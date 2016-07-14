@@ -34,12 +34,10 @@ dependencies:
   - numpy>=1.10.4
   - scikit-learn>=0.17.1
   - scipy>=0.17.0
-
-  - on pip only:
-    - emcee>=2.1.0
-    - iminuit>=1.2
-    - sncosmo>=1.2.0
-    - pywavelets>=0.4.0
+  - emcee>=2.1.0 [pip]
+  - iminuit>=1.2 [pip]
+  - sncosmo>=1.2.0 [pip]
+  - pywavelets>=0.4.0 [pip]
 
 ### Installation caveats
 
