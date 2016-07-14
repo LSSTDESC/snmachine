@@ -1,0 +1,32 @@
+# snmachine
+
+Welcome to the pre-release of snmachine! This is a flexible python library for reading in supernova data or simulations, extracting useful features from them and subsequently performing supervised machine learning to classify supernovae based on their light curves. Please keep this code private for now within the DESC collaboration.
+
+## Installation
+
+Install the library using:
+
+`python setup.py install`
+
+or
+
+`python setup.py develop` if you are contributing to the code.
+
+This should use `pip` to automatically install the dependencies. It's highly recommended to do this within an anaconda environment.
+
+Two installation caveats:
+1) `snmachine` has the ability to use nested sampling for some of the parameter estimates, which we have found to give much more reliable fits than least squares. However this depends on `pymultinest` (https://github.com/JohannesBuchner/PyMultiNest) being installed separately, since it requires manual compiling of Fortran code (but not it's not a particularly difficult one).
+
+2) If you want to use neural networks, these are currently only available in the development version of scikit-learn (version 0.18). You will also need to install that separately to enable neural networks (see http://scikit-learn.org/stable/developers/contributing.html#git-repo).
+
+## Contributing
+
+Please feel free to contribute to the code! Simply fork it into your own private repository and submit a pull request when ready. You can contribute by adding new dataset-reading methods, new feature extraction methods or new classification algorithms. 
+
+## Examples
+
+The folder `examples` contains an example jupyter notebook. Start the notebook from the `examples` directory by typing:
+
+`jupyter notebook example_spcc.ipynb`
+
+Execute each cell block using "shift-enter". A subset of simulated DES data from the supernova photometric classification challenge is provided to illustrate the code.
