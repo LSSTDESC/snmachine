@@ -290,14 +290,14 @@ class OptimisedClassifier():
     """
     
     NB_param_dict = {}
-    KNN_param_dict = {'n_neighbors':range(1,180,5), 'weights':['distance']}
+    KNN_param_dict = {'n_neighbors':range(1, 180, 5), 'weights':['distance']}
     SVM_param_dict = {'C':np.logspace(-2, 5, 5), 'gamma':np.logspace(-8, 3, 5)}
-    NN_param_dict={'hidden_layer_sizes':[(l,) for l in range(80,120,5)]}
+    NN_param_dict={'hidden_layer_sizes':[(l,) for l in range(80, 120, 5)]}
 
     DT_param_dict={'criterion':['gini','entropy'],'min_samples_leaf':range(1,400,25)}
-    RF_param_dict = {'n_estimators':range(200,900,100), 'criterion':['gini', 'entropy']}
-    ests=[DecisionTreeClassifier(criterion='entropy',min_samples_leaf=l) for l in range(5,50,5)]
-    Boost_param_dict={'base_estimator':ests,'n_estimators':range(5,80,5)}
+    RF_param_dict = {'n_estimators':range(200, 900, 100), 'criterion':['gini', 'entropy']}
+    ests=[DecisionTreeClassifier(criterion='entropy',min_samples_leaf=l) for l in range(5, 55, 10)]
+    Boost_param_dict={'base_estimator':ests,'n_estimators':range(5, 85, 10)}
     #This is a strange boosted random forest classifier that Max came up that works quite well, but is likely biased
     #in general
     Boost_RF_param_dict = {'base_estimator':[RandomForestClassifier(400, 'entropy'),
