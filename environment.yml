@@ -4,6 +4,7 @@
 name: snmachine
 
 dependencies:
+  - python=2.7.11
   - astropy>=1.1.2
   - cython>=0.23.4
   - jupyter>=1.0.0
