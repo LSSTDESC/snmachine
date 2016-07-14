@@ -1262,13 +1262,15 @@ class WaveletFeatures(Features):
             given the number of points in the Gaussian process curve.
         """
         Features.__init__(self)
-        if wavelet not in self.wavelet_list:
-            print 'Wavelet not recognised in pywt'
-            sys.exit()
+
 
         self.wav=pywt.Wavelet(wavelet)
         self.ngp=ngp #Number of points to use on the Gaussian process curve
         self.wavelet_list=pywt.wavelist() #All possible families
+
+        if wavelet not in self.wavelet_list:
+            print 'Wavelet not recognised in pywt'
+            sys.exit()
 
         #If the user does not specify a level of depth for the wavelet, automatically calculate it
         if 'level' in kwargs:
