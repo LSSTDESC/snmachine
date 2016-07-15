@@ -6,6 +6,8 @@ Welcome to the pre-release of snmachine! This is a flexible python library for r
 
 Unfortunately, at the moment snmachine is not python 3 compatible. Please stick to python 2.7.
 
+There are two possible ways to set up snmachine:
+
 ### Using conda
 
 By far the easiest way to install snmachine is to use anaconda.
