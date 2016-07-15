@@ -4,6 +4,8 @@ Welcome to the pre-release of snmachine! This is a flexible python library for r
 
 ## Installation
 
+Unfortunately, at the moment snmachine is not python 3 compatible. Please stick to python 2.7.
+
 ### Using conda
 
 By far the easiest way to install snmachine is to use anaconda.
@@ -48,6 +50,14 @@ dependencies:
 ## Contributing
 
 Please feel free to contribute to the code! Simply fork it into your own private repository and submit a pull request when ready. You can contribute by adding new dataset-reading methods, new feature extraction methods or new classification algorithms. 
+
+## Documentation
+
+snmachine has complete docstrings for all functions and classes. These can be compiled into html documentation by typing:
+
+`make html`
+
+in the `docs` folder.
 
 ## Examples
 
