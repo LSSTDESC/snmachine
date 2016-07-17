@@ -362,8 +362,10 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds):
         model=sncosmo.Model(model_name)
 
 
-    labels=['Object']+model.param_names+['Chisq']
-    output=Table(names=labels, dtype=['S32']+['f']*(len(model.param_names))+['f'])
+    #labels=['Object']+model.param_names+['Chisq']
+    #output=Table(names=labels, dtype=['S32']+['f']*(len(model.param_names))+['f'])
+    labels = ['Object'] + model.param_names
+    output=Table(names=labels, dtype=['S32']+['f']*(len(model.param_names)))
 
     t1=time.time()
     row=[obj]
@@ -382,7 +384,7 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds):
     best=res['parameters']
     best=best.tolist()
     row+=best
-    row+=[res['chisq']]
+    #row+=[res['chisq']]
 
     output.add_row(row)
 
@@ -789,14 +791,16 @@ class TemplateFeatures(Features):
             params=['['+mod_name+']'+pname for pname in self.model.param_names]
             # err_plus=[pname+'_err+' for pname in params]
             # err_minus=[pname+'_err-' for pname in params]
-            if self.sampler=='mcmc':
-                labels=['Object']+params
-            elif self.sampler=='nested':
-                labels=['Object']+params
-            else:
-                labels=['Object']+params+['Chisq']
+            labels = ['Object'] + params
+            # if self.sampler=='mcmc':
+            #     labels=['Object']+params
+            # elif self.sampler=='nested':
+            #     labels=['Object']+params
+            # else:
+            #     labels=['Object']+params+['Chisq']
             
-            output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
+            #output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
+            output = Table(names=labels, dtype=['S32'] + ['f'] * (len(labels) - 1))
             
             k=0
             if nprocesses<2:

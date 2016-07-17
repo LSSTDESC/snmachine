@@ -713,16 +713,16 @@ class SDSS_Data(Dataset):
             classes = [classes[i] for i in x]
 
         if classification != 'none': # can specify classification of supernova if user-requested
-            if classification =='Ia' or classification == 'SNIa':
+            if classification == 'Ia' or classification == 'SNIa':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIa']
             elif classification == 'Ib' or classification == 'SNIb':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIb']
             elif classification == 'Ic' or classification == 'SNIc':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIc']
             elif classification == 'Ibc' or classification == 'SNIbc':
-                SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIb' or classes[i] == 'SNIc']
+                SN = [SN[i] for i in range(len(SN)) if classes[i] == 'SNIb' or classes[i] == 'SNIc']
             elif classification == 'II' or classification == 'SNII':
-                SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNII']
+                SN = [SN[i] for i in range(len(SN)) if classes[i] == 'SNII']
             else:
                 print 'Invalid classification requested.'
                 sys.exit()
