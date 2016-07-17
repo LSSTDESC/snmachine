@@ -18,7 +18,11 @@ By far the easiest way to install snmachine is to use anaconda.
 
 `conda env create --name snmachine --file environment.yml`
 
-3) Install snmachine by typing:
+3) Activate the environment by typing:
+
+`source activate snmachine`
+
+4) Install snmachine by typing:
 
 `python setup.py install`
 
