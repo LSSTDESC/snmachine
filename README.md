@@ -22,9 +22,9 @@ By far the easiest way to install snmachine is to use anaconda.
 
 `source activate snmachine`
 
-*Note: If you have tsch instead of bash this will not work!*
+**Note: If you have tsch instead of bash this will not work!**
 
-A simple workaround is to manually edit your PATH environment variable to point to the new anaconda environment:
+*A simple workaround is to manually edit your PATH environment variable to point to the new anaconda environment:
 
 `setenv PATH <your path to anaconda>/envs/snmachine/bin/:$PATH`
 
