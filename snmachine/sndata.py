@@ -133,8 +133,8 @@ class Dataset:
             else:
                 object_names= np.loadtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
         elif all(isinstance(l,basestring) for l in subset):
-            #We assume subset is a list of strings containing object names
-            object_names= np.array(subset)
+            #We assume subset is a list or array of strings containing object names
+            object_names= np.asarray(subset)
         else:
             #Otherwise it must be a list of indices. Otherwise raise an error.
             names=np.loadtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
