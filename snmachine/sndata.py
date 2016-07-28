@@ -785,24 +785,24 @@ class SDSS_Data(Dataset):
             Redshift, redshift error, type
         """
         fl = open(self.rootdir+self.survey_name+'.LIST')
-        z = {'z_hel':float('nan'),'z_psnid':float('nan')}# z_hel is spectroscopic heliocentric redshift and z_psnid uses zspec as prior but has many more??
-        z_err = {'z_hel_err':float('nan'),'z_psnid_err':float('nan')}
+        z = {'z_hel':float('nan'),'z_phot':float('nan')}# z_hel is spectroscopic heliocentric redshift and z_psnid uses zspec as prior but has many more??
+        z_err = {'z_hel_err':float('nan'),'z_phot_err':float('nan')}
         t = -9
         for line in fl:
             s=line.split()
             if "SMP_000%s.dat" % s[0] == flname or "SMP_00%s.dat" % s[0] == flname or "SMP_0%s.dat" % s[0] == flname: # is this a bit slow?
                 if s[52] != "\N":
-                    z['z_psnid']=float(s[52])
+                    z['z_phot']=float(s[103])
                 else:
-                    z['z_psnid']= -9
+                    z['z_phot']= -9
                 if s[11] != "\N":
                     z['z_hel']=float(s[11])
                 else:
                     z['z_hel']= -9
                 if s[53] != "\N":
-                    z_err['z_psnid_err']=float(s[53])
+                    z_err['z_phot_err']=float(s[104])
                 else:
-                    z_err['z_psnid_err']= -9
+                    z_err['z_phot_err']= -9
                 if s[12] != "\N":
                     z_err['z_hel_err']=float(s[12])
                 else:
