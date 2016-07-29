@@ -623,7 +623,7 @@ class SDSS_Data(Dataset):
         """
         self.filter_set=filter_set
         self.rootdir=folder
-        self.survey_name=folder.split('/')[-2] # second to last / / /..
+        self.survey_name=folder.split(os.path.sep)[-2] # second to last / / /..
         self.object_names=self.get_object_names(subset=subset,subset_length=subset_length,classification=classification)
         #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
         self.data={}
@@ -791,7 +791,7 @@ class SDSS_Data(Dataset):
         for line in fl:
             s=line.split()
             if "SMP_000%s.dat" % s[0] == flname or "SMP_00%s.dat" % s[0] == flname or "SMP_0%s.dat" % s[0] == flname: # is this a bit slow?
-                if s[52] != "\N":
+                if s[103] != "\N":
                     z['z_phot']=float(s[103])
                 else:
                     z['z_phot']= -9
@@ -799,7 +799,7 @@ class SDSS_Data(Dataset):
                     z['z_hel']=float(s[11])
                 else:
                     z['z_hel']= -9
-                if s[53] != "\N":
+                if s[104] != "\N":
                     z_err['z_phot_err']=float(s[104])
                 else:
                     z_err['z_phot_err']= -9
