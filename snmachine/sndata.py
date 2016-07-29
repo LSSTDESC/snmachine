@@ -599,27 +599,13 @@ class OpsimDataset(Dataset):
         return tab_new
         
 
-class SDSS_Data(Dataset):
-    """
-    Class to read in the SDSS supernovae dataset
-    """
+class SDSS_Data(Dataset):    
 
-    def __init__(self, folder, subset='none', filter_set=['sdssu','sdssg', 'sdssr', 'sdssi', 'sdssz'], subset_length = False, classification = 'none'):
+    def __init__(self, folder, subset='none', training_only=False, filter_set=['sdssu','sdssg', 'sdssr', 'sdssi', 'sdssz'], subset_length = False, classification = 'none'):
         """
-        Initialisation
-
-        Parameters
-        ----------
-        folder : str
-            Folder where simulations are located
-        subset : str or list-like, optional
-            List of a subset of object names. If not supplied, the full dataset will be used
-        filter_set : list-like, optional
-            Set of possible filters
-        subset_length : bool or int, optional
-            If supplied, will return this many random objects (can be used in conjunction with subset="spectro")
-        classification : str, optional
-            Can return one specific type of supernova.
+        Construct this class by specifying the filepath of the data directory and getting a list of object names.
+        @param subset Optional. Something you pass to get_object_names to specify which files you want. Can be anything. Current setup is
+        get_object_names will accept a list of indices or a list of actual object names as a subset.
         """
         self.filter_set=filter_set
         self.rootdir=folder
@@ -642,22 +628,8 @@ class SDSS_Data(Dataset):
         self.models={}
 
     def get_SNe(self,subset_length):
-        """
-        Function to take all supernovae from Master SDSS data file  and return a random sample of SNe of user-specified length
-        if requested
-
-        Parameters
-        ----------
-        subset_length : int
-            Number of objects to return
-
-        Returns
-        -------
-        list-like
-            List of object names
-
-        """
-
+        '''Function to take all supernovae from Master SDSS data file  and return a random sample of SNe of user-specified length
+        if requested'''
         fl = open(self.rootdir+self.survey_name+'.LIST')
         SN = []
         for line in fl:
@@ -676,22 +648,8 @@ class SDSS_Data(Dataset):
         return SN
 
     def get_spectro(self,subset_length,classification):
-        """
-        Function to take all spectroscopically confirmed supernovae from Master file and return a random sample of SNe of user-specified length
-        if requested
-
-        Parameters
-        ----------
-        subset_length : bool or int
-            Number of objects to return (False to return all)
-        classification : str
-            Can specify a particular type of supernova to return ('none' for all types)
-
-        Returns
-        -------
-        list-like
-            List of object names
-        """
+        '''Function to take all spectroscopically confirmed supernovae from Master file and return a random sample of SNe of user-specified length
+        if requested'''
         fl = open(self.rootdir+self.survey_name+'.LIST')
         SN = []
         classes = []
@@ -713,46 +671,67 @@ class SDSS_Data(Dataset):
             classes = [classes[i] for i in x]
 
         if classification != 'none': # can specify classification of supernova if user-requested
-            if classification == 'Ia' or classification == 'SNIa':
+            if classification =='Ia' or classification == 'SNIa':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIa']
             elif classification == 'Ib' or classification == 'SNIb':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIb']
             elif classification == 'Ic' or classification == 'SNIc':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIc']
             elif classification == 'Ibc' or classification == 'SNIbc':
-                SN = [SN[i] for i in range(len(SN)) if classes[i] == 'SNIb' or classes[i] == 'SNIc']
+                SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIb' or classes[i] == 'SNIc']
             elif classification == 'II' or classification == 'SNII':
-                SN = [SN[i] for i in range(len(SN)) if classes[i] == 'SNII']
+                SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNII']
+            else:
+                print 'Invalid classification requested.'
+                sys.exit()
+
+        return SN
+    def get_photo(self,subset_length,classification):
+        '''Function to take only photometrically classified supernovae.'''
+        fl = open(self.rootdir+self.survey_name+'.LIST')
+        SN = []
+        classes = []
+        for line in fl:
+            s = line.split()
+            if (s[5] == "pSNIa" or s[5] == "pSNIbc" or s[5] == "pSNII" or s[5] == "zSNIa" or s[5] == 'zSNIbc' or s[5] == 'zSNII' or s[5] == 'SNIa?'):
+                classes.append(s[5])
+                if len(str(s[0])) == 3:
+                    SN.append("SMP_000%s.dat" % s[0])
+                elif len(str(s[0])) == 4:
+                    SN.append("SMP_00%s.dat" % s[0])
+                elif len(str(s[0])) == 5:
+                    SN.append("SMP_0%s.dat" % s[0])
+         #SN now contains all file names for spectroscopically confirmed supernovae
+
+        if subset_length != False:
+            x = sorted(sample(xrange(len(SN)), subset_length))
+            SN = [SN[i] for i in x ]
+            classes = [classes[i] for i in x]
+
+        if classification != 'none': # can specify classification of supernova if user-requested
+            if classification =='Ia' or classification == 'SNIa':
+                SN = [SN[i] for i in range(len(SN)) if classes[i] == 'SNIa?' or classes[i] == 'pSNIa' or classes[i] == 'zSNIa']
+            elif classification == 'Ibc' or classification == 'SNIbc':
+                SN = [SN[i] for i in range(len(SN)) if classes[i] == 'pSNIbc' or classes[i] == 'zSNIbc']
+            elif classification == 'II' or classification == 'SNII':
+                SN = [SN[i] for i in range(len(SN)) if classes[i] == 'pSNII' or classes[i] == 'zSNII']
             else:
                 print 'Invalid classification requested.'
                 sys.exit()
 
         return SN
 
-
     def get_object_names(self, subset='none',subset_length=False,classification='none'):
+        """Gets a list of the names of the files within the dataset.
+        @param subset Optional. Used to specify which files you want. Can be anything. Current setup is
+        get_object_names will accept a list of indices, a list of actual object names as a subset or the keyword 'spectro'.
         """
-        Gets a list of the names of the files within the dataset.
-
-        Parameters
-        ----------
-        subset : str or list-like, optional
-            List of a subset of object names. If not supplied, the full dataset will be used
-        subset_length : bool or int, optional
-            Number of objects to return (False to return all)
-        classification : str, optional
-            Can specify a particular type of supernova to return ('none' for all types)
-
-        Returns
-        -------
-        list-like
-            Object names
-        """
-
         if isinstance(subset,basestring):
             if subset=='spectro':
                 return np.array(self.get_spectro(subset_length,classification)) # have to convert to numpy array for wavelet features to work
                 #loads random sample of the spec confirmed data defaulted to whole
+            elif subset == 'photo': ##only photometric data
+                return np.array(self.get_photo(subset_length,classification))
             elif subset=='none':
                 return np.array(self.get_SNe(subset_length))
                 # loads random sample of SNe from whole master file - sample defaulted to whole
@@ -761,8 +740,7 @@ class SDSS_Data(Dataset):
             return subset
         else:
             #Otherwise it must be a list of indices. Otherwise raise an error.
-            #names=np.loadtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
-            names=np.array(self.get_SNe(subset_length))
+            names=np.loadtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
             try:
                 return names[subset]
             except IndexError:
@@ -818,16 +796,7 @@ class SDSS_Data(Dataset):
     def get_lightcurve(self, flname):
         """
         Given a filename, returns a light curve astropy table that conforms with sncosmo requirements
-
-        Parameters
-        ----------
-        flname : str
-            The filename of the supernova (relative to data_root)
-
-        Returns
-        -------
-        astropy.table.Table
-            Light curve
+        @param fname The filename of the supernova (relative to data_root)
         """
         fl=open(self.rootdir+flname,'r')
         mjd=[]
@@ -859,9 +828,9 @@ class SDSS_Data(Dataset):
         if Z['z_hel'] != -9:
             z = Z['z_hel'] #use spectroscopic redshifts if available
             z_err = Z_err['z_hel_err']
-        elif Z['z_psnid'] != -9:
-            z = Z['z_psnid'] #photometric redshift
-            z_err = Z_err['z_psnid_err']
+        elif Z['z_phot'] != -9:
+            z = Z['z_phot'] #photometric redshift
+            z_err = Z_err['z_phot_err']
         else:
             z = -9
             z_err = -9 # returns values of -9 if no redshift is available
@@ -886,7 +855,6 @@ class SDSS_Data(Dataset):
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'name':flname,'z':z, 'z_err':z_err, 'type':type, 'initial_observation_time':start_mjd, 'peak flux':peak_flux })
 
         return tab
-    
     
     
     
