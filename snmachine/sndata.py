@@ -608,6 +608,7 @@ class SDSS_Data(Dataset):
     def __init__(self, folder, subset='none', training_only=False, filter_set=['sdssu','sdssg', 'sdssr', 'sdssi', 'sdssz'], subset_length = False, classification = 'none'):
         """
         Initialisation
+ 
         Parameters
         ----------
         folder : str
@@ -645,15 +646,19 @@ class SDSS_Data(Dataset):
         """
         Function to take all supernovae from Master SDSS data file  and return a random sample of SNe of user-specified length
         if requested
+ 
         Parameters
         ----------
         subset_length : int
             Number of objects to return
+
         Returns
         -------
         list-like
             List of object names
+ 
         """
+ 
         fl = open(self.rootdir+self.survey_name+'.LIST')
         SN = []
         for line in fl:
@@ -675,12 +680,14 @@ class SDSS_Data(Dataset):
         """
         Function to take all spectroscopically confirmed supernovae from Master file and return a random sample of SNe of user-specified length
         if requested
+ 
         Parameters
         ----------
         subset_length : bool or int
             Number of objects to return (False to return all)
         classification : str
             Can specify a particular type of supernova to return ('none' for all types)
+ 
         Returns
         -------
         list-like
@@ -707,16 +714,16 @@ class SDSS_Data(Dataset):
             classes = [classes[i] for i in x]
 
         if classification != 'none': # can specify classification of supernova if user-requested
-            if classification =='Ia' or classification == 'SNIa':
+            if classification == 'Ia' or classification == 'SNIa':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIa']
             elif classification == 'Ib' or classification == 'SNIb':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIb']
             elif classification == 'Ic' or classification == 'SNIc':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIc']
             elif classification == 'Ibc' or classification == 'SNIbc':
-                SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNIb' or classes[i] == 'SNIc']
+                SN = [SN[i] for i in range(len(SN)) if classes[i] == 'SNIb' or classes[i] == 'SNIc']
             elif classification == 'II' or classification == 'SNII':
-                SN = [SN[i] for i in range(len(SN)) if classes[i] =='SNII']
+                SN = [SN[i] for i in range(len(SN)) if classes[i] == 'SNII']
             else:
                 print 'Invalid classification requested.'
                 sys.exit()
