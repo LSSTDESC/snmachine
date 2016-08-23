@@ -10,6 +10,7 @@ from astropy.io import fits
 import sys, sncosmo, os
 from random import shuffle,sample
 from scipy import interpolate
+import sncosmo, math
 
 #Colours for graphs
 colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00','desz':'k',
@@ -868,6 +869,8 @@ class SDSS_Data(Dataset):
         flt=[] # band
         flux=[]
         fluxerr=[] # error in flux
+        mag = []
+        magerr = []
         line_count = 0
         for line in fl:
             s=line.split()
@@ -876,6 +879,8 @@ class SDSS_Data(Dataset):
                 mjd.append(s[1])
                 flux.append(s[7])
                 fluxerr.append(s[8])
+                mag.append(s[3])
+                magerr.append(s[4])
                 if s[2] == '0':
                     flt.append('sdssu')
                 elif s[2] == '1':
@@ -889,6 +894,8 @@ class SDSS_Data(Dataset):
         mjd = [float(x) for x in mjd] # contains strings - convert to floats
         flux = [float(x) for x in flux]
         fluxerr = [float(x) for x in fluxerr]
+        mag = [float(x) for x in mag]
+        magerr = [float(x) for x in magerr]
         (Z, Z_err, type) = self.get_info(flname)
         if Z['z_hel'] != -9:
             z = Z['z_hel'] #use spectroscopic redshifts if available
@@ -909,6 +916,8 @@ class SDSS_Data(Dataset):
         flt=np.array(flt, dtype='str')
         flux=np.array(flux)
         fluxerr=np.array(fluxerr)
+        mag = np.array(mag)
+        magerr = np.array(magerr)
         start_mjd=mjd.min()
         r_flux = np.array([flux[i] for i in range(len(flux)) if flt[i]=='sdssr'])
         if len(r_flux) > 0:
@@ -917,17 +926,182 @@ class SDSS_Data(Dataset):
             peak_flux = -9
         mjd=mjd-start_mjd #We shift the times of the observations to all start at zero. If required, the mjd of the initial observation is stored in the metadata.
         #Note: obviously this will only zero the observations in one filter band, the others have to be zeroed if fitting functions.
-        tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'name':flname,'z':z, 'z_err':z_err, 'type':type, 'initial_observation_time':start_mjd, 'peak flux':peak_flux })
+        tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys', 'mag', 'mag_error'), meta={'name':flname,'z':z, 'z_err':z_err, 'type':type, 'initial_observation_time':start_mjd, 'peak flux':peak_flux })
 
         return tab
     
-    
-    
-    
-    
-    
-    
-    
+class SDSS_Simulations(Dataset):
+    """
+    Class to read in the SDSS simulations dataset
+    """
+
+    def __init__(self, folder, subset='none', training_only=False, filter_set=['sdssu','sdssg', 'sdssr', 'sdssi', 'sdssz'], subset_length = False, classification = 'none'):
+        """
+        Initialisation
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located
+        subset : str or list-like, optional
+            List of a subset of object names. If not supplied, the full dataset will be used
+        filter_set : list-like, optional
+            Set of possible filters
+        subset_length : bool or int, optional
+
+            If supplied, will return this many random objects (can be used in conjunction with subset="spectro")
+        classification : str, optional
+            Can return one specific type of supernova.
+        """
+        self.filter_set=filter_set
+        self.rootdir=folder
+        self.survey_name=folder.split(os.path.sep)[-2] # second to last / / /..
+        #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
+        self.data={}
+        invalid=0 #Some objects may have empty data
+        print 'Reading data..'
+        (self.data, invalid) = self.get_data(subset, subset_length, classification)
+        if invalid>0:
+            print '%d objects were invalid and not added to the dataset.' %invalid
+        print '%d objects read into memory.' %len(self.data)
+        self.object_names = self.data.keys()
+        #We create an optional model set which can be set by whatever feature class used
+        self.models={}
+
+
+    def get_data(self, subset='none', subset_length=False, classification = 'none'):
+        """
+        Function to get all data in same form as SDSS Data
+        """
+        # read in data as snana files
+        d_Ia = sncosmo.read_snana_fits(self.rootdir + "SDSS_Ia_HEAD.FITS",self.rootdir + "SDSS_Ia_PHOT.FITS")
+        d_nIa =  sncosmo.read_snana_fits(self.rootdir + "SDSS_NONIa_HEAD.FITS", self.rootdir + "SDSS_NONIa_PHOT.FITS")
+        invalid = 0 # number of invalid LCs
+        data = {}
+
+        # allow user to specify dataset of entirely Ia, Ibc, non-Ia or II
+        if classification == 'none':
+            for i in range(len(d_Ia)):
+                SN = self.get_lightcurve(d_Ia[i])
+                if len(SN['mjd']) > 0 :  
+                    data['%s'%SN.meta['snid']] = SN
+                else:
+                    invalid+=1
+            for i in range(len(d_nIa)):
+                SN = self.get_lightcurve(d_nIa[i])
+                if len(SN['mjd']) > 0:
+                    data['%s'%SN.meta['snid']] = SN
+                else:
+                    invalid+=1
+        elif classification == 'Ia' or classification == 'SNIa':
+            for i in range(len(d_Ia)):
+                SN = self.get_lightcurve(d_Ia[i])
+                if len(SN['mjd']) > 0 :     
+                    data['%s'%SN.meta['snid']] = SN
+                else:
+                    invalid+=1
+        elif classification == 'nIa' or classification == 'non-SNIa':
+            for i in range(len(d_nIa)):
+                SN = self.get_lightcurve(d_nIa[i])
+                if len(SN['mjd']) > 0:
+                    data['%s'%SN.meta['snid']] = SN
+                else:
+                    invalid+=1
+        elif classification == 'Ibc' or classification == 'SNIbc':
+            for i in range(len(d_nIa)):
+                SN = self.get_lightcurve(d_nIa[i])
+                if len(SN['mjd']) > 0 :  
+                    if SN.meta['type'] == 2:
+                        data['%s'%SN.meta['snid']] = SN
+                else:
+                    invalid+=1
+        elif classification == 'II' or classification == 'SNII':
+            for i in range(len(d_nIa)):
+                SN = self.get_lightcurve(d_Ia[i])
+                if len(SN['mjd']) > 0:
+                    if SN.meta['type'] == 3:
+                        data['%s'%SN.meta['snid']] = SN
+                else:
+                    invalid+=1
+        else:
+            print 'Invalid classification requested'
+            sys.exit()
+        
+        # allow user to request entirely spectroscopic data or photometric data
+        if subset == 'spectro':
+            data = dict((key,value) for (key,value) in data.items() if value.meta['data type'] == 'spec')
+        if subset == 'photo':
+            data = dict((key,value) for (key,value) in data.items() if value.meta['data type'] == 'phot')
+        
+        # allow user to request a shortened subset of the dataset
+        if subset_length != False:
+            data = dict(sample(data.items(), subset_length))
+
+        return data, invalid
+
+    def get_lightcurve(self, lc):
+        
+        mjd = np.array([lc['MJD'][i] for i in range(len(lc['MJD'])) if lc['FLUXCAL'][i] > 0])
+        flt = np.array(['sdss' + lc['FLT'][i] for i in range(len(lc['FLT'])) if lc['FLUXCAL'][i] > 0])
+        flux = np.array( [(lc['FLUXCAL'][i]*math.pow(10,-1.44)) for i in range(len(lc['FLUXCAL'])) if lc['FLUXCAL'][i] > 0]) # ignore negative flux values
+#FLUX: MULTIPLY BY 10^-1.44 (FLUX IN SDSS IS CALCULATED AS 10^(-0.4MAG +9.56) WHEREAS SIMULATED FLUXES ARE CALCULATED AS 10^(-0.4MAG + 11)- WE USE THE SDSS CONVENTION). 
+        fluxerr = np.array([(lc['FLUXCALERR'][i]*math.pow(10,-1.44)) for i in range(len(lc['FLUXCALERR'])) if lc['FLUXCAL'][i] > 0])
+        mag = np.array([lc['MAG'][i] for i in range(len(lc['MAGERR'])) if lc['FLUXCAL'][i] > 0])
+        magerr = np.array([lc['MAGERR'][i] for i in range(len(lc['MAGERR'])) if lc['FLUXCAL'][i] > 0])
+        start_mjd = mjd.min()
+        r_flux = np.array([flux[i] for i in range(len(flux)) if flt[i]=='sdssr'])
+        if len(r_flux) > 0:
+            peak_flux = r_flux.max()
+        else:
+            peak_flux = -9
+        mjd=mjd-start_mjd #We shift the times of the observations to all start at zero. If required, the mjd of the initial observation is stored in the metadata.
+        #Note: obviously this will only zero the observations in one filter band, the others have to be zeroed if fitting functions.
+        # find supernova classification and whether it is spectroscopically classified or photometrically       
+        sntype = -9
+        dtype = -9
+        if lc.meta['SNTYPE'] == 120  :
+            sntype = 1
+            dtype = 'spec'
+        elif lc.meta['SNTYPE'] == 106:
+            sntype =1
+            dtype = 'phot'
+        elif lc.meta['SNTYPE'] == 32 or lc.meta['SNTYPE'] == 33:
+            sntype =2
+            dtype = 'spec'
+        elif lc.meta['SNTYPE'] == 132 or lc.meta['SNTYPE'] == 133:
+            sntype = 2
+            dtype = 'phot'
+        elif lc.meta['SNTYPE'] == 22:
+            sntype = 3
+            dtype = 'spec'
+        elif lc.meta['SNTYPE'] == 122:
+            sntype = 3
+            dtype = 'phot'
+        # get redshift - heliocentric is used where possible, otherwise a simulated heliocentric redshift is used
+        z = -9
+        z_err = -9
+        if lc.meta['REDSHIFT_HELIO'] != -9 and lc.meta['REDSHIFT_HELIO_ERR'] != -9:
+            z = lc.meta['REDSHIFT_HELIO']
+            z_err = lc.meta['REDSHIFT_HELIO_ERR']
+        else:
+            z = lc.meta['SIM_REDSHIFT_HELIO']
+            # no simulated error in redshift available
+
+        #supernova identifier (used as object name)
+        snid = lc.meta['SNID']
+
+        #Zeropoint
+        zp=np.array([27.5]*len(mjd))
+        zpsys=['ab']*len(mjd)
+        
+        # form astropy table
+        tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys', 'mag', 'mag_error'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux , 'data type':dtype })
+
+        return tab
+
+
+
+            
+
     
     
     
