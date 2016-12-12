@@ -520,7 +520,7 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
         
         
         if not restart or not os.path.exists(chain_name+'stats.dat'):
-            pymultinest.run(loglike_multinest, prior_multinest, ndim, importance_nested_sampling = False, init_MPI=False, 
+            pymultinest.run(loglike_multinest, prior_multinest, ndim, importance_nested_sampling = False, init_MPI=False,
             resume = False, verbose = False, sampling_efficiency = 'parameter', n_live_points = nlp, outputfiles_basename=chain_name, 
             multimodal=False)
         
