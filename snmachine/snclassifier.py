@@ -53,36 +53,36 @@ def roc(pr, Yt, true_class=0):
         The area under the ROC curve
 
     """
-    probs=pr.copy()
-    Y_test=Yt.copy()
-    min_class=(int)(Y_test.min()) #This is to deal with starting class assignment at 1.
+    probs = pr.copy()
+    Y_test = Yt.copy()
+    min_class = (int)(Y_test.min())  # This is to deal with starting class assignment at 1.
     Y_test = Y_test.squeeze()
     
     if len(pr.shape)>1:
-        probs_1=probs[:, true_class-min_class]
+        probs_1 = probs[:, true_class-min_class]
     else:
-        probs_1=probs
+        probs_1 = probs
     
-    threshold=np.linspace(0., 1., 50) #50 evenly spaced numbers between 0,1
+    threshold = np.linspace(0., 1., 50)  # 50 evenly spaced numbers between 0,1
 
-    #This creates an array where each column is the prediction for each threshold
-    preds=np.tile(probs_1, (len(threshold), 1)).T>=np.tile(threshold, (len(probs_1), 1))
-    Y_bool=(Y_test==true_class)
-    Y_bool=np.tile(Y_bool, (len(threshold), 1)).T
+    # This creates an array where each column is the prediction for each threshold
+    preds = np.tile(probs_1, (len(threshold), 1)).T >= np.tile(threshold, (len(probs_1), 1))
+    Y_bool = (Y_test == true_class)
+    Y_bool = np.tile(Y_bool, (len(threshold), 1)).T
     
-    TP=(preds & Y_bool).sum(axis=0)
-    FP=(preds & ~Y_bool).sum(axis=0)
-    TN=(~preds & ~Y_bool).sum(axis=0)
-    FN=(~preds & Y_bool).sum(axis=0)
+    TP = (preds & Y_bool).sum(axis=0)
+    FP = (preds & ~Y_bool).sum(axis=0)
+    TN = (~preds & ~Y_bool).sum(axis=0)
+    FN = (~preds & Y_bool).sum(axis=0)
     
-    tpr=np.zeros(len(TP))
-    tpr[TP!=0]=TP[TP!=0]/(TP[TP!=0]+FN[TP!=0])
-    fpr=FP/(FP+TN)
+    tpr = np.zeros(len(TP))
+    tpr[TP != 0] = TP[TP != 0]/(TP[TP != 0] + FN[TP != 0])
+    fpr = FP/(FP+TN)
     
-    fpr=np.array(fpr)[::-1]
-    tpr=np.array(tpr)[::-1]
+    fpr = np.array(fpr)[::-1]
+    tpr = np.array(tpr)[::-1]
     
-    auc=trapz(tpr, fpr)
+    auc = trapz(tpr, fpr)
 
     return fpr, tpr, auc
     
@@ -661,10 +661,13 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
 
     else:
         for cls in classifiers:
-            probs,clf=__call_classifier(cls, X_train, y_train, X_test, param_dict,return_classifier)
-            probabilities[cls]=probs
+            retval = __call_classifier(cls, X_train, y_train, X_test, param_dict,return_classifier)
+
             if return_classifier:
-                classifier_objects[cls]=clf
+                probabilities[cls] = retval[0]
+                classifier_objects[cls] = retval[1]
+            else:
+                probabilities[cls] = retval[0]
 
     for i in range(len(classifiers)):
         cls=classifiers[i]
