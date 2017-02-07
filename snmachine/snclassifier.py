@@ -652,7 +652,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     if nprocesses>1 and not return_classifier:
         partial_func=partial(__call_classifier,X_train=X_train, y_train=y_train, X_test=X_test,
                              param_dict=param_dict,return_classifier=False)
-        p=Pool(nprocesses)
+        p=Pool(nprocesses, maxtasksperchild=1)
         result=p.map(partial_func,classifiers)
 
         for i in range(len(result)):

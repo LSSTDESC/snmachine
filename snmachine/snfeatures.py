@@ -844,7 +844,7 @@ class TemplateFeatures(Features):
             
             else:
                 if self.sampler=='leastsq':
-                    p=Pool(nprocesses)
+                    p=Pool(nprocesses, maxtasksperchild=1)
                     partial_func=partial(_run_leastsq_templates, d=d, model_name=self.templates[mod_name], use_redshift=use_redshift, bounds=self.bounds[self.templates[mod_name]])
                     out=p.map(partial_func, d.object_names)
                     output=out[0]
@@ -855,7 +855,7 @@ class TemplateFeatures(Features):
                     else:
                         all_output=vstack((all_output, output))
                 elif self.sampler=='nested':
-                    p=Pool(nprocesses)
+                    p=Pool(nprocesses, maxtasksperchild=1)
                     partial_func=partial(_run_multinest_templates, d=d, model_name=self.templates[mod_name], bounds=self.bounds[self.templates[mod_name]], 
                     chain_directory=chain_directory, nlp=1000, convert_to_binary=True, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart)
                     out=p.map(partial_func, d.object_names)
@@ -1051,14 +1051,14 @@ class ParametricFeatures(Features):
                 k+=1
         else:
             if self.sampler=='leastsq':
-                p=Pool(nprocesses)
+                p=Pool(nprocesses, maxtasksperchild=1)
                 partial_func=partial(_run_leastsq, d=d, model=self.model,  n_attempts=n_attempts)
                 out=p.map(partial_func, d.object_names)
                 output=out[0]
                 for i in range(1, len(out)):
                     output=vstack((output, out[i]))
             elif self.sampler=='nested':
-                p=Pool(nprocesses)
+                p=Pool(nprocesses, maxtasksperchild=1)
                 partial_func=partial(_run_multinest, d=d, model=self.model,chain_directory=chain_directory, 
                 nlp=nlp, convert_to_binary=convert_to_binary, n_iter=n_iter, restart=restart)
                 #Pool starts a number of threads, all of which may try to tackle all of the data. Better to take it in chunks
@@ -1496,7 +1496,7 @@ class WaveletFeatures(Features):
                 if save_output!='none':
                     out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
         else:
-            p=Pool(nprocesses)
+            p=Pool(nprocesses, maxtasksperchild=1)
 
             #Pool and map can only really work with single-valued functions
             partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root)
