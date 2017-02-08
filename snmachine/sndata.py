@@ -854,9 +854,9 @@ class SDSS_Data(Dataset):
                 if s[5] == 'SNIa' or s[5] == 'pSNIa' or s[5] == 'zSNIa' or s[5] =='SNIa?': #all classifications of type Ia SNe - includes probable SNeIa
                     t = 1
                 elif s[5] == 'SNIb' or s[5] == 'SNIc' or s[5] == 'pSNIbc' or s[5] == 'zSNIbc':
-                    t = 2
-                elif s[5] == 'SNII' or s[5] == 'pSNII' or s[5] == 'zSNII':
                     t = 3
+                elif s[5] == 'SNII' or s[5] == 'pSNII' or s[5] == 'zSNII':
+                    t = 2
         return z , z_err, t
 
     def get_lightcurve(self, flname):
@@ -1017,7 +1017,7 @@ class SDSS_Simulations(Dataset):
             for i in range(len(d_nIa)):
                 SN = self.get_lightcurve(d_nIa[i])
                 if len(SN['mjd']) > 0 :  
-                    if SN.meta['type'] == 2:
+                    if SN.meta['type'] == 3:
                         data['%s'%SN.meta['snid']] = SN
                 else:
                     invalid+=1
@@ -1025,7 +1025,7 @@ class SDSS_Simulations(Dataset):
             for i in range(len(d_nIa)):
                 SN = self.get_lightcurve(d_Ia[i])
                 if len(SN['mjd']) > 0:
-                    if SN.meta['type'] == 3:
+                    if SN.meta['type'] == 2:
                         data['%s'%SN.meta['snid']] = SN
                 else:
                     invalid+=1
@@ -1072,16 +1072,16 @@ class SDSS_Simulations(Dataset):
             sntype =1
             dtype = 'phot'
         elif lc.meta['SNTYPE'] == 32 or lc.meta['SNTYPE'] == 33:
-            sntype =2
+            sntype =3
             dtype = 'spec'
         elif lc.meta['SNTYPE'] == 132 or lc.meta['SNTYPE'] == 133:
-            sntype = 2
+            sntype = 3
             dtype = 'phot'
         elif lc.meta['SNTYPE'] == 22:
-            sntype = 3
+            sntype = 2
             dtype = 'spec'
         elif lc.meta['SNTYPE'] == 122:
-            sntype = 3
+            sntype = 2
             dtype = 'phot'
         # get redshift - heliocentric is used where possible, otherwise a simulated heliocentric redshift is used
         z = -9
