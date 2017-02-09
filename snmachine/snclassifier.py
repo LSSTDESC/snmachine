@@ -371,7 +371,7 @@ class OptimisedClassifier():
                         activation=kwargs.pop('activation')
                     else:
                         activation='tanh'
-                    self.clf = MLPClassifier(algorithm=algo, hidden_layer_sizes=l,activation=activation,  **kwargs)
+                    self.clf = MLPClassifier(solver=algo, hidden_layer_sizes=l,activation=activation,  **kwargs)
                 elif classifier=='multiple_classifier':
                     pass
                 else:
