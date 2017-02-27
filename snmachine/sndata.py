@@ -522,7 +522,7 @@ class OpsimDataset(Dataset):
             List of a subset of object names. If not supplied, the full dataset will be used
 
         """
-        if ~isinstance(subset,basestring) and (all(isinstance(l,basestring) for l in subset)):
+        if (not isinstance(subset,basestring)) and (isinstance(subset,(tuple,list))) and (all(isinstance(l,basestring) for l in subset)):
             #We have to deal with separate Ia and nIa fits files
             Ia_head=os.path.join(folder,'LSST_Ia_HEAD.FITS')
             nIa_head=os.path.join(folder,'LSST_NONIa_HEAD.FITS')
