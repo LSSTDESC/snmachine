@@ -1823,9 +1823,9 @@ class WaveletFeatures(Features):
         mn=mn.flatten()
 
         #
-        # np.savetxt('PCA_vals.txt', vals)
-        # np.savetxt('PCA_vec.txt', vec)
-        # np.savetxt('PCA_mean.txt', mn)
+        np.savetxt('PCA_vals.txt', vals)
+        np.savetxt('PCA_vec.txt', vec)
+        np.savetxt('PCA_mean.txt', mn)
 
         #Actually fit the components
         ncomp=self.best_coeffs(vals)
