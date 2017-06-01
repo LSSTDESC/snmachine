@@ -12,7 +12,7 @@ good_nodes=[20, 21, 22, 23]
 #good_nodes=[]
 node_ind=0
 
-job_dir='/home/robert/data_sets/sne/sdss/full_dataset/jobs/'
+job_dir='/home/robert/data_sets/sne/sdss/jobs/'
 #job_dir='jobs/'
 if not os.path.exists(job_dir):
     os.makedirs(job_dir)
@@ -91,7 +91,7 @@ if dataset=='des':
 elif dataset=='sdss':
     survey_name='SMP_Data'
     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-    rootdir='/home/robert/data_sets/sne/sdss/full_dataset/'+survey_name+'/'
+    rootdir='/home/roberts/data_sets/sne/sdss/'+survey_name+'/'
     if subset=='spectro':
         objects=np.loadtxt(rootdir+'spectro.list', dtype='str')
     else:
