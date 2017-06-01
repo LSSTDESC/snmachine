@@ -86,7 +86,7 @@ def roc(pr, Yt, true_class=0):
 
     return fpr, tpr, auc
     
-def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, line_width=3):
+def plot_roc(fpr, tpr, auc, labels=[], cols=[], label_size=26, tick_size=18, line_width=3):
     """
     Plots a ROC curve or multiple curves. Can plot the results from multiple classifiers if fpr and tpr are arrays
     where each column corresponds to a different classifier.
