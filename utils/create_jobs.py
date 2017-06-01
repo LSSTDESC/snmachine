@@ -7,17 +7,17 @@ from __future__ import division
 import os
 import numpy as np
 
-#good_nodes=range(13, 18)+range(19,22) #We want to avoid node 18 (and any nodes that aren't free of course)
-good_nodes=[20, 21, 22, 23]
+good_nodes=range(13, 18)+range(19,23) #We want to avoid node 18 (and any nodes that aren't free of course)
+#good_nodes=[20, 21, 22, 23]
 #good_nodes=[]
 node_ind=0
 
-job_dir='/home/robert/data_sets/sne/sdss/jobs/'
+job_dir='/home/roberts/data_sets/sne/sdss/jobs/'
 #job_dir='jobs/'
 if not os.path.exists(job_dir):
     os.makedirs(job_dir)
     
-n12=0 #How many cores12 nodes requesting
+n12=12 #How many cores12 nodes requesting
 n24=len(good_nodes) #How many cores24 nodes requesting
 
 proc12=n12*12 #Total number of cores12 processors
@@ -56,9 +56,9 @@ def make_job_script(ppn, subset_name, extra_flags=''):
 #PBS -q %s\n \
 #PBS -l walltime=99:00:00\n' %(node_string,queue))
     fl.write('source .tcshrc\n')
-    fl.write('cd /home/roberts/sne/snmachine/	\n')
+    fl.write('cd /home/roberts/sne/snmachine.parallel/snmachine/	\n')
 
-    fl.write('python /home/roberts/sne/snmachine/utils/run_pipeline.py %s%s.txt %d %s %s %s\n' %(job_dir, subset_name, ppn, reds, train_choice, extra_flags))
+    fl.write('python /home/roberts/sne/snmachine.parallel/snmachine/utils/run_pipeline.py %s%s.txt %d %s %s %s\n' %(job_dir, subset_name, ppn, reds, train_choice, extra_flags))
     #fl.write('python /home/michelle/SN_Class/snmachine/run_pipeline.py %s%s.txt\n' %(job_dir, subset_name))
     fl.close()
     
@@ -74,7 +74,7 @@ def make_job_spawner(n12, n24, job_dir, subset_root):
         subs=subset_root %j
         fl.write('job%d=$(qsub %s)\n' %(j, os.path.join(job_dir, subs+'.pbs')))
         joblist+=':$job%d' %j
-    fl.write('qsub -W depend=afterok%s %s\n'%(joblist, os.path.join(job_dir, subs+'.pbs')) )
+    fl.write('qsub -W depend=afterok%s %s\n'%(joblist, os.path.join(job_dir, fullset_name+'.pbs')) )
     fl.close()
 
 

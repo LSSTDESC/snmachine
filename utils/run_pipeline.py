@@ -19,7 +19,7 @@ from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 
 dataset='sdss'
-laptop=True
+laptop=False
 template_model='Ia'
 
 nproc=2#number of processors
@@ -162,11 +162,11 @@ print 'Using redshift:', use_redshift, 'training choice', train_choice
 
 
 if laptop:
-    outdir=os.path.join(os.path.sep, 'home', 'robert', 'data_sets', 'sne','SN_output','output_%s_rand' %(run_name),'')
+    outdir=os.path.join(os.path.sep, 'home', 'robert', 'data_sets', 'sne','sn_output','output_%s_rand' %(run_name),'')
     final_outdir=outdir
     #outdir=os.path.join(os.path.sep, 'home', 'michelle', 'output_%s' %(run_name),'')
 else:
-    final_outdir=os.path.join(os.path.sep, 'home', 'roberts','data_sets', 'sne', 'sn_output','output_%s' %(run_name), '')
+    final_outdir=os.path.join(os.path.sep, 'home', 'roberts','data_sets', 'sne', 'sn_output_no_augment','output_%s' %(run_name), '')
     outdir=os.path.join(os.path.sep, 'state','partition1', 'roberts')
 
 #This is where to save intermediate output for the feature extraction method. In some cases (such as the wavelets), these
@@ -282,7 +282,7 @@ elif 'lsst' in dataset or dataset=='sdss':
             rt=os.path.join(os.path.sep, 'home', 'roberts','data_sets', 'sne','sdss', 'SMP_Data','')
         d=sndata.SDSS_Data(rt,subset=subset)
         if train_choice=='non-repr':
-            training_names=np.loadtxt(rt+'spectro.list')
+            training_names=np.loadtxt(rt+'spectro.list', dtype='str')
         else:
             training_names=None
 
@@ -309,8 +309,20 @@ elif 'lsst' in dataset or dataset=='sdss':
     training_set=np.array(training_set,dtype='str')
     test_set=np.array(test_set,dtype='str')
 
-    train_inds=[np.where(d.object_names==x)[0][0] for x in training_set]
-    val_inds=[np.where(d.object_names==x)[0][0] for x in test_set]
+    train_inds=np.intersect1d(d.object_names, training_set)
+    val_inds=np.intersect1d(d.object_names, test_set)
+#    print(train_inds)
+#    print
+#    print(val_inds)
+#    if len(np.intersect1d(d.object_names, training_set))>0:
+#        train_inds=[np.where(d.object_names==x)[0][0] for x in training_set]
+#    else:
+#        train_inds=[]
+#    if len(np.intersect1d(d.object_names, test_set))>0:
+#        val_inds=[np.where(d.object_names==x)[0][0] for x in test_set]
+#    else:
+#        val_inds=[]
+
     #
     # Ytrain=types[train_inds]
     # Yval=types[val_inds]
