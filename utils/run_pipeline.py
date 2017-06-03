@@ -28,12 +28,12 @@ lim=10000000 #only use these many objects
 #feature_sets=['templates','newling', 'karpenka', 'wavelets']
 #feature_sets=['templates','newling', 'karpenka']
 #feature_sets=['templates']
-#feature_sets=['wavelets']
-feature_sets=['templates', 'wavelets']
+feature_sets=['wavelets']
+#feature_sets=['templates', 'wavelets']
 
 #cls=['knn', 'nb', 'neural_network','svm','boost_dt','random_forest']
 #cls=['knn', 'nb', 'neural_network','svm','random_forest']
-cls=['boost_dt']
+cls=['boost_dt', 'knn', 'svm', 'random_forest']
 
 use_redshift=False
 
@@ -348,6 +348,14 @@ def copy_files():
 
     print 'Time taken for file copying', time.time()-t1
 
+def append_line(flname):
+    #Append one line to the logfile that contains all file names of successfully extracted features.
+    #Rerunning the pipeline for classification will collate all feature files listed in there.
+    logfile=open(os.path.join(final_outdir, 'features/extracted_feature_filenames.txt'), 'a')
+    logfile.write(os.path.basename(flname)+'\n')
+    logfile.close()
+
+
 if 'no-xtr' not in sys.argv:
 
     # ### Templates feature extraction ### #
@@ -384,7 +392,7 @@ if 'no-xtr' not in sys.argv:
         #Copy across intermediate files from temp directory
         if laptop==False and outdir != final_outdir:
             copy_files()
-
+        append_line(flname)
 
     # ### Parametric feature extraction ### #
 
@@ -413,6 +421,7 @@ if 'no-xtr' not in sys.argv:
         #Copy across intermediate files from temp directory
         if laptop==False and outdir != final_outdir:
             copy_files()
+        append_line(flname)
 
     # Karpenka parameterisation
 
@@ -437,6 +446,7 @@ if 'no-xtr' not in sys.argv:
         #Copy across intermediate files from temp directory
         if laptop==False and outdir != final_outdir:
             copy_files()
+        append_line(flname)
 
 
     # ### Wavelet feature extraction ### #
@@ -454,9 +464,9 @@ if 'no-xtr' not in sys.argv:
                                                       output_root=out_inter, nprocesses=nproc)
             wavelet_features.write(flname,format='ascii')
 
-            subprocess.call(['cp','PCA_vals.txt',out_features+'%s_PCA_vals.txt' %run_name])
-            subprocess.call(['cp','PCA_vec.txt',out_features+'%s_PCA_vec.txt' %run_name])
-            subprocess.call(['cp','PCA_mean.txt',out_features+'%s_PCA_mean.txt' %run_name])
+            subprocess.call(['cp',out_features+'PCA_vals.txt',out_features+'%s_%s_PCA_vals.txt' %(run_name, subset_name)])
+            subprocess.call(['cp',out_features+'PCA_vec.txt',out_features+'%s_%s_PCA_vec.txt' %(run_name, subset_name)])
+            subprocess.call(['cp',out_features+'PCA_mean.txt',out_features+'%s_%s_PCA_mean.txt' %(run_name, subset_name)])
 
         blah=wavelet_features['Object'].astype(str)
         wavelet_features.replace_column('Object', blah)
@@ -466,21 +476,17 @@ if 'no-xtr' not in sys.argv:
         
             xmin=0
             xmax=d.get_max_length()
-            vals=np.loadtxt('%s_PCA_vals.txt' %run_name)
-            vec=np.loadtxt('%s_PCA_vec.txt' %run_name)
-            mn=np.loadtxt('%s_PCA_mean.txt' %run_name)
+            vals=np.loadtxt(out_features+'%s_%s_PCA_vals.txt' %(run_name, subset_name))
+            vec=np.loadtxt(out_features+'%s_%s_PCA_vec.txt' %(run_name, subset_name))
+            mn=np.loadtxt(out_features+'%s_%s_PCA_mean.txt' %(run_name, subset_name))
         
             d.set_model(waveletFeat.fit_sn,wavelet_features,vec,  mn, xmin, xmax,d.filter_set)
             d.plot_all()
         #Copy across intermediate files from temp directory
         if laptop==False and outdir != final_outdir:
             copy_files()
+        append_line(flname)
 
-    #Append one line to the logfile that contains all file names of successfully extracted features.
-    #Rerunning the pipeline for classification will collate all feature files listed in there.
-    logfile=open(os.path.join(final_outdir, 'extracted_feature_filenames.txt'), 'a')
-    logfile.write(flname+'\n')
-    logfile.close()
 
 else:
     #This part gets executed if we run the pipeline with the flag 'no-extr'. We read in the feature files that 
@@ -499,7 +505,7 @@ else:
         wavelet_features=[]
 
     for filename in logfile.readlines():
-        new_feat_subset=Table.read(filename, format='ascii')[:lim]
+        new_feat_subset=Table.read(os.path.join(final_outdir,filename), format='ascii')[:lim]
         if 'templates' in feature_sets and 'templates' in filename:
             if len(template_features)==0:
                 template_features=new_feat_subset
@@ -516,6 +522,8 @@ else:
             else:
                 karpenka_features=vstack(karpenka_features,new_feat_subset)
         if 'wavelets' in feature_sets and 'wavelets' in filename:
+            #BLATANTLY AND FLAGRANTLY WRONG 
+            #please dont look at this before I push a corrected version 
             if len(wavelet_features)==0:
                 wavelet_features=new_feat_subset
             else:

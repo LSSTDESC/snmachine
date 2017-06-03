@@ -1347,7 +1347,7 @@ class WaveletFeatures(Features):
         save_output : bool, optional
             Whether or not to save the output
         output_root : str, optional
-         Output directory
+            Output directory
         nprocesses : int, optional
             Number of processors to use for parallelisation (shared memory only)
         restart : str, optional
@@ -1362,7 +1362,7 @@ class WaveletFeatures(Features):
             Table of features (first column object names, the rest are the PCA coefficient values)
         """
 
-        if save_output is not 'none':
+        if save_output:
             subprocess.call(['mkdir', output_root])
 
         xmin=0
@@ -1383,6 +1383,11 @@ class WaveletFeatures(Features):
         self.PCA_eigenvals = vals
         self.PCA_eigenvectors=vec
         self.PCA_mean=mn
+
+        if save_output is not None:
+            np.savetxt('PCA_vals.txt', vals)
+            np.savetxt('PCA_vec.txt', vec)
+            np.savetxt('PCA_mean.txt', mn)
 
         return self.features
 
@@ -1823,9 +1828,9 @@ class WaveletFeatures(Features):
         mn=mn.flatten()
 
         #
-        np.savetxt('PCA_vals.txt', vals)
-        np.savetxt('PCA_vec.txt', vec)
-        np.savetxt('PCA_mean.txt', mn)
+        #np.savetxt('PCA_vals.txt', vals)
+        #np.savetxt('PCA_vec.txt', vec)
+        #np.savetxt('PCA_mean.txt', mn)
 
         #Actually fit the components
         ncomp=self.best_coeffs(vals)
