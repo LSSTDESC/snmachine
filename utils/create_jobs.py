@@ -7,7 +7,7 @@ from __future__ import division
 import os
 import numpy as np
 
-good_nodes=range(13, 18)+range(19,23) #We want to avoid node 18 (and any nodes that aren't free of course)
+good_nodes=range(13, 18)+range(19,24) #We want to avoid node 18 (and any nodes that aren't free of course)
 #good_nodes=[20, 21, 22, 23]
 #good_nodes=[]
 node_ind=0
@@ -17,7 +17,7 @@ job_dir='/home/roberts/data_sets/sne/sdss/jobs/'
 if not os.path.exists(job_dir):
     os.makedirs(job_dir)
     
-n12=12 #How many cores12 nodes requesting
+n12=0 #How many cores12 nodes requesting
 n24=len(good_nodes) #How many cores24 nodes requesting
 
 proc12=n12*12 #Total number of cores12 processors
@@ -131,7 +131,7 @@ for i in range(n12):
 for j in range(n24):
     subs=subset_name %(j+len(obj12))
     np.savetxt(job_dir+subs+'.txt', obj24[j], fmt='%s')
-    make_job_script(24,subs, extra_flags='no_class')
+    make_job_script(24,subs, extra_flags='no-class')
 
 #This is the job that does the classification, and is executed on one single node only
 np.savetxt(job_dir+fullset_name+'.txt', objects, fmt='%s')
