@@ -142,8 +142,4 @@ elif n12>0:
 else:
     print('You gave me no nodes to work on. Do not do that again.')
 
-
-logfname=os.path.join(os.path.sep, rootdir, 'features', 'extracted_feature_filenames.txt', '')
-if os.path.exists(logfname):
-    os.remove(logfname)    
 make_job_spawner(n12, n24, job_dir, subset_name)
