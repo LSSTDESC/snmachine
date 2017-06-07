@@ -696,8 +696,8 @@ if len(cls)>0 and 'no-class' not in sys.argv:
         #new_feats = new_feats['Object', 'z','t0', 'Type']
         new_feats.write('/state/partition1/roberts/thesearethefeaturesafterreadin', format='ascii')
 
-        if np.sort(d.object_names) != np.sort(np.array(new_feats['Object'])):
-            print('Alarm!')
+#        if np.sort(d.object_names) != np.sort(np.array(new_feats['Object'])):
+#            print('Alarm!')
 
 
         Xtrain = new_feats[np.in1d(new_feats['Object'], training_set)]
@@ -716,6 +716,7 @@ if len(cls)>0 and 'no-class' not in sys.argv:
 
         run_classifier(Xtrain,Ytrain,Xval,
                            Yval,feature_set='templates',read_from_output=read_from_output, nprocesses=nproc, out_root=out_class)
+        copy_files()
 
     if 'newling' in feature_sets:
         flname='output_%s_%s.txt' %('newling', run_name)
@@ -733,6 +734,7 @@ if len(cls)>0 and 'no-class' not in sys.argv:
 
         run_classifier(Xtrain,Ytrain,Xval,
                            Yval,feature_set='newling',read_from_output=read_from_output, nprocesses=nproc, out_root=out_class)
+        copy_files()
 
     if 'karpenka' in feature_sets:
         flname='output_%s_%s.txt' %('karpenka', run_name)
@@ -749,7 +751,7 @@ if len(cls)>0 and 'no-class' not in sys.argv:
 
         run_classifier(Xtrain,Ytrain,Xval,
                            Yval,feature_set='karpenka',read_from_output=read_from_output, nprocesses=nproc, out_root=out_class)
-
+        copy_files()
 
     if 'wavelets' in feature_sets:
         flname='output_%s_%s.txt' %('wavelets', run_name)
@@ -770,4 +772,4 @@ if len(cls)>0 and 'no-class' not in sys.argv:
 
         run_classifier(Xtrain,Ytrain,Xval,
                            Yval,feature_set='wavelets',read_from_output=read_from_output, nprocesses=nproc, out_root=out_class)
-
+        copy_files()
