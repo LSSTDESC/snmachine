@@ -4,7 +4,7 @@ Welcome to the pre-release of snmachine! This is a flexible python library for r
 
 ## Installation
 
-Unfortunately, at the moment snmachine is not python 3 compatible. Please stick to python 2.7.
+Unfortunately, the main branch of snmachine is not python 3 compatible. The 'python3' branch is currently in the testing phase, so use at your own risk!
 
 There are two possible ways to set up snmachine:
 
