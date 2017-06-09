@@ -2,10 +2,9 @@
 Module for feature extraction on supernova light curves.
 """
 
-from __future__ import division, print_function
+from __future__ import division
 import numpy as np
-from . import parametric_models
-import sys, pywt, time, subprocess, os, sncosmo
+import parametric_models, sys, pywt, time, subprocess, os, sncosmo
 from scipy.interpolate import interp1d
 from gapp import dgp
 from astropy.table import Table, vstack, hstack, join
@@ -301,8 +300,8 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
                             np.save(outfile, x)
                             os.system('rm %s' %infile)
                         except:
-                            print ('ERROR reading file', infile)
-                            print ('File unconverted')
+                            print 'ERROR reading file', infile
+                            print 'File unconverted'
     #            stats=An.get_stats()['marginals']
     #            sig_upper=[stats[p]['1sigma'][1]-best_params[p] for p in range(len(stats))]
     #            sig_lower=[best_params[p]-stats[p]['1sigma'][0] for p in range(len(stats))]
@@ -321,9 +320,9 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
     
     except:
         #Sometimes things just break
-        print ('ERROR in', obj)
-        print (sys.exc_info()[0])
-        print (sys.exc_info()[1])
+        print 'ERROR in', obj
+        print sys.exc_info()[0]
+        print sys.exc_info()[1]
         traceback.print_tb(sys.exc_info()[2])
         
         return None
@@ -548,9 +547,9 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
     
     except:
         #Sometimes things just break
-        print ('ERROR in', obj)
-        print (sys.exc_info()[0])
-        print (sys.exc_info()[1])
+        print 'ERROR in', obj
+        print sys.exc_info()[0]
+        print sys.exc_info()[1]
         traceback.print_tb(sys.exc_info()[2])
         
         return None
@@ -574,7 +573,7 @@ def output_time(tm):
         out = '%.2f minutes' % (mins)
     else:
         out = '%.2f seconds' % (secs)
-    print ('Time taken is', out)
+    print 'Time taken is', out
 
 
 def get_MAP(chain_name):
@@ -629,7 +628,7 @@ class Features:
             Table with the reduced Chi2 for each object
         """
         if len(d.models)==0:
-            print ('Call Dataset.set_models first.')
+            print 'Call Dataset.set_models first.'
             return None
         filts=np.unique(d.data[d.object_names[0]]['filter'])
         filts=np.array(filts).tolist()
@@ -688,13 +687,13 @@ class Features:
         if dof<=0:
             dof=1
         chi2_limit=stats.chi2.ppf(1-self.p_limit, dof)
-        print (chi2_limit)
-        print (chi2.min(), chi2.max())
+        print chi2_limit
+        print chi2.min(), chi2.max()
         chi2=np.sort(chi2)
         p_value=np.count_nonzero(chi2>chi2_limit)/len(chi2)
         
         if p_value>self.p_limit:
-            print ('Model fit unsatisfactory, p value=', p_value)
+            print 'Model fit unsatisfactory, p value=', p_value
         return p_value
     
     def convert_astropy_array(self, tab):
@@ -737,13 +736,13 @@ class TemplateFeatures(Features):
             try:
                 import pymultinest
             except ImportError:
-                print ('Nested sampling selected but pymultinest is not installed. Defaulting to least squares.')
+                print 'Nested sampling selected but pymultinest is not installed. Defaulting to least squares.'
                 sampler='leastsq'
         elif sampler=='mcmc':
             try:
                 import emcee
             except ImportError:
-                print ('MCMC sampling selected but emcee is not installed. Defaulting to least squares.')
+                print 'MCMC sampling selected but emcee is not installed. Defaulting to least squares.'
                 sampler='leastsq'
                 
         self.sampler=sampler
@@ -780,7 +779,7 @@ class TemplateFeatures(Features):
 
         """
         subprocess.call(['mkdir', chain_directory])
-        print ('Fitting templates using', self.sampler, '...')
+        print 'Fitting templates using', self.sampler, '...'
         all_output=[]
         t1=time.time()
         for mod_name in self.model_names:
@@ -807,7 +806,7 @@ class TemplateFeatures(Features):
             if nprocesses<2:
                 for obj in d.object_names:
                     if k%100==0:
-                        print (k, 'objects fitted')
+                        print k, 'objects fitted'
                     lc=d.data[obj]
                     
                     if self.sampler=='mcmc':
@@ -868,7 +867,7 @@ class TemplateFeatures(Features):
                     else:
                         all_output=vstack((all_output, output))
                         
-        print (len(all_output), 'objects fitted')
+        print len(all_output), 'objects fitted'
         output_time(time.time()-t1)
         return all_output
         
@@ -894,7 +893,7 @@ class TemplateFeatures(Features):
         params=np.array([tab[c] for c in tab.columns[1:]]).flatten()
              
         if len(params)==0:
-            print ('No feature set found for', obj)
+            print 'No feature set found for', obj
             return None
         
         model_name=self.templates[self.model_names[0]]
@@ -923,6 +922,10 @@ class TemplateFeatures(Features):
             #newtable=Table([x, ynew, [filt]*len(x)], names=labels)
             output=vstack((output, newtable))
         return output
+        
+        
+
+
 
     def registerBands(self, dirname, prefix=None, suffix=None):
         """Register LSST bandpasses with sncosmo.
@@ -964,16 +967,16 @@ class ParametricFeatures(Features):
             else:
                 self.model=self.model_choices[model_choice]()
         except KeyError:
-            print ('Your selected model is not in the parametric_models package. Either choose an existing model,  or implement a new one in that package.')
-            print ('Make sure any new models are included in the model_choices dictionary in the ParametricFeatures class.')
+            print 'Your selected model is not in the parametric_models package. Either choose an existing model,  or implement a new one in that package.'
+            print 'Make sure any new models are included in the model_choices dictionary in the ParametricFeatures class.'
             sys.exit()
             
         if sampler=='nested' and not has_multinest:
-            print ('Nested sampling selected but pymultinest is not installed. Defaulting to least squares.')
+            print 'Nested sampling selected but pymultinest is not installed. Defaulting to least squares.'
             sampler='leastsq'
                 
         elif sampler=='mcmc' and not has_emcee:
-            print ('MCMC sampling selected but emcee is not installed. Defaulting to least squares.')
+            print 'MCMC sampling selected but emcee is not installed. Defaulting to least squares.'
             sampler='leastsq'
             
         self.sampler=sampler
@@ -1033,7 +1036,7 @@ class ParametricFeatures(Features):
             k=0
             for obj in d.object_names:
                 if k%100==0:
-                    print (k, 'objects fitted')
+                    print k, 'objects fitted'
                 if self.sampler=='leastsq':
                     newtable=_run_leastsq(obj, d, self.model, n_attempts)
                 elif self.sampler=='mcmc':
@@ -1067,14 +1070,14 @@ class ParametricFeatures(Features):
                     out=p.map(partial_func, objs_subset)
                     for i in range(0, len(out)):
                         if out[i]==None:
-                            print ('Fitting failed for', objs_subset[i])
+                            print 'Fitting failed for', objs_subset[i]
                         else:
                             if len(output)==0:
                                 output=out[i]
                             else:
                                 output=vstack((output, out[i]))
                     k+=len(objs_subset)
-        print (len(output), 'objects fitted')
+        print len(output), 'objects fitted'
         output_time(time.time()-t1)
         return output
         
@@ -1099,7 +1102,7 @@ class ParametricFeatures(Features):
         params=features[features['Object']==obj]
         
         if len(params)==0:
-            print ('No feature set found for', obj)
+            print 'No feature set found for', obj
             return None
         
         filts=np.unique(lc['filter'])
@@ -1215,7 +1218,7 @@ class ParametricFeatures(Features):
                 row+=[0]*len(self.model.param_names) #I'm not sure if it makes the most sense to fill in missing values with zeroes...
         output.add_row(row)
 
-        print ('Time per filter', (time.time()-t1)/len(d.filter_set))
+        print 'Time per filter', (time.time()-t1)/4
         return output
     
 
@@ -1270,7 +1273,7 @@ class WaveletFeatures(Features):
         self.wavelet_list=pywt.wavelist() #All possible families
 
         if wavelet not in self.wavelet_list:
-            print ('Wavelet not recognised in pywt')
+            print 'Wavelet not recognised in pywt'
             sys.exit()
 
         #If the user does not specify a level of depth for the wavelet, automatically calculate it
@@ -1366,7 +1369,7 @@ class WaveletFeatures(Features):
         try:
             pca_comps=comps[comps['Object']==obj]
         except KeyError:
-            print ('No feature set found for', obj)
+            print 'No feature set found for', obj
             return None
 
         new_comps=np.array([pca_comps[c] for c in pca_comps.columns[1:]]).flatten()
@@ -1384,7 +1387,7 @@ class WaveletFeatures(Features):
                 filt_coeffs=filt_coeffs.reshape(self.mlev, 2, self.ngp, order='C')
                 ynew=self.iswt(filt_coeffs, self.wav)
 
-                newtable=Table([xnew, ynew, [filter_set[i]]*self.ngp], names=['mjd', 'flux', 'filter'], dtype=['f', 'f', 'S32'])
+                newtable=Table([xnew, ynew, [filter_set[i]]*self.ngp], names=['mjd', 'flux', 'filter'])
                 if len(output)==0:
                     output=newtable
                 else:
@@ -1404,14 +1407,14 @@ class WaveletFeatures(Features):
             Location of GP objects
         """
 
-        print ('Restarting from stored Gaussian Processes...')
+        print 'Restarting from stored Gaussian Processes...'
         for obj in d.object_names:
             fname=os.path.join(output_root, 'gp_'+obj)
             try:
                 tab=Table.read(fname, format='ascii')
                 d.models[obj]=tab
             except IOError:
-                print ('IOError, file ',fname, 'does not exist.')
+                print 'IOError, file ',fname, 'does not exist.'
 
     def restart_from_wavelets(self, d, output_root):
         """
@@ -1433,7 +1436,7 @@ class WaveletFeatures(Features):
             A similar numpy array storing the (assuming Gaussian) error on each coefficient.
         """
 
-        print ('Restarting from stored wavelets...')
+        print 'Restarting from stored wavelets...'
         nfilts=len(d.filter_set)
         wavout=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts]) #This is just a very big array holding coefficients in memory
         wavout_err=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts])
@@ -1455,7 +1458,7 @@ class WaveletFeatures(Features):
                     wavout_err[i, j*n:(j+1)*n]=newcoeffs_err.flatten('F')
 
             except IOError:
-                print ('IOError, file ',fname, 'does not exist.')
+                print 'IOError, file ',fname, 'does not exist.'
 
         return wavout, wavout_err
 
@@ -1482,11 +1485,11 @@ class WaveletFeatures(Features):
         nprocesses : int, optional
             Number of processors to use for parallelisation (shared memory only)
         """
-        print ('Performing Gaussian process regression')
+        print 'Performing Gaussian process regression'
         t1=time.time()
         #Check for parallelisation
         if nprocesses==1:
-            for i in range(len(d.object_names)):
+            for i in xrange(len(d.object_names)):
                 obj=d.object_names[i]
                 out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root)
                 d.models[obj]=out
@@ -1498,12 +1501,12 @@ class WaveletFeatures(Features):
             #Pool and map can only really work with single-valued functions
             partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root)
 
-            out=p.map(partial_GP, d.get_object_names())
+            out=p.map(partial_GP, d.data.keys())
             for i in range(len(out)):
-                obj=d.get_object_names()[i]
+                obj=d.data.keys()[i]
                 d.models[obj]=out[i]
 
-        print ('Time taken for Gaussian process regression', time.time()-t1)
+        print 'Time taken for Gaussian process regression', time.time()-t1
 
     def GP(self, obj, d, ngp=200, xmin=0, xmax=170, initheta=[500, 20]):
         """
@@ -1568,7 +1571,7 @@ class WaveletFeatures(Features):
 
             #Create the column names (follows pywt convention)
             labels=[]
-            for i in range(len(coeffs)):
+            for i in xrange(len(coeffs)):
                 labels.append('cA%d' %(len(coeffs)-i))
                 labels.append('cD%d' %(len(coeffs)-i))
 
@@ -1619,7 +1622,7 @@ class WaveletFeatures(Features):
             A numpy array storing the (assuming Gaussian) error on each coefficient.
         """
 
-        print ('Performing wavelet decomposition')
+        print 'Performing wavelet decomposition'
 
         nfilts=len(d.filter_set)
         wavout=np.zeros([len(d.object_names), self.ngp*2*mlev*nfilts]) #This is just a big array holding coefficients in memory
@@ -1644,7 +1647,7 @@ class WaveletFeatures(Features):
                     newcoeffs_err=np.array([coeffs_err[c] for c in coeffs_err.columns]).T
                     wavout[i, j*n:(j+1)*n]=newcoeffs.flatten('F')
                     wavout_err[i, j*n:(j+1)*n]=newcoeffs_err.flatten('F')
-        print ('Time for wavelet decomposition', time.time()-t1)
+        print 'Time for wavelet decomposition', time.time()-t1
 
         return wavout, wavout_err
 
@@ -1718,7 +1721,7 @@ class WaveletFeatures(Features):
                 return i
                 break
 
-        print ("No dimensionality reduction achieved. All components of the PCA are required.")
+        print "No dimensionality reduction achieved. All components of the PCA are required."
         return -1
 
     def project_pca(self, X, eig_vec):
@@ -1762,7 +1765,7 @@ class WaveletFeatures(Features):
 
         """
 
-        print ('Running PCA...')
+        print 'Running PCA...'
         t1=time.time()
         #We now run PCA on this big matrix
         vals, vec, mn=self.pca(wavout)
@@ -1788,7 +1791,7 @@ class WaveletFeatures(Features):
         objnames=Table(object_names, names=['Object'])
         wavs=hstack((objnames, wavs))
         #wavs.write('wavelet_features.dat', format='ascii')
-        print ('Time for PCA', time.time()-t1)
+        print 'Time for PCA', time.time()-t1
         return wavs,vals,vec,mn
 
     def iswt(self, coefficients, wavelet):
@@ -1840,3 +1843,15 @@ class WaveletFeatures(Features):
                 output[indices] = (x1 + x2)/2.
 
         return output
+        
+       
+
+        
+        
+        
+        
+        
+        
+
+
+

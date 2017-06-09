@@ -1,7 +1,6 @@
 """
 Module for parametric models for use in snfeatures module
 """
-from __future__ import print_function
 import numpy as np
 
 class NewlingModel:
@@ -47,7 +46,7 @@ class NewlingModel:
 
         #Fits a cubic spine between only two points given x and y input and their derivatives and evaluates it on x_eval
         if len(x)>2:
-            print ('this is only appropriate for 2 datapoints')
+            print 'this is only appropriate for 2 datapoints'
             return 0
             
         x1, x2=x

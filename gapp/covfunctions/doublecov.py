@@ -24,7 +24,7 @@
 
 
 
-from . import cov
+import cov
 import numpy as np
 from numpy import concatenate, reshape
 import warnings

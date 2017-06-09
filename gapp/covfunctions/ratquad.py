@@ -25,7 +25,7 @@
 
 
 
-from . import cov
+import cov
 import numpy as np
 from numpy import array, exp, log, reshape, sqrt
 import warnings

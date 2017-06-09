@@ -58,7 +58,7 @@ fstd           Standard deviation of the reconstructed function
 reconstruction Array containing Xstar, fmean and fstd
 """
 
-from . import covariance
+import covariance
 import numpy as np
 from numpy import append, array, concatenate, diagonal, dot, eye, exp, \
     flatnonzero, loadtxt, log, mean, ones, pi, reshape, resize, shape, sign, \

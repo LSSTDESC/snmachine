@@ -23,7 +23,7 @@
 """
 
 
-from . import dgp, covariance
+import dgp, covariance
 import numpy as np
 from numpy import array, concatenate, ones, random, reshape, shape, zeros
 import multiprocessing
@@ -201,9 +201,7 @@ class MCMCDGaussianProcess(dgp.DGaussianProcess):
 
     def mcmc_sampling(self):
         print("start burn-in")
-        nb=1000
-        (pos, prob, state) = self.sampler.run_mcmc(self.pos, nb)
-        print('length: %d'%nb)
+        (pos, prob, state) = self.sampler.run_mcmc(self.pos, 50)
         try:
             maxa = max(self.sampler.acor)
             if (shape(self.sampler.chain)[1] < self.nacor * maxa):

@@ -30,8 +30,8 @@
 # dm_dgp: reconstruction of f'(x) using measurements of f(x) and f'(x)
 # dm_d2gp: reconstruction of f''(x) using measurements of f(x) and f'(x)
 
-from . import gp
-from . import covariance
+import gp
+import covariance
 import numpy as np
 from numpy import append, array, concatenate, diagonal, dot, eye, \
     flatnonzero, linalg, log, pi, reshape, resize, shape, sqrt, take, \
