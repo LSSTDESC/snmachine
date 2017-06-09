@@ -8,23 +8,24 @@ import os
 import numpy as np
 
 #good_nodes=range(13, 18)+range(19,22) #We want to avoid node 18 (and any nodes that aren't free of course)
-good_nodes=range(13,16)
-#good_nodes=[]
+#good_nodes=range(13,17)
+good_nodes=[24]
 node_ind=0
 
-job_dir='/home/mlochner/sn/jobs/'
+job_dir='/home/robert/data_sets/sne/sdss/full_dataset/jobs/'
 #job_dir='jobs/'
 if not os.path.exists(job_dir):
     os.makedirs(job_dir)
     
-n12=10 #How many cores12 nodes requesting
+n12=0 #How many cores12 nodes requesting
 n24=len(good_nodes) #How many cores24 nodes requesting
 
 proc12=n12*12 #Total number of cores12 processors
 proc24=n24*24
 
-dataset='lsst_ddf'
+dataset='sdss'
 subset='none'
+train_choice='non-repr'
 
 use_redshift=False
 
@@ -52,9 +53,9 @@ def make_job_script(ppn, subset_name):
 #PBS -q %s\n \
 #PBS -l walltime=99:00:00\n' %(node_string,queue))
     fl.write('source .tcshrc\n')
-    fl.write('cd /home/mlochner/sn\n')
+    fl.write('cd /home/robert/temp/snmachine/examples/\n')
 
-    fl.write('python /home/mlochner/snmachine/utils/run_pipeline.py %s%s.txt %d %s\n' %(job_dir, subset_name, ppn,reds))
+    fl.write('python3 /home/robert/temp/snmachine/utils/run_pipeline.py %s%s.txt %d %s %s\n' %(job_dir, subset_name, ppn, reds, train_choice))
     #fl.write('python /home/michelle/SN_Class/snmachine/run_pipeline.py %s%s.txt\n' %(job_dir, subset_name))
     fl.close()
     
@@ -70,32 +71,36 @@ def make_job_spawner(n12, n24, job_dir, subset_root):
     fl.close()
 
 
+if dataset=='spcc':
+    survey_name='SPCC_SUBSET'
+    rootdir='/home/robert/data_sets/sne/spcc/'+survey_name+'/'
+    objects=np.genfromtxt(rootdir+'SPCC_SUBSET.LIST', dtype='str')
 
-if dataset=='des':
+elif dataset=='des':
     survey_name='SIMGEN_PUBLIC_DES'
     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-    rootdir='/home/mlochner/sn/'+survey_name+'/'
+    rootdir='/home/robert/data_sets/sne/spcc/'+survey_name+'/'
     if subset=='spectro':
-        objects=np.loadtxt('DES_spectro.list', dtype='str')
+        objects=np.genfromtxt(rootdir+'DES_spectro.list', dtype='str')
     else:
-        objects=np.loadtxt(rootdir+survey_name+'.LIST', dtype='str') #Our list of objects to split up
+        objects=np.genfromtxt(rootdir+survey_name+'.LIST', dtype='str') #Our list of objects to split up
 
 elif dataset=='sdss':
     survey_name='SMP_Data'
     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-    rootdir='/home/mlochner/sn/'+survey_name+'/'
+    rootdir='/home/robert/data_sets/sne/sdss/full_dataset/'+survey_name+'/'
     if subset=='spectro':
-        objects=np.loadtxt(rootdir+'spectro.list', dtype='str')
+        objects=np.genfromtxt(rootdir+'spectro.list', dtype='str')
     else:
-        objects=np.loadtxt(rootdir+'sdss_classes.list', dtype='str',skiprows=1)[:,0] #Our list of objects to split up
+        objects=np.genfromtxt(rootdir+'sdss_classes.list', dtype='str') #Our list of objects to split up
 
 elif 'lsst' in dataset:
     if dataset=='lsst_main':
         survey_name='ENIGMA_1189_10YR_MAIN'
     else:
         survey_name='ENIGMA_1189_10YR_DDF'
-    rootdir='/home/mlochner/sn/'+survey_name+'/'
-    objects=np.loadtxt(rootdir+'high_SNR_snids.txt', dtype='str')
+    rootdir='/home/robert/data_sets/sne/lsst/'+survey_name+'/'
+    objects=np.genfromtxt(rootdir+'high_SNR_snids.txt', dtype='str')
     #objects=np.loadtxt('missing_objects.txt',dtype='str')
     
 nobj=len(objects) #Total number of objects
@@ -105,9 +110,14 @@ nobj12=(int)(nobj/(proc12+proc24)*proc12)
 nobj24=nobj-nobj12
 
 #Split the data as evenly as possible amongst processors
-obj12=np.array_split(objects[:nobj12], n12)
+if n12>0:
+    obj12=np.array_split(objects[:nobj12], n12)
+else:
+    obj12=[]
 if n24>0:
-	obj24=np.array_split(objects[nobj12:], n24)
+    obj24=np.array_split(objects[nobj12:], n24)
+else:
+    obj24=[]
 
 #We write each set of objects to file and use it as an argument to run_pipeline.py to find the subset
 for i in range(n12):
