@@ -1,0 +1,4 @@
+examples/.ipynb_checkpoints/*
+examples/SPCC_SUBSET/*
+*.pyc
+examples/output*

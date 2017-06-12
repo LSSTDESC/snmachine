@@ -11,10 +11,11 @@ import sys, sncosmo, os
 from random import shuffle,sample
 from scipy import interpolate
 import sncosmo, math
+import json
 
 #Colours for graphs
 colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00','desz':'k',
-            'lssty':'#2727c1','lsstu':'#6614de','lsstg':'#007718','lsstr':'#b30100','lssti':'#d35c00','lsstz':'k','lsstY':'#2727c1'}
+            'lssty':'#2727c1','lsstu':'#6614de','lsstg':'#007718','lsstr':'#b30100','lssti':'#d35c00','lsstz':'k','lsstY':'#2727c1','g':'#007718','r':'#b30100','i':'#d35c00'}
 sntypes={1:'Ia',2:'II',21:'IIn',22:'IIP',23:'IIL',3:'Ibc',32:'Ib',33:'Ic',66:'other'}
 markers={'desg':'^', 'desr':'o', 'desi':'s', 'desz':'*'}
 labels={'desg':'g', 'desr':'r', 'desi':'i', 'desz':'z'}
@@ -116,7 +117,7 @@ class Dataset:
         print '%d objects read into memory.' %len(self.data)
         #We create an optional model set which can be set by whatever feature class used
         self.models={}
-        
+
     def get_object_names(self, subset='none'):
         """
         Gets a list of the names of the files within the dataset.
@@ -234,7 +235,6 @@ class Dataset:
 
         #This selects the filters from the possible set that this object has measurements in and maintains the order
         filts=sorted(set(self.filter_set) & set(np.unique(lc['filter'])), key = self.filter_set.index)
-        
         #Keep track of the min and max values on the plot for resizing axes
         min_x=np.inf
         max_x=-np.inf
@@ -1107,10 +1107,183 @@ class SDSS_Simulations(Dataset):
 
 
 
-            
+class OSC_subset(Dataset):
+    """
+    Class to read in parsed files from Open Supernova Catalog (OSC)
+    Files that make it here have at a minimum 10 observations and have a determined type
 
+    The filter set is taken to be the DES, but at the present, this is done by a crude bandmapping method
+    that uses binning to determine if the original band falls within a certain range of the DES filters
+
+    For more information, see https://github.com/tayebzaidi/HonorsThesisTZ
+
+    This dataset class does not support subsetting or classification at the present time, and the subset parameter is maintained
+    only for compatibility
+
+    Data Schema for the OSC derived lightcurves (the data products of the above github work):
+        Nested dict:
+            band (ugrizY)
+                'mjd'  -- MJD of the object in the given band
+                'mag'  -- Magnitude
+                'dmag' -- Error in magnitude
+                'type' -- Supernova type (str)
+    """
+
+    def __init__(self, folder, subset='none', training_only=False, filter_set=['g', 'r', 'i'], subset_length = False, classification = 'none'):
+        """
+        Initialisation
+        Parameters
+        ----------
+        folder : str
+            Folder where OSC files are located
+        subset : str or list-like, optional
+            List of a subset of object names. If not supplied, the full dataset will be used
+        filter_set : list-like, optional
+            Set of possible filters
+        subset_length : bool or int, optional
+
+            If supplied, will return this many random objects (can be used in conjunction with subset="spectro")
+        classification : str, optional
+            Can return one specific type of supernova.
+        """
+        self.filter_set=filter_set
+        self.rootdir=folder
+        self.survey_name='OSC_subset' 
+        self.object_names=self.get_object_names(subset=subset)
+        #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
+        self.data={}
+        invalid=0 
+        #Some objects may have empty data
+        print('Reading data...')
+        for i in range(len(self.object_names)):
+            lc=self.get_lightcurve(self.object_names[i])
+            if len(lc['mjd']>0):
+                self.data[self.object_names[i]]=lc
+            else:
+                invalid+=1
+        if invalid>0:
+            print('%d objects were invalid and not added to the dataset.' %invalid)
+        print('%d objects read into memory.' %len(self.data))
+
+        #We create an optional model set which can be set by whatever feature class used
+        self.models={}
+
+    def get_lightcurve(self, flname):
+        """
+        Given a filename, returns a light curve astropy table that conforms with sncosmo requirements
+
+        Parameters
+        ----------
+        flname : str
+            The filename of the supernova (relative to data_root)
+
+        Returns
+        -------
+        astropy.table.Table
+            Light curve
+        """
+        with open(self.rootdir+flname,'r') as fl:
+            file_data = json.load(fl)
+        start_mjd = 0
+        mjd=[]
+        flt=[]
+        flux=[]
+        fluxerr=[]
+        z=-9
+        z_err=-9
+        type=-9
+
+        #Zeropoint
+        zp=np.array([27.5]*len(mjd))
+        zpsys=['ab']*len(mjd)
+
+        ### Check to see if file contains at least those in the required filter set
+        if not set(self.filter_set).issubset(set(file_data.keys())):
+            ###Return an empty table making the file invalid
+            tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'name':flname,'z':z, 'z_err':z_err, 'type':type, 'initial_observation_time':start_mjd})
+            return tab
+        
+        for filt in file_data:
+            filt_data = file_data[filt]
+            mjd += filt_data['mjd']
+            flt += [filt] * len(filt_data['mjd'])
+            flux += filt_data['mag']
+            fluxerr += filt_data['dmag']
+            type = self.get_type_mapped(file_data[filt]['type'])
+
+        
+        #Make everything arrays
+        mjd=np.array(mjd)
+        flt=np.array(flt, dtype='str')
+        flux=np.array(flux)
+        fluxerr=np.array(fluxerr)
+        start_mjd=mjd.min()
+        mjd=mjd-start_mjd #We shift the times of the observations to all start at zero. If required, the mjd of the initial observation is stored in the metadata.
+        #Note: obviously this will only zero the observations in one filter band, the others have to be zeroed if fitting functions.
+        
+        #Zeropoint
+        zp=np.array([27.5]*len(mjd))
+        zpsys=['ab']*len(mjd)
+        
+        tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'name':flname,'z':z, 'z_err':z_err, 'type':type, 'initial_observation_time':start_mjd})
+        return tab
+
+    def get_object_names(self, subset='none'):
+        """
+        Gets a list of the names of the files within the dataset.
+
+        Parameters
+        ----------
+        subset : str or list-like, optional
+            Used to specify which files you want. Current setup is get_object_names will accept a list of
+            indices, a list of actual object names as a subset or the keyword 'spectro'.
+
+        """
+        try:
+            names=np.loadtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
+            object_names= names
+        except IndexError:
+            print('Invalid list file')
+            sys.exit()
+                
+        return np.sort(object_names)
     
-    
-    
-    
-    
+    def get_type_mapped(self, sntype, Ia_vs_all=False):
+        """
+        Returns the integer type of supernova following the classifications from the SNPhotCC
+
+        Parameters
+        ------
+        sntype: str
+            String corresponding to supernova type
+
+        Returns
+        ------
+        sntype_mapped: int
+            Integer corresponding to supernova type
+        """
+        type_dict = {
+            1: ['Ia', 'I a'],
+            31: ['Ib', 'I b'],
+            32: ['Ib', 'I c'],
+            3: ['Ib/c', 'Ibc'],
+            2: ['II'],
+            21: ['IIn'],
+            22: ['II P']
+        }
+
+        if Ia_vs_all:
+            if sntype in type_dict[1]:
+                sntype_mapped = 1
+            else:
+                sntype_mapped = 2
+        else:
+            for k in type_dict:
+                if sntype in type_dict[k]:
+                    sntype_mapped = k
+                    return sntype_mapped
+            else:
+                sntype_mapped = 66
+        
+        return sntype_mapped
+            
