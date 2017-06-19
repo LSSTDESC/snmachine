@@ -1187,8 +1187,8 @@ class OSC_subset(Dataset):
         start_mjd = 0
         mjd=[]
         flt=[]
-        flux=[]
-        fluxerr=[]
+        mag=[]
+        magerr=[]
         z=-9
         z_err=-9
         type=-9
@@ -1207,16 +1207,25 @@ class OSC_subset(Dataset):
             filt_data = file_data[filt]
             mjd += filt_data['mjd']
             flt += [filt] * len(filt_data['mjd'])
-            flux += filt_data['mag']
-            fluxerr += filt_data['dmag']
+            mag += filt_data['mag']
+            magerr += filt_data['dmag']
             type = self.get_type_mapped(file_data[filt]['type'])
 
         
         #Make everything arrays
         mjd=np.array(mjd)
         flt=np.array(flt, dtype='str')
-        flux=np.array(flux)
-        fluxerr=np.array(fluxerr)
+        mag=np.array(mag)
+        magerr=np.array(magerr)
+
+        ## Do conversion from magnitude to flux here
+        # Use magnitude 27.5 as the zero point 
+        flux = 10**(-0.4*(mag-27.5))
+        # Alternate form in base e --> 10^10 * exp(-0.921034 * mag)
+        
+        # Propagation of error formula --> abs(flux * -0.921034 * magerr)
+        fluxerr = np.abs(flux*-0.921034*magerr)
+
         start_mjd=mjd.min()
         mjd=mjd-start_mjd #We shift the times of the observations to all start at zero. If required, the mjd of the initial observation is stored in the metadata.
         #Note: obviously this will only zero the observations in one filter band, the others have to be zeroed if fitting functions.
