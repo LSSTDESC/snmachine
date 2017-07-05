@@ -1109,11 +1109,47 @@ class SDSS_Simulations(Dataset):
         return tab
 
 
+class EmptyDataset(Dataset):
+    """
+    Empty data set, to fill up with light curves (of format astropy.table.Table) in your memory.
+    """
 
-            
+    def __init__(self, folder=None, survey_name=None, filter_set=None):
 
-    
-    
-    
-    
-    
+        """
+        Initialisation.
+        Parameters
+        ----------
+        folder : str
+            Root folder containing the data
+        survey_name : str
+            Specifies the name of the survey; needed for output folder name
+        filter_set : list, optional
+            List of possible filters used
+
+        """
+        if filter_set is None:
+            self.filter_set=[]
+        else:
+            self.filter_set=filter_set
+        self.rootdir=folder
+        self.survey_name=survey_name
+        self.data={}
+        self.object_names=[]
+        self.models={}
+
+    def set_filters(self, filter_set):
+        self.filter_set=filter_set
+
+    def set_rootdir(folder):
+        self.rootdir=folder
+        self.survey_name=folder.splot(os.path.sep)[-2]
+
+    def insert_lightcurve(self, lc):
+        name=lc.meta['name']
+        self.object_names=np.append(self.object_names,name)
+        self.data[name]=lc
+        for flt in np.unique(lc['filter']):
+            if not flt in self.filter_set:
+                print('Adding filter '+flt+' ...')
+                self.filter_set.append(flt)
