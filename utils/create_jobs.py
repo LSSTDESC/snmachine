@@ -7,12 +7,12 @@ from __future__ import division
 import os
 import numpy as np
 
-good_nodes=range(13, 18)+range(19,24) #We want to avoid node 18 (and any nodes that aren't free of course)
-#good_nodes=[20, 21, 22, 23]
+#good_nodes=range(13, 18)+range(19,24) #We want to avoid node 18 (and any nodes that aren't free of course)
+good_nodes=[19, 21, 22, 23]
 #good_nodes=[]
 node_ind=0
 
-job_dir='/home/roberts/data_sets/sne/sdss/jobs/'
+job_dir='/home/roberts/data_sets/sne/des/jobs/'
 #job_dir='jobs/'
 if not os.path.exists(job_dir):
     os.makedirs(job_dir)
@@ -23,7 +23,7 @@ n24=len(good_nodes) #How many cores24 nodes requesting
 proc12=n12*12 #Total number of cores12 processors
 proc24=n24*24
 
-dataset='sdss'
+dataset='des'
 subset='none'
 train_choice='non-repr'
 
@@ -43,11 +43,14 @@ def make_job_script(ppn, subset_name, extra_flags=''):
     if ppn==12:
         node_string='#PBS -l nodes=1:ppn=%d' %ppn
     else:
-        if 'no-xtr' in extra_flags:#this will be called only once, for the final script
+        if 'no-xtr' in extra_flags or 'preprocess' in extra_flags:#this will be called only once, for the final script
             node_ind=0
         node_string='#PBS -l nodes=compute-0-%d:ppn=%d' %(good_nodes[node_ind],ppn)
         node_ind+=1
-    fl=open(job_dir+subset_name+'.pbs', 'w')
+    if 'preprocess' in extra_flags:
+        fl=open(job_dir+subset_name+'_preprocess.pbs', 'w')
+    else:
+        fl=open(job_dir+subset_name+'.pbs', 'w')
     fl.write('#!/bin/tcsh -f\n \
 #PBS -V\n \
 %s\n \
@@ -65,14 +68,15 @@ def make_job_script(ppn, subset_name, extra_flags=''):
 def make_job_spawner(n12, n24, job_dir, subset_root):
     #Create a simple bash script to qsub all the jobs
     fl=open(os.path.join(job_dir, 'run_all.sh'), 'w')
+    fl.write('job_pre=$(qsub %s)\n'%(os.path.join(job_dir, fullset_name+'_preprocess.pbs')) )
     joblist=''
     for i in range(n12):
         subs=subset_root %i
-        fl.write('job%d=$(qsub %s)\n' %(i, os.path.join(job_dir, subs+'.pbs'))) 
+        fl.write('job%d=$(qsub -W depend=afterok:$job_pre %s)\n' %(i, os.path.join(job_dir, subs+'.pbs'))) 
         joblist+=':$job%d' %i
     for j in range(n12, n12+n24):
         subs=subset_root %j
-        fl.write('job%d=$(qsub %s)\n' %(j, os.path.join(job_dir, subs+'.pbs')))
+        fl.write('job%d=$(qsub -W depend=afterok:$job_pre %s)\n' %(j, os.path.join(job_dir, subs+'.pbs')))
         joblist+=':$job%d' %j
     fl.write('qsub -W depend=afterok%s %s\n'%(joblist, os.path.join(job_dir, fullset_name+'.pbs')) )
     fl.close()
@@ -82,7 +86,7 @@ def make_job_spawner(n12, n24, job_dir, subset_root):
 if dataset=='des':
     survey_name='SIMGEN_PUBLIC_DES'
     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-    rootdir='/home/mlochner/sn/'+survey_name+'/'
+    rootdir='/home/roberts/data_sets/sne/des/'+survey_name+'/'
     if subset=='spectro':
         objects=np.loadtxt('DES_spectro.list', dtype='str')
     else:
@@ -137,8 +141,10 @@ for j in range(n24):
 np.savetxt(job_dir+fullset_name+'.txt', objects, fmt='%s')
 if n24>0:
     make_job_script(24, fullset_name, extra_flags='no-xtr')
+    make_job_script(24, fullset_name, extra_flags='preprocess')
 elif n12>0:
     make_job_script(12, fullset_name, extra_flags='no-xtr')
+    make_job_script(12, fullset_name, extra_flags='preprocess')
 else:
     print('You gave me no nodes to work on. Do not do that again.')
 

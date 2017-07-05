@@ -18,7 +18,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-dataset='sdss'
+dataset='des'
 laptop=False
 template_model='Ia'
 
@@ -27,8 +27,8 @@ lim=10000000 #only use these many objects
 
 #feature_sets=['templates','newling', 'karpenka', 'wavelets']
 #feature_sets=['templates','newling', 'karpenka']
-feature_sets=['templates']
-#feature_sets=['wavelets']
+#feature_sets=['templates']
+feature_sets=['wavelets']
 #feature_sets=['templates', 'wavelets']
 
 #cls=['knn', 'nb', 'neural_network','svm','boost_dt','random_forest']
@@ -166,7 +166,7 @@ if laptop:
     final_outdir=outdir
     #outdir=os.path.join(os.path.sep, 'home', 'michelle', 'output_%s' %(run_name),'')
 else:
-    final_outdir=os.path.join(os.path.sep, 'home', 'roberts','data_sets', 'sne', 'sdss', 'sn_output_no_augment','output_%s' %(run_name), '')
+    final_outdir=os.path.join(os.path.sep, 'home', 'roberts','data_sets', 'sne', 'des', 'sn_output','output_%s' %(run_name), '')
     outdir=os.path.join(os.path.sep, 'state','partition1', 'roberts')
 
 #This is where to save intermediate output for the feature extraction method. In some cases (such as the wavelets), these
@@ -176,6 +176,12 @@ print 'out_features', out_features
 out_class=os.path.join(outdir, 'classifications', '')
 out_inter=os.path.join(outdir, 'int', '')
 
+if not os.path.exists(final_outdir):
+    os.makedirs(final_outdir)
+    os.makedirs(os.path.join(final_outdir, 'features', ''))
+    os.makedirs(os.path.join(final_outdir, 'int', ''))
+    os.makedirs(os.path.join(final_outdir, 'classifications', ''))
+
 if not os.path.exists(out_features):
     os.makedirs(out_features)
 if not os.path.exists(out_class):
@@ -183,6 +189,19 @@ if not os.path.exists(out_class):
 if not os.path.exists(out_inter):
     os.makedirs(out_inter)
 
+def copy_files():
+    t1=time.time()
+    if not os.path.exists(final_outdir):
+        os.makedirs(final_outdir)
+        os.makedirs(os.path.join(final_outdir, 'features', ''))
+        os.makedirs(os.path.join(final_outdir, 'int', ''))
+        os.makedirs(os.path.join(final_outdir, 'classifications', ''))
+    os.system('mv %s* %s' %(os.path.join(outdir, 'features', ''), os.path.join(final_outdir, 'features', '')))
+    print 'mv %s* %s' %(os.path.join(outdir, 'features', ''), os.path.join(final_outdir, 'features', ''))
+    os.system('mv %s* %s' %(os.path.join(outdir, 'int', ''), os.path.join(final_outdir, 'int', '')))
+    os.system('mv %s* %s' %(os.path.join(outdir, 'classifications', ''), os.path.join(final_outdir, 'classifications', '')))
+
+    print 'Time taken for file copying', time.time()-t1
 
 def select_training(obj_names, out_features_dir, repr=True, training_names=None, num_training=0):
     if repr:
@@ -213,21 +232,24 @@ if dataset=='des':
     if laptop:
         rt=os.path.join(os.path.sep, 'home', 'michelle', 'BigData', 'SN_Sims', 'SIMGEN_PUBLIC_DES',  '')
     else:
-        rt=os.path.join(os.path.sep, 'home', 'mlochner','sn','SIMGEN_PUBLIC_DES','')
+        rt=os.path.join(os.path.sep, 'home', 'roberts','data_sets', 'sne','des', 'SIMGEN_PUBLIC_DES','')
 
     #Subset tells the initialiser to only load a subset of the data, in this case only the spectroscopic data
     d=sndata.Dataset(rt,subset=subset)
 
     #Extract the types for all objects. This is specific to this example
-    types=np.zeros(len(d.object_names),dtype=int)
-    for i in range(len(d.object_names)):
-        obj=d.object_names[i]
-        types[i]=d.data[obj].meta['type']
+    #types=np.zeros(len(d.object_names),dtype=int)
+    #for i in range(len(d.object_names)):
+    #    obj=d.object_names[i]
+    #    types[i]=d.data[obj].meta['type']
 
+    types=d.get_types()
 
     #The spectroscopic subsample is quite small so we can't subtype. We replace 21,22 etc. with 2 and 31,32 etc. with 3
-    types[np.floor(types/10)==2]=2
-    types[np.floor(types/10)==3]=3
+    types['Type'][np.floor(types['Type']/10)==2]=2
+    types['Type'][np.floor(types['Type']/10)==3]=3
+
+    
 
     # #### Choose training and validation samples
     if len(cls)>0:
@@ -253,14 +275,14 @@ if dataset=='des':
 	
         print 'out_features', out_features
 
-        train_inds=[np.where(d.object_names==x)[0][0] for x in training_set]
-        val_inds=[np.where(d.object_names==x)[0][0] for x in test_set]
+        #train_inds=[np.where(d.object_names==x)[0][0] for x in training_set]
+        #val_inds=[np.where(d.object_names==x)[0][0] for x in test_set]
 
         #Separate out the training and validation types. The separation of the features will come later, after feature extraction.
-        Ytrain=types[train_inds]
-        Yval=types[val_inds]
+        #Ytrain=types[train_inds]
+        #Yval=types[val_inds]
 
-        print np.unique(Ytrain),np.unique(Yval)
+        #print np.unique(Ytrain),np.unique(Yval)
 
 elif 'lsst' in dataset or dataset=='sdss':
     if 'lsst' in dataset:
@@ -281,37 +303,46 @@ elif 'lsst' in dataset or dataset=='sdss':
         else:
             rt=os.path.join(os.path.sep, 'home', 'roberts','data_sets', 'sne','sdss', 'SMP_Data','')
         d=sndata.SDSS_Data(rt,subset=subset)
+
+        for obj in d.object_names:
+            d.data[obj].remove_rows(np.where(d.data[obj]['filter']=='sdssu')[0])
+
         if train_choice=='non-repr':
             training_names=np.loadtxt(rt+'spectro.list', dtype='str')
         else:
             training_names=None
-
     types=d.get_types()
 
     types['Type'][np.floor(types['Type']/10)==2]=2
     types['Type'][np.floor(types['Type']/10)==3]=3
 
     flname=rt+'%s_indices.txt' %run_name
-    #os.remove(flname)
+        #os.remove(flname)
     if os.path.isfile(flname):
         indices=np.loadtxt(flname,dtype=int).tolist()
     else:
-        indices=np.np.random.permutation(len(types))
+        indices=np.random.permutation(len(types))
         np.savetxt(flname, indices, fmt='%d')
-    if 'no-class' not in sys.argv:
-        select_training(d.object_names, out_features, repr=repr, training_names=training_names)
-        training_set=np.loadtxt(out_features+'train-%s.txt' %train_choice, dtype='str')
-        test_set=np.loadtxt(out_features+'test-%s.txt' %train_choice, dtype='str')
 
-        training_set.sort()
-        test_set.sort()
+if 'no-class' not in sys.argv:
+    select_training(d.object_names, out_features, repr=repr, training_names=training_names)
+    training_set=np.loadtxt(out_features+'train-%s.txt' %train_choice, dtype='str')
+    test_set=np.loadtxt(out_features+'test-%s.txt' %train_choice, dtype='str')
 
-        training_set=np.array(training_set,dtype='str')
-        test_set=np.array(test_set,dtype='str')
+    training_set.sort()
+    test_set.sort()
 
-        train_inds=np.in1d(d.object_names,training_set).nonzero()[0]
-        val_inds=np.in1d(d.object_names, test_set).nonzero()[0]
-        print('sanity check: length of training and test set: '+str(len(train_inds))+' / '+str(len(val_inds)))
+    training_set=np.array(training_set,dtype='str')
+    test_set=np.array(test_set,dtype='str')
+
+    train_inds=np.in1d(d.object_names,training_set).nonzero()[0]
+    val_inds=np.in1d(d.object_names, test_set).nonzero()[0]
+
+    Ytrain=types[train_inds]
+    Yval=types[val_inds]
+
+    copy_files()
+    print('sanity check: length of training and test set: '+str(len(train_inds))+' / '+str(len(val_inds)))
 #    print(train_inds)
 #    print
 #    print(val_inds)
@@ -331,28 +362,23 @@ elif 'lsst' in dataset or dataset=='sdss':
     # print np.unique(Ytrain['Type']),np.unique(Yval['Type'])
 
 
+
+if 'preprocess' in sys.argv:
+    if not os.path.exists(os.path.join(final_outdir, 'features', '')):
+        os.makedirs(os.path.join(final_outdir, 'features', ''))
+    maxfile=open(os.path.join(final_outdir, 'features', 'maximum_lightcurve_length.txt') , 'w')
+    maxfile.write(str(d.get_max_length())+'\n')
+    maxfile.close()
+    sys.exit(0)
+
 ################################################################################
 ####### FEATURE EXTRACTION #####################################################
 ################################################################################
 
-def copy_files():
-    t1=time.time()
-    if not os.path.exists(final_outdir):
-        os.makedirs(final_outdir)
-        os.makedirs(os.path.join(final_outdir, 'features', ''))
-        os.makedirs(os.path.join(final_outdir, 'int', ''))
-        os.makedirs(os.path.join(final_outdir, 'classifications', ''))
-    os.system('mv %s* %s' %(os.path.join(outdir, 'features', ''), os.path.join(final_outdir, 'features', '')))
-    print 'mv %s* %s' %(os.path.join(outdir, 'features', ''), os.path.join(final_outdir, 'features', ''))
-    os.system('mv %s* %s' %(os.path.join(outdir, 'int', ''), os.path.join(final_outdir, 'int', '')))
-    os.system('mv %s* %s' %(os.path.join(outdir, 'classifications', ''), os.path.join(final_outdir, 'classifications', '')))
-
-    print 'Time taken for file copying', time.time()-t1
-
 def append_line(flname):
     #Append one line to the logfile that contains all file names of successfully extracted features.
     #Rerunning the pipeline for classification will collate all feature files listed in there.
-    logfile=open(os.path.join(final_outdir, 'features/extracted_feature_filenames.txt'), 'a')
+    logfile=open(os.path.join(final_outdir, 'features', 'extracted_feature_filenames.txt'), 'a')
     logfile.write(os.path.basename(flname)+'\n')
     logfile.close()
 
@@ -456,13 +482,20 @@ if 'no-xtr' not in sys.argv:
         waveletFeat=snfeatures.WaveletFeatures(wavelet='sym2', ngp=100)
         flname=os.path.join(out_features, subset_name+'_wavelets.dat')
 
+        xmin=0
+        maxfilepath=os.path.join(final_outdir, 'features', 'maximum_lightcurve_length.txt')
+        if 'no-class' in sys.argv and os.path.exists(maxfilepath):
+            maxfile=open(maxfilepath , 'r')
+            xmax=map(float, maxfile)[0]
+        else:
+            xmax=d.get_max_length()
+
         if restart_from_features and os.path.exists(flname):
             print 'Restarting from', flname
             wavelet_features=Table.read(flname, format='ascii')[:lim]
 
         else:
-            wavelet_features=waveletFeat.extract_features(d, save_output='all',restart='none',
-                                                      output_root=out_inter, nprocesses=nproc)
+            wavelet_features=waveletFeat.extract_features(d, save_output='all',restart='none', output_root=out_inter, nprocesses=nproc, xmax=xmax)
             wavelet_features.write(flname,format='ascii')
 
             subprocess.call(['cp',out_features+'PCA_vals.txt',out_features+'%s_%s_PCA_vals.txt' %(run_name, subset_name)])
@@ -474,9 +507,6 @@ if 'no-xtr' not in sys.argv:
 
 
         if plot_data:
-        
-            xmin=0
-            xmax=d.get_max_length()
             vals=np.loadtxt(out_features+'%s_%s_PCA_vals.txt' %(run_name, subset_name))
             vec=np.loadtxt(out_features+'%s_%s_PCA_vec.txt' %(run_name, subset_name))
             mn=np.loadtxt(out_features+'%s_%s_PCA_mean.txt' %(run_name, subset_name))
@@ -502,8 +532,6 @@ else:
         newling_features=[]
     if 'karpenka' in feature_sets:
         karpenka_features=[]
-    if 'wavelets' in feature_sets:
-        wavelet_features=[]
 
     for filename in logfile.readlines():
         new_feat_subset=Table.read(os.path.join(final_outdir, 'features', filename.strip('\n')), format='ascii')[:lim]
@@ -522,13 +550,13 @@ else:
                 karpenka_features=new_feat_subset
             else:
                 karpenka_features=vstack([karpenka_features,new_feat_subset])
-        if 'wavelets' in feature_sets and 'wavelets' in filename:
-            #BLATANTLY AND FLAGRANTLY WRONG 
-            #please dont look at this before I push a corrected version 
-            if len(wavelet_features)==0:
-                wavelet_features=new_feat_subset
-            else:
-		wavelet_features=vstack([wavelet_features,new_feat_subset])
+
+    if 'wavelets' in feature_sets:
+        wavelet_feats=snfeatures.WaveletFeatures(wavelet='sym2', ngp=100)
+        wave_raw, wave_err=wavelet_feats.restart_from_wavelets(d, os.path.join(final_outdir, 'int', ''))
+        wavelet_features,vals,vec,means=wavelet_feats.extract_pca(d.object_names.copy(), wave_raw)
+
+    #we still want to write all features to file, incl pca components and suchlike
 
     print('Read in features for '+str(len(template_features))+'lightcurves.')
     logfile.close()
@@ -657,6 +685,7 @@ def run_classifier(Xtrain,Ytrain,Xtest,Ytest,save_output=True,feature_set='templ
     if save_output:
         snclassifier.plot_roc(FPR, TPR, AUC, labels=cls,label_size=16,tick_size=12)
         plt.savefig(os.path.join(os.path.sep, out_root, 'new_roc_%s_%s.png' %(run_name,feature_set)))
+        plt.close()
     
 
 
