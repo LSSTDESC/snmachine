@@ -7,6 +7,7 @@ import numpy as np
 import parametric_models, sys, pywt, time, subprocess, os, sncosmo
 from scipy.interpolate import interp1d
 from gapp import dgp
+import george
 from astropy.table import Table, vstack, hstack, join
 from multiprocessing import Pool
 from functools import partial
@@ -28,7 +29,7 @@ except ImportError:
     has_emcee=False
 
 
-def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root):
+def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='gapp'):
     """
     Fit a Gaussian process curve at specific evenly spaced points along a light curve.
 
@@ -57,19 +58,32 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root):
         Table with evaluated Gaussian process curve and errors
 
     """
+
     lc=d.data[obj]
     filters=np.unique(lc['filter'])
     #Store the output in another astropy table
     output=[]
     for fil in d.filter_set:
         if fil in filters:
+            print(obj+': '+fil)
             x=lc['mjd'][lc['filter']==fil]
             y=lc['flux'][lc['filter']==fil]
             err=lc['flux_error'][lc['filter']==fil]
             sys.stdout = open(os.devnull, "w")
-            g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
+            if gpalgo=='gapp':
+                g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
+            elif gpalgo=='george':
+                g=george.GP(george.ExpSquaredKernel(1.0))
+                g.compute(x,err)
             sys.stdout=sys.__stdout__
-            rec, theta=g.gp(theta=initheta)  
+            print('done'+obj+': '+fil)
+            if gpalgo=='gapp':
+                rec, theta=g.gp(theta=initheta)  
+            elif gpalgo=='george':
+                xstar=np.linspace(xmin,xmax,ngp)
+                mu,cov=g.predict(y,xstar)
+                std=np.sqrt(np.diag(cov))
+                rec=np.column_stack((xstar,mu,std))        
         else:
             rec=np.zeros([ngp, 3])
         newtable=Table([rec[:, 0], rec[:, 1], rec[:, 2], [fil]*ngp], names=['mjd', 'flux', 'flux_error', 'filter'])
@@ -217,6 +231,7 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
 
     """
 
+    print(obj)
     try:
         def prior_multinest(cube, ndim, nparams):
             """Prior function specifically for multinest. This would be called for one filter, for one object.
@@ -442,6 +457,7 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
     array-like
         List of best-fitting parameters
     """
+    print(obj)
     try:
         def prior_multinest(cube, ndim, nparams):
             """Prior function specifically for multinest. This would be called for one filter, for one object.
@@ -504,6 +520,7 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
         Y={}
         E={}
         for filt in filts:
+            print(filt)
             x, y, err=np.column_stack((lc['mjd'][lc['filter']==filt], lc['flux'][lc['filter']==filt], lc['flux_error'][lc['filter']==filt])).T
             X[filt]=x
             Y[filt]=y
@@ -1267,7 +1284,6 @@ class WaveletFeatures(Features):
         """
         Features.__init__(self)
 
-
         self.wav=pywt.Wavelet(wavelet)
         self.ngp=ngp #Number of points to use on the Gaussian process curve
         self.wavelet_list=pywt.wavelist() #All possible families
@@ -1283,7 +1299,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none'):
+    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none', xmin=0, xmax=170, gpalgo='gapp'):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1296,12 +1312,17 @@ class WaveletFeatures(Features):
         save_output : bool, optional
             Whether or not to save the output
         output_root : str, optional
-         Output directory
+            Output directory
         nprocesses : int, optional
             Number of processors to use for parallelisation (shared memory only)
         restart : str, optional
             Either 'none' to start from scratch, 'gp' to restart from saved Gaussian processes, or 'wavelet' to
             restart from saved wavelet decompositions (will look in output_root for the previously saved outputs).
+        xmin: float, optional
+            The minimum mjd, this defines the lowest point of the grid on which GP regression is performed
+        xmax: float, optional
+            The maximum mjd, this defines the highest point of the grid on which GP regression is performed
+
         log : bool, optional
             Whether or not to take the logarithm of the final PCA components. Recommended setting is False (legacy code).
 
@@ -1311,11 +1332,9 @@ class WaveletFeatures(Features):
             Table of features (first column object names, the rest are the PCA coefficient values)
         """
 
-        if save_output is not 'none':
-            subprocess.call(['mkdir', output_root])
 
-        xmin=0
-        xmax=d.get_max_length()
+        if save_output:
+            subprocess.call(['mkdir', output_root])
 
         if restart=='wavelet':
             wavout, waveout_err=self.restart_from_wavelets(d, output_root)
@@ -1323,7 +1342,7 @@ class WaveletFeatures(Features):
             if restart=='gp':
                 self.restart_from_gp(d, output_root)
             else:
-                self.extract_GP(d, self.ngp, xmin, xmax, initheta, save_output, output_root, nprocesses)
+                self.extract_GP(d, self.ngp, xmin, xmax, initheta, save_output, output_root, nprocesses, gpalgo=gpalgo)
 
             wavout, waveout_err=self.extract_wavelets(d, self.wav, self.mlev,  nprocesses, save_output, output_root)
         self.features,vals,vec,mn=self.extract_pca(d.object_names.copy(), wavout)
@@ -1332,6 +1351,11 @@ class WaveletFeatures(Features):
         self.PCA_eigenvals = vals
         self.PCA_eigenvectors=vec
         self.PCA_mean=mn
+
+        if save_output is not None:
+            np.savetxt('PCA_vals.txt', vals)
+            np.savetxt('PCA_vec.txt', vec)
+            np.savetxt('PCA_mean.txt', mn)
 
         return self.features
 
@@ -1462,7 +1486,7 @@ class WaveletFeatures(Features):
 
         return wavout, wavout_err
 
-    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses):
+    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses, gpalgo='gapp'):
         """
         Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
 
@@ -1772,9 +1796,9 @@ class WaveletFeatures(Features):
         mn=mn.flatten()
 
         #
-        # np.savetxt('PCA_vals.txt', vals)
-        # np.savetxt('PCA_vec.txt', vec)
-        # np.savetxt('PCA_mean.txt', mn)
+        #np.savetxt('PCA_vals.txt', vals)
+        #np.savetxt('PCA_vec.txt', vec)
+        #np.savetxt('PCA_mean.txt', mn)
 
         #Actually fit the components
         ncomp=self.best_coeffs(vals)
