@@ -78,23 +78,6 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
             x=lc['mjd'][lc['filter']==fil]
             y=lc['flux'][lc['filter']==fil]
             err=lc['flux_error'][lc['filter']==fil]
-<<<<<<< Updated upstream
-            sys.stdout = open(os.devnull, "w")
-            if gpalgo=='gapp':
-                g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
-            elif gpalgo=='george':
-                g=george.GP(george.ExpSquaredKernel(1.0))
-                g.compute(x,err)
-            sys.stdout=sys.__stdout__
-            print('done'+obj+': '+fil)
-            if gpalgo=='gapp':
-                rec, theta=g.gp(theta=initheta)  
-            elif gpalgo=='george':
-                xstar=np.linspace(xmin,xmax,ngp)
-                mu,cov=g.predict(y,xstar)
-                std=np.sqrt(np.diag(cov))
-                rec=np.column_stack((xstar,mu,std))        
-=======
             if gpalgo=='gapp':
                 sys.stdout = open(os.devnull, "w")
                 g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
@@ -110,7 +93,6 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
                 mu,cov=g.predict(y,xstar)
                 std=np.sqrt(np.diag(cov))
                 rec=np.column_stack((xstar,mu,std))
->>>>>>> Stashed changes
         else:
             rec=np.zeros([ngp, 3])
         newtable=Table([rec[:, 0], rec[:, 1], rec[:, 2], [fil]*ngp], names=['mjd', 'flux', 'flux_error', 'filter'])
