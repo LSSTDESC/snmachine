@@ -36,7 +36,7 @@ try:
 except ImportError:
     has_george=False
 
-def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='gapp'):
+def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george'):
     """
     Fit a Gaussian process curve at specific evenly spaced points along a light curve.
 
@@ -78,6 +78,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='gap
             x=lc['mjd'][lc['filter']==fil]
             y=lc['flux'][lc['filter']==fil]
             err=lc['flux_error'][lc['filter']==fil]
+<<<<<<< Updated upstream
             sys.stdout = open(os.devnull, "w")
             if gpalgo=='gapp':
                 g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
@@ -93,6 +94,23 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='gap
                 mu,cov=g.predict(y,xstar)
                 std=np.sqrt(np.diag(cov))
                 rec=np.column_stack((xstar,mu,std))        
+=======
+            if gpalgo=='gapp':
+                sys.stdout = open(os.devnull, "w")
+                g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
+                sys.stdout=sys.__stdout__
+                rec, theta=g.gp(theta=initheta)  
+            elif gpalgo=='george':
+                sys.stdout = open(os.devnull, "w")
+                g=george.GP(initheta[0]*george.kernels.ExpSquaredKernel(initheta[1]))
+                theta,res=g.optimize(x,y,err)
+                g.compute(x,err)
+                sys.stdout=sys.__stdout__
+                xstar=np.linspace(xmin,xmax,ngp)
+                mu,cov=g.predict(y,xstar)
+                std=np.sqrt(np.diag(cov))
+                rec=np.column_stack((xstar,mu,std))
+>>>>>>> Stashed changes
         else:
             rec=np.zeros([ngp, 3])
         newtable=Table([rec[:, 0], rec[:, 1], rec[:, 2], [fil]*ngp], names=['mjd', 'flux', 'flux_error', 'filter'])
@@ -1314,7 +1332,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none', xmin=0, xmax=170, gpalgo='gapp'):
+    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none', xmin=0, xmax=170, gpalgo='george'):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1347,8 +1365,7 @@ class WaveletFeatures(Features):
             Table of features (first column object names, the rest are the PCA coefficient values)
         """
 
-
-        if save_output:
+        if save_output is not 'none':
             subprocess.call(['mkdir', output_root])
 
         if restart=='wavelet':
@@ -1501,7 +1518,7 @@ class WaveletFeatures(Features):
 
         return wavout, wavout_err
 
-    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses, gpalgo='gapp'):
+    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses, gpalgo='george'):
         """
         Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
 
@@ -1524,7 +1541,7 @@ class WaveletFeatures(Features):
         nprocesses : int, optional
             Number of processors to use for parallelisation (shared memory only)
         """
-        print ('Performing Gaussian process regression')
+        print 'Performing Gaussian process regression using '+gpalgo
         t1=time.time()
         #Check for parallelisation
         if nprocesses==1:
@@ -1576,7 +1593,7 @@ class WaveletFeatures(Features):
         Wraps internal module-level function in order to circumvent multiprocessing module limitations in dealing with
         objects when parallelising.
         """
-        return _GP(obj, d, ngp, xmin, xmax, initheta, gpalgo)
+        return _GP(obj, d, ngp, xmin, xmax, initheta, gpalgo=gpalgo)
 
 
     def wavelet_decomp(self, lc, wav, mlev):
