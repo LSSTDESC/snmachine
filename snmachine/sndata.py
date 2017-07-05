@@ -548,6 +548,9 @@ class OpsimDataset(Dataset):
             all_data=data_nIa
         else:
             all_data=data_Ia+data_nIa
+   
+        #all_data=sncosmo.read_snana_fits(os.path.join(folder, 'LSST_LSST_TRAIN_DDF_FITS_HEAD.FITS'), os.path.join(folder, 'LSST_TRAIN_DDF_FITS_PHOT.FITS')
+
         self.data={}
         self.object_names=[]
         
