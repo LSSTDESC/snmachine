@@ -33,7 +33,7 @@ feature_sets=['wavelets']
 
 #cls=['knn', 'nb', 'neural_network','svm','boost_dt','random_forest']
 #cls=['knn', 'nb', 'neural_network','svm','random_forest']
-cls=['boost_dt', 'knn', 'svm', 'random_forest']
+cls=['nb', 'boost_dt', 'knn', 'svm', 'random_forest']
 
 use_redshift=False
 
@@ -196,17 +196,17 @@ def copy_files():
         os.makedirs(os.path.join(final_outdir, 'features', ''))
         os.makedirs(os.path.join(final_outdir, 'int', ''))
         os.makedirs(os.path.join(final_outdir, 'classifications', ''))
-    os.system('mv %s* %s' %(os.path.join(outdir, 'features', ''), os.path.join(final_outdir, 'features', '')))
-    print 'mv %s* %s' %(os.path.join(outdir, 'features', ''), os.path.join(final_outdir, 'features', ''))
-    os.system('mv %s* %s' %(os.path.join(outdir, 'int', ''), os.path.join(final_outdir, 'int', '')))
-    os.system('mv %s* %s' %(os.path.join(outdir, 'classifications', ''), os.path.join(final_outdir, 'classifications', '')))
+    os.system('rsync %s* %s' %(os.path.join(outdir, 'features', ''), os.path.join(final_outdir, 'features', '')))
+    print 'rsync %s* %s' %(os.path.join(outdir, 'features', ''), os.path.join(final_outdir, 'features', ''))
+    os.system('rsync %s* %s' %(os.path.join(outdir, 'int', ''), os.path.join(final_outdir, 'int', '')))
+    os.system('rsync %s* %s' %(os.path.join(outdir, 'classifications', ''), os.path.join(final_outdir, 'classifications', '')))
 
     print 'Time taken for file copying', time.time()-t1
 
 def select_training(obj_names, out_features_dir, repr=True, training_names=None, num_training=0):
     if repr:
         if num_training==0: #Number of objects in the training set
-            num_training=(int)(len(obj_names)*0.7)
+            num_training=(int)(len(obj_names)*1104/21319)
         indices=np.random.permutation(len(obj_names))
         train_inds=indices[:num_training]
         test_inds=indices[num_training:]
@@ -556,9 +556,25 @@ else:
         wave_raw, wave_err=wavelet_feats.restart_from_wavelets(d, os.path.join(final_outdir, 'int', ''))
         wavelet_features,vals,vec,means=wavelet_feats.extract_pca(d.object_names.copy(), wave_raw)
 
+
     #we still want to write all features to file, incl pca components and suchlike
 
-    print('Read in features for '+str(len(template_features))+'lightcurves.')
+    if 'templates' in feature_sets:
+        print('Read in template features for '+str(len(template_features))+' lightcurves.')
+        flname=os.path.join(out_features, subset_name+'_templates.dat')
+        template_features.write(flname,format='ascii')
+    if 'newling' in feature_sets:
+        print('Read in Newling features for '+str(len(newling_features))+' lightcurves.')
+        flname=os.path.join(out_features, subset_name+'_newling.dat')
+        newling_features.write(flname,format='ascii')
+    if 'karpenka' in feature_sets:
+        print('Read in Karpenka features for '+str(len(karpenka_features))+' lightcurves.')
+        flname=os.path.join(out_features, subset_name+'_karpenka.dat')
+        karpenka_features.write(flname,format='ascii')
+    if 'wavelets' in feature_sets:
+        print('Read in wavelet features for '+str(len(wavelet_features))+' lightcurves.')
+        flname=os.path.join(out_features, subset_name+'_wavelets.dat')
+        wavelet_features.write(flname,format='ascii')
     logfile.close()
    
 

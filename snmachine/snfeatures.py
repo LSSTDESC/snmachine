@@ -842,7 +842,7 @@ class TemplateFeatures(Features):
                         best=res['parameters'].flatten('F').tolist()
                     elif self.sampler=='nested':
                         best=_run_multinest_templates(obj, d, self.templates[mod_name], self.bounds[self.templates[mod_name]], chain_directory=chain_directory,  
-                        nlp=1000, convert_to_binary=False, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart)
+                        nlp=1000, convert_to_binary=True, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart)
                         best=best.tolist()
                     elif self.sampler=='leastsq':
                         if use_redshift:
