@@ -7,8 +7,8 @@ from __future__ import division
 import os
 import numpy as np
 
-#good_nodes=range(13, 18)+range(19,24) #We want to avoid node 18 (and any nodes that aren't free of course)
-good_nodes=[19, 21, 22, 23]
+good_nodes=range(13, 18)+range(19,24) #We want to avoid node 18 (and any nodes that aren't free of course)
+#good_nodes=[19, 20, 21, 22, 23, 24]
 #good_nodes=[]
 node_ind=0
 
