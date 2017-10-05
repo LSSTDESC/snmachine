@@ -56,7 +56,7 @@ def plot_lc(lc):
         else:
             mkr='o'
         if error:
-            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr,linestyle='none',  color=colours[filts[j]], markersize=8)
+            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr,linestyle='none',  color=colours[filts[j]], markersize=4)
         else:
             l=plt.plot(tdelt, F,lw=2,  marker=mkr,color=colours[filts[j]])
         lines.append(l)
@@ -259,7 +259,7 @@ class Dataset:
                         t_mod, F_mod=mod['mjd'][inds], mod['flux'][inds]
                         plt.plot(t_mod, F_mod, color=colours[filts[j]])
             
-            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr,linestyle='none',  color=colours[filts[j]])
+            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr, linestyle='none',  color=colours[filts[j]], markersize=4)
             lines.append(l)
             if tdelt.min()<min_x:
                 min_x=tdelt.min()
