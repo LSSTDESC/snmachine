@@ -1,10 +1,10 @@
 # This file may be used to create an environment using:
-# $ conda create --name <env> --file <this file>
+# $ conda create env --name <env> --file <this file>
 # platform: linux-64
 name: snmachine
 
 dependencies:
-  - python=2.7.11
+  - python>=3
   - astropy>=1.1.2
   - jupyter>=1.0.0
   - matplotlib>=1.5.1
