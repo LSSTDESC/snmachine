@@ -833,7 +833,7 @@ class TemplateFeatures(Features):
                             
                             res, fitted_model=sncosmo.fit_lc(lc, self.model, vparam_names=self.model.param_names, 
                                 bounds=self.bounds[self.templates[mod_name]], minsnr=0)               
-                        best=res['parameters'].flatten('F').tolist()+[res['chisq']]
+                        best=res['parameters'].flatten('F').tolist()#+[res['chisq']]
                     row=[obj]+best
                     output.add_row(row)
                     k+=1

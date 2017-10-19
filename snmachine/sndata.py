@@ -418,11 +418,11 @@ class Dataset:
         print
         print 'Total number of SNe: %d' %(N)
         print
-        ks=self.sntypes.keys()
+        ks=self.get_types().keys()
         ks.sort()
         for k in ks:
             nk=len(np.where(types==k)[0])
-            print 'Number of %s: %d (%0.2f%%)' %(self.sntypes[k],nk ,nk/N*100)
+            print 'Number of %s: %d (%0.2f%%)' %(self.get_types()[k],nk ,nk/N*100)
         nk=len(np.where(types==-9)[0])
         print 'Number of unknown: %d (%0.2f%%)' %(nk ,nk/N*100)
         
