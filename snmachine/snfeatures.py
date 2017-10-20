@@ -83,7 +83,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root):
 
 
 
-def _run_leastsq(obj, d, model, n_attempts):
+def _run_leastsq(obj, d, model, n_attempts, seed=-1):
     """
     Minimises the chi2 on all the filter bands of a given light curve, fitting the model to each one and extracting
     the best fitting parameters
@@ -120,6 +120,10 @@ def _run_leastsq(obj, d, model, n_attempts):
         for p in pams:
             labels.append(f+'-'+p)
     output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
+
+    if seed!=-1:
+        np.random.seed(seed)
+
     t1=time.time()
     row=[obj]
     for f in d.filter_set:
@@ -186,7 +190,7 @@ def _run_leastsq(obj, d, model, n_attempts):
 
 
 
-def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_iter, restart=False):
+def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_iter, restart=False, seed=-1):
     """
     Runs multinest on all the filter bands of a given light curve, fitting the model to each one and
     extracting the best fitting parameters.
@@ -280,7 +284,7 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
                     #Gives the ability to restart from existing chains if they exist
                     pymultinest.run(loglike_multinest, prior_multinest, n_params, importance_nested_sampling = False, init_MPI=False, 
                     resume = False, verbose = False, sampling_efficiency = 'parameter', n_live_points = nlp, outputfiles_basename=chain_name, 
-                    multimodal=False, max_iter=n_iter)
+                    multimodal=False, max_iter=n_iter, seed=seed)
                     
                 #An=Analyzer(n_params, chain_name)
                 #best_params=An.get_best_fit()['parameters']
@@ -391,7 +395,7 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds):
     return output
         
 
-def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  nlp=1000, convert_to_binary=True, use_redshift=False, short_name='', restart=False):
+def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  nlp=1000, convert_to_binary=True, use_redshift=False, short_name='', restart=False, seed=-1):
     """
 
     Fit template-based supernova models using multinest.
@@ -522,7 +526,7 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
         if not restart or not os.path.exists(chain_name+'stats.dat'):
             pymultinest.run(loglike_multinest, prior_multinest, ndim, importance_nested_sampling = False, init_MPI=False,
             resume = False, verbose = False, sampling_efficiency = 'parameter', n_live_points = nlp, outputfiles_basename=chain_name, 
-            multimodal=False)
+            multimodal=False, seed=seed)
         
         best_params=get_MAP(chain_name)
         
@@ -753,7 +757,7 @@ class TemplateFeatures(Features):
                     'nugent-sn2l':{'z':(0.01, 1.5)}, 
                     'nugent-sn1bc':{'z':(0.01, 1.5)}}
         
-    def extract_features(self, d, save_chains=False, chain_directory='chains', use_redshift=False, nprocesses=1, restart=False):
+    def extract_features(self, d, save_chains=False, chain_directory='chains', use_redshift=False, nprocesses=1, restart=False, seed=-1):
         """
         Extract template features for a dataset.
 
@@ -810,6 +814,8 @@ class TemplateFeatures(Features):
                     lc=d.data[obj]
                     
                     if self.sampler=='mcmc':
+                        if(seed!=-1):
+                            np.random.seed(seed)
                         res, fitted_model = sncosmo.mcmc_lc(lc, self.model,  self.model.param_names, bounds=self.bounds[self.templates[mod_name]], nwalkers=20, nsamples=1500, nburn=300)
                         chain=res.samples
                         if save_chains:
@@ -818,7 +824,7 @@ class TemplateFeatures(Features):
                         best=res['parameters'].flatten('F').tolist()
                     elif self.sampler=='nested':
                         best=_run_multinest_templates(obj, d, self.templates[mod_name], self.bounds[self.templates[mod_name]], chain_directory=chain_directory,  
-                        nlp=1000, convert_to_binary=False, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart)
+                        nlp=1000, convert_to_binary=False, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart, seed=seed)
                         best=best.tolist()
                     elif self.sampler=='leastsq':
                         if use_redshift:
@@ -857,7 +863,7 @@ class TemplateFeatures(Features):
                 elif self.sampler=='nested':
                     p=Pool(nprocesses, maxtasksperchild=1)
                     partial_func=partial(_run_multinest_templates, d=d, model_name=self.templates[mod_name], bounds=self.bounds[self.templates[mod_name]], 
-                    chain_directory=chain_directory, nlp=1000, convert_to_binary=True, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart)
+                    chain_directory=chain_directory, nlp=1000, convert_to_binary=True, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart, seed=seed)
                     out=p.map(partial_func, d.object_names)
 
                     for i in range(len(out)):
@@ -984,7 +990,7 @@ class ParametricFeatures(Features):
 
 
     def extract_features(self, d, chain_directory='chains', save_output=True, n_attempts=20, nprocesses=1, n_walkers=100, 
-    n_steps=500, walker_spread=0.1, burn=50, nlp=1000, starting_point=None, convert_to_binary=True, n_iter=0, restart=False):
+    n_steps=500, walker_spread=0.1, burn=50, nlp=1000, starting_point=None, convert_to_binary=True, n_iter=0, restart=False, seed=-1):
         """
         Fit parametric models and return best-fitting parameters as features.
 
@@ -1038,11 +1044,13 @@ class ParametricFeatures(Features):
                 if k%100==0:
                     print k, 'objects fitted'
                 if self.sampler=='leastsq':
-                    newtable=_run_leastsq(obj, d, self.model, n_attempts)
+                    newtable=_run_leastsq(obj, d, self.model, n_attempts, seed=seed)
                 elif self.sampler=='mcmc':
-                    newtable=self.run_emcee(d, obj, save_output, chain_directory,   n_walkers, n_steps, walker_spread, burn, starting_point)
+                    if(seed!=-1):
+                        np.random.seed(seed)
+                    newtable=self.run_emcee(d, obj, save_output, chain_directory,   n_walkers, n_steps, walker_spread, burn, starting_point, seed=seed)
                 else:
-                    newtable=_run_multinest(obj, d, self.model, chain_directory, nlp, convert_to_binary, n_iter, restart)
+                    newtable=_run_multinest(obj, d, self.model, chain_directory, nlp, convert_to_binary, n_iter, restart, seed=seed)
                 
                 if len(output)==0:
                     output=newtable
@@ -1052,7 +1060,7 @@ class ParametricFeatures(Features):
         else:
             if self.sampler=='leastsq':
                 p=Pool(nprocesses, maxtasksperchild=1)
-                partial_func=partial(_run_leastsq, d=d, model=self.model,  n_attempts=n_attempts)
+                partial_func=partial(_run_leastsq, d=d, model=self.model,  n_attempts=n_attempts, seed=seed)
                 out=p.map(partial_func, d.object_names)
                 output=out[0]
                 for i in range(1, len(out)):
@@ -1060,7 +1068,7 @@ class ParametricFeatures(Features):
             elif self.sampler=='nested':
                 p=Pool(nprocesses, maxtasksperchild=1)
                 partial_func=partial(_run_multinest, d=d, model=self.model,chain_directory=chain_directory, 
-                nlp=nlp, convert_to_binary=convert_to_binary, n_iter=n_iter, restart=restart)
+                nlp=nlp, convert_to_binary=convert_to_binary, n_iter=n_iter, restart=restart, seed=seed)
                 #Pool starts a number of threads, all of which may try to tackle all of the data. Better to take it in chunks
                 output=[]
                 k=0
@@ -1125,7 +1133,7 @@ class ParametricFeatures(Features):
         
 
         
-    def run_emcee(self, d, obj, save_output, chain_directory,  n_walkers, n_steps, walker_spread, burn, starting_point):
+    def run_emcee(self, d, obj, save_output, chain_directory,  n_walkers, n_steps, walker_spread, burn, starting_point, seed=-1):
         """
         Runs emcee on all the filter bands of a given light curve, fitting the model to each one and extracting the best fitting parameters.
 
