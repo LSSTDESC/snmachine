@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='snmachine',
-    version='1.0',
+    version='1.0.1',
     packages=['snmachine','gapp','gapp.covfunctions'],
     url='',
     license='MIT',

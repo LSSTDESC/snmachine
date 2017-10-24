@@ -104,7 +104,7 @@ class Dataset:
         #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
         self.data={}
         invalid=0 #Some objects may have empty data
-        print 'Reading data...'
+        print('Reading data...')
         for i in range(len(self.object_names)):
             lc=self.get_lightcurve(self.object_names[i])
             if len(lc['mjd']>0):
@@ -134,8 +134,8 @@ class Dataset:
             else:
                 object_names= np.loadtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
         elif all(isinstance(l,basestring) for l in subset):
-            #We assume subset is a list of strings containing object names
-            object_names= subset
+            #We assume subset is a list or array of strings containing object names
+            object_names= np.asarray(subset)
         else:
             #Otherwise it must be a list of indices. Otherwise raise an error.
             names=np.loadtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')

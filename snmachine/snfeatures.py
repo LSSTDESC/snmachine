@@ -1332,7 +1332,8 @@ class WaveletFeatures(Features):
                 self.restart_from_gp(d, output_root)
             else:
                 self.extract_GP(d, self.ngp, xmin, xmax, initheta, save_output, output_root, nprocesses)
-
+            if not isinstance(d.object_names, np.ndarray): 
+                d.object_names = np.asarray(d.object_names)
             wavout, waveout_err=self.extract_wavelets(d, self.wav, self.mlev,  nprocesses, save_output, output_root)
         self.features,vals,vec,mn=self.extract_pca(d.object_names.copy(), wavout)
 
