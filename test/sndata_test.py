@@ -42,11 +42,11 @@ def test_load_example_data():
 def test_single_lightcurve_meta(load_example_lightcurve):
     """test that lc metadata has been properly parsed"""
     test_lc=load_example_lightcurve
-    np.testing.assert_almost_equal(test_lc.meta['initial_observation_time'], 56177.172, err_msg='test lightcurve metadata: initial observation time false')
+    np.testing.assert_allclose(test_lc.meta['initial_observation_time'], 56177.172, err_msg='test lightcurve metadata: initial observation time false')
     assert test_lc.meta['name']==example_name, 'test lightcurve metadata: object name false'
     assert test_lc.meta['type']==2, 'test lightcurve metadata: type false'
-    np.testing.assert_almost_equal(test_lc.meta['z'], 0.5022, err_msg='test lightcurve metadata: redshift false')
-    np.testing.assert_almost_equal(test_lc.meta['z_err'], 0.0466, err_msg='test lightcurve metadata: redshift error false')
+    np.testing.assert_allclose(test_lc.meta['z'], 0.5022, err_msg='test lightcurve metadata: redshift false')
+    np.testing.assert_allclose(test_lc.meta['z_err'], 0.0466, err_msg='test lightcurve metadata: redshift error false')
 
 def test_single_lightcurve_plot(load_example_lightcurve):
     """testing plotting routine on single light curve: this is without a model fit, in snfeatures we redo with test-extracted features"""
