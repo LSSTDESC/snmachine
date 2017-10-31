@@ -5,8 +5,8 @@ from snmachine import sndata
 import numpy as np
 
 import matplotlib.pyplot as plt
-from matplotlib.testing.compare import compare_images
-from matplotlib.testing.noseclasses import ImageComparisonFailure
+#from matplotlib.testing.compare import compare_images
+#from matplotlib.testing.noseclasses import ImageComparisonFailure
 
 
 ### THESE GLOBAL VARIABLES DEFINE THE LOCATION OF THE TEST DATA SET AND THE SPECIFIC EXAMPLE LC WE USE FOR TESTING ###
@@ -48,13 +48,18 @@ def test_single_lightcurve_meta(load_example_lightcurve):
     np.testing.assert_allclose(test_lc.meta['z'], 0.5022, err_msg='test lightcurve metadata: redshift false')
     np.testing.assert_allclose(test_lc.meta['z_err'], 0.0466, err_msg='test lightcurve metadata: redshift error false')
 
+@pytest.mark.mpl_image_compare
+@pytest.mark.plots
 def test_single_lightcurve_plot(load_example_lightcurve):
     """testing plotting routine on single light curve: this is without a model fit, in snfeatures we redo with test-extracted features"""
     test_lc=load_example_lightcurve
+    fig=plt.figure()
     sndata.plot_lc(test_lc)
-    plt.savefig('raw_lc_test.png')
 
-    err=compare_images('raw_lc_test.png', 'raw_lc_truth.png', tol=1e-3)
+    return fig
+#    plt.savefig('raw_lc_test.png')
 
-    if err:
-        raise ImageComparisonFailure(err)
+#    err=compare_images('raw_lc_test.png', 'raw_lc_truth.png', tol=0.1)
+
+#    if err:
+#        raise ImageComparisonFailure(err)

@@ -3,8 +3,8 @@ from snmachine import sndata, snfeatures, tsne_plot
 import sys, os, subprocess
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.testing.compare import compare_images
-from matplotlib.testing.noseclasses import ImageComparisonFailure
+#from matplotlib.testing.compare import compare_images
+#from matplotlib.testing.noseclasses import ImageComparisonFailure
 from astropy.table import join, Table
 
 
@@ -55,7 +55,7 @@ def load_example_data(request):
 
 def fit_templates(d, sampler='leastsq', use_redshift=False, nprocesses=1):
     temp_featz=snfeatures.TemplateFeatures(sampler=sampler)
-    extr_features=temp_featz.extract_features(d, save_chains=False, use_redshift=use_redshift, nprocesses=nprocesses, seed=42)
+    extr_features=temp_featz.extract_features(d, save_chains=False, use_redshift=use_redshift, nprocesses=nprocesses)
     d.set_model(temp_featz.fit_sn, extr_features)
     gof=temp_featz.goodness_of_fit(d)
     gof=np.array([gof[f] for f in d.filter_set]).T
@@ -64,16 +64,16 @@ def fit_templates(d, sampler='leastsq', use_redshift=False, nprocesses=1):
 
 def fit_parametric(model_choice, d, sampler='leastsq', nprocesses=1):
     parametric_featz=snfeatures.ParametricFeatures(model_choice=model_choice, sampler=sampler)
-    extr_features=parametric_featz.extract_features(d, nprocesses=nprocesses, seed=42)
+    extr_features=parametric_featz.extract_features(d, nprocesses=nprocesses)
     d.set_model(parametric_featz.fit_sn, extr_features)
     gof=parametric_featz.goodness_of_fit(d)
     gof=np.array([gof[f] for f in d.filter_set]).T
     return gof[0]
 
-def fit_gp(d, gpalgo='gapp', nprocesses=1):
+def fit_gp(d, gpalgo='george', nprocesses=1):
     ###NB: THIS TESTS ONLY THE GP EXTRACTION, NOT WAVELET TRAFO OR PCA###
-    gp_featz=snfeatures.WaveletFeatures(gpalgo=gpalgo)
-    gp_featz.extract_GP(d, ngp=gp_featz.ngp, xmin=0, xmax=d.get_max_length(), initheta=[500,20], save_output='none', output_root='features', nprocesses=nprocesses)
+    gp_featz=snfeatures.WaveletFeatures()
+    gp_featz.extract_GP(d, ngp=gp_featz.ngp, xmin=0, xmax=d.get_max_length(), initheta=[500,20], save_output='none', output_root='features', nprocesses=nprocesses, gpalgo=gpalgo)
     gof=gp_featz.goodness_of_fit(d)
     gof=np.array([gof[f] for f in d.filter_set]).T
     return gof[0]
@@ -84,11 +84,11 @@ def test_module_loading():
     modules=sys.modules.keys()
     assert 'snmachine.sndata' in modules, 'module sndata could not be loaded'
     assert 'snmachine.snfeatures' in modules, 'module snfeatures could not be loaded'
-    assert 'snmachine.tsne_plot' in modules, 'module snfeatures could not be loaded'
+    assert 'snmachine.tsne_plot' in modules, 'module tsne_plot could not be loaded'
 
-    if not os.path.exists(test_data_path):
-        print('Unpacking example data')
-        subprocess.call(['tar', '-zxf', os.path.join('..', 'examples', 'SPCC_SUBSET.tar.gz'), '-C', os.path.join('..', 'examples', '')])
+#    if not os.path.exists(test_data_path):
+#        print('Unpacking example data')
+#        subprocess.call(['tar', '-zxf', os.path.join('..', 'examples', 'SPCC_SUBSET.tar.gz'), '-C', os.path.join('..', 'examples', '')])
 
 ### HERE WE ASSEMBLE ALL THE DIFFERENT CONFIGURATIONS THAT WE WILL TEST THE FEATURE EXTRACTION METHODS ON ###
 samplers=['leastsq']
@@ -171,9 +171,10 @@ def test_karpenka_nested(load_example_data):
         gof=fit_parametric('karpenka', d, sampler='nested', nprocesses=nproc)
         np.testing.assert_allclose(gof, [ 0.8307367,   0.4544247,   1.04103566,  1.14468516], rtol=rtol)
 
+@pytest.mark.gp
 def test_gp_extraction(load_example_data):
     d=load_example_data
-    gof_truth={'gapp':[ 0.76875293,  0.4266906,   0.7617092,   0.8427292 ], 'george':[ 0.76875293,  0.4266906,   0.7617092,   0.8427292 ]}#TODO george truth
+    gof_truth={'gapp':[ 0.76875293,  0.4266906,   0.7617092,   0.8427292 ], 'george':[ 0.20906565,  0.20430474,  0.31514347,  0.13088728]}#TODO george truth
     for gpalgo in gpalgos:
         for nproc in parallel_cores:
             gof=fit_gp(d, gpalgo=gpalgo, nprocesses=nproc)
@@ -189,14 +190,18 @@ def load_full_testdata(request):
     types['Type'][np.floor(types['Type']/10)==3]=3
     return d_full, precomp_features, types
 
-
+@pytest.mark.mpl_image_compare
+@pytest.mark.plots
 def test_tsne(load_full_testdata):
     d_full, precomp_features, types=load_full_testdata
-    plt.figure()
+    fig=plt.figure()
     tsne_plot.plot(precomp_features, join(precomp_features, types)['Type'], seed=42)
     plt.savefig('tsne_plot_test.png')
 
-    err=compare_images('tsne_plot_test.png', 'tsne_plot_truth.png', tol=1.e-3)
+    assert os.path.getsize('tsne_plot_test.png')>0
 
-    if err:
-        raise ImageComparisonFailure(err)
+    return fig
+ #   err=compare_images('tsne_plot_test.png', 'tsne_plot_truth.png', tol=1.e-3)
+
+ #   if err:
+ #       raise ImageComparisonFailure(err)
