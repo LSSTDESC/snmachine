@@ -1,7 +1,8 @@
 import pytest
 
 import os, sys, subprocess
-from snmachine import sndata
+from snmachine import (sndata,
+                       example_data)
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -11,7 +12,7 @@ import matplotlib.pyplot as plt
 
 ### THESE GLOBAL VARIABLES DEFINE THE LOCATION OF THE TEST DATA SET AND THE SPECIFIC EXAMPLE LC WE USE FOR TESTING ###
 
-test_data_path=os.path.join('..', 'examples', 'SPCC_SUBSET', '') 
+test_data_path=os.path.join(example_data, 'SPCC_SUBSET', '') 
 example_name='DES_SN001695.DAT'
 
 @pytest.fixture(scope='module')
@@ -26,9 +27,9 @@ def test_module_loading():
     modules=sys.modules.keys()
     assert 'snmachine.sndata' in modules, 'module sndata could not be loaded'
 
-    if not os.path.exists(test_data_path):
-        print('Unpacking example data')
-        subprocess.call(['tar', '-zxf', os.path.join('..', 'examples', 'SPCC_SUBSET.tar.gz'), '-C', os.path.join('..', 'examples', '')])
+    # if not os.path.exists(test_data_path):
+    #    print('Unpacking example data')
+    #    subprocess.call(['tar', '-zxf', os.path.join('..', 'examples', 'SPCC_SUBSET.tar.gz'), '-C', os.path.join('..', 'examples', '')])
 
 def test_load_example_data():
     """ test-loading example dataset"""
