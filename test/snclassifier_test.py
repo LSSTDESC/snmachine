@@ -6,6 +6,8 @@ import numpy as np
 
 test_data_path=os.path.join('..', 'examples', 'SPCC_SUBSET', '')
 precomp_features_path=os.path.join('..', 'examples', 'output_spcc_no_z', 'features', 'spcc_all_wavelets.dat')
+slow_classifiers=['boost_dt', 'random_forest', 'boost_rf']
+
 
 @pytest.fixture(scope='module')
 def check_avail_classifiers(request):
@@ -29,19 +31,34 @@ def test_module_loading():
     assert 'snmachine.snfeatures' in modules, 'module snfeatures could not be loaded'
     assert 'snmachine.snclassifier' in modules, 'module snclassifier could not be loaded'
 
-
-def test_classification(check_avail_classifiers, load_full_testdata):
-    avail_classifiers=check_avail_classifiers
-    d, featz, types=load_full_testdata
-
+def classification_test(cls, featz, types):
+    print cls
     out_dir=os.path.join('classifications', '')
     if not os.path.exists(out_dir):
         subprocess.call(['mkdir',out_dir])
 
-    snclassifier.run_pipeline(featz, types, classifiers=avail_classifiers, nprocesses=4, plot_roc_curve=False, output_name=out_dir)
+    snclassifier.run_pipeline(featz, types, classifiers=cls, nprocesses=4, plot_roc_curve=False, output_name=out_dir)
 
-    auc_truth={'nb':5.498296484233418102e-01, 'svm': 9.607832585029829620e-01, 'knn':9.748062611476721040e-01, 'random_forest': 9.794267790146994335e-01, 'decision_tree':9.046528076757488490e-01, 'boost_dt': 9.597607478934744307e-01, 'boost_rf': 9.791576972753551766e-01, 'neural_network': 9.637969739836398375e-01}
-    
-    for classifier in avail_classifiers:
+    auc_truth={'nb':5.498296484233418102e-01, 'svm': 9.607832585029829620e-01, 'knn':8.683540372670807139e-01, 'random_forest': 9.794267790146994335e-01, 'decision_tree':9.046528076757488490e-01, 'boost_dt': 9.597607478934744307e-01, 'boost_rf': 9.791576972753551766e-01, 'neural_network': 9.637969739836398375e-01}
+
+    for classifier in cls:
         auc=np.loadtxt(os.path.join('classifications', classifier+'.auc'))
-        np.testing.assert_allclose(auc, auc_truth[classifier], rtol=0.1)
+        np.testing.assert_allclose(auc, auc_truth[classifier], rtol=0.25)
+
+@pytest.mark.slow
+def test_classification_slow(check_avail_classifiers, load_full_testdata):
+    avail_classifiers=check_avail_classifiers
+    d, featz, types=load_full_testdata
+
+    my_slow_classifiers=list(set(slow_classifiers) & set(avail_classifiers))
+
+    classification_test(my_slow_classifiers, featz, types)
+
+
+def test_classification_fast(check_avail_classifiers, load_full_testdata):
+    avail_classifiers=check_avail_classifiers
+    d, featz, types=load_full_testdata
+
+    fast_classifiers=list(set(avail_classifiers) - set(slow_classifiers))
+
+    classification_test(fast_classifiers, featz, types)

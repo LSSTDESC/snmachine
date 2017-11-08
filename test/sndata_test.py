@@ -55,6 +55,9 @@ def test_single_lightcurve_plot(load_example_lightcurve):
     test_lc=load_example_lightcurve
     fig=plt.figure()
     sndata.plot_lc(test_lc)
+    plt.savefig('raw_lc_test.png')
+
+    assert os.path.getsize('raw_lc_test.png')>0
 
     return fig
 #    plt.savefig('raw_lc_test.png')

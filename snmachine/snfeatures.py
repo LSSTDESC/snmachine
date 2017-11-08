@@ -13,6 +13,9 @@ from functools import partial
 from scipy import stats
 from iminuit import Minuit, describe
 import traceback
+import scipy.optimize as op
+import george
+
 
 try:
     import pymultinest
@@ -28,7 +31,7 @@ except ImportError:
     has_emcee=False
 
 
-def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root):
+def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george'):
     """
     Fit a Gaussian process curve at specific evenly spaced points along a light curve.
 
@@ -66,10 +69,34 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root):
             x=lc['mjd'][lc['filter']==fil]
             y=lc['flux'][lc['filter']==fil]
             err=lc['flux_error'][lc['filter']==fil]
-            sys.stdout = open(os.devnull, "w")
-            g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
-            sys.stdout=sys.__stdout__
-            rec, theta=g.gp(theta=initheta)  
+            if gpalgo=='gapp':
+                sys.stdout = open(os.devnull, "w")
+                g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
+                sys.stdout=sys.__stdout__
+                rec, theta=g.gp(theta=initheta)  
+            elif gpalgo=='george':
+                # Define the objective function (negative log-likelihood in this case).
+                def nll(p):
+                    g.set_parameter_vector(p)
+                    ll = g.log_likelihood(y, quiet=True)
+                    return -ll if np.isfinite(ll) else 1e25
+
+                # And the gradient of the objective function.
+                def grad_nll(p):
+                    g.set_parameter_vector(p)
+                    return -g.grad_log_likelihood(y, quiet=True)
+
+      #          sys.stdout = open(os.devnull, "w")
+                g=george.GP(initheta[0]**2*george.kernels.ExpSquaredKernel(metric=initheta[1]**2))
+                g.compute(x,err)
+                p0 = g.get_parameter_vector()
+                results = op.minimize(nll, p0, jac=grad_nll, method="L-BFGS-B")
+                g.set_parameter_vector(results.x)
+       #         sys.stdout=sys.__stdout__
+                xstar=np.linspace(xmin,xmax,ngp)
+                mu,cov=g.predict(y,xstar)
+                std=np.sqrt(np.diag(cov))
+                rec=np.column_stack((xstar,mu,std))
         else:
             rec=np.zeros([ngp, 3])
         newtable=Table([rec[:, 0], rec[:, 1], rec[:, 2], [fil]*ngp], names=['mjd', 'flux', 'flux_error', 'filter'])
@@ -1291,7 +1318,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none'):
+    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none', xmin=0, xmax=170, gpalgo='george', recompute_bounds=True):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1321,9 +1348,9 @@ class WaveletFeatures(Features):
 
         if save_output is not 'none':
             subprocess.call(['mkdir', output_root])
-
-        xmin=0
-        xmax=d.get_max_length()
+        if recompute_bounds:
+            xmin=0.
+            xmax=d.get_max_length()
 
         if restart=='wavelet':
             wavout, waveout_err=self.restart_from_wavelets(d, output_root)
@@ -1331,7 +1358,7 @@ class WaveletFeatures(Features):
             if restart=='gp':
                 self.restart_from_gp(d, output_root)
             else:
-                self.extract_GP(d, self.ngp, xmin, xmax, initheta, save_output, output_root, nprocesses)
+                self.extract_GP(d, self.ngp, xmin, xmax, initheta, save_output, output_root, nprocesses, gpalgo=gpalgo)
 
             wavout, waveout_err=self.extract_wavelets(d, self.wav, self.mlev,  nprocesses, save_output, output_root)
         self.features,vals,vec,mn=self.extract_pca(d.object_names.copy(), wavout)
@@ -1470,7 +1497,7 @@ class WaveletFeatures(Features):
 
         return wavout, wavout_err
 
-    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses):
+    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses, gpalgo='george'):
         """
         Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
 
@@ -1493,13 +1520,13 @@ class WaveletFeatures(Features):
         nprocesses : int, optional
             Number of processors to use for parallelisation (shared memory only)
         """
-        print 'Performing Gaussian process regression'
+        print 'Performing Gaussian process regression using '+gpalgo
         t1=time.time()
         #Check for parallelisation
         if nprocesses==1:
             for i in xrange(len(d.object_names)):
                 obj=d.object_names[i]
-                out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root)
+                out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
                 d.models[obj]=out
                 if save_output!='none':
                     out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
@@ -1507,7 +1534,7 @@ class WaveletFeatures(Features):
             p=Pool(nprocesses, maxtasksperchild=1)
 
             #Pool and map can only really work with single-valued functions
-            partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root)
+            partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
 
             out=p.map(partial_GP, d.data.keys())
             for i in range(len(out)):
@@ -1516,7 +1543,7 @@ class WaveletFeatures(Features):
 
         print 'Time taken for Gaussian process regression', time.time()-t1
 
-    def GP(self, obj, d, ngp=200, xmin=0, xmax=170, initheta=[500, 20]):
+    def GP(self, obj, d, ngp=200, xmin=0, xmax=170, initheta=[500, 20], gpalgo='george'):
         """
         Fit a Gaussian process curve at specific evenly spaced points along a light curve.
 
@@ -1545,7 +1572,7 @@ class WaveletFeatures(Features):
         Wraps internal module-level function in order to circumvent multiprocessing module limitations in dealing with
         objects when parallelising.
         """
-        return _GP(obj, d, ngp, xmin, xmax, initheta)
+        return _GP(obj, d, ngp, xmin, xmax, initheta, gpalgo=gpalgo)
 
 
     def wavelet_decomp(self, lc, wav, mlev):
@@ -1596,7 +1623,7 @@ class WaveletFeatures(Features):
             #Add the filters
             joined_table['filter']=[fil]*npoints
 
-            if output==0:
+            if output == 0:
                 output=joined_table
             else:
                 output=vstack((output, joined_table))
