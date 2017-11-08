@@ -19,3 +19,4 @@ dependencies:
     - pywavelets>=0.4.0
     - sncosmo>=1.3.0
     - nose>=1.3.7
+    - george>=0.3
