@@ -2,7 +2,7 @@
 Module containing Dataset classes. These read in data from various sources and turns the light curves into astropy tables that
 can be read by the rest of the code.
 """
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.table import Table, Column
@@ -104,7 +104,7 @@ class Dataset:
         #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
         self.data={}
         invalid=0 #Some objects may have empty data
-        print 'Reading data...'
+        print('Reading data...')
         for i in range(len(self.object_names)):
             lc=self.get_lightcurve(self.object_names[i])
             if len(lc['mjd']>0):
@@ -112,8 +112,8 @@ class Dataset:
             else:
                 invalid+=1
         if invalid>0:
-            print '%d objects were invalid and not added to the dataset.' %invalid
-        print '%d objects read into memory.' %len(self.data)
+            print('%d objects were invalid and not added to the dataset.' %invalid)
+        print('%d objects read into memory.' %len(self.data))
         #We create an optional model set which can be set by whatever feature class used
         self.models={}
         
@@ -142,7 +142,7 @@ class Dataset:
             try:
                 object_names= names[subset]
             except IndexError:
-                print 'Invalid subset provided'
+                print('Invalid subset provided')
                 sys.exit()
                 
         return np.sort(object_names)
@@ -294,10 +294,10 @@ class Dataset:
         args : list, optional
             Whatever arguments fit_sn requires
         """
-        print 'Fitting supernova models...'
+        print('Fitting supernova models...')
         for obj in self.object_names:
             self.models[obj]=fit_sn(self.data[obj], *args)
-        print 'Models fitted.'
+        print('Models fitted.')
     
     def plot_lc(self, fname, plot_model=True, title=True, loc='best'):
         """Public function to plot a single light curve.
@@ -415,16 +415,14 @@ class Dataset:
             redshifts[i]=lc.meta['z']
             types[i]=lc.meta['type']
             
-        print
-        print 'Total number of SNe: %d' %(N)
-        print
+        print('Total number of SNe: %d' %(N))
         ks=self.get_types().keys()
         ks.sort()
         for k in ks:
             nk=len(np.where(types==k)[0])
-            print 'Number of %s: %d (%0.2f%%)' %(self.get_types()[k],nk ,nk/N*100)
+            print('Number of %s: %d (%0.2f%%)' %(self.get_types()[k],nk ,nk/N*100))
         nk=len(np.where(types==-9)[0])
-        print 'Number of unknown: %d (%0.2f%%)' %(nk ,nk/N*100)
+        print('Number of unknown: %d (%0.2f%%)' %(nk ,nk/N*100))
         
         if plot_redshifts==True:
             plt.hist(redshifts[redshifts!=-9], 30, facecolor='#0057f6')
@@ -552,7 +550,7 @@ class OpsimDataset(Dataset):
         self.object_names=[]
         
         invalid=0 #Some objects may have empty data
-        print 'Reading data...'
+        print('Reading data...')
         
         for i in range(len(all_data)):
             snid=all_data[i].meta['SNID']
@@ -564,9 +562,9 @@ class OpsimDataset(Dataset):
                 else:
                     invalid+=1
         if invalid>0:
-            print '%d objects were invalid and not added to the dataset.' %invalid
+            print('%d objects were invalid and not added to the dataset.' %invalid)
         self.object_names=np.array(self.object_names, dtype='str')
-        print '%d objects read into memory.' %len(self.data)
+        print('%d objects read into memory.' %len(self.data))
         
         
     def get_lightcurve(self, tab):
@@ -629,7 +627,7 @@ class SDSS_Data(Dataset):
         #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
         self.data={}
         invalid=0 #Some objects may have empty data
-        print 'Reading data...'
+        print('Reading data...')
         for i in range(len(self.object_names)):
             lc=self.get_lightcurve(self.object_names[i])
             if len(lc['mjd']>0):
@@ -637,8 +635,8 @@ class SDSS_Data(Dataset):
             else:
                 invalid+=1
         if invalid>0:
-            print '%d objects were invalid and not added to the dataset.' %invalid
-        print '%d objects read into memory.' %len(self.data)
+            print('%d objects were invalid and not added to the dataset.' %invalid)
+        print('%d objects read into memory.' %len(self.data))
         #We create an optional model set which can be set by whatever feature class used
         self.models={}
 
@@ -725,7 +723,7 @@ class SDSS_Data(Dataset):
             elif classification == 'II' or classification == 'SNII':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] == 'SNII']
             else:
-                print 'Invalid classification requested.'
+                print('Invalid classification requested.')
                 sys.exit()
 
         return SN
@@ -773,7 +771,7 @@ class SDSS_Data(Dataset):
             elif classification == 'II' or classification == 'SNII':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] == 'pSNII' or classes[i] == 'zSNII']
             else:
-                print 'Invalid classification requested.'
+                print('Invalid classification requested.')
                 sys.exit()
 
         return SN
@@ -812,7 +810,7 @@ class SDSS_Data(Dataset):
             try:
                 return names[subset]
             except IndexError:
-                print 'Invalid subset provided'
+                print('Invalid subset provided')
 
 
     def get_info(self,flname):
@@ -965,11 +963,11 @@ class SDSS_Simulations(Dataset):
         #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
         self.data={}
         invalid=0 #Some objects may have empty data
-        print 'Reading data..'
+        print('Reading data..')
         (self.data, invalid) = self.get_data(subset, subset_length, classification)
         if invalid>0:
-            print '%d objects were invalid and not added to the dataset.' %invalid
-        print '%d objects read into memory.' %len(self.data)
+            print('%d objects were invalid and not added to the dataset.' %invalid)
+        print('%d objects read into memory.' %len(self.data))
         self.object_names = self.data.keys()
         #We create an optional model set which can be set by whatever feature class used
         self.models={}
@@ -1030,7 +1028,7 @@ class SDSS_Simulations(Dataset):
                 else:
                     invalid+=1
         else:
-            print 'Invalid classification requested'
+            print('Invalid classification requested')
             sys.exit()
         
         # allow user to request entirely spectroscopic data or photometric data

@@ -2,7 +2,7 @@
 Utility module mostly wrapping sklearn functionality and providing utility functions.
 """
 
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import svm
@@ -26,7 +26,7 @@ try:
     from sklearn.neural_network import MLPClassifier
     choice_of_classifiers.append('neural_network')
 except ImportError:
-    print 'Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.'
+    print('Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.')
 
 def roc(pr, Yt, true_class=0):
     """
@@ -375,19 +375,17 @@ class OptimisedClassifier():
                 elif classifier=='multiple_classifier':
                     pass
                 else:
-                    print 'Requested classifier not recognised.' 
-                    print 'Choice of built-in classifiers:'
-                    print choice_of_classifiers
+                    print('Requested classifier not recognised.')
+                    print('Choice of built-in classifiers:')
+                    print(choice_of_classifiers)
                     sys.exit(0)
                     
             except TypeError:
                 #Gracefully catch errors of sending the wrong kwargs to the classifiers
-                print
-                print 'Error'
-                print 'One of the kwargs below:'
-                print kwargs.keys()
-                print 'Does not belong to classifier', classifier
-                print
+                print('Error')
+                print('One of the kwargs below:')
+                print(kwargs.keys())
+                print('Does not belong to classifier', classifier)
                 sys.exit(0)
             
                 
@@ -395,9 +393,8 @@ class OptimisedClassifier():
             #This is already some sklearn classifier or an object that behaves like one
             self.clf=classifier 
         
-        print 'Created classifier of type:'
-        print self.clf
-        print    
+        print('Created classifier of type:')
+        print(self.clf)
             
     
 
@@ -502,20 +499,16 @@ class OptimisedClassifier():
         
         self.clf.fit(X_train, y_train) #This actually does the grid search
         best_params=self.clf.best_params_
-        print 'Optimised parameters:', best_params
+        print('Optimised parameters:', best_params)
         
         for k in best_params.keys():
             #This is the safest way to check if something is a number
             try:
                 float(best_params[k])
                 if best_params[k]<=min(params[k]):
-                    print
-                    print 'WARNING: Lower boundary on parameter', k, 'may be too high. Optimum may not have been reached.'
-                    print
+                    print('WARNING: Lower boundary on parameter', k, 'may be too high. Optimum may not have been reached.')
                 elif best_params[k]>=max(params[k]):
-                    print
-                    print 'WARNING: Upper boundary on parameter', k, 'may be too low. Optimum may not have been reached.'
-                    print
+                    print('WARNING: Upper boundary on parameter', k, 'may be too low. Optimum may not have been reached.')
                 
             except (ValueError, TypeError):
                 pass #Ignore a parameter that isn't numerical
@@ -645,9 +638,9 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     classifier_objects={}
 
     if nprocesses>1 and return_classifier:
-        print "Due to limitations with python's multiprocessing module, classifier objects cannot be returned if " \
-              "multiple processors are used. Continuing serially..."
-        print
+        print("Due to limitations with python's multiprocessing module, classifier objects cannot be returned if " \
+              "multiple processors are used. Continuing serially...")
+        print('\n')
 
     if nprocesses>1 and not return_classifier:
         partial_func=partial(__call_classifier,X_train=X_train, y_train=y_train, X_test=X_test,
@@ -675,7 +668,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
         fpr, tpr, auc=roc(probs, y_test, true_class=1)
         fom, thresh_fom=FoM(probs, y_test, true_class=1, full_output=False)
 
-        print 'Classifier', cls+':', 'AUC =', auc, 'FoM =', fom
+        print('Classifier', cls+':', 'AUC =', auc, 'FoM =', fom)
 
         if i==0:
             FPR=fpr
@@ -706,8 +699,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
 
             np.savetxt(output_name+cls+'.auc',[auc])
 
-    print
-    print 'Time taken ', (time.time()-t1)/60., 'minutes'
+    print('\nTime taken ', (time.time()-t1)/60., 'minutes\n')
 
     if plot_roc_curve:
         plot_roc(FPR, TPR, AUC, labels=classifiers,label_size=16,tick_size=12,line_width=1.5)

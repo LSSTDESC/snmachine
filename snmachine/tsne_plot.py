@@ -2,7 +2,7 @@
 Utility script for making nice t-SNE plots (https://lvdmaaten.github.io/tsne/)
 """
 
-from __future__ import division
+from __future__ import division, print_function
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 import numpy as np
