@@ -72,7 +72,6 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
     filters=np.unique(lc['filter'])
     #Store the output in another astropy table
     output=[]
-    print(george.__version__)
     for fil in d.filter_set:
         if fil in filters:
             x=lc['mjd'][lc['filter']==fil]
