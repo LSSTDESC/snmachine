@@ -32,7 +32,6 @@ def test_module_loading():
     assert 'snmachine.snclassifier' in modules, 'module snclassifier could not be loaded'
 
 def classification_test(cls, featz, types):
-    print cls
     out_dir=os.path.join('classifications', '')
     if not os.path.exists(out_dir):
         subprocess.call(['mkdir',out_dir])

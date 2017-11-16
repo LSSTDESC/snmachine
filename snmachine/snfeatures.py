@@ -2,20 +2,19 @@
 Module for feature extraction on supernova light curves.
 """
 
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
-import parametric_models, sys, pywt, time, subprocess, os, sncosmo
+from . import parametric_models
+import sys, pywt, time, subprocess, os, sncosmo
 from scipy.interpolate import interp1d
-from gapp import dgp
+import george
 from astropy.table import Table, vstack, hstack, join
 from multiprocessing import Pool
 from functools import partial
 from scipy import stats
+import scipy.optimize as op
 from iminuit import Minuit, describe
 import traceback
-import scipy.optimize as op
-import george
-
 
 try:
     import pymultinest
@@ -30,6 +29,17 @@ try:
 except ImportError:
     has_emcee=False
 
+try:
+    import george
+    has_george=True
+except ImportError:
+    has_george=False
+
+try:
+    from gapp import dgp
+    has_gapp=True
+except ImportError:
+    has_gapp=False
 
 def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george'):
     """
@@ -53,6 +63,8 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
         Whether or not to save the output
     output_root : str
         Output directory
+    gpalgo : str
+        which gp package is used for the Gaussian Process Regression, GaPP or george
 
     Returns
     -------
@@ -60,6 +72,11 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
         Table with evaluated Gaussian process curve and errors
 
     """
+
+    if gpalgo=='gapp' and not has_gapp:
+        print('No GP module gapp. Defaulting to george instead.')
+        gpalgo='george'
+
     lc=d.data[obj]
     filters=np.unique(lc['filter'])
     #Store the output in another astropy table
@@ -69,11 +86,12 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
             x=lc['mjd'][lc['filter']==fil]
             y=lc['flux'][lc['filter']==fil]
             err=lc['flux_error'][lc['filter']==fil]
+            sys.stdout = open(os.devnull, "w")
             if gpalgo=='gapp':
                 sys.stdout = open(os.devnull, "w")
                 g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
                 sys.stdout=sys.__stdout__
-                rec, theta=g.gp(theta=initheta)  
+                rec, theta=g.gp(theta=initheta)
             elif gpalgo=='george':
                 # Define the objective function (negative log-likelihood in this case).
                 def nll(p):
@@ -146,7 +164,7 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
         pams=model.param_names
         for p in pams:
             labels.append(f+'-'+p)
-    output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
+    output=Table(names=labels, dtype=['U32']+['f']*(len(labels)-1))
 
     if seed!=-1:
         np.random.seed(seed)
@@ -277,7 +295,7 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
             for p in pams:
                 labels.append(f+'-'+p)
 
-        output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
+        output=Table(names=labels, dtype=['U32']+['f']*(len(labels)-1))
     
         
         row=[obj]
@@ -331,8 +349,8 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
                             np.save(outfile, x)
                             os.system('rm %s' %infile)
                         except:
-                            print 'ERROR reading file', infile
-                            print 'File unconverted'
+                            print ('ERROR reading file', infile)
+                            print ('File unconverted')
     #            stats=An.get_stats()['marginals']
     #            sig_upper=[stats[p]['1sigma'][1]-best_params[p] for p in range(len(stats))]
     #            sig_lower=[best_params[p]-stats[p]['1sigma'][0] for p in range(len(stats))]
@@ -351,9 +369,9 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
     
     except:
         #Sometimes things just break
-        print 'ERROR in', obj
-        print sys.exc_info()[0]
-        print sys.exc_info()[1]
+        print ('ERROR in', obj)
+        print (sys.exc_info()[0])
+        print (sys.exc_info()[1])
         traceback.print_tb(sys.exc_info()[2])
         
         return None
@@ -361,7 +379,7 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
 
     
     
-def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds):
+def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds, seed=-1):
     """
     Fit template-based supernova models using least squares.
 
@@ -396,7 +414,7 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds):
     #labels=['Object']+model.param_names+['Chisq']
     #output=Table(names=labels, dtype=['S32']+['f']*(len(model.param_names))+['f'])
     labels = ['Object'] + model.param_names
-    output=Table(names=labels, dtype=['S32']+['f']*(len(model.param_names)))
+    output=Table(names=labels, dtype=['U32']+['f']*(len(model.param_names)))
 
     t1=time.time()
     row=[obj]
@@ -578,9 +596,9 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
     
     except:
         #Sometimes things just break
-        print 'ERROR in', obj
-        print sys.exc_info()[0]
-        print sys.exc_info()[1]
+        print ('ERROR in', obj)
+        print (sys.exc_info()[0])
+        print (sys.exc_info()[1])
         traceback.print_tb(sys.exc_info()[2])
         
         return None
@@ -604,7 +622,7 @@ def output_time(tm):
         out = '%.2f minutes' % (mins)
     else:
         out = '%.2f seconds' % (secs)
-    print 'Time taken is', out
+    print ('Time taken is', out)
 
 
 def get_MAP(chain_name):
@@ -659,11 +677,11 @@ class Features:
             Table with the reduced Chi2 for each object
         """
         if len(d.models)==0:
-            print 'Call Dataset.set_models first.'
+            print ('Call Dataset.set_models first.')
             return None
         filts=np.unique(d.data[d.object_names[0]]['filter'])
         filts=np.array(filts).tolist()
-        rcs=Table(names=['Object']+filts, dtype=['S32']+['float64']*len(filts)) #Reduced chi2
+        rcs=Table(names=['Object']+filts, dtype=['U32']+['float64']*len(filts)) #Reduced chi2
         for obj in d.object_names:
             #Go through each filter
             chi2=[]
@@ -677,7 +695,6 @@ class Features:
                 e=l['flux_error']
                 xmod=m['mjd']
                 ymod=m['flux']
-                
                 #Interpolate
                 fit=interp1d(xmod, ymod)
                 yfit=fit(x)
@@ -718,13 +735,13 @@ class Features:
         if dof<=0:
             dof=1
         chi2_limit=stats.chi2.ppf(1-self.p_limit, dof)
-        print chi2_limit
-        print chi2.min(), chi2.max()
+        print (chi2_limit)
+        print (chi2.min(), chi2.max())
         chi2=np.sort(chi2)
         p_value=np.count_nonzero(chi2>chi2_limit)/len(chi2)
         
         if p_value>self.p_limit:
-            print 'Model fit unsatisfactory, p value=', p_value
+            print ('Model fit unsatisfactory, p value=', p_value)
         return p_value
     
     def convert_astropy_array(self, tab):
@@ -767,13 +784,13 @@ class TemplateFeatures(Features):
             try:
                 import pymultinest
             except ImportError:
-                print 'Nested sampling selected but pymultinest is not installed. Defaulting to least squares.'
+                print ('Nested sampling selected but pymultinest is not installed. Defaulting to least squares.')
                 sampler='leastsq'
         elif sampler=='mcmc':
             try:
                 import emcee
             except ImportError:
-                print 'MCMC sampling selected but emcee is not installed. Defaulting to least squares.'
+                print ('MCMC sampling selected but emcee is not installed. Defaulting to least squares.')
                 sampler='leastsq'
                 
         self.sampler=sampler
@@ -810,7 +827,7 @@ class TemplateFeatures(Features):
 
         """
         subprocess.call(['mkdir', chain_directory])
-        print 'Fitting templates using', self.sampler, '...'
+        print ('Fitting templates using', self.sampler, '...')
         all_output=[]
         t1=time.time()
         for mod_name in self.model_names:
@@ -831,17 +848,17 @@ class TemplateFeatures(Features):
             #     labels=['Object']+params+['Chisq']
             
             #output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
-            output = Table(names=labels, dtype=['S32'] + ['f'] * (len(labels) - 1))
+            output = Table(names=labels, dtype=['U32'] + ['f'] * (len(labels) - 1))
             
             k=0
             if nprocesses<2:
                 for obj in d.object_names:
                     if k%100==0:
-                        print k, 'objects fitted'
+                        print (k, 'objects fitted')
                     lc=d.data[obj]
                     
                     if self.sampler=='mcmc':
-                        if(seed!=-1):
+                        if seed!=-1:
                             np.random.seed(seed)
                         res, fitted_model = sncosmo.mcmc_lc(lc, self.model,  self.model.param_names, bounds=self.bounds[self.templates[mod_name]], nwalkers=20, nsamples=1500, nburn=300)
                         chain=res.samples
@@ -900,7 +917,7 @@ class TemplateFeatures(Features):
                     else:
                         all_output=vstack((all_output, output))
                         
-        print len(all_output), 'objects fitted'
+        print (len(all_output), 'objects fitted')
         output_time(time.time()-t1)
         return all_output
         
@@ -926,7 +943,7 @@ class TemplateFeatures(Features):
         params=np.array([tab[c] for c in tab.columns[1:]]).flatten()
              
         if len(params)==0:
-            print 'No feature set found for', obj
+            print ('No feature set found for', obj)
             return None
         
         model_name=self.templates[self.model_names[0]]
@@ -943,7 +960,7 @@ class TemplateFeatures(Features):
 
         filts=np.unique(lc['filter'])
         labels=['mjd', 'flux', 'filter']
-        output=Table(names=labels, dtype=['f', 'f', 'S32'],  meta={'name':obj})
+        output=Table(names=labels, dtype=['f', 'f', 'U32'],  meta={'name':obj})
         for filt in filts:
             x=lc['mjd'][lc['filter']==filt]
             xnew=np.linspace(0, x.max()-x.min(), 100)
@@ -955,10 +972,6 @@ class TemplateFeatures(Features):
             #newtable=Table([x, ynew, [filt]*len(x)], names=labels)
             output=vstack((output, newtable))
         return output
-        
-        
-
-
 
     def registerBands(self, dirname, prefix=None, suffix=None):
         """Register LSST bandpasses with sncosmo.
@@ -1000,16 +1013,16 @@ class ParametricFeatures(Features):
             else:
                 self.model=self.model_choices[model_choice]()
         except KeyError:
-            print 'Your selected model is not in the parametric_models package. Either choose an existing model,  or implement a new one in that package.'
-            print 'Make sure any new models are included in the model_choices dictionary in the ParametricFeatures class.'
+            print ('Your selected model is not in the parametric_models package. Either choose an existing model,  or implement a new one in that package.')
+            print ('Make sure any new models are included in the model_choices dictionary in the ParametricFeatures class.')
             sys.exit()
             
         if sampler=='nested' and not has_multinest:
-            print 'Nested sampling selected but pymultinest is not installed. Defaulting to least squares.'
+            print ('Nested sampling selected but pymultinest is not installed. Defaulting to least squares.')
             sampler='leastsq'
                 
         elif sampler=='mcmc' and not has_emcee:
-            print 'MCMC sampling selected but emcee is not installed. Defaulting to least squares.'
+            print ('MCMC sampling selected but emcee is not installed. Defaulting to least squares.')
             sampler='leastsq'
             
         self.sampler=sampler
@@ -1069,13 +1082,13 @@ class ParametricFeatures(Features):
             k=0
             for obj in d.object_names:
                 if k%100==0:
-                    print k, 'objects fitted'
+                    print (k, 'objects fitted')
                 if self.sampler=='leastsq':
                     newtable=_run_leastsq(obj, d, self.model, n_attempts, seed=seed)
                 elif self.sampler=='mcmc':
                     if(seed!=-1):
                         np.random.seed(seed)
-                    newtable=self.run_emcee(d, obj, save_output, chain_directory,   n_walkers, n_steps, walker_spread, burn, starting_point, seed=seed)
+                    newtable=self.run_emcee(d, obj, save_output, chain_directory,   n_walkers, n_steps, walker_spread, burn, starting_point)
                 else:
                     newtable=_run_multinest(obj, d, self.model, chain_directory, nlp, convert_to_binary, n_iter, restart, seed=seed)
                 
@@ -1105,14 +1118,14 @@ class ParametricFeatures(Features):
                     out=p.map(partial_func, objs_subset)
                     for i in range(0, len(out)):
                         if out[i]==None:
-                            print 'Fitting failed for', objs_subset[i]
+                            print ('Fitting failed for', objs_subset[i])
                         else:
                             if len(output)==0:
                                 output=out[i]
                             else:
                                 output=vstack((output, out[i]))
                     k+=len(objs_subset)
-        print len(output), 'objects fitted'
+        print (len(output), 'objects fitted')
         output_time(time.time()-t1)
         return output
         
@@ -1137,12 +1150,12 @@ class ParametricFeatures(Features):
         params=features[features['Object']==obj]
         
         if len(params)==0:
-            print 'No feature set found for', obj
+            print ('No feature set found for', obj)
             return None
         
         filts=np.unique(lc['filter'])
         labels=['mjd', 'flux', 'filter']
-        output=Table(names=labels, dtype=['f', 'f', 'S32'],  meta={'name':obj})
+        output=Table(names=labels, dtype=['f', 'f', 'U32'],  meta={'name':obj})
         cols=params.columns[1:]
         prms=np.array([params[c] for c in cols])
         for filt in filts:
@@ -1202,6 +1215,9 @@ class ParametricFeatures(Features):
         lc=d.data[obj]
         filts=np.unique(lc['filter'])
         
+        if(seed!=-1):
+            np.random.seed(seed)
+
         n_params=len(self.model.param_names)
         
         #err_plus=[pname+'_err+' for pname in self.model.param_names]
@@ -1212,7 +1228,7 @@ class ParametricFeatures(Features):
             for p in pams:
                 labels.append(f+'-'+p)
 
-        output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
+        output=Table(names=labels, dtype=['U32']+['f']*(len(labels)-1))
 
         t1=time.time()
         row=[obj]
@@ -1253,7 +1269,7 @@ class ParametricFeatures(Features):
                 row+=[0]*len(self.model.param_names) #I'm not sure if it makes the most sense to fill in missing values with zeroes...
         output.add_row(row)
 
-        print 'Time per filter', (time.time()-t1)/4
+        print ('Time per filter', (time.time()-t1)/len(d.filter_set))
         return output
     
 
@@ -1308,7 +1324,7 @@ class WaveletFeatures(Features):
         self.wavelet_list=pywt.wavelist() #All possible families
 
         if wavelet not in self.wavelet_list:
-            print 'Wavelet not recognised in pywt'
+            print ('Wavelet not recognised in pywt')
             sys.exit()
 
         #If the user does not specify a level of depth for the wavelet, automatically calculate it
@@ -1318,7 +1334,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none', xmin=0, xmax=170, gpalgo='george', recompute_bounds=True):
+    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none', gpalgo='george'):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1348,9 +1364,9 @@ class WaveletFeatures(Features):
 
         if save_output is not 'none':
             subprocess.call(['mkdir', output_root])
-        if recompute_bounds:
-            xmin=0.
-            xmax=d.get_max_length()
+
+        xmin=0
+        xmax=d.get_max_length()
 
         if restart=='wavelet':
             wavout, waveout_err=self.restart_from_wavelets(d, output_root)
@@ -1404,7 +1420,7 @@ class WaveletFeatures(Features):
         try:
             pca_comps=comps[comps['Object']==obj]
         except KeyError:
-            print 'No feature set found for', obj
+            print ('No feature set found for', obj)
             return None
 
         new_comps=np.array([pca_comps[c] for c in pca_comps.columns[1:]]).flatten()
@@ -1422,7 +1438,7 @@ class WaveletFeatures(Features):
                 filt_coeffs=filt_coeffs.reshape(self.mlev, 2, self.ngp, order='C')
                 ynew=self.iswt(filt_coeffs, self.wav)
 
-                newtable=Table([xnew, ynew, [filter_set[i]]*self.ngp], names=['mjd', 'flux', 'filter'])
+                newtable=Table([xnew, ynew, [filter_set[i]]*self.ngp], names=['mjd', 'flux', 'filter'], dtype=['f', 'f', 'U32'])
                 if len(output)==0:
                     output=newtable
                 else:
@@ -1442,14 +1458,14 @@ class WaveletFeatures(Features):
             Location of GP objects
         """
 
-        print 'Restarting from stored Gaussian Processes...'
+        print ('Restarting from stored Gaussian Processes...')
         for obj in d.object_names:
             fname=os.path.join(output_root, 'gp_'+obj)
             try:
                 tab=Table.read(fname, format='ascii')
                 d.models[obj]=tab
             except IOError:
-                print 'IOError, file ',fname, 'does not exist.'
+                print ('IOError, file ',fname, 'does not exist.')
 
     def restart_from_wavelets(self, d, output_root):
         """
@@ -1471,7 +1487,7 @@ class WaveletFeatures(Features):
             A similar numpy array storing the (assuming Gaussian) error on each coefficient.
         """
 
-        print 'Restarting from stored wavelets...'
+        print ('Restarting from stored wavelets...')
         nfilts=len(d.filter_set)
         wavout=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts]) #This is just a very big array holding coefficients in memory
         wavout_err=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts])
@@ -1493,7 +1509,7 @@ class WaveletFeatures(Features):
                     wavout_err[i, j*n:(j+1)*n]=newcoeffs_err.flatten('F')
 
             except IOError:
-                print 'IOError, file ',fname, 'does not exist.'
+                print ('IOError, file ',fname, 'does not exist.')
 
         return wavout, wavout_err
 
@@ -1520,11 +1536,11 @@ class WaveletFeatures(Features):
         nprocesses : int, optional
             Number of processors to use for parallelisation (shared memory only)
         """
-        print 'Performing Gaussian process regression using '+gpalgo
+        print ('Performing Gaussian process regression')
         t1=time.time()
         #Check for parallelisation
         if nprocesses==1:
-            for i in xrange(len(d.object_names)):
+            for i in range(len(d.object_names)):
                 obj=d.object_names[i]
                 out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
                 d.models[obj]=out
@@ -1536,12 +1552,12 @@ class WaveletFeatures(Features):
             #Pool and map can only really work with single-valued functions
             partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
 
-            out=p.map(partial_GP, d.data.keys())
+            out=p.map(partial_GP, d.get_object_names())
             for i in range(len(out)):
-                obj=d.data.keys()[i]
+                obj=d.get_object_names()[i]
                 d.models[obj]=out[i]
 
-        print 'Time taken for Gaussian process regression', time.time()-t1
+        print ('Time taken for Gaussian process regression', time.time()-t1)
 
     def GP(self, obj, d, ngp=200, xmin=0, xmax=170, initheta=[500, 20], gpalgo='george'):
         """
@@ -1572,7 +1588,7 @@ class WaveletFeatures(Features):
         Wraps internal module-level function in order to circumvent multiprocessing module limitations in dealing with
         objects when parallelising.
         """
-        return _GP(obj, d, ngp, xmin, xmax, initheta, gpalgo=gpalgo)
+        return _GP(obj, d, ngp, xmin, xmax, initheta, gpalgo)
 
 
     def wavelet_decomp(self, lc, wav, mlev):
@@ -1606,7 +1622,7 @@ class WaveletFeatures(Features):
 
             #Create the column names (follows pywt convention)
             labels=[]
-            for i in xrange(len(coeffs)):
+            for i in range(len(coeffs)):
                 labels.append('cA%d' %(len(coeffs)-i))
                 labels.append('cD%d' %(len(coeffs)-i))
 
@@ -1623,7 +1639,7 @@ class WaveletFeatures(Features):
             #Add the filters
             joined_table['filter']=[fil]*npoints
 
-            if output == 0:
+            if output==0:
                 output=joined_table
             else:
                 output=vstack((output, joined_table))
@@ -1657,7 +1673,7 @@ class WaveletFeatures(Features):
             A numpy array storing the (assuming Gaussian) error on each coefficient.
         """
 
-        print 'Performing wavelet decomposition'
+        print ('Performing wavelet decomposition')
 
         nfilts=len(d.filter_set)
         wavout=np.zeros([len(d.object_names), self.ngp*2*mlev*nfilts]) #This is just a big array holding coefficients in memory
@@ -1682,7 +1698,7 @@ class WaveletFeatures(Features):
                     newcoeffs_err=np.array([coeffs_err[c] for c in coeffs_err.columns]).T
                     wavout[i, j*n:(j+1)*n]=newcoeffs.flatten('F')
                     wavout_err[i, j*n:(j+1)*n]=newcoeffs_err.flatten('F')
-        print 'Time for wavelet decomposition', time.time()-t1
+        print ('Time for wavelet decomposition', time.time()-t1)
 
         return wavout, wavout_err
 
@@ -1756,7 +1772,7 @@ class WaveletFeatures(Features):
                 return i
                 break
 
-        print "No dimensionality reduction achieved. All components of the PCA are required."
+        print ("No dimensionality reduction achieved. All components of the PCA are required.")
         return -1
 
     def project_pca(self, X, eig_vec):
@@ -1800,7 +1816,7 @@ class WaveletFeatures(Features):
 
         """
 
-        print 'Running PCA...'
+        print ('Running PCA...')
         t1=time.time()
         #We now run PCA on this big matrix
         vals, vec, mn=self.pca(wavout)
@@ -1826,7 +1842,7 @@ class WaveletFeatures(Features):
         objnames=Table(object_names, names=['Object'])
         wavs=hstack((objnames, wavs))
         #wavs.write('wavelet_features.dat', format='ascii')
-        print 'Time for PCA', time.time()-t1
+        print ('Time for PCA', time.time()-t1)
         return wavs,vals,vec,mn
 
     def iswt(self, coefficients, wavelet):
@@ -1878,15 +1894,3 @@ class WaveletFeatures(Features):
                 output[indices] = (x1 + x2)/2.
 
         return output
-        
-       
-
-        
-        
-        
-        
-        
-        
-
-
-

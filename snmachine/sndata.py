@@ -3,6 +3,7 @@ Module containing Dataset classes. These read in data from various sources and t
 can be read by the rest of the code.
 """
 from __future__ import division
+from past.builtins import basestring
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.table import Table, Column
@@ -55,7 +56,7 @@ def plot_lc(lc):
         else:
             mkr='o'
         if error:
-            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr,linestyle='none',  color=colours[filts[j]], markersize=8)
+            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr,linestyle='none',  color=colours[filts[j]], markersize=4)
         else:
             l=plt.plot(tdelt, F,lw=2,  marker=mkr,color=colours[filts[j]])
         lines.append(l)
@@ -104,7 +105,7 @@ class Dataset:
         #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
         self.data={}
         invalid=0 #Some objects may have empty data
-        print 'Reading data...'
+        print ('Reading data...')
         for i in range(len(self.object_names)):
             lc=self.get_lightcurve(self.object_names[i])
             if len(lc['mjd']>0):
@@ -112,8 +113,8 @@ class Dataset:
             else:
                 invalid+=1
         if invalid>0:
-            print '%d objects were invalid and not added to the dataset.' %invalid
-        print '%d objects read into memory.' %len(self.data)
+            print ('%d objects were invalid and not added to the dataset.' %invalid)
+        print ('%d objects read into memory.' %len(self.data))
         #We create an optional model set which can be set by whatever feature class used
         self.models={}
         
@@ -130,19 +131,19 @@ class Dataset:
         """
         if isinstance(subset,basestring):
             if subset=='spectro':
-                object_names= np.loadtxt(self.rootdir+'spectro.list', dtype='str').flatten()
+                object_names= np.genfromtxt(self.rootdir+'spectro.list', dtype='str').flatten()
             else:
-                object_names= np.loadtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
+                object_names= np.genfromtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
         elif all(isinstance(l,basestring) for l in subset):
             #We assume subset is a list of strings containing object names
             object_names= subset
         else:
             #Otherwise it must be a list of indices. Otherwise raise an error.
-            names=np.loadtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
+            names=np.genfromtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
             try:
                 object_names= names[subset]
             except IndexError:
-                print 'Invalid subset provided'
+                print ('Invalid subset provided')
                 sys.exit()
                 
         return np.sort(object_names)
@@ -251,14 +252,14 @@ class Dataset:
             
             #Plot the model, if it has been set
             if self.plot_model:
-                if self.models.has_key(fname):
+                if fname in self.models.keys():
                     mod=self.models[fname]
                     if mod is not None:
                         inds=np.where(mod['filter']==filts[j])[0]
                         t_mod, F_mod=mod['mjd'][inds], mod['flux'][inds]
                         plt.plot(t_mod, F_mod, color=colours[filts[j]])
-            
-            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr,linestyle='none',  color=colours[filts[j]])
+
+            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr, linestyle='none',  color=colours[filts[j]], markersize=4)
             lines.append(l)
             if tdelt.min()<min_x:
                 min_x=tdelt.min()
@@ -294,10 +295,10 @@ class Dataset:
         args : list, optional
             Whatever arguments fit_sn requires
         """
-        print 'Fitting supernova models...'
+        print ('Fitting supernova models...')
         for obj in self.object_names:
             self.models[obj]=fit_sn(self.data[obj], *args)
-        print 'Models fitted.'
+        print ('Models fitted.')
     
     def plot_lc(self, fname, plot_model=True, title=True, loc='best'):
         """Public function to plot a single light curve.
@@ -415,16 +416,16 @@ class Dataset:
             redshifts[i]=lc.meta['z']
             types[i]=lc.meta['type']
             
-        print
-        print 'Total number of SNe: %d' %(N)
-        print
-        ks=self.get_types().keys()
+        print()
+        print ('Total number of SNe: %d' %(N))
+        print()
+        ks=self.sntypes.keys()
         ks.sort()
         for k in ks:
             nk=len(np.where(types==k)[0])
-            print 'Number of %s: %d (%0.2f%%)' %(self.get_types()[k],nk ,nk/N*100)
+            print ('Number of %s: %d (%0.2f%%)' %(self.sntypes[k],nk ,nk/N*100))
         nk=len(np.where(types==-9)[0])
-        print 'Number of unknown: %d (%0.2f%%)' %(nk ,nk/N*100)
+        print ('Number of unknown: %d (%0.2f%%)' %(nk ,nk/N*100))
         
         if plot_redshifts==True:
             plt.hist(redshifts[redshifts!=-9], 30, facecolor='#0057f6')
@@ -464,7 +465,7 @@ class Dataset:
                 #tdelt=t-t.min()
                 tdelt=t
                 N = N + len(tdelt)
-                if self.models.has_key(name):
+                if name in self.models:
                     mod=self.models[name]
                     if mod is not None:
                         inds=np.where(mod['filter']==filts[j])[0]
@@ -522,7 +523,7 @@ class OpsimDataset(Dataset):
             List of a subset of object names. If not supplied, the full dataset will be used
 
         """
-        if (not isinstance(subset,basestring)) and (isinstance(subset,(tuple,list))) and (all(isinstance(l,basestring) for l in subset)):
+        if ~isinstance(subset,basestring) and (all(isinstance(l,basestring) for l in subset)):
             #We have to deal with separate Ia and nIa fits files
             Ia_head=os.path.join(folder,'LSST_Ia_HEAD.FITS')
             nIa_head=os.path.join(folder,'LSST_NONIa_HEAD.FITS')
@@ -552,7 +553,7 @@ class OpsimDataset(Dataset):
         self.object_names=[]
         
         invalid=0 #Some objects may have empty data
-        print 'Reading data...'
+        print ('Reading data...')
         
         for i in range(len(all_data)):
             snid=all_data[i].meta['SNID']
@@ -564,9 +565,9 @@ class OpsimDataset(Dataset):
                 else:
                     invalid+=1
         if invalid>0:
-            print '%d objects were invalid and not added to the dataset.' %invalid
+            print ('%d objects were invalid and not added to the dataset.' %invalid)
         self.object_names=np.array(self.object_names, dtype='str')
-        print '%d objects read into memory.' %len(self.data)
+        print ('%d objects read into memory.' %len(self.data))
         
         
     def get_lightcurve(self, tab):
@@ -629,7 +630,7 @@ class SDSS_Data(Dataset):
         #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
         self.data={}
         invalid=0 #Some objects may have empty data
-        print 'Reading data...'
+        print ('Reading data...')
         for i in range(len(self.object_names)):
             lc=self.get_lightcurve(self.object_names[i])
             if len(lc['mjd']>0):
@@ -637,8 +638,8 @@ class SDSS_Data(Dataset):
             else:
                 invalid+=1
         if invalid>0:
-            print '%d objects were invalid and not added to the dataset.' %invalid
-        print '%d objects read into memory.' %len(self.data)
+            print ('%d objects were invalid and not added to the dataset.' %invalid)
+        print ('%d objects read into memory.' %len(self.data))
         #We create an optional model set which can be set by whatever feature class used
         self.models={}
 
@@ -672,7 +673,7 @@ class SDSS_Data(Dataset):
                     SN.append("SMP_0%s.dat" % s[0])
     #SN now contains all file names for supernovae
         if subset_length != False:
-            SN = [SN[i] for i in sorted(sample(xrange(len(SN)), subset_length)) ]
+            SN = [SN[i] for i in sorted(sample(range(len(SN)), subset_length)) ]
 
         return SN
 
@@ -709,7 +710,7 @@ class SDSS_Data(Dataset):
          #SN now contains all file names for spectroscopically confirmed supernovae
 
         if subset_length != False:
-            x = sorted(sample(xrange(len(SN)), subset_length))
+            x = sorted(sample(range(len(SN)), subset_length))
             SN = [SN[i] for i in x ]
             classes = [classes[i] for i in x]
 
@@ -725,7 +726,7 @@ class SDSS_Data(Dataset):
             elif classification == 'II' or classification == 'SNII':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] == 'SNII']
             else:
-                print 'Invalid classification requested.'
+                print ('Invalid classification requested.')
                 sys.exit()
 
         return SN
@@ -761,7 +762,7 @@ class SDSS_Data(Dataset):
          #SN now contains all file names for spectroscopically confirmed supernovae
 
         if subset_length != False:
-            x = sorted(sample(xrange(len(SN)), subset_length))
+            x = sorted(sample(range(len(SN)), subset_length))
             SN = [SN[i] for i in x ]
             classes = [classes[i] for i in x]
 
@@ -773,7 +774,7 @@ class SDSS_Data(Dataset):
             elif classification == 'II' or classification == 'SNII':
                 SN = [SN[i] for i in range(len(SN)) if classes[i] == 'pSNII' or classes[i] == 'zSNII']
             else:
-                print 'Invalid classification requested.'
+                print ('Invalid classification requested.')
                 sys.exit()
 
         return SN
@@ -808,11 +809,11 @@ class SDSS_Data(Dataset):
             return subset
         else:
             #Otherwise it must be a list of indices. Otherwise raise an error.
-            names=np.loadtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
+            names=np.genfromtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
             try:
                 return names[subset]
             except IndexError:
-                print 'Invalid subset provided'
+                print ('Invalid subset provided')
 
 
     def get_info(self,flname):
@@ -835,19 +836,19 @@ class SDSS_Data(Dataset):
         for line in fl:
             s=line.split()
             if "SMP_000%s.dat" % s[0] == flname or "SMP_00%s.dat" % s[0] == flname or "SMP_0%s.dat" % s[0] == flname: # is this a bit slow?
-                if s[103] != "\N":
+                if s[103] != "\\N":
                     z['z_phot']=float(s[103])
                 else:
                     z['z_phot']= -9
-                if s[11] != "\N":
+                if s[11] != "\\N":
                     z['z_hel']=float(s[11])
                 else:
                     z['z_hel']= -9
-                if s[104] != "\N":
+                if s[104] != "\\N":
                     z_err['z_phot_err']=float(s[104])
                 else:
                     z_err['z_phot_err']= -9
-                if s[12] != "\N":
+                if s[12] != "\\N":
                     z_err['z_hel_err']=float(s[12])
                 else:
                     z_err['z_hel_err']= -9
@@ -965,11 +966,11 @@ class SDSS_Simulations(Dataset):
         #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
         self.data={}
         invalid=0 #Some objects may have empty data
-        print 'Reading data..'
+        print ('Reading data..')
         (self.data, invalid) = self.get_data(subset, subset_length, classification)
         if invalid>0:
-            print '%d objects were invalid and not added to the dataset.' %invalid
-        print '%d objects read into memory.' %len(self.data)
+            print ('%d objects were invalid and not added to the dataset.' %invalid)
+        print ('%d objects read into memory.' %len(self.data))
         self.object_names = self.data.keys()
         #We create an optional model set which can be set by whatever feature class used
         self.models={}
@@ -1030,7 +1031,7 @@ class SDSS_Simulations(Dataset):
                 else:
                     invalid+=1
         else:
-            print 'Invalid classification requested'
+            print ('Invalid classification requested')
             sys.exit()
         
         # allow user to request entirely spectroscopic data or photometric data
@@ -1104,13 +1105,3 @@ class SDSS_Simulations(Dataset):
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys', 'mag', 'mag_error'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux , 'data type':dtype })
 
         return tab
-
-
-
-            
-
-    
-    
-    
-    
-    

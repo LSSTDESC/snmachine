@@ -112,17 +112,17 @@ def test_templates_leastsq(load_example_data):
 	#This case distinction is necessary, since from sncosmo-1.4 to sncosmo-1.5 there have been 
 	#significant changes in the salt2 templates that result in different fits.
         if sncosmo.__version__ < '1.5.0':
-	    gof_truth=[  6.19486141,  18.22896966,   6.11967201,   1.06182221]
-	else:
-	    gof_truth=[  6.15794175,  18.22484842,   6.47569171,   2.2642403 ]
+            gof_truth=[  6.19486141,  18.22896966,   6.11967201,   1.06182221]
+        else:
+            gof_truth=[  6.15794175,  18.22484842,   6.47569171,   2.2642403 ]
         np.testing.assert_allclose(gof, gof_truth, rtol=rtol)
     for nproc in parallel_cores:
         gof=fit_templates(d, sampler='leastsq', use_redshift=True, nprocesses=nproc)
         if sncosmo.__version__ < '1.5.0':
-	    gof_truth= [  6.21906514,  18.35383076,   6.08646565,   1.0458849 ]
+            gof_truth= [  6.21906514,  18.35383076,   6.08646565,   1.0458849 ]
         else:
             gof_truth= [  6.23329476,  18.5004063,    6.35119046,   2.21491234]
-	np.testing.assert_allclose(gof, gof_truth, rtol=rtol)
+        np.testing.assert_allclose(gof, gof_truth, rtol=rtol)
 
 """
 @pytest.mark.skipif('mcmc' not in samplers, reason='emcee not found')
@@ -150,10 +150,10 @@ def test_templates_nested(load_example_data):
     d=load_example_data
     for nproc in parallel_cores:
         gof=fit_templates(d, sampler='nested', use_redshift=False, nprocesses=nproc)
-	if sncosmo.__version__ < '1.5.0':
-	    gof_truth=[  6.14752938,  18.26134481,   6.12642616,   1.06306042]
-	else:
-	    gof_truth=[  6.10687986,  18.16491907,   6.48794317,   2.26138874]
+        if sncosmo.__version__ < '1.5.0':
+            gof_truth=[  6.14752938,  18.26134481,   6.12642616,   1.06306042]
+        else:
+            gof_truth=[  6.10687986,  18.16491907,   6.48794317,   2.26138874]
         np.testing.assert_allclose(np.sort(gof), np.sort(gof_truth), rtol=rtol)
 #        np.testing.assert_allclose(np.sort(gof), np.sort([ 2.4059210272, 2.0797560142, 1.7905944939, 3.57346633979]), rtol=rtol)
     for nproc in parallel_cores:

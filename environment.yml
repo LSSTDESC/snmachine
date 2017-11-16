@@ -4,7 +4,7 @@
 name: snmachine
 
 dependencies:
-  - python=2.7.11
+  - python>=2.7.11
   - astropy>=1.1.2
   - jupyter>=1.0.0
   - matplotlib=1.5.1
@@ -19,4 +19,4 @@ dependencies:
     - pywavelets>=0.4.0
     - sncosmo>=1.3.0
     - nose>=1.3.7
-    - george>=0.3
+    - george>=0.3.0

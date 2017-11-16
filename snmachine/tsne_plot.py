@@ -35,7 +35,7 @@ def get_tsne(feats,objs,perplexity=100, seed=-1):
     Xfit=manifold.fit_transform(X)
     return Xfit
 
-def plot_tsne(Xfit,types, loc='best', seed=-1):
+def plot_tsne(Xfit,types, loc='best'):
     """
     Plot the resulting t-SNE embedded features.
 

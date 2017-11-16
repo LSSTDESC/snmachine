@@ -3,6 +3,7 @@ Utility module mostly wrapping sklearn functionality and providing utility funct
 """
 
 from __future__ import division
+from past.builtins import basestring
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import svm
@@ -26,7 +27,7 @@ try:
     from sklearn.neural_network import MLPClassifier
     choice_of_classifiers.append('neural_network')
 except ImportError:
-    print 'Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.'
+    print ('Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.')
 
 def roc(pr, Yt, true_class=0):
     """
@@ -37,7 +38,7 @@ def roc(pr, Yt, true_class=0):
     ----------
     pr : array
         An array of probability scores, either a 1d array of size N_samples or an nd array,
-        in which case the column corresponding to the true class will be used.
+	in which case the column corresponding to the true class will be used.
     Yt : array
         An array of class labels, of size (N_samples,)
     true_class : int
@@ -290,18 +291,18 @@ class OptimisedClassifier():
     """
     
     NB_param_dict = {}
-    KNN_param_dict = {'n_neighbors':range(1, 180, 5), 'weights':['distance']}
+    KNN_param_dict = {'n_neighbors':list(range(1, 180, 5)), 'weights':['distance']}
     SVM_param_dict = {'C':np.logspace(-2, 5, 5), 'gamma':np.logspace(-8, 3, 5)}
     NN_param_dict={'hidden_layer_sizes':[(l,) for l in range(80, 120, 5)]}
 
-    DT_param_dict={'criterion':['gini','entropy'],'min_samples_leaf':range(1,400,25)}
-    RF_param_dict = {'n_estimators':range(200, 900, 100), 'criterion':['gini', 'entropy']}
+    DT_param_dict={'criterion':['gini','entropy'],'min_samples_leaf':list(range(1,400,25))}
+    RF_param_dict = {'n_estimators':list(range(200, 900, 100)), 'criterion':['gini', 'entropy']}
     ests=[DecisionTreeClassifier(criterion='entropy',min_samples_leaf=l) for l in range(5, 55, 10)]
-    Boost_param_dict={'base_estimator':ests,'n_estimators':range(5, 85, 10)}
+    Boost_param_dict={'base_estimator':ests,'n_estimators':list(range(5, 85, 10))}
     #This is a strange boosted random forest classifier that Max came up that works quite well, but is likely biased
     #in general
     Boost_RF_param_dict = {'base_estimator':[RandomForestClassifier(400, 'entropy'),
-                                             RandomForestClassifier(600, 'entropy')],'n_estimators':[2, 3, 5, 10]}
+                                             RandomForestClassifier(600, 'entropy')],'n_estimators':list([2, 3, 5, 10])}
 
     
     #Dictionary to hold good default ranges for parameters for each classifier.
@@ -375,19 +376,19 @@ class OptimisedClassifier():
                 elif classifier=='multiple_classifier':
                     pass
                 else:
-                    print 'Requested classifier not recognised.' 
-                    print 'Choice of built-in classifiers:'
-                    print choice_of_classifiers
+                    print ('Requested classifier not recognised.' )
+                    print ('Choice of built-in classifiers:')
+                    print (choice_of_classifiers)
                     sys.exit(0)
                     
             except TypeError:
                 #Gracefully catch errors of sending the wrong kwargs to the classifiers
-                print
-                print 'Error'
-                print 'One of the kwargs below:'
-                print kwargs.keys()
-                print 'Does not belong to classifier', classifier
-                print
+                print()
+                print ('Error')
+                print ('One of the kwargs below:')
+                print (kwargs.keys())
+                print ('Does not belong to classifier', classifier)
+                print()
                 sys.exit(0)
             
                 
@@ -395,9 +396,9 @@ class OptimisedClassifier():
             #This is already some sklearn classifier or an object that behaves like one
             self.clf=classifier 
         
-        print 'Created classifier of type:'
-        print self.clf
-        print    
+        print ('Created classifier of type:')
+        print (self.clf)
+        print()
             
     
 
@@ -502,20 +503,20 @@ class OptimisedClassifier():
         
         self.clf.fit(X_train, y_train) #This actually does the grid search
         best_params=self.clf.best_params_
-        print 'Optimised parameters:', best_params
+        print ('Optimised parameters:', best_params)
         
         for k in best_params.keys():
             #This is the safest way to check if something is a number
             try:
                 float(best_params[k])
                 if best_params[k]<=min(params[k]):
-                    print
-                    print 'WARNING: Lower boundary on parameter', k, 'may be too high. Optimum may not have been reached.'
-                    print
+                    print()
+                    print ('WARNING: Lower boundary on parameter', k, 'may be too high. Optimum may not have been reached.')
+                    print()
                 elif best_params[k]>=max(params[k]):
-                    print
-                    print 'WARNING: Upper boundary on parameter', k, 'may be too low. Optimum may not have been reached.'
-                    print
+                    print()
+                    print ('WARNING: Upper boundary on parameter', k, 'may be too low. Optimum may not have been reached.')
+                    print()
                 
             except (ValueError, TypeError):
                 pass #Ignore a parameter that isn't numerical
@@ -645,9 +646,9 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     classifier_objects={}
 
     if nprocesses>1 and return_classifier:
-        print "Due to limitations with python's multiprocessing module, classifier objects cannot be returned if " \
-              "multiple processors are used. Continuing serially..."
-        print
+        print ("Due to limitations with python's multiprocessing module, classifier objects cannot be returned if " \
+              "multiple processors are used. Continuing serially...")
+        print()
 
     if nprocesses>1 and not return_classifier:
         partial_func=partial(__call_classifier,X_train=X_train, y_train=y_train, X_test=X_test,
@@ -675,7 +676,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
         fpr, tpr, auc=roc(probs, y_test, true_class=1)
         fom, thresh_fom=FoM(probs, y_test, true_class=1, full_output=False)
 
-        print 'Classifier', cls+':', 'AUC =', auc, 'FoM =', fom
+        print ('Classifier', cls+':', 'AUC =', auc, 'FoM =', fom)
 
         if i==0:
             FPR=fpr
@@ -706,8 +707,8 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
 
             np.savetxt(output_name+cls+'.auc',[auc])
 
-    print
-    print 'Time taken ', (time.time()-t1)/60., 'minutes'
+    print()
+    print ('Time taken ', (time.time()-t1)/60., 'minutes')
 
     if plot_roc_curve:
         plot_roc(FPR, TPR, AUC, labels=classifiers,label_size=16,tick_size=12,line_width=1.5)
@@ -716,27 +717,3 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     if return_classifier:
         return classifier_objects
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
