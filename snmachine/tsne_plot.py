@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 import numpy as np
 
-def get_tsne(feats,objs,perplexity=100):
+def get_tsne(feats,objs,perplexity=100, seed=-1):
     """
     Return the transformed features running the sklearn t-SNE code.
 
@@ -26,6 +26,8 @@ def get_tsne(feats,objs,perplexity=100):
         Transformed, embedded 2-d features
 
     """
+    if seed!=-1:
+        np.random.seed(seed)
     manifold=TSNE(perplexity=perplexity)
     short_inds=np.in1d(feats['Object'],objs)
     X=feats[short_inds]
@@ -64,7 +66,7 @@ def plot_tsne(Xfit,types, loc='best'):
     plt.gcf().tight_layout()
     plt.plot()
 
-def plot(feats, types,objs=[]):
+def plot(feats, types,objs=[], seed=-1):
     """
     Convenience function to run t-SNE and plot
 
@@ -79,7 +81,7 @@ def plot(feats, types,objs=[]):
     """
     if len(objs)==0:
         objs=feats['Object']
-    Xfit=get_tsne(feats,objs)
+    Xfit=get_tsne(feats,objs, seed=seed)
     plot_tsne(Xfit,types)
 
 

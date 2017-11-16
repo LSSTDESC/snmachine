@@ -8,10 +8,12 @@ from . import parametric_models
 import sys, pywt, time, subprocess, os, sncosmo
 from scipy.interpolate import interp1d
 from gapp import dgp
+import george
 from astropy.table import Table, vstack, hstack, join
 from multiprocessing import Pool
 from functools import partial
 from scipy import stats
+import scipy.optimize as op
 from iminuit import Minuit, describe
 import traceback
 
@@ -28,8 +30,14 @@ try:
 except ImportError:
     has_emcee=False
 
+try:
+    import george
+    has_george=True
+except ImportError:
+    has_george=False
 
-def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root):
+
+def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george'):
     """
     Fit a Gaussian process curve at specific evenly spaced points along a light curve.
 
@@ -51,6 +59,8 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root):
         Whether or not to save the output
     output_root : str
         Output directory
+    gpalgo : str
+        which gp package is used for the Gaussian Process Regression, GaPP or george
 
     Returns
     -------
@@ -62,15 +72,41 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root):
     filters=np.unique(lc['filter'])
     #Store the output in another astropy table
     output=[]
+    print(george.__version__)
     for fil in d.filter_set:
         if fil in filters:
             x=lc['mjd'][lc['filter']==fil]
             y=lc['flux'][lc['filter']==fil]
             err=lc['flux_error'][lc['filter']==fil]
             sys.stdout = open(os.devnull, "w")
-            g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
-            sys.stdout=sys.__stdout__
-            rec, theta=g.gp(theta=initheta)  
+            if gpalgo=='gapp':
+                sys.stdout = open(os.devnull, "w")
+                g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
+                sys.stdout=sys.__stdout__
+                rec, theta=g.gp(theta=initheta)
+            elif gpalgo=='george':
+                # Define the objective function (negative log-likelihood in this case).
+                def nll(p):
+                    g.set_parameter_vector(p)
+                    ll = g.log_likelihood(y, quiet=True)
+                    return -ll if np.isfinite(ll) else 1e25
+
+                # And the gradient of the objective function.
+                def grad_nll(p):
+                    g.set_parameter_vector(p)
+                    return -g.grad_log_likelihood(y, quiet=True)
+
+      #          sys.stdout = open(os.devnull, "w")
+                g=george.GP(initheta[0]**2*george.kernels.ExpSquaredKernel(metric=initheta[1]**2))
+                g.compute(x,err)
+                p0 = g.get_parameter_vector()
+                results = op.minimize(nll, p0, jac=grad_nll, method="L-BFGS-B")
+                g.set_parameter_vector(results.x)
+       #         sys.stdout=sys.__stdout__
+                xstar=np.linspace(xmin,xmax,ngp)
+                mu,cov=g.predict(y,xstar)
+                std=np.sqrt(np.diag(cov))
+                rec=np.column_stack((xstar,mu,std))
         else:
             rec=np.zeros([ngp, 3])
         newtable=Table([rec[:, 0], rec[:, 1], rec[:, 2], [fil]*ngp], names=['mjd', 'flux', 'flux_error', 'filter'])
@@ -84,7 +120,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root):
 
 
 
-def _run_leastsq(obj, d, model, n_attempts):
+def _run_leastsq(obj, d, model, n_attempts, seed=-1):
     """
     Minimises the chi2 on all the filter bands of a given light curve, fitting the model to each one and extracting
     the best fitting parameters
@@ -120,7 +156,11 @@ def _run_leastsq(obj, d, model, n_attempts):
         pams=model.param_names
         for p in pams:
             labels.append(f+'-'+p)
-    output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
+    output=Table(names=labels, dtype=['U32']+['f']*(len(labels)-1))
+
+    if seed!=-1:
+        np.random.seed(seed)
+
     t1=time.time()
     row=[obj]
     for f in d.filter_set:
@@ -187,7 +227,7 @@ def _run_leastsq(obj, d, model, n_attempts):
 
 
 
-def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_iter, restart=False):
+def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_iter, restart=False, seed=-1):
     """
     Runs multinest on all the filter bands of a given light curve, fitting the model to each one and
     extracting the best fitting parameters.
@@ -247,7 +287,7 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
             for p in pams:
                 labels.append(f+'-'+p)
 
-        output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
+        output=Table(names=labels, dtype=['U32']+['f']*(len(labels)-1))
     
         
         row=[obj]
@@ -281,7 +321,7 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
                     #Gives the ability to restart from existing chains if they exist
                     pymultinest.run(loglike_multinest, prior_multinest, n_params, importance_nested_sampling = False, init_MPI=False, 
                     resume = False, verbose = False, sampling_efficiency = 'parameter', n_live_points = nlp, outputfiles_basename=chain_name, 
-                    multimodal=False, max_iter=n_iter)
+                    multimodal=False, max_iter=n_iter, seed=seed)
                     
                 #An=Analyzer(n_params, chain_name)
                 #best_params=An.get_best_fit()['parameters']
@@ -331,7 +371,7 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
 
     
     
-def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds):
+def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds, seed=-1):
     """
     Fit template-based supernova models using least squares.
 
@@ -366,7 +406,7 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds):
     #labels=['Object']+model.param_names+['Chisq']
     #output=Table(names=labels, dtype=['S32']+['f']*(len(model.param_names))+['f'])
     labels = ['Object'] + model.param_names
-    output=Table(names=labels, dtype=['S32']+['f']*(len(model.param_names)))
+    output=Table(names=labels, dtype=['U32']+['f']*(len(model.param_names)))
 
     t1=time.time()
     row=[obj]
@@ -392,7 +432,7 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds):
     return output
         
 
-def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  nlp=1000, convert_to_binary=True, use_redshift=False, short_name='', restart=False):
+def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  nlp=1000, convert_to_binary=True, use_redshift=False, short_name='', restart=False, seed=-1):
     """
 
     Fit template-based supernova models using multinest.
@@ -523,7 +563,7 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
         if not restart or not os.path.exists(chain_name+'stats.dat'):
             pymultinest.run(loglike_multinest, prior_multinest, ndim, importance_nested_sampling = False, init_MPI=False,
             resume = False, verbose = False, sampling_efficiency = 'parameter', n_live_points = nlp, outputfiles_basename=chain_name, 
-            multimodal=False)
+            multimodal=False, seed=seed)
         
         best_params=get_MAP(chain_name)
         
@@ -633,7 +673,8 @@ class Features:
             return None
         filts=np.unique(d.data[d.object_names[0]]['filter'])
         filts=np.array(filts).tolist()
-        rcs=Table(names=['Object']+filts, dtype=['S32']+['float64']*len(filts)) #Reduced chi2
+        print(filts)
+        rcs=Table(names=['Object']+filts, dtype=['U32']+['float64']*len(filts)) #Reduced chi2
         for obj in d.object_names:
             #Go through each filter
             chi2=[]
@@ -647,7 +688,6 @@ class Features:
                 e=l['flux_error']
                 xmod=m['mjd']
                 ymod=m['flux']
-                
                 #Interpolate
                 fit=interp1d(xmod, ymod)
                 yfit=fit(x)
@@ -754,7 +794,7 @@ class TemplateFeatures(Features):
                     'nugent-sn2l':{'z':(0.01, 1.5)}, 
                     'nugent-sn1bc':{'z':(0.01, 1.5)}}
         
-    def extract_features(self, d, save_chains=False, chain_directory='chains', use_redshift=False, nprocesses=1, restart=False):
+    def extract_features(self, d, save_chains=False, chain_directory='chains', use_redshift=False, nprocesses=1, restart=False, seed=-1):
         """
         Extract template features for a dataset.
 
@@ -801,7 +841,7 @@ class TemplateFeatures(Features):
             #     labels=['Object']+params+['Chisq']
             
             #output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
-            output = Table(names=labels, dtype=['S32'] + ['f'] * (len(labels) - 1))
+            output = Table(names=labels, dtype=['U32'] + ['f'] * (len(labels) - 1))
             
             k=0
             if nprocesses<2:
@@ -811,6 +851,8 @@ class TemplateFeatures(Features):
                     lc=d.data[obj]
                     
                     if self.sampler=='mcmc':
+                        if seed!=-1:
+                            np.random.seed(seed)
                         res, fitted_model = sncosmo.mcmc_lc(lc, self.model,  self.model.param_names, bounds=self.bounds[self.templates[mod_name]], nwalkers=20, nsamples=1500, nburn=300)
                         chain=res.samples
                         if save_chains:
@@ -819,7 +861,7 @@ class TemplateFeatures(Features):
                         best=res['parameters'].flatten('F').tolist()
                     elif self.sampler=='nested':
                         best=_run_multinest_templates(obj, d, self.templates[mod_name], self.bounds[self.templates[mod_name]], chain_directory=chain_directory,  
-                        nlp=1000, convert_to_binary=False, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart)
+                        nlp=1000, convert_to_binary=False, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart, seed=seed)
                         best=best.tolist()
                     elif self.sampler=='leastsq':
                         if use_redshift:
@@ -834,7 +876,7 @@ class TemplateFeatures(Features):
                             
                             res, fitted_model=sncosmo.fit_lc(lc, self.model, vparam_names=self.model.param_names, 
                                 bounds=self.bounds[self.templates[mod_name]], minsnr=0)               
-                        best=res['parameters'].flatten('F').tolist()+[res['chisq']]
+                        best=res['parameters'].flatten('F').tolist()#+[res['chisq']]
                     row=[obj]+best
                     output.add_row(row)
                     k+=1
@@ -858,7 +900,7 @@ class TemplateFeatures(Features):
                 elif self.sampler=='nested':
                     p=Pool(nprocesses, maxtasksperchild=1)
                     partial_func=partial(_run_multinest_templates, d=d, model_name=self.templates[mod_name], bounds=self.bounds[self.templates[mod_name]], 
-                    chain_directory=chain_directory, nlp=1000, convert_to_binary=True, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart)
+                    chain_directory=chain_directory, nlp=1000, convert_to_binary=True, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart, seed=seed)
                     out=p.map(partial_func, d.object_names)
 
                     for i in range(len(out)):
@@ -911,7 +953,7 @@ class TemplateFeatures(Features):
 
         filts=np.unique(lc['filter'])
         labels=['mjd', 'flux', 'filter']
-        output=Table(names=labels, dtype=['f', 'f', 'S32'],  meta={'name':obj})
+        output=Table(names=labels, dtype=['f', 'f', 'U32'],  meta={'name':obj})
         for filt in filts:
             x=lc['mjd'][lc['filter']==filt]
             xnew=np.linspace(0, x.max()-x.min(), 100)
@@ -981,7 +1023,7 @@ class ParametricFeatures(Features):
 
 
     def extract_features(self, d, chain_directory='chains', save_output=True, n_attempts=20, nprocesses=1, n_walkers=100, 
-    n_steps=500, walker_spread=0.1, burn=50, nlp=1000, starting_point=None, convert_to_binary=True, n_iter=0, restart=False):
+    n_steps=500, walker_spread=0.1, burn=50, nlp=1000, starting_point=None, convert_to_binary=True, n_iter=0, restart=False, seed=-1):
         """
         Fit parametric models and return best-fitting parameters as features.
 
@@ -1035,11 +1077,13 @@ class ParametricFeatures(Features):
                 if k%100==0:
                     print (k, 'objects fitted')
                 if self.sampler=='leastsq':
-                    newtable=_run_leastsq(obj, d, self.model, n_attempts)
+                    newtable=_run_leastsq(obj, d, self.model, n_attempts, seed=seed)
                 elif self.sampler=='mcmc':
+                    if(seed!=-1):
+                        np.random.seed(seed)
                     newtable=self.run_emcee(d, obj, save_output, chain_directory,   n_walkers, n_steps, walker_spread, burn, starting_point)
                 else:
-                    newtable=_run_multinest(obj, d, self.model, chain_directory, nlp, convert_to_binary, n_iter, restart)
+                    newtable=_run_multinest(obj, d, self.model, chain_directory, nlp, convert_to_binary, n_iter, restart, seed=seed)
                 
                 if len(output)==0:
                     output=newtable
@@ -1049,7 +1093,7 @@ class ParametricFeatures(Features):
         else:
             if self.sampler=='leastsq':
                 p=Pool(nprocesses, maxtasksperchild=1)
-                partial_func=partial(_run_leastsq, d=d, model=self.model,  n_attempts=n_attempts)
+                partial_func=partial(_run_leastsq, d=d, model=self.model,  n_attempts=n_attempts, seed=seed)
                 out=p.map(partial_func, d.object_names)
                 output=out[0]
                 for i in range(1, len(out)):
@@ -1057,7 +1101,7 @@ class ParametricFeatures(Features):
             elif self.sampler=='nested':
                 p=Pool(nprocesses, maxtasksperchild=1)
                 partial_func=partial(_run_multinest, d=d, model=self.model,chain_directory=chain_directory, 
-                nlp=nlp, convert_to_binary=convert_to_binary, n_iter=n_iter, restart=restart)
+                nlp=nlp, convert_to_binary=convert_to_binary, n_iter=n_iter, restart=restart, seed=seed)
                 #Pool starts a number of threads, all of which may try to tackle all of the data. Better to take it in chunks
                 output=[]
                 k=0
@@ -1104,7 +1148,7 @@ class ParametricFeatures(Features):
         
         filts=np.unique(lc['filter'])
         labels=['mjd', 'flux', 'filter']
-        output=Table(names=labels, dtype=['f', 'f', 'S32'],  meta={'name':obj})
+        output=Table(names=labels, dtype=['f', 'f', 'U32'],  meta={'name':obj})
         cols=params.columns[1:]
         prms=np.array([params[c] for c in cols])
         for filt in filts:
@@ -1122,7 +1166,7 @@ class ParametricFeatures(Features):
         
 
         
-    def run_emcee(self, d, obj, save_output, chain_directory,  n_walkers, n_steps, walker_spread, burn, starting_point):
+    def run_emcee(self, d, obj, save_output, chain_directory,  n_walkers, n_steps, walker_spread, burn, starting_point, seed=-1):
         """
         Runs emcee on all the filter bands of a given light curve, fitting the model to each one and extracting the best fitting parameters.
 
@@ -1164,6 +1208,9 @@ class ParametricFeatures(Features):
         lc=d.data[obj]
         filts=np.unique(lc['filter'])
         
+        if(seed!=-1):
+            np.random.seed(seed)
+
         n_params=len(self.model.param_names)
         
         #err_plus=[pname+'_err+' for pname in self.model.param_names]
@@ -1174,7 +1221,7 @@ class ParametricFeatures(Features):
             for p in pams:
                 labels.append(f+'-'+p)
 
-        output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
+        output=Table(names=labels, dtype=['U32']+['f']*(len(labels)-1))
 
         t1=time.time()
         row=[obj]
@@ -1280,7 +1327,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none'):
+    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none', gpalgo='george'):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1320,7 +1367,7 @@ class WaveletFeatures(Features):
             if restart=='gp':
                 self.restart_from_gp(d, output_root)
             else:
-                self.extract_GP(d, self.ngp, xmin, xmax, initheta, save_output, output_root, nprocesses)
+                self.extract_GP(d, self.ngp, xmin, xmax, initheta, save_output, output_root, nprocesses, gpalgo=gpalgo)
 
             wavout, waveout_err=self.extract_wavelets(d, self.wav, self.mlev,  nprocesses, save_output, output_root)
         self.features,vals,vec,mn=self.extract_pca(d.object_names.copy(), wavout)
@@ -1384,7 +1431,7 @@ class WaveletFeatures(Features):
                 filt_coeffs=filt_coeffs.reshape(self.mlev, 2, self.ngp, order='C')
                 ynew=self.iswt(filt_coeffs, self.wav)
 
-                newtable=Table([xnew, ynew, [filter_set[i]]*self.ngp], names=['mjd', 'flux', 'filter'], dtype=['f', 'f', 'S32'])
+                newtable=Table([xnew, ynew, [filter_set[i]]*self.ngp], names=['mjd', 'flux', 'filter'], dtype=['f', 'f', 'U32'])
                 if len(output)==0:
                     output=newtable
                 else:
@@ -1459,7 +1506,7 @@ class WaveletFeatures(Features):
 
         return wavout, wavout_err
 
-    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses):
+    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses, gpalgo='george'):
         """
         Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
 
@@ -1488,7 +1535,7 @@ class WaveletFeatures(Features):
         if nprocesses==1:
             for i in range(len(d.object_names)):
                 obj=d.object_names[i]
-                out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root)
+                out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
                 d.models[obj]=out
                 if save_output!='none':
                     out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
@@ -1496,7 +1543,7 @@ class WaveletFeatures(Features):
             p=Pool(nprocesses, maxtasksperchild=1)
 
             #Pool and map can only really work with single-valued functions
-            partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root)
+            partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
 
             out=p.map(partial_GP, d.get_object_names())
             for i in range(len(out)):
@@ -1505,7 +1552,7 @@ class WaveletFeatures(Features):
 
         print ('Time taken for Gaussian process regression', time.time()-t1)
 
-    def GP(self, obj, d, ngp=200, xmin=0, xmax=170, initheta=[500, 20]):
+    def GP(self, obj, d, ngp=200, xmin=0, xmax=170, initheta=[500, 20], gpalgo='george'):
         """
         Fit a Gaussian process curve at specific evenly spaced points along a light curve.
 
@@ -1534,7 +1581,7 @@ class WaveletFeatures(Features):
         Wraps internal module-level function in order to circumvent multiprocessing module limitations in dealing with
         objects when parallelising.
         """
-        return _GP(obj, d, ngp, xmin, xmax, initheta)
+        return _GP(obj, d, ngp, xmin, xmax, initheta, gpalgo)
 
 
     def wavelet_decomp(self, lc, wav, mlev):
