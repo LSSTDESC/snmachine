@@ -4,7 +4,6 @@
 name: snmachine
 
 dependencies:
-  - python>=2.7.11
   - astropy>=1.1.2
   - jupyter>=1.0.0
   - matplotlib=1.5.1
