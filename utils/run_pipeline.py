@@ -6,7 +6,8 @@ import matplotlib
 matplotlib.use('Agg')
 import numpy as np
 import matplotlib.pyplot as plt
-import sndata, snfeatures, snclassifier, time, os, pywt,subprocess, sys, StringIO
+from snmachine import sndata, snfeatures, snclassifier
+import time, os, pywt,subprocess, sys#, StringIO
 from sklearn.decomposition import PCA
 from astropy.table import Table,join
 import sklearn.metrics 
@@ -17,11 +18,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-dataset='lsst_main'
+dataset='des'
 laptop=True
 template_model='Ia'
 
-nproc=2#number of processors
+nproc=4#number of processors
 lim=10000000 #only use these many objects
 
 #feature_sets=['templates','newling', 'karpenka', 'wavelets']
@@ -146,7 +147,7 @@ elif dataset=='sdss':
     if len(sys.argv)>2:
         nproc=(int)(sys.argv[2])
 
-print 'Using redshift:', use_redshift, 'training choice', train_choice
+print ('Using redshift:', use_redshift, 'training choice', train_choice)
 
 
 #####################################################################################################################
@@ -155,7 +156,8 @@ print 'Using redshift:', use_redshift, 'training choice', train_choice
 
 
 if laptop:
-    outdir=os.path.join(os.path.sep, 'home', 'michelle', 'BigData','SN_output','output_%s_rand' %(run_name),'')
+    outdir=os.path.join(os.path.sep, 'home', 'robert', 'data_sets', 'sne','output_%s_rand' %(run_name),'')
+    #outdir=os.path.join(os.path.sep, 'home', 'michelle', 'BigData','SN_output','output_%s_rand' %(run_name),'')
     #outdir=os.path.join(os.path.sep, 'home', 'michelle', 'output_%s' %(run_name),'')
 else:
     final_outdir=os.path.join(os.path.sep, 'home', 'mlochner', 'sn_output','output_%s' %(run_name), '')
@@ -164,7 +166,7 @@ else:
 #This is where to save intermediate output for the feature extraction method. In some cases (such as the wavelets), these
 #files can be quite large.
 out_features=os.path.join(outdir, 'features', '')
-print 'out_features', out_features
+print ('out_features', out_features)
 out_class=os.path.join(outdir, 'classifications', '')
 out_inter=os.path.join(outdir, 'int', '')
 
@@ -189,7 +191,7 @@ def select_training(obj_names, out_features_dir, repr=True, training_names=None,
 
     else: #If a non-representative training set, the training set names must be supplied
         if training_names is None:
-            print 'Non-representative training set requested but training_names==None'
+            print ('Non-representative training set requested but training_names==None')
             sys.exit(0)
         training_set=training_names
         mask=np.in1d(obj_names, training_names)
@@ -203,7 +205,7 @@ if dataset=='des':
     #Root directory for simulated data. Replace with your own path.
     #Note: the use of os.path.join means you don't have to worry about operating system-specific things like which way the slashes go
     if laptop:
-        rt=os.path.join(os.path.sep, 'home', 'michelle', 'BigData', 'SN_Sims', 'SIMGEN_PUBLIC_DES',  '')
+        rt=os.path.join(os.path.sep, 'home', 'robert', 'data_sets', 'sne', 'spcc', 'SIMGEN_PUBLIC_DES',  '')
     else:
         rt=os.path.join(os.path.sep, 'home', 'mlochner','sn','SIMGEN_PUBLIC_DES','')
 
@@ -243,7 +245,7 @@ if dataset=='des':
         training_set=np.loadtxt(out_features+'train-%s.txt' %train_choice, dtype='str')
         test_set=np.loadtxt(out_features+'test-%s.txt' %train_choice, dtype='str')
 	
-        print 'out_features', out_features
+        print ('out_features', out_features)
 
         train_inds=[np.where(d.object_names==x)[0][0] for x in training_set]
         val_inds=[np.where(d.object_names==x)[0][0] for x in test_set]
@@ -252,7 +254,7 @@ if dataset=='des':
         Ytrain=types[train_inds]
         Yval=types[val_inds]
 
-        print np.unique(Ytrain),np.unique(Yval)
+        print (np.unique(Ytrain),np.unique(Yval))
 
 elif 'lsst' in dataset or dataset=='sdss':
     if 'lsst' in dataset:
@@ -319,11 +321,10 @@ def copy_files():
         os.makedirs(os.path.join(final_outdir, 'int', ''))
         os.makedirs(os.path.join(final_outdir, 'classifications', ''))
     os.system('mv %s* %s' %(os.path.join(outdir, 'features', ''), os.path.join(final_outdir, 'features', '')))
-    print 'mv %s* %s' %(os.path.join(outdir, 'features', ''), os.path.join(final_outdir, 'features', ''))
     os.system('mv %s* %s' %(os.path.join(outdir, 'int', ''), os.path.join(final_outdir, 'int', '')))
     os.system('mv %s* %s' %(os.path.join(outdir, 'classifications', ''), os.path.join(final_outdir, 'classifications', '')))
 
-    print 'Time taken for file copying', time.time()-t1
+    print ('Time taken for file copying', time.time()-t1)
 
 # ### Templates feature extraction ### #
 
@@ -340,9 +341,9 @@ if 'templates' in feature_sets:
         tempFeat=snfeatures.TemplateFeatures(model=[template_model], sampler=sampler)
     flname=os.path.join(out_features, subset_name+'_templates.dat')
     #flname=os.path.join(out_features, run_name+'_templates.dat')
-    print 'features', flname
+    print ('features', flname)
     if restart_from_features and os.path.exists(flname):
-        print 'Restarting from', flname
+        print ('Restarting from', flname)
         template_features=Table.read(flname, format='ascii')[:lim]
     else:
         #Run feature extraction
@@ -367,16 +368,16 @@ if 'templates' in feature_sets:
 
 if 'newling' in feature_sets:
     newlingFeat=snfeatures.ParametricFeatures('newling', sampler=sampler)
-    print 'out_features', out_features
+    print ('out_features', out_features)
     flname=os.path.join(out_features, subset_name+'_newling.dat')
 
     if restart_from_features and os.path.exists(flname):
-        print 'Restarting from', flname
+        print ('Restarting from', flname)
         newling_features=Table.read(flname, format='ascii')
     else:
         newling_features=newlingFeat.extract_features(d,chain_directory=out_inter, nprocesses=nproc,
                                                       convert_to_binary=True, restart=restart_from_chains)
-        print 'flname', flname
+        print ('flname', flname)
         newling_features.write(flname,format='ascii')
 
     blah=newling_features['Object'].astype(str)
@@ -396,7 +397,7 @@ if 'karpenka' in feature_sets:
     flname=os.path.join(out_features, subset_name+'_karpenka.dat')
 
     if restart_from_features and os.path.exists(flname):
-        print 'Restarting from', flname
+        print ('Restarting from', flname)
         karpenka_features=Table.read(flname, format='ascii')
     else:
         karpenka_features=karpenkaFeat.extract_features(d,chain_directory=out_inter,
@@ -421,7 +422,7 @@ if 'wavelets' in feature_sets:
     flname=os.path.join(out_features, subset_name+'_wavelets.dat')
 
     if restart_from_features and os.path.exists(flname):
-        print 'Restarting from', flname
+        print ('Restarting from', flname)
         wavelet_features=Table.read(flname, format='ascii')[:lim]
 
     else:
@@ -459,7 +460,7 @@ if 'wavelets' in feature_sets:
 def do_classification(classifier, param_dict, Xtrain, Ytrain, Xtest, read_from_output, save_output, feature_set):
     flname='%s%s_%s.dat' %(out_class, feature_set, classifier)
     if read_from_output and os.path.exists(flname):
-        print 'reading from file'
+        print ('reading from file')
         tab=Table.read(flname,format='ascii')
         probs=np.array([tab[c] for c in tab.columns[1:]]).T
         probs=probs[1:,:]
@@ -556,16 +557,16 @@ def run_classifier(Xtrain,Ytrain,Xtest,Ytest,save_output=True,feature_set='templ
             FOM[cls[i]]=fom
             F1[cls[i]]=f1
             
-    print 'Kessler figure of merit'
-    print FOM
-    print
-    print 'F1'
-    print F1
-    print
-    print 'AUC'
-    print AUC
-    print
-    print 'Time taken',(time.time()-t1)/60.,'min'
+    print ('Kessler figure of merit')
+    print (FOM)
+    print ()
+    print ('F1')
+    print (F1)
+    print ()
+    print ('AUC')
+    print (AUC)
+    print ()
+    print ('Time taken',(time.time()-t1)/60.,'min')
     #Plot the roc curve for these classifiers, for this feature set.
     snclassifier.plot_roc(FPR, TPR, AUC, labels=cls,figsize=(8,6),label_size=16,tick_size=12)
     plt.savefig(os.path.join(os.path.sep, 'home', 'michelle', 'Dropbox', 'Project','SN_Class', 'Figures', 'new_roc_%s_%s.png' %(run_name,feature_set)))
@@ -577,9 +578,9 @@ if len(cls)>0:
 
     if 'templates' in feature_sets:
         flname='output_%s_%s.txt' %('templates', run_name)
-        print
-        print 'TEMPLATES'
-        print
+        print ()
+        print ('TEMPLATES')
+        print ()
         # Xtrain=template_features[np.in1d(template_features['Object'],training_set)]
         # Xval=template_features[np.in1d(template_features['Object'],test_set)]
         #
@@ -613,7 +614,7 @@ if len(cls)>0:
         Yval = np.array(Xval['Type'], dtype='int')
 
         Xtrain = np.array([Xtrain[c] for c in Xtrain.columns[1:-1]]).T
-        print Xtrain.shape
+#        print Xtrain.shape
         Xval = np.array([Xval[c] for c in Xval.columns[1:-1]]).T
 
         run_classifier(Xtrain,Ytrain,Xval,
@@ -621,9 +622,9 @@ if len(cls)>0:
 
     if 'newling' in feature_sets:
         flname='output_%s_%s.txt' %('newling', run_name)
-        print
-        print 'NEWLING'
-        print
+        print ()
+        print ('NEWLING')
+        print ()
 
         Xtrain=newling_features[np.in1d(newling_features['Object'],training_set)]
         Xval=newling_features[np.in1d(newling_features['Object'],test_set)]
@@ -638,9 +639,9 @@ if len(cls)>0:
 
     if 'karpenka' in feature_sets:
         flname='output_%s_%s.txt' %('karpenka', run_name)
-        print
-        print 'KARPENKA'
-        print
+        print ()
+        print ('KARPENKA')
+        print ()
         Xtrain=karpenka_features[np.in1d(karpenka_features['Object'],training_set)]
         Xval=karpenka_features[np.in1d(karpenka_features['Object'],test_set)]
         Xtrain=np.array([Xtrain[c] for c in Xtrain.columns[1:]]).T
@@ -655,9 +656,9 @@ if len(cls)>0:
 
     if 'wavelets' in feature_sets:
         flname='output_%s_%s.txt' %('wavelets', run_name)
-        print
-        print 'WAVELETS'
-        print
+        print ()
+        print ('WAVELETS')
+        print ()
 
         new_feats=join(wavelet_features,types,keys='Object')
 
