@@ -87,7 +87,7 @@ def roc(pr, Yt, true_class=0):
 
     return fpr, tpr, auc
     
-def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, line_width=3):
+def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, line_width=3, figsize=(8,6)):
     """
     Plots a ROC curve or multiple curves. Can plot the results from multiple classifiers if fpr and tpr are arrays
     where each column corresponds to a different classifier.
@@ -511,11 +511,11 @@ class OptimisedClassifier():
                 float(best_params[k])
                 if best_params[k]<=min(params[k]):
                     print()
-                    print ('WARNING: Lower boundary on parameter', k, 'may be too high. Optimum may not have been reached.')
+                    print('WARNING: Lower boundary on parameter', k, 'may be too high. Optimum may not have been reached.')
                     print()
                 elif best_params[k]>=max(params[k]):
                     print()
-                    print ('WARNING: Upper boundary on parameter', k, 'may be too low. Optimum may not have been reached.')
+                    print('WARNING: Upper boundary on parameter', k, 'may be too low. Optimum may not have been reached.')
                     print()
                 
             except (ValueError, TypeError):

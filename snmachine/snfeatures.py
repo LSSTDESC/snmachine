@@ -45,7 +45,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
     """
     Fit a Gaussian process curve at specific evenly spaced points along a light curve.
 
-    Parameters
+    iarameters
     ----------
     obj : str
         Name of the object
@@ -123,7 +123,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
         else:
             output=vstack((output, newtable))
     if save_output=='gp' or save_output=='all':
-        output.write(os.path.join(output_root, 'gp_'+obj), format='ascii')        
+        output.write(os.path.join(output_root, 'gp_'+obj), format='ascii', overwrite=True)        
     return output
 
 
@@ -864,7 +864,7 @@ class TemplateFeatures(Features):
                         chain=res.samples
                         if save_chains:
                             tab=Table(chain, names=self.model.param_names)
-                            tab.write(os.path.join(chain_directory, obj.split('.')[0]+'_emcee_'+mod_name), format='ascii')
+                            tab.write(os.path.join(chain_directory, obj.split('.')[0]+'_emcee_'+mod_name), format='ascii', overwrite=True)
                         best=res['parameters'].flatten('F').tolist()
                     elif self.sampler=='nested':
                         best=_run_multinest_templates(obj, d, self.templates[mod_name], self.bounds[self.templates[mod_name]], chain_directory=chain_directory,  
@@ -1545,7 +1545,7 @@ class WaveletFeatures(Features):
                 out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
                 d.models[obj]=out
                 if save_output!='none':
-                    out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
+                    out.write(os.path.join(output_root, 'gp_'+obj), format='ascii', overwrite=True)
         else:
             p=Pool(nprocesses, maxtasksperchild=1)
 
@@ -1569,7 +1569,7 @@ class WaveletFeatures(Features):
             Object name
         d : Dataset object
             Dataset
-        ngp : int, optional
+        ngp / int, optional
             Number of points to evaluate Gaussian Process at
         xmin : float, optional
             Minimim time to evaluate at
@@ -1684,7 +1684,7 @@ class WaveletFeatures(Features):
             lc=d.models[obj]
             out= self.wavelet_decomp(lc, wav, mlev)
             if save_output=='wavelet' or save_output=='all':
-                out.write(os.path.join(output_root, 'wavelet_'+obj), format='ascii')
+                out.write(os.path.join(output_root, 'wavelet_'+obj), format='ascii', overwrite=True)
             #We go by filter, then by set of coefficients
             cols=out.colnames[:-1]
             n=self.ngp*2*mlev

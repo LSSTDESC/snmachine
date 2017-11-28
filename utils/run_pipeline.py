@@ -27,11 +27,12 @@ lim=10000000 #only use these many objects
 
 #feature_sets=['templates','newling', 'karpenka', 'wavelets']
 #feature_sets=['templates','newling', 'karpenka']
-feature_sets=['templates']
+#feature_sets=['templates']
+feature_sets=['wavelets']
 
-#cls=['knn', 'nb', 'neural_network','svm','boost_dt','random_forest']
+cls=['knn', 'nb', 'neural_network','svm','boost_dt','random_forest']
 #cls=['knn', 'nb', 'neural_network','svm','random_forest']
-cls=['nb']
+#cls=['nb']
 
 use_redshift=False
 
@@ -147,7 +148,7 @@ elif dataset=='sdss':
     if len(sys.argv)>2:
         nproc=(int)(sys.argv[2])
 
-print ('Using redshift:', use_redshift, 'training choice', train_choice)
+print('Using redshift:', use_redshift, 'training choice', train_choice)
 
 
 #####################################################################################################################
@@ -166,7 +167,7 @@ else:
 #This is where to save intermediate output for the feature extraction method. In some cases (such as the wavelets), these
 #files can be quite large.
 out_features=os.path.join(outdir, 'features', '')
-print ('out_features', out_features)
+print('out_features', out_features)
 out_class=os.path.join(outdir, 'classifications', '')
 out_inter=os.path.join(outdir, 'int', '')
 
@@ -177,11 +178,10 @@ if not os.path.exists(out_class):
 if not os.path.exists(out_inter):
     os.makedirs(out_inter)
 
-
 def select_training(obj_names, out_features_dir, repr=True, training_names=None, num_training=0):
     if repr:
         if num_training==0: #Number of objects in the training set
-            num_training=(int)(len(obj_names)*0.7)
+            num_training=(int)(len(obj_names)*0.5)
         indices=np.random.permutation(len(obj_names))
         train_inds=indices[:num_training]
         test_inds=indices[num_training:]
@@ -191,7 +191,7 @@ def select_training(obj_names, out_features_dir, repr=True, training_names=None,
 
     else: #If a non-representative training set, the training set names must be supplied
         if training_names is None:
-            print ('Non-representative training set requested but training_names==None')
+            print('Non-representative training set requested but training_names==None')
             sys.exit(0)
         training_set=training_names
         mask=np.in1d(obj_names, training_names)
@@ -199,7 +199,6 @@ def select_training(obj_names, out_features_dir, repr=True, training_names=None,
 
     np.savetxt(out_features_dir+'train-%s.txt' %train_choice, training_set, fmt='%s')
     np.savetxt(out_features_dir+'test-%s.txt' %train_choice, test_set, fmt='%s')
-
 
 if dataset=='des':
     #Root directory for simulated data. Replace with your own path.
@@ -213,15 +212,16 @@ if dataset=='des':
     d=sndata.Dataset(rt,subset=subset)
 
     #Extract the types for all objects. This is specific to this example
-    types=np.zeros(len(d.object_names),dtype=int)
-    for i in range(len(d.object_names)):
-        obj=d.object_names[i]
-        types[i]=d.data[obj].meta['type']
+    #types=np.zeros(len(d.object_names),dtype=int)
+    #for i in range(len(d.object_names)):
+    #    obj=d.object_names[i]
+    #    types[i]=d.data[obj].meta['type']
 
+    types=d.get_types()
 
     #The spectroscopic subsample is quite small so we can't subtype. We replace 21,22 etc. with 2 and 31,32 etc. with 3
-    types[np.floor(types/10)==2]=2
-    types[np.floor(types/10)==3]=3
+    types['Type'][np.floor(types['Type']/10)==2]=2
+    types['Type'][np.floor(types['Type']/10)==3]=3
 
     # #### Choose training and validation samples
     if len(cls)>0:
@@ -244,8 +244,8 @@ if dataset=='des':
 
         training_set=np.loadtxt(out_features+'train-%s.txt' %train_choice, dtype='str')
         test_set=np.loadtxt(out_features+'test-%s.txt' %train_choice, dtype='str')
-	
-        print ('out_features', out_features)
+
+        print('out_features', out_features)
 
         train_inds=[np.where(d.object_names==x)[0][0] for x in training_set]
         val_inds=[np.where(d.object_names==x)[0][0] for x in test_set]
@@ -254,7 +254,7 @@ if dataset=='des':
         Ytrain=types[train_inds]
         Yval=types[val_inds]
 
-        print (np.unique(Ytrain),np.unique(Yval))
+        #print(np.unique(Ytrain),np.unique(Yval))
 
 elif 'lsst' in dataset or dataset=='sdss':
     if 'lsst' in dataset:
@@ -324,7 +324,7 @@ def copy_files():
     os.system('mv %s* %s' %(os.path.join(outdir, 'int', ''), os.path.join(final_outdir, 'int', '')))
     os.system('mv %s* %s' %(os.path.join(outdir, 'classifications', ''), os.path.join(final_outdir, 'classifications', '')))
 
-    print ('Time taken for file copying', time.time()-t1)
+    print('Time taken for file copying', time.time()-t1)
 
 # ### Templates feature extraction ### #
 
@@ -341,15 +341,15 @@ if 'templates' in feature_sets:
         tempFeat=snfeatures.TemplateFeatures(model=[template_model], sampler=sampler)
     flname=os.path.join(out_features, subset_name+'_templates.dat')
     #flname=os.path.join(out_features, run_name+'_templates.dat')
-    print ('features', flname)
+    print('features', flname)
     if restart_from_features and os.path.exists(flname):
-        print ('Restarting from', flname)
+        print('Restarting from', flname)
         template_features=Table.read(flname, format='ascii')[:lim]
     else:
         #Run feature extraction
         template_features=tempFeat.extract_features(d, chain_directory=out_inter, nprocesses=nproc,
                                                     use_redshift=use_redshift, restart=restart_from_chains)
-        template_features.write(flname, format='ascii')
+        template_features.write(flname, format='ascii', overwrite=True)
     blah=template_features['Object'].astype(str)
     template_features.replace_column('Object', blah)
 
@@ -368,17 +368,17 @@ if 'templates' in feature_sets:
 
 if 'newling' in feature_sets:
     newlingFeat=snfeatures.ParametricFeatures('newling', sampler=sampler)
-    print ('out_features', out_features)
+    print('out_features', out_features)
     flname=os.path.join(out_features, subset_name+'_newling.dat')
 
     if restart_from_features and os.path.exists(flname):
-        print ('Restarting from', flname)
+        print('Restarting from', flname)
         newling_features=Table.read(flname, format='ascii')
     else:
         newling_features=newlingFeat.extract_features(d,chain_directory=out_inter, nprocesses=nproc,
                                                       convert_to_binary=True, restart=restart_from_chains)
-        print ('flname', flname)
-        newling_features.write(flname,format='ascii')
+        print('flname', flname)
+        newling_features.write(flname,format='ascii', overwrite=True)
 
     blah=newling_features['Object'].astype(str)
     newling_features.replace_column('Object', blah)
@@ -397,12 +397,12 @@ if 'karpenka' in feature_sets:
     flname=os.path.join(out_features, subset_name+'_karpenka.dat')
 
     if restart_from_features and os.path.exists(flname):
-        print ('Restarting from', flname)
+        print('Restarting from', flname)
         karpenka_features=Table.read(flname, format='ascii')
     else:
         karpenka_features=karpenkaFeat.extract_features(d,chain_directory=out_inter,
                                                         nprocesses=nproc, restart=restart_from_chains)
-        karpenka_features.write(flname,format='ascii')
+        karpenka_features.write(flname,format='ascii', overwrite=True)
 
     blah=karpenka_features['Object'].astype(str)
     karpenka_features.replace_column('Object', blah)
@@ -422,13 +422,13 @@ if 'wavelets' in feature_sets:
     flname=os.path.join(out_features, subset_name+'_wavelets.dat')
 
     if restart_from_features and os.path.exists(flname):
-        print ('Restarting from', flname)
+        print('Restarting from', flname)
         wavelet_features=Table.read(flname, format='ascii')[:lim]
 
     else:
         wavelet_features=waveletFeat.extract_features(d, save_output='all',restart='none',
                                                       output_root=out_inter, nprocesses=nproc)
-        wavelet_features.write(flname,format='ascii')
+        wavelet_features.write(flname,format='ascii', overwrite=True)
 
         subprocess.call(['cp','PCA_vals.txt',out_features+'%s_PCA_vals.txt' %run_name])
         subprocess.call(['cp','PCA_vec.txt',out_features+'%s_PCA_vec.txt' %run_name])
@@ -452,7 +452,6 @@ if 'wavelets' in feature_sets:
     if laptop==False and outdir != final_outdir:
         copy_files()
 
-
 ################################################################################
 ####### CLASSIFICATION #########################################################
 ################################################################################
@@ -460,7 +459,7 @@ if 'wavelets' in feature_sets:
 def do_classification(classifier, param_dict, Xtrain, Ytrain, Xtest, read_from_output, save_output, feature_set):
     flname='%s%s_%s.dat' %(out_class, feature_set, classifier)
     if read_from_output and os.path.exists(flname):
-        print ('reading from file')
+        print('reading from file')
         tab=Table.read(flname,format='ascii')
         probs=np.array([tab[c] for c in tab.columns[1:]]).T
         probs=probs[1:,:]
@@ -477,13 +476,14 @@ def do_classification(classifier, param_dict, Xtrain, Ytrain, Xtest, read_from_o
             fil.write((str)(c.clf.best_params_))
             fil.close()
             ####################################################
+
             dat=np.column_stack((d.object_names[val_inds],probs))
             typs=np.unique(Ytrain)
             typs.sort()
             typs=np.array(typs,dtype='str').tolist()
             nms=['Object']+typs
             tab=Table(dat,dtype=['S64']+['f']*probs.shape[1],names=nms)
-            tab.write(flname,format='ascii')
+            tab.write(flname,format='ascii', overwrite=True)
             
             if classifier=='boost_forest':
                 np.savetxt('%s%s_%s.importances' %(out_class, feature_set, classifier), c.clf.best_estimator_.feature_importances_)
@@ -557,16 +557,16 @@ def run_classifier(Xtrain,Ytrain,Xtest,Ytest,save_output=True,feature_set='templ
             FOM[cls[i]]=fom
             F1[cls[i]]=f1
             
-    print ('Kessler figure of merit')
-    print (FOM)
-    print ()
-    print ('F1')
-    print (F1)
-    print ()
-    print ('AUC')
-    print (AUC)
-    print ()
-    print ('Time taken',(time.time()-t1)/60.,'min')
+    print('Kessler figure of merit')
+    print(FOM)
+    print()
+    print('F1')
+    print(F1)
+    print()
+    print('AUC')
+    print(AUC)
+    print()
+    print('Time taken',(time.time()-t1)/60.,'min')
     #Plot the roc curve for these classifiers, for this feature set.
     snclassifier.plot_roc(FPR, TPR, AUC, labels=cls,figsize=(8,6),label_size=16,tick_size=12)
     plt.savefig(os.path.join(os.path.sep, 'home', 'michelle', 'Dropbox', 'Project','SN_Class', 'Figures', 'new_roc_%s_%s.png' %(run_name,feature_set)))
@@ -578,9 +578,9 @@ if len(cls)>0:
 
     if 'templates' in feature_sets:
         flname='output_%s_%s.txt' %('templates', run_name)
-        print ()
-        print ('TEMPLATES')
-        print ()
+        print()
+        print('TEMPLATES')
+        print()
         # Xtrain=template_features[np.in1d(template_features['Object'],training_set)]
         # Xval=template_features[np.in1d(template_features['Object'],test_set)]
         #
@@ -604,9 +604,10 @@ if len(cls)>0:
         # Xval = Xval[inds]
         # Yval = Yval[inds]
 
+
         new_feats = join(template_features, types, keys='Object')
-        #new_feats=new_feats['Object', 'z','t0', 'x0', 'x1','c', 'Type']
-        new_feats = new_feats['Object', 'z','t0', 'Type']
+        new_feats=new_feats['Object', 'z','t0', 'x0', 'x1','c', 'Type']
+        #new_feats = new_feats['Object', 'z','t0', 'Type']
 
         Xtrain = new_feats[np.in1d(new_feats['Object'], training_set)]
         Ytrain = np.array(Xtrain['Type'], dtype='int')
@@ -622,9 +623,9 @@ if len(cls)>0:
 
     if 'newling' in feature_sets:
         flname='output_%s_%s.txt' %('newling', run_name)
-        print ()
-        print ('NEWLING')
-        print ()
+        print()
+        print('NEWLING')
+        print()
 
         Xtrain=newling_features[np.in1d(newling_features['Object'],training_set)]
         Xval=newling_features[np.in1d(newling_features['Object'],test_set)]
@@ -639,9 +640,9 @@ if len(cls)>0:
 
     if 'karpenka' in feature_sets:
         flname='output_%s_%s.txt' %('karpenka', run_name)
-        print ()
-        print ('KARPENKA')
-        print ()
+        print()
+        print('KARPENKA')
+        print()
         Xtrain=karpenka_features[np.in1d(karpenka_features['Object'],training_set)]
         Xval=karpenka_features[np.in1d(karpenka_features['Object'],test_set)]
         Xtrain=np.array([Xtrain[c] for c in Xtrain.columns[1:]]).T
@@ -656,17 +657,18 @@ if len(cls)>0:
 
     if 'wavelets' in feature_sets:
         flname='output_%s_%s.txt' %('wavelets', run_name)
-        print ()
-        print ('WAVELETS')
-        print ()
+        print()
+        print('WAVELETS')
+        print()
 
         new_feats=join(wavelet_features,types,keys='Object')
-
+        new_feats.write('testtable.txt', format='ascii')
 
         Xtrain=new_feats[np.in1d(new_feats['Object'],training_set)]
         Ytrain=np.array(Xtrain['Type'],dtype='int')
         Xval=new_feats[np.in1d(new_feats['Object'],test_set)]
         Yval = np.array(Xval['Type'], dtype='int')
+
 
         Xtrain=np.array([Xtrain[c] for c in Xtrain.columns[1:-1]]).T
         Xval=np.array([Xval[c] for c in Xval.columns[1:-1]]).T

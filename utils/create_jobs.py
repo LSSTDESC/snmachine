@@ -12,7 +12,7 @@ good_nodes=range(13,16)
 #good_nodes=[]
 node_ind=0
 
-job_dir='/home/mlochner/sn/jobs/'
+job_dir='/home/robert/data_sets/sne/jobs/'
 #job_dir='jobs/'
 if not os.path.exists(job_dir):
     os.makedirs(job_dir)
@@ -23,7 +23,7 @@ n24=len(good_nodes) #How many cores24 nodes requesting
 proc12=n12*12 #Total number of cores12 processors
 proc24=n24*24
 
-dataset='lsst_ddf'
+dataset='des'
 subset='none'
 
 use_redshift=False
@@ -54,7 +54,7 @@ def make_job_script(ppn, subset_name):
     fl.write('source .tcshrc\n')
     fl.write('cd /home/mlochner/sn\n')
 
-    fl.write('python /home/mlochner/snmachine/utils/run_pipeline.py %s%s.txt %d %s\n' %(job_dir, subset_name, ppn,reds))
+    fl.write('python /home/robert/developing/snmachine/run_pipeline.py %s%s.txt %d %s\n' %(job_dir, subset_name, ppn,reds))
     #fl.write('python /home/michelle/SN_Class/snmachine/run_pipeline.py %s%s.txt\n' %(job_dir, subset_name))
     fl.close()
     
@@ -74,7 +74,7 @@ def make_job_spawner(n12, n24, job_dir, subset_root):
 if dataset=='des':
     survey_name='SIMGEN_PUBLIC_DES'
     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-    rootdir='/home/mlochner/sn/'+survey_name+'/'
+    rootdir='/home/robert/data_sets/sne/spcc/SIMGEN_PUBLIC_DES/'
     if subset=='spectro':
         objects=np.loadtxt('DES_spectro.list', dtype='str')
     else:
