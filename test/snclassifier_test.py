@@ -8,6 +8,11 @@ test_data_path=os.path.join('..', 'examples', 'SPCC_SUBSET', '')
 precomp_features_path=os.path.join('..', 'examples', 'output_spcc_no_z', 'features', 'spcc_all_wavelets.dat')
 slow_classifiers=['boost_dt', 'random_forest', 'boost_rf']
 
+def setup_module(module):
+    ### UNPACKING TEST DATA IF NOT ALREADY UNPACKED ###
+    if not os.path.exists(test_data_path):
+        print('Unpacking example data')
+        subprocess.call(['tar', '-zxf', os.path.join('..', 'examples', 'SPCC_SUBSET.tar.gz'), '-C', os.path.join('..', 'examples', '')])
 
 @pytest.fixture(scope='module')
 def check_avail_classifiers(request):
