@@ -131,15 +131,15 @@ class Dataset:
         """
         if isinstance(subset,basestring):
             if subset=='spectro':
-                object_names= np.genfromtxt(self.rootdir+'spectro.list', dtype='str').flatten()
+                object_names= np.genfromtxt(self.rootdir+'spectro.list', dtype='U').flatten()
             else:
-                object_names= np.genfromtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
+                object_names= np.genfromtxt(self.rootdir+self.survey_name+'.LIST', dtype='U')
         elif all(isinstance(l,basestring) for l in subset):
             #We assume subset is a list of strings containing object names
             object_names= subset
         else:
             #Otherwise it must be a list of indices. Otherwise raise an error.
-            names=np.genfromtxt(self.rootdir+self.survey_name+'.LIST', dtype='str')
+            names=np.genfromtxt(self.rootdir+self.survey_name+'.LIST', dtype='U')
             try:
                 object_names= names[subset]
             except IndexError:

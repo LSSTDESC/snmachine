@@ -73,10 +73,11 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
 
     """
 
+    print(obj)
     if gpalgo=='gapp' and not has_gapp:
         print('No GP module gapp. Defaulting to george instead.')
         gpalgo='george'
-
+    sys.stdout.flush()
     lc=d.data[obj]
     filters=np.unique(lc['filter'])
     #Store the output in another astropy table
@@ -123,7 +124,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
         else:
             output=vstack((output, newtable))
     if save_output=='gp' or save_output=='all':
-        output.write(os.path.join(output_root, 'gp_'+obj), format='ascii', overwrite=True)        
+        output.write(os.path.join(output_root, 'gp_'+obj), format='ascii')        
     return output
 
 
@@ -864,7 +865,7 @@ class TemplateFeatures(Features):
                         chain=res.samples
                         if save_chains:
                             tab=Table(chain, names=self.model.param_names)
-                            tab.write(os.path.join(chain_directory, obj.split('.')[0]+'_emcee_'+mod_name), format='ascii', overwrite=True)
+                            tab.write(os.path.join(chain_directory, obj.split('.')[0]+'_emcee_'+mod_name), format='ascii')
                         best=res['parameters'].flatten('F').tolist()
                     elif self.sampler=='nested':
                         best=_run_multinest_templates(obj, d, self.templates[mod_name], self.bounds[self.templates[mod_name]], chain_directory=chain_directory,  
@@ -1546,16 +1547,16 @@ class WaveletFeatures(Features):
                 out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
                 d.models[obj]=out
                 if save_output!='none':
-                    out.write(os.path.join(output_root, 'gp_'+obj), format='ascii', overwrite=True)
+                    out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
         else:
             p=Pool(nprocesses, maxtasksperchild=1)
 
             #Pool and map can only really work with single-valued functions
             partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
 
-            out=p.map(partial_GP, d.get_object_names())
+            out=p.map(partial_GP, d.object_names)
             for i in range(len(out)):
-                obj=d.get_object_names()[i]
+                obj=d.object_names[i]
                 d.models[obj]=out[i]
 
         print ('Time taken for Gaussian process regression', time.time()-t1)
@@ -1685,7 +1686,7 @@ class WaveletFeatures(Features):
             lc=d.models[obj]
             out= self.wavelet_decomp(lc, wav, mlev)
             if save_output=='wavelet' or save_output=='all':
-                out.write(os.path.join(output_root, 'wavelet_'+obj), format='ascii', overwrite=True)
+                out.write(os.path.join(output_root, 'wavelet_'+obj), format='ascii')
             #We go by filter, then by set of coefficients
             cols=out.colnames[:-1]
             n=self.ngp*2*mlev
