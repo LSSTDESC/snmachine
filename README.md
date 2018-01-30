@@ -4,7 +4,7 @@ Welcome to version 1.0 of snmachine! This is a flexible python library for readi
 
 ## Usage Policy
 
-This code is made available within the LSST DESC Collaboration. It was developed for and within DESC, making it a DESC Product in the context of the [DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf). We are aware that the codebase might be useful within other collaborations and welcome requests for access to the code for non-DESC use. If you wish to use the code outside DESC please submit your request here <link to google form>.  
+This code is made available within the LSST DESC Collaboration. It was developed for and within DESC, making it a DESC Product in the context of the [DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf). We are aware that the codebase might be useful within other collaborations and welcome requests for access to the code for non-DESC use. If you wish to use the code outside DESC please submit your request [here](https://docs.google.com/forms/d/e/1FAIpQLSfHKNf-GeIGeRWODtwpVz_byXsUDBYISjlQk5lv1W9M0hgB3g/viewform?usp=sf_link).  
 
 ## Contributors
 
