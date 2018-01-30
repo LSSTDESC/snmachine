@@ -1,6 +1,24 @@
 # snmachine
 
-Welcome to the pre-release of snmachine! This is a flexible python library for reading in supernova data or simulations, extracting useful features from them and subsequently performing supervised machine learning to classify supernovae based on their light curves. Please keep this code private for now within the DESC collaboration.
+Welcome to version 1.0 of snmachine! This is a flexible python library for reading in supernova data or simulations, extracting useful features from them and subsequently performing supervised machine learning to classify supernovae based on their light curves. 
+
+## Usage Policy
+
+This code is made available within the LSST DESC Collaboration. It was developed for and within DESC, making it a DESC Product in the context of the [DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf). We are aware that the codebase might be useful within other collaborations and welcome requests for access to the code for non-DESC users. If you wish to use the code outside DESC please submit your request here <link to google form>.  
+
+## Contributors
+
+The following people have contributed to snmachine v1.0:
+Michelle Lochner, Robert Schuhmann, Jason McEwen, Hiranya Peiris, Ofer Lahav, Johnny Holland, Max Winter
+
+## Contributing to snmachine
+
+We welcome developers! Simply fork it into your own private repository and submit a pull request when ready. You can contribute by adding new dataset-reading methods, new feature extraction methods or new classification algorithms. Please create an issue if you have any questions or problems with the code.
+
+## Citation
+
+If you use snmachine in your work please cite ([BibTex])(http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2016ApJS..225...31L&data_type=BIBTEX&db_key=AST&nocookieset=1):
+Lochner, M., McEwen, J., Peiris, H., Lahav, O., Winter, M. (2016) “Photometric Supernova Classification with Machine Learning”, The Astrophysical Journal Supplement Series, 225, 31
 
 ## Installation
 
@@ -60,9 +78,6 @@ dependencies:
 
 2) If you want to use neural networks, these are currently only available in the development version of scikit-learn (version 0.18). You will also need to install that separately to enable neural networks (see http://scikit-learn.org/stable/developers/contributing.html#git-repo).
 
-## Contributing
-
-Please feel free to contribute to the code! Simply fork it into your own private repository and submit a pull request when ready. You can contribute by adding new dataset-reading methods, new feature extraction methods or new classification algorithms. 
 
 ## Documentation
 
@@ -82,36 +97,4 @@ Execute each cell block using "shift-enter". A subset of simulated DES data from
 
 ## Unit Tests
 
-snmachine comes with a suite of unit tests, which allow you to check whether the software has been set up correctly and is working properly. To execute the full test suite, go into the `test` folder and run:
-
-```
-py.test [flags] [arguments]
-```
-
-You can use the following flags (all optional):
-
-  `-h`:
-print a full list of flags
-
-  `-v`:
-verbose mode
-
-  `-s`:
-enable stdout capture
-
-  `-mpl`:
-plots will explicitly be compared to the baseline plots in `test/baseline` with the pytest-mpl package (see https://github.com/astrofrog/pytest-mpl). Without this flag, the default behaviour for the plotting tests is: create the plot, save it, check that the output file is nonempty.
-
-  `-m "..."`:
-set pytest marker that restrict to a subset of tests. The following markers might be interesting:
-
-* `"not slow"`: exclude the the slow tests.
-
-* `"slow"`: run only the slow tests.
-
-* `"plots"`: run only the plotting tests.
-
-If you do not have george or pymultinest installed, then the corresponding tests are automatically skipped.
-Another way to restrict the number of tests is by passing a filename as argument. `py.test sndata_test.py` will only run the tests in this file. It is possible to select single tests via, e.g., `py.test snfeatures_test.py::test_gp_extraction`
-
-The full suite should need 20-30min to run, the subset excluding the slow ones in about 5min.
+snmachine comes with a suite of unit tests, which allow you to check whether the software has been set up correctly and is working properly. Please navigate to the test folder to run tests.
