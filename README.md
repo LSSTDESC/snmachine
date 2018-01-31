@@ -9,7 +9,7 @@ This code is made available within the LSST DESC Collaboration. It was developed
 ## Contributors
 
 The following people have contributed to snmachine v1.0:
-Michelle Lochner, Robert Schuhmann, Jason McEwen, Hiranya Peiris, Ofer Lahav, Johnny Holland, Max Winter
+Michelle Lochner, Robert Schuhmann, Jason McEwen, Hiranya Peiris, Rahul Biswas, Ofer Lahav, Johnny Holland, Max Winter
 
 ## Contributing to snmachine
 
