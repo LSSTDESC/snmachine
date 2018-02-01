@@ -1,10 +1,10 @@
 # snmachine
 
-Welcome to version 1.0 of snmachine! This is a flexible python library for reading in supernova data or simulations, extracting useful features from them and subsequently performing supervised machine learning to classify supernovae based on their light curves. 
+Welcome to version 1.0 of `snmachine`! As described in [Lochner et al. (2016)](https://arxiv.org/abs/1603.00882), this is a flexible python library for reading in photometric supernova light curves, extracting useful features from them and subsequently performing supervised machine learning to classify supernovae based on their light curves. The library is also flexible enough to easily extend to general transient classification.
 
 ## Usage Policy
 
-This code is made available within the LSST DESC Collaboration. It was developed for and within DESC, making it a DESC Product in the context of the [DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf). We are aware that the codebase might be useful within other collaborations and welcome requests for access to the code for non-DESC use. If you wish to use the code outside DESC please submit your request [here](https://docs.google.com/forms/d/e/1FAIpQLSfHKNf-GeIGeRWODtwpVz_byXsUDBYISjlQk5lv1W9M0hgB3g/viewform?usp=sf_link).  
+This code is made available within the LSST DESC Collaboration. `snmachine` was developed within the DESC, using DESC resources, and so meets the criteria given in the DESC Publication Policy for being a “DESC product” ([DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf)). We are aware that the codebase might be useful within other collaborations and welcome requests for access to the code for non-DESC use. If you wish to use the code outside DESC please submit your request [here](https://docs.google.com/forms/d/e/1FAIpQLSfHKNf-GeIGeRWODtwpVz_byXsUDBYISjlQk5lv1W9M0hgB3g/viewform?usp=sf_link).  
 
 ## Contributors
 
