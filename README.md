@@ -1,6 +1,6 @@
 # snmachine
 
-Welcome to version 1.0 of snmachine! This is a flexible python library for reading in supernova data or simulations, extracting useful features from them and subsequently performing supervised machine learning to classify supernovae based on their light curves. 
+Welcome to version 1.0 of `snmachine`! As described in [Lochner et al. (2016)](https://arxiv.org/abs/1603.00882), this is a flexible python library for reading in photometric supernova light curves, extracting useful features from them and subsequently performing supervised machine learning to classify supernovae based on their light curves. The library is also flexible enough to easily extend to general transient classification.
 
 ## Usage Policy
 
