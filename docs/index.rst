@@ -2,6 +2,9 @@
 snmachine
 *********
 
+.. image:: https://img.shields.io/badge/GitHub-LSSTDESC%2Fsnmachine-blue.svg?style=flat
+    :target: https://github.com/LSSTDESC/snmachine
+
 Welcome to version 1.0 of snmachine! As described in Lochner et al. (2016),
 this is a flexible python library for reading in photometric supernova light
 curves, extracting useful features from them and subsequently performing
