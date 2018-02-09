@@ -1,54 +1,43 @@
-snmachine package
-=================
+*********
+snmachine
+*********
 
-Submodules
-----------
+Welcome to version 1.0 of snmachine! As described in Lochner et al. (2016),
+this is a flexible python library for reading in photometric supernova light
+curves, extracting useful features from them and subsequently performing
+supervised machine learning to classify supernovae based on their light curves.
+The library is also flexible enough to easily extend to general transient
+classification.
 
-snmachine.parametric_models module
-----------------------------------
+Usage Policy
+============
 
-.. automodule:: snmachine.parametric_models
-    :members:
-    :undoc-members:
-    :show-inheritance:
+This code is made available within the LSST DESC Collaboration. snmachine was
+developed within the DESC, using DESC resources, and so meets the criteria given
+in the DESC Publication Policy for being a “DESC product” (DESC Publication Policy).
+We are aware that the codebase might be useful within other collaborations and
+welcome requests for access to the code for non-DESC use. If you wish to use the
+code outside DESC please submit your request here.
 
-snmachine.snclassifier module
------------------------------
+Citation
+========
 
-.. automodule:: snmachine.snclassifier
-    :members:
-    :undoc-members:
-    :show-inheritance:
+If you use snmachine in your work please cite (`BibTex
+<http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2016ApJS..225...31L&data_type=BIBTEX&db_key=AST&nocookieset=1)>`_.)
+Lochner, M., McEwen, J., Peiris, H., Lahav, O., Winter, M. (2016)
+“Photometric Supernova Classification with Machine Learning”,
+The Astrophysical Journal Supplement Series, 225, 31
 
-snmachine.sndata module
------------------------
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
 
-.. automodule:: snmachine.sndata
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   install
 
-snmachine.snfeatures module
----------------------------
+Contributing to snmachine
+=========================
 
-.. automodule:: snmachine.snfeatures
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-snmachine.tsne_plot module
---------------------------
-
-.. automodule:: snmachine.tsne_plot
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: snmachine
-    :members:
-    :undoc-members:
-    :show-inheritance:
+We welcome developers! Simply fork it into your own private repository and
+submit a pull request when ready. You can contribute by adding new dataset-reading
+methods, new feature extraction methods or new classification algorithms.
+Please create an issue if you have any questions or problems with the code.
