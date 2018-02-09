@@ -5,7 +5,7 @@ Installation and Setup
 snmachine is now compatible with Python2 and Python3.
 There are two possible ways to set up snmachine:
 
-Using conda
+Using Conda
 ===========
 
 By far the easiest way to install snmachine is to use anaconda.
@@ -53,7 +53,7 @@ packages (all of which are on either conda or pip):
 - pywavelets>=0.4.0 [pip]
 - george>=0.3.0
 
-Installation caveats
+Installation Caveats
 ====================
 
 snmachine has the ability to use nested sampling for some of the parameter
