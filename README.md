@@ -4,7 +4,7 @@ Welcome to version 1.0 of `snmachine`! As described in [Lochner et al. (2016)](h
 
 ## Usage Policy
 
-This code is made available within the LSST DESC Collaboration. `snmachine` was developed within the DESC, using DESC resources, and so meets the criteria given in the DESC Publication Policy for being a “DESC product” ([DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf)). We are aware that the codebase might be useful within other collaborations and welcome requests for access to the code for non-DESC use. If you wish to use the code outside DESC please submit your request [here](https://docs.google.com/forms/d/e/1FAIpQLSfHKNf-GeIGeRWODtwpVz_byXsUDBYISjlQk5lv1W9M0hgB3g/viewform?usp=sf_link).  
+This code is made available within the LSST DESC Collaboration. `snmachine` was developed within the DESC, using DESC resources, and so meets the criteria given in the DESC Publication Policy for being a “DESC product” ([DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf)). We are aware that the codebase might be useful within other collaborations and welcome requests for access to the code for non-DESC use. If you wish to use the code outside DESC please submit your request [here](https://docs.google.com/forms/d/e/1FAIpQLSfHKNf-GeIGeRWODtwpVz_byXsUDBYISjlQk5lv1W9M0hgB3g/viewform?usp=sf_link).
 
 ## Contributors
 
@@ -60,17 +60,21 @@ If you don't want to use an conda environment, snmachine requires the following 
 
 dependencies:
   - astropy>=1.1.2
-  - cython>=0.23.4
   - jupyter>=1.0.0
-  - matplotlib>=1.5.1
-  - numpy>=1.10.4
-  - scikit-learn>=0.17.1
+  - matplotlib=1.5.1
+  - numpy=1.11.0
+  - scikit-learn=0.18.1
   - scipy>=0.17.0
   - emcee>=2.1.0 [pip]
   - iminuit>=1.2 [pip]
-  - sncosmo>=1.2.0 [pip]
+  - numpydoc>=0.6.0 [pip]
   - pywavelets>=0.4.0 [pip]
-  - george>=0.3.0
+  - sncosmo>=1.3.0 [pip]
+  - nose>=1.3.7 [pip]
+  - george>=0.3.0 [pip]
+  - future>=0.16 [pip]
+  - sphinx_rtd_theme>=0.2.4 [pip]
+
 
 ### Installation caveats
 
