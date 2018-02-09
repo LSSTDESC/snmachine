@@ -98,3 +98,29 @@ Execute each cell block using "shift-enter". A subset of simulated DES data from
 ## Unit Tests
 
 snmachine comes with a suite of unit tests, which allow you to check whether the software has been set up correctly and is working properly. Please navigate to the test folder to run tests.
+
+
+## `snmachine`on NERSC
+
+To run `snmachine` on NERSC, set your shell to bash shell, and please run the following from the command line:
+
+```
+export PATH=/global/projecta/projectdirs/lsst/groups/SN/miniconda3/bin:$PATH
+```
+
+Then to use `snmachine` any time all that is needed is to activate the environment using,
+
+```
+module load python
+source activate snmachine
+```
+
+### `snmachine` on Jupyter @ NERSC
+
+Prior to accessing the Jupyter interface, either create a `.condarc` file (if you do not have already) with the following lines:
+
+```
+envs_dirs:
+ - /global/projecta/projectdirs/lsst/groups/SN/miniconda3/envs
+```
+or append this to your exisitng `.condarc`file. Be sure to access Jupyter via https://jupyter-dev.nersc.gov/ and not the Jupyter-Hub via 'MyNERSC' pages. Then, when prompted or accessing the notebook file, choose the `Python [conda env:snmachine]` kernel. This can be found under Kernel tab in the top menu bar. 
