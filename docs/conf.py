@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__name__), '..'))
 
 # Specify extensions / features
 extensions = ['sphinx.ext.autodoc',      # auto-documentation
@@ -35,7 +38,7 @@ todo_include_todos = False
 html_theme = 'sphinx_rtd_theme'
 
 # Paths that contain custom static files
-html_static_path = []
+html_static_path = ['_static']
 
 # -- Options for HTMLHelp output ------------------------------------------
 

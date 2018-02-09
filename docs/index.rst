@@ -2,12 +2,17 @@
 snmachine
 *********
 
+.. image:: https://img.shields.io/badge/GitHub-LSSTDESC%2Fsnmachine-blue.svg?style=flat
+    :target: https://github.com/LSSTDESC/snmachine
+
 Welcome to version 1.0 of snmachine! As described in Lochner et al. (2016),
 this is a flexible python library for reading in photometric supernova light
 curves, extracting useful features from them and subsequently performing
 supervised machine learning to classify supernovae based on their light curves.
 The library is also flexible enough to easily extend to general transient
 classification.
+
+.. image:: _static/pipeline.png
 
 Usage Policy
 ============
@@ -28,11 +33,23 @@ Lochner, M., McEwen, J., Peiris, H., Lahav, O., Winter, M. (2016)
 “Photometric Supernova Classification with Machine Learning”,
 The Astrophysical Journal Supplement Series, 225, 31
 
+.. The toc directive (below) is necessary to populate the side bar in the html
+   documentation. If you don't want it to show up on the html page, use
+   the :hidden: directive. For a complete reference on the table of contents
+   see: http://www.sphinx-doc.org/en/stable/markup/toctree.html
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
    install
+   quickstart
+   pmodels
+   snclassifier
+   sndata
+   snfeatures
+   tsne_plot
+   parallel
 
 Contributing to snmachine
 =========================
