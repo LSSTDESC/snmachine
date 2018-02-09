@@ -5,6 +5,10 @@ Utility module mostly wrapping sklearn functionality and providing utility funct
 from __future__ import division
 from past.builtins import basestring
 import numpy as np
+import os
+if not 'DISPLAY' in os.environ:
+    import matplotlib
+    matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn import svm
 from sklearn import neighbors
