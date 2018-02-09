@@ -30,11 +30,23 @@ Lochner, M., McEwen, J., Peiris, H., Lahav, O., Winter, M. (2016)
 “Photometric Supernova Classification with Machine Learning”,
 The Astrophysical Journal Supplement Series, 225, 31
 
+.. The toc directive (below) is necessary to populate the side bar in the html
+   documentation. If you don't want it to show up on the html page, use
+   the :hidden: directive. For a complete reference on the table of contents
+   see: http://www.sphinx-doc.org/en/stable/markup/toctree.html
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
    install
+   quickstart
+   pmodels
+   snclassifier
+   sndata
+   snfeatures
+   tsne_plot
+   parallel
 
 Contributing to snmachine
 =========================
