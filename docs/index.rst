@@ -9,6 +9,8 @@ supervised machine learning to classify supernovae based on their light curves.
 The library is also flexible enough to easily extend to general transient
 classification.
 
+.. image:: _static/pipeline.png
+
 Usage Policy
 ============
 

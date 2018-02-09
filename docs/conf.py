@@ -35,7 +35,7 @@ todo_include_todos = False
 html_theme = 'sphinx_rtd_theme'
 
 # Paths that contain custom static files
-html_static_path = []
+html_static_path = ['_static']
 
 # -- Options for HTMLHelp output ------------------------------------------
 
