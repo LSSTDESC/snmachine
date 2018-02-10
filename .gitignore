@@ -30,3 +30,6 @@ pip-delete-this-directory.txt
 
 # Rope project settings
 .ropeproject
+
+# Other
+*.DS_Store
