@@ -6,7 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = snmachine
 SOURCEDIR     = .
-BUILDDIR      = _build
+BUILDDIR      = .
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -18,3 +18,19 @@ help:
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+gh-pages:
+	make html
+
+	rm -fr ../_modules
+	mv -f html/_modules ../_modules
+
+	rm -fr ../_sources
+	mv -f html/_sources ../_sources
+
+	rm -fr ../_static
+	mv -f html/_static ../_static
+
+	mv -f html/* ../
+	rm -fr html/
+	rm -fr doctrees/
