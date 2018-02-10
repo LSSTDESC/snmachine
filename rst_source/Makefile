@@ -30,6 +30,7 @@ gh-pages:
 
 	rm -fr ../_static
 	mv -f html/_static ../_static
+	cp -r images/* ../_static
 
 	mv -f html/* ../
 	rm -fr html/
