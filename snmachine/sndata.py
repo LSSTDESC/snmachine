@@ -5,10 +5,14 @@ can be read by the rest of the code.
 from __future__ import division
 from past.builtins import basestring
 import numpy as np
+import os
+if not 'DISPLAY' in os.environ:
+    import matplotlib
+    matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from astropy.table import Table, Column
 from astropy.io import fits
-import sys, sncosmo, os
+import sys, sncosmo
 from random import shuffle,sample
 from scipy import interpolate
 import sncosmo, math
