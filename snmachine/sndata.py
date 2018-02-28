@@ -10,6 +10,7 @@ if not 'DISPLAY' in os.environ:
     import matplotlib
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.switch_backend('tkagg')
 from astropy.table import Table, Column
 from astropy.io import fits
 import sys, sncosmo
