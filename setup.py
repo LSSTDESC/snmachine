@@ -24,7 +24,7 @@ setup(
     packages=['snmachine', 'gapp', 'gapp.covfunctions'],
     packagedir={PACKAGENAME:'snmachine'},
     include_package_data=True,
-    #package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz']},
+    package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz', 'example_data/output_spcc_no_z/features/*.dat']},
     #data_files=[('snmachine', ['example_data/SPCC_SUBSET.tar.gz'])],
     url='',
     license='MIT',

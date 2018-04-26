@@ -1,2 +1,3 @@
-include example_data/test.dat
+include example_data/SPCC_SUBSET.tar.gz
+include example_data/output_spcc_no_z/features/*.dat
 
