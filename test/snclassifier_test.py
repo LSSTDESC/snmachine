@@ -1,11 +1,11 @@
 import pytest
 import sys, os, subprocess
 from astropy.table import Table
-from snmachine import sndata, snfeatures, snclassifier
+from snmachine import sndata, snfeatures, snclassifier, example_data
 import numpy as np
 
-test_data_path=os.path.join('..', 'examples', 'SPCC_SUBSET', '')
-precomp_features_path=os.path.join('..', 'examples', 'output_spcc_no_z', 'features', 'spcc_all_wavelets.dat')
+test_data_path=os.path.join(example_data, 'SPCC_SUBSET', '')
+precomp_features_path=os.path.join(example_data, 'output_spcc_no_z', 'features', 'spcc_all_wavelets.dat')
 slow_classifiers=['boost_dt', 'random_forest', 'boost_rf']
 
 def setup_module(module):
