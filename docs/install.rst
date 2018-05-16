@@ -58,12 +58,8 @@ Installation Caveats
 
 snmachine has the ability to use nested sampling for some of the parameter
 estimates, which we have found to give much more reliable fits than least
-squares. However this depends on pymultinest
-(https://github.com/JohannesBuchner/PyMultiNest) being installed separately,
+squares. However this depends on `pymultinest <https://github.com/JohannesBuchner/PyMultiNest>`_ being installed separately,
 since it requires manual compiling of Fortran code (but not it's not a
 particularly difficult one).
 
-If you want to use neural networks, these are currently only available in the
-development version of scikit-learn (version 0.18). You will also need to
-install that separately to enable neural networks
-(see http://scikit-learn.org/stable/developers/contributing.html#git-repo).
+If you want to use neural networks, these are available in newer versions of scikit-learn (version >= 0.18).
