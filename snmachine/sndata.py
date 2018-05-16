@@ -357,7 +357,36 @@ class Dataset:
         plt.plot([0, 0])
         #subplots_adjust(right=0.95, top=0.95)
         plt.show()
-        
+      
+    def save_to_folder(self, outpath, overwrite=True):
+        """
+        Saves the light curves in one data set to a folder, including one '.LIST' file with all object names.
+        The format is the sncosmo standard, including a header for the metadata
+
+        Parameters
+        ----------
+        outpath : string
+            Path to folder that the light curve files will be saved to. If not existent, it will be created.
+        overwrite : bool, optional
+	    If the files already exist, do we overwrite them?
+           
+        """
+
+        #in case the path does not end in separator, add one for good measure
+        outpath=os.path.join(outpath,'')
+
+        if not os.path.exists(outpath):
+            os.makedirs(outpath)
+
+        foldername=outpath.split(os.path.sep)[-2]#the folder name will be the second to last item in the list
+
+        object_list_path=os.path.join(outpath,(outpath.split(os.path.sep)[-2]+'.LIST'))
+        if overwrite or not os.path.exists(object_list_path):
+            np.savetxt(object_list_path,self.object_names,fmt='%s')
+        for obj in self.object_names:
+            sncosmo.write_lc(self.data[obj],os.path.join(outpath,obj),format='ascii',overwrite=overwrite)
+
+  
     def get_types(self):
         """
         Returns a list of the types of the entire dataset.
