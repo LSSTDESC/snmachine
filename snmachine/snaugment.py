@@ -89,12 +89,16 @@ class GPAugment(SNAugment):
         if templates is None:
             templates=d.get_object_names()
         self.meta['trained_gp']={}
+        self.meta['random_state']=np.random.RandomState()
+        self.meta['random_seed_state']=self.meta['random_state'].get_state()
+
+        self.original=d.get_object_names()
 
     def train_filter(self,x,y,yerr,initheta=[100,20]):
         def nll(p):
             g.set_parameter_vector(p)
             ll=g.log_likelihood(y,quiet=True)
-            return -ll if np.isfinite(ll) else 1e25
+            return -ll if np.isfinite(ll) else 1.e25
         def grad_nll(p):
             g.set_parameter_vector(p)
             return -g.grad_log_likelihood(y,quiet=True)
@@ -106,12 +110,13 @@ class GPAugment(SNAugment):
         g.set_parameter_vector(results.x)
         return g
 
-    def sample_cadence_filter(self,g,cadence,y):
+    def sample_cadence_filter(self,g,cadence,y,):
         mu,cov=g.predict(y,cadence)
-        std=np.sqrt(np.diag(cov))
-        return mu,std
+        flux=self.meta['random_state'].multivariate_normal(mu,cov)
+        fluxerr=np.sqrt(np.diag(cov))
+        return flux,fluxerr
 
-    def produce_new_lc(self,obj,cadence=None,savegp=True):
+    def produce_new_lc(self,obj,cadence=None,savegp=True,samplez=True,name='dummy'):
 
         obj_table=self.dataset.data[obj]
         if cadence is None:
@@ -139,7 +144,11 @@ class GPAugment(SNAugment):
                 self.meta['trained_gp'][obj]=all_g
 
         #Produce new LC based on the set of GP
-        new_lc_meta={'name':'dummy','z':obj_table.meta['z'],'type':obj_table.meta['type'], 'template': obj, 'augment_algo': self.algorithm}
+        if samplez and 'z_err' in obj_table.meta.keys():
+            newz=obj_table.meta['z']+obj_table.meta['z_err']*self.meta['random_state'].randn()
+        else:
+            newz=obj_table.meta['z']
+        new_lc_meta={'name':name,'z':newz,'type':obj_table.meta['type'], 'template': obj, 'augment_algo': self.algorithm}
         new_lc=Table(names=['mjd','filter','flux','flux_error'],dtype=['f','S64','f','f'],meta=new_lc_meta)
         for f in self.dataset.filter_set:
             obj_f=obj_table[obj_table['filter']==f]
