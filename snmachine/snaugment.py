@@ -95,6 +95,27 @@ class GPAugment(SNAugment):
         self.original=d.get_object_names()
 
     def train_filter(self,x,y,yerr,initheta=[100,20]):
+        """
+        Train one Gaussian process on the data from one band. We use the squared-exponential
+        kernel, and we optimise its hyperparameters
+
+        Parameters:
+        -----------
+        x: numpy array
+            mjd values for the cadence
+        y: numpy array
+            flux values
+        yerr: numpy array
+            errors on the flux
+        initheta: list, optional
+            initial values for the hyperparameters. They should roughly correspond to the
+            spread in y and x direction.
+
+        Returns:
+        -------
+        g: george.GP
+            the trained GP object
+        """
         def nll(p):
             g.set_parameter_vector(p)
             ll=g.log_likelihood(y,quiet=True)
@@ -110,20 +131,61 @@ class GPAugment(SNAugment):
         g.set_parameter_vector(results.x)
         return g
 
-    def sample_cadence_filter(self,g,cadence,y,):
+    def sample_cadence_filter(self,g,cadence,y):
+        """
+        Given a trained GP, and a cadence of mjd values, produce a sample from the distribution
+        defined by the GP, on that cadence. The error bars are set to the spread of the GP distribution
+        at the given mjd value.
+
+        Parameters:
+        -----------
+        g: george.GP
+            the trained Gaussian process object
+        cadence: dict of type {string:numpy.array}
+            the cadence defined by {filter1:mjds1, filter2:mjd2, ...}.
+        y: numpy array
+            the flux values of the data that the GP has been trained on.
+
+        Returns:
+        --------
+        flux: numpy array
+            flux values for the new sample
+        fluxerr: numpy array
+            error bars on the flux for the new sample
+        """
         mu,cov=g.predict(y,cadence)
         flux=self.meta['random_state'].multivariate_normal(mu,cov)
         fluxerr=np.sqrt(np.diag(cov))
         return flux,fluxerr
 
     def produce_new_lc(self,obj,cadence=None,savegp=True,samplez=True,name='dummy'):
+        """
+        Assemble a new light curve from a template. If the template already has been used
+        and the resulting GPs have been saved, then we use those. If not, we train a new GP.
 
+        Parameters:
+        -----------
+        obj: str
+           name of the object that we use as a template to train the GP on.
+        cadence: dict of type {string:numpy.array}, optional.
+           the cadence for the new light curve, defined by {filter:mjds}. If none is given, 
+           then we pull the cadence of the template.
+        savegp: bool, optional
+           Do we save the trained GP in self.meta? This results in a speedup, but costs memory.
+        samplez: bool, optional
+           Do we give the new light curve a random redshift value drawn from a Gaussian of location
+           and width defined by the template? If not, we just take the value of the template.
+        name: str, optional
+           object name of the new light curve. 
+
+        Returns:
+        --------
+        new_lc: astropy.table.Table
+           The new light curve
+        """
         obj_table=self.dataset.data[obj]
         if cadence is None:
-            cadence={}
-            for f in self.dataset.filter_set:
-                obj_table=self.dataset.data[obj]
-                cadence[f]=obj_table[obj_table['filter']==f]['mjd']
+            cadence=self.extract_cadence(obj)
 
 	#Either train a new set of GP on the template obj, or pull from metadata
         if obj in self.meta['trained_gp'].keys():
@@ -163,6 +225,19 @@ class GPAugment(SNAugment):
         return new_lc
 
     def extract_cadence(self, obj):
+        """
+        Given a light curve, we extract the cadence in a format that we can insert into produce_lc and sample_cadence_filter.
+
+        Parameters:
+        -----------
+        obj: str
+            name of the object
+
+        Returns:
+        --------
+        cadence: dict of type {str:numpy.array}
+            the cadence, in the format {filter1:mjd1, filter2:mjd2, ...}
+        """
         table=self.dataset.data[obj]
         cadence={flt:np.array(table[table['filter']==flt]['mjd']) for flt in self.dataset.filter_set}
         return cadence
