@@ -12,11 +12,13 @@ import numpy as np
 good_nodes=[]
 node_ind=0
 
-job_dir='/home/roberts/data_sets/sne/des/jobs/'
+homedir = os.environ['HOME']
+
+job_dir=homedir + 'data_sets/sne/des/jobs/'
 #job_dir='jobs/'
 if not os.path.exists(job_dir):
     os.makedirs(job_dir)
-    
+
 n12=12 #How many cores12 nodes requesting
 n24=len(good_nodes) #How many cores24 nodes requesting
 
@@ -59,12 +61,12 @@ def make_job_script(ppn, subset_name, extra_flags=''):
 #PBS -q %s\n \
 #PBS -l walltime=99:00:00\n' %(node_string,queue))
     fl.write('source .tcshrc\n')
-    fl.write('cd /home/roberts/sne/snmachine/	\n')
+    fl.write('cd ' + homedir + 'sne/snmachine/	\n')
 
-    fl.write('python /home/roberts/sne/snmachine/utils/run_pipeline.py %s%s.txt %d %s %s %s\n' %(job_dir, subset_name, ppn, reds, train_choice, extra_flags))
+    fl.write('python ' + homedir + '/sne/snmachine/utils/run_pipeline.py %s%s.txt %d %s %s %s\n' %(job_dir, subset_name, ppn, reds, train_choice, extra_flags))
     #fl.write('python /home/michelle/SN_Class/snmachine/run_pipeline.py %s%s.txt\n' %(job_dir, subset_name))
     fl.close()
-    
+
 def make_job_spawner(n12, n24, job_dir, subset_root):
     #Create a simple bash script to qsub all the jobs
     fl=open(os.path.join(job_dir, 'run_all.sh'), 'w')
@@ -86,7 +88,7 @@ def make_job_spawner(n12, n24, job_dir, subset_root):
 if dataset=='des':
     survey_name='SIMGEN_PUBLIC_DES'
     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-    rootdir='/home/roberts/data_sets/sne/des/'+survey_name+'/'
+    rootdir=homedir + '/data_sets/sne/des/'+survey_name+'/'
     if subset=='spectro':
         objects=np.genfromtxt('DES_spectro.list', dtype='str')
     else:
@@ -97,7 +99,7 @@ if dataset=='des':
 elif dataset=='sdss':
     survey_name='SMP_Data'
     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-    rootdir='/home/roberts/data_sets/sne/sdss/'+survey_name+'/'
+    rootdir=homedir + '/data_sets/sne/sdss/'+survey_name+'/'
     if subset=='spectro':
         objects=np.genfromtxt(rootdir+'spectro.list', dtype='str')
     else:
