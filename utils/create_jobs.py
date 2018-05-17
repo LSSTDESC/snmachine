@@ -7,14 +7,16 @@ from __future__ import division
 import os
 import numpy as np
 
-#good_nodes=range(13, 18)+range(19,24) #We want to avoid node 18 (and any nodes that aren't free of course)
+# good_nodes=range(13, 18)+range(19,24) #We want to avoid node 18 (and any nodes that aren't free of course)
 #good_nodes=[15, 19, 21, 22, 23, 24]
+# good_nodes=[14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 good_nodes=[]
+# good_nodes=[25, 26, 27, 28]
 node_ind=0
 
 homedir = os.environ['HOME']
 
-job_dir=homedir + 'data_sets/sne/des/jobs/'
+job_dir= homedir + '/data_sets/sne/des/jobs/'
 #job_dir='jobs/'
 if not os.path.exists(job_dir):
     os.makedirs(job_dir)
@@ -61,9 +63,9 @@ def make_job_script(ppn, subset_name, extra_flags=''):
 #PBS -q %s\n \
 #PBS -l walltime=99:00:00\n' %(node_string,queue))
     fl.write('source .tcshrc\n')
-    fl.write('cd ' + homedir + 'sne/snmachine/	\n')
+    fl.write('cd ' + homedir + '/snmachine/	\n')
 
-    fl.write('python ' + homedir + '/sne/snmachine/utils/run_pipeline.py %s%s.txt %d %s %s %s\n' %(job_dir, subset_name, ppn, reds, train_choice, extra_flags))
+    fl.write('python ' + homedir + '/snmachine/utils/run_pipeline.py %s%s.txt %d %s %s %s\n' %(job_dir, subset_name, ppn, reds, train_choice, extra_flags))
     #fl.write('python /home/michelle/SN_Class/snmachine/run_pipeline.py %s%s.txt\n' %(job_dir, subset_name))
     fl.close()
 
@@ -74,7 +76,7 @@ def make_job_spawner(n12, n24, job_dir, subset_root):
     joblist=''
     for i in range(n12):
         subs=subset_root %i
-        fl.write('job%d=$(qsub -W depend=afterok:$job_pre %s)\n' %(i, os.path.join(job_dir, subs+'.pbs'))) 
+        fl.write('job%d=$(qsub -W depend=afterok:$job_pre %s)\n' %(i, os.path.join(job_dir, subs+'.pbs')))
         joblist+=':$job%d' %i
     for j in range(n12, n12+n24):
         subs=subset_root %j
@@ -113,7 +115,7 @@ elif 'lsst' in dataset:
     rootdir='/home/mlochner/sn/'+survey_name+'/'
     objects=np.genfromtxt(rootdir+'high_SNR_snids.txt', dtype='str')
     #objects=np.loadtxt('missing_objects.txt',dtype='str')
-    
+
 nobj=len(objects) #Total number of objects
 
 #Figure out how many objects go onto cores24 processors and how many on cores12
@@ -135,7 +137,7 @@ for i in range(n12):
     subs=subset_name %i
     np.savetxt(job_dir+subs+'.txt', obj12[i], fmt='%s')
     make_job_script(12, subs, extra_flags='no-class')
-    
+
 for j in range(n24):
     subs=subset_name %(j+len(obj12))
     np.savetxt(job_dir+subs+'.txt', obj24[j], fmt='%s')
