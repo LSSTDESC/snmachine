@@ -161,6 +161,7 @@ print('Using redshift: '+str(use_redshift)+'; training choice '+str(train_choice
 #####################################################################################################################
 
 homedir = os.environ['HOME']
+username = os.environ.get('USER')
 
 if laptop:
     outdir=os.path.join(os.path.sep, homedir, 'data_sets', 'sne','sn_output','output_%s' %(run_name),'')
@@ -168,7 +169,7 @@ if laptop:
     #outdir=os.path.join(os.path.sep, 'home', 'michelle', 'output_%s' %(run_name),'')
 else:
     final_outdir=os.path.join(os.path.sep, homedir, 'data_sets', 'sne', 'sn_output','output_%s' %(run_name), '')
-    outdir=os.path.join(os.path.sep, 'state','partition1', 'roberts', '')
+    outdir=os.path.join(os.path.sep, 'state','partition1', username, '')
 print('temp outdir '+outdir)
 print('final outdir '+final_outdir)
 
