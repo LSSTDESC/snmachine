@@ -55,14 +55,15 @@ def make_job_script(ppn, subset_name, extra_flags=''):
         fl=open(job_dir+subset_name+'_preprocess.pbs', 'w')
     else:
         fl=open(job_dir+subset_name+'.pbs', 'w')
-    fl.write('#!/bin/tcsh -f\n \
+    fl.write('#!/bin/bash --norc\n \
 #PBS -V\n \
 %s\n \
 #PBS -r n\n \
 #PBS -S /bin/tcsh\n \
 #PBS -q %s\n \
 #PBS -l walltime=99:00:00\n' %(node_string,queue))
-    fl.write('source .tcshrc\n')
+    # fl.write('source .tcshrc\n')
+    fl.write('source ' + homedir + '/snmachine/install/setup.sh\n')
     fl.write('cd ' + homedir + '/snmachine/	\n')
 
     fl.write('python ' + homedir + '/snmachine/utils/run_pipeline.py %s%s.txt %d %s %s %s\n' %(job_dir, subset_name, ppn, reds, train_choice, extra_flags))
