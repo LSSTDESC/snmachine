@@ -25,26 +25,19 @@
   
 
   
-  
     <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="snmachine 1.0.0 documentation" href="index.html"/>
-        <link rel="next" title="Running in Parallel" href="parallel.html"/>
-        <link rel="prev" title="snfeatures" href="snfeatures.html"/> 
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Running on Clusters / in Parallel" href="parallel.html" />
+    <link rel="prev" title="snfeatures" href="snfeatures.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -99,7 +92,7 @@
 <li class="toctree-l1"><a class="reference internal" href="sndata.html">sndata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="snfeatures.html">snfeatures</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">tsne_plot</a></li>
-<li class="toctree-l1"><a class="reference internal" href="parallel.html">Running in Parallel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallel.html">Running on Clusters / in Parallel</a></li>
 </ul>
 
             
@@ -111,7 +104,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">snmachine</a>
@@ -119,9 +112,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -168,20 +162,20 @@
 <p>Utility script for making nice t-SNE plots (<a class="reference external" href="https://lvdmaaten.github.io/tsne/">https://lvdmaaten.github.io/tsne/</a>)</p>
 <dl class="function">
 <dt id="snmachine.tsne_plot.get_tsne">
-<code class="descclassname">snmachine.tsne_plot.</code><code class="descname">get_tsne</code><span class="sig-paren">(</span><em>feats</em>, <em>objs</em>, <em>perplexity=100</em>, <em>seed=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#snmachine.tsne_plot.get_tsne" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">snmachine.tsne_plot.</code><code class="descname">get_tsne</code><span class="sig-paren">(</span><em>feats</em>, <em>objs</em>, <em>perplexity=100</em>, <em>seed=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/tsne_plot.html#get_tsne"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.tsne_plot.get_tsne" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the transformed features running the sklearn t-SNE code.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>feats</strong> (<em>astropy.table.Table</em>) &#8211; Input features</li>
-<li><strong>objs</strong> (<em>list</em>) &#8211; Subset of objects to run on (t-SNE is slow for large numbers, 2000 randomly selected objects is a good compromise)</li>
-<li><strong>perplexity</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; t-SNE parameter which controls (roughly speaking) how sensitive the t-SNE plot is to small details</li>
+<li><strong>feats</strong> (<em>astropy.table.Table</em>) – Input features</li>
+<li><strong>objs</strong> (<em>list</em>) – Subset of objects to run on (t-SNE is slow for large numbers, 2000 randomly selected objects is a good compromise)</li>
+<li><strong>perplexity</strong> (<em>float</em><em>, </em><em>optional</em>) – t-SNE parameter which controls (roughly speaking) how sensitive the t-SNE plot is to small details</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Xfit</strong> &#8211; Transformed, embedded 2-d features</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Xfit</strong> – Transformed, embedded 2-d features</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
@@ -193,16 +187,16 @@
 
 <dl class="function">
 <dt id="snmachine.tsne_plot.plot">
-<code class="descclassname">snmachine.tsne_plot.</code><code class="descname">plot</code><span class="sig-paren">(</span><em>feats</em>, <em>types</em>, <em>objs=[]</em>, <em>seed=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#snmachine.tsne_plot.plot" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">snmachine.tsne_plot.</code><code class="descname">plot</code><span class="sig-paren">(</span><em>feats</em>, <em>types</em>, <em>objs=[]</em>, <em>seed=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/tsne_plot.html#plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.tsne_plot.plot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convenience function to run t-SNE and plot</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>feats</strong> (<em>astropy.table.Table</em>) &#8211; Input features</li>
-<li><strong>types</strong> (<em>array</em>) &#8211; Types of the supernovae (to colour the points appropriately)</li>
-<li><strong>objs</strong> (<em>list</em>) &#8211; Subset of objects to run on (t-SNE is slow for large numbers, 2000 randomly selected objects is a good compromise)</li>
+<li><strong>feats</strong> (<em>astropy.table.Table</em>) – Input features</li>
+<li><strong>types</strong> (<em>array</em>) – Types of the supernovae (to colour the points appropriately)</li>
+<li><strong>objs</strong> (<em>list</em>) – Subset of objects to run on (t-SNE is slow for large numbers, 2000 randomly selected objects is a good compromise)</li>
 </ul>
 </td>
 </tr>
@@ -212,16 +206,16 @@
 
 <dl class="function">
 <dt id="snmachine.tsne_plot.plot_tsne">
-<code class="descclassname">snmachine.tsne_plot.</code><code class="descname">plot_tsne</code><span class="sig-paren">(</span><em>Xfit</em>, <em>types</em>, <em>loc='best'</em><span class="sig-paren">)</span><a class="headerlink" href="#snmachine.tsne_plot.plot_tsne" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">snmachine.tsne_plot.</code><code class="descname">plot_tsne</code><span class="sig-paren">(</span><em>Xfit</em>, <em>types</em>, <em>loc='best'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/tsne_plot.html#plot_tsne"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.tsne_plot.plot_tsne" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot the resulting t-SNE embedded features.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>Xfit</strong> (<em>array</em>) &#8211; Transformed, embedded 2-d features</li>
-<li><strong>types</strong> (<em>array</em>) &#8211; Types of the supernovae (to colour the points appropriately)</li>
-<li><strong>loc</strong> (<em>str</em><em>, </em><em>optional</em>) &#8211; Location of the legend in the plot</li>
+<li><strong>Xfit</strong> (<em>array</em>) – Transformed, embedded 2-d features</li>
+<li><strong>types</strong> (<em>array</em>) – Types of the supernovae (to colour the points appropriately)</li>
+<li><strong>loc</strong> (<em>str</em><em>, </em><em>optional</em>) – Location of the legend in the plot</li>
 </ul>
 </td>
 </tr>
@@ -233,15 +227,13 @@
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="parallel.html" class="btn btn-neutral float-right" title="Running in Parallel" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="parallel.html" class="btn btn-neutral float-right" title="Running on Clusters / in Parallel" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="snfeatures.html" class="btn btn-neutral" title="snfeatures" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -257,7 +249,7 @@
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -276,6 +268,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
             VERSION:'1.0.0',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -293,14 +286,13 @@
     <script type="text/javascript" src="_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

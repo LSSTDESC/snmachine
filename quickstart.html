@@ -25,26 +25,19 @@
   
 
   
-  
     <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="snmachine 1.0.0 documentation" href="index.html"/>
-        <link rel="next" title="parametric_models" href="pmodels.html"/>
-        <link rel="prev" title="Installation and Setup" href="install.html"/> 
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="parametric_models" href="pmodels.html" />
+    <link rel="prev" title="Installation and Setup" href="install.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -93,13 +86,17 @@
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Setup</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Start</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#unit-tests">Unit tests</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="pmodels.html">parametric_models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="snclassifier.html">snclassifier</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sndata.html">sndata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="snfeatures.html">snfeatures</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tsne_plot.html">tsne_plot</a></li>
-<li class="toctree-l1"><a class="reference internal" href="parallel.html">Running in Parallel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallel.html">Running on Clusters / in Parallel</a></li>
 </ul>
 
             
@@ -111,7 +108,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">snmachine</a>
@@ -119,9 +116,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -165,13 +163,36 @@
             
   <div class="section" id="quick-start">
 <h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h1>
+<p>First, if you are using <cite>snmachine</cite> on your own machine, please see the installation steps outlined in <a class="reference internal" href="install.html"><span class="doc">Installation and Setup</span></a>.</p>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>To get a feel for running <cite>snmachine</cite> and to understand it’s uses, the best place to start are the jupyter notebooks. These are contained in the folder <cite>examples</cite>, which you can also view on Github, <a class="reference external" href="https://github.com/LSSTDESC/snmachine/blob/master/examples/example_spcc.ipynb">Getting Started Notebook</a>. You can also run this yourself. Start the notebook from the <cite>examples</cite> directory by typing,:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">jupyter</span> <span class="n">notebook</span> <span class="n">example_spcc</span><span class="o">.</span><span class="n">ipynb</span>
+</pre></div>
+</div>
+<p>Execute each cell block using “shift-enter”. A subset of simulated DES data from the supernova photometric classification challenge is provided to illustrate the code.</p>
+</div>
+<div class="section" id="unit-tests">
+<h2>Unit tests<a class="headerlink" href="#unit-tests" title="Permalink to this headline">¶</a></h2>
+<p>Also, great way to check your installation of snmachine is to run the suite of unit tests. These allow you to check whether the software has been set up correctly and that each step is working properly. Please navigate to the <cite>test</cite> folder to run tests using the syntax,:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytest</span> <span class="o">*.</span><span class="n">py</span>
+</pre></div>
+</div>
+<p>If you would like to run a subset of tests you can run the command,:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytest</span> <span class="o">*.</span><span class="n">py</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;slow&#39;</span>
+</pre></div>
+</div>
+<p>to run the tests that are the most cpu-intensive. Or conversely,:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytest</span> <span class="o">*.</span><span class="n">py</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;not slow&#39;</span>
+</pre></div>
+</div>
+<p>to run the tests of the basic functionality of <cite>snmachine</cite>.</p>
+</div>
 </div>
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -193,7 +214,7 @@
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -212,6 +233,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
             VERSION:'1.0.0',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -229,14 +251,13 @@
     <script type="text/javascript" src="_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

@@ -25,26 +25,19 @@
   
 
   
-  
     <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="snmachine 1.0.0 documentation" href="index.html"/>
-        <link rel="next" title="Quick Start" href="quickstart.html"/>
-        <link rel="prev" title="snmachine" href="index.html"/> 
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Quick Start" href="quickstart.html" />
+    <link rel="prev" title="snmachine" href="index.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -104,7 +97,7 @@
 <li class="toctree-l1"><a class="reference internal" href="sndata.html">sndata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="snfeatures.html">snfeatures</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tsne_plot.html">tsne_plot</a></li>
-<li class="toctree-l1"><a class="reference internal" href="parallel.html">Running in Parallel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallel.html">Running on Clusters / in Parallel</a></li>
 </ul>
 
             
@@ -116,7 +109,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">snmachine</a>
@@ -124,9 +117,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -176,15 +170,15 @@ There are two possible ways to set up snmachine:</p>
 <h2>Using Conda<a class="headerlink" href="#using-conda" title="Permalink to this headline">¶</a></h2>
 <p>By far the easiest way to install snmachine is to use anaconda.</p>
 <ol class="arabic">
-<li><p class="first">Install anaconda if you don&#8217;t already have it (<a class="reference external" href="https://www.continuum.io/downloads">https://www.continuum.io/downloads</a>)</p>
+<li><p class="first">Install anaconda if you don’t already have it (<a class="reference external" href="https://www.continuum.io/downloads">https://www.continuum.io/downloads</a>)</p>
 </li>
 <li><p class="first">Create a new anaconda environment by type (inside the snmachine folder):</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">env</span> <span class="n">create</span> <span class="o">--</span><span class="n">name</span> <span class="n">snmachine</span> <span class="o">--</span><span class="n">file</span> <span class="n">environment</span><span class="o">.</span><span class="n">yml</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">env</span> <span class="n">create</span> <span class="o">--</span><span class="n">name</span> <span class="n">snmachine</span> <span class="o">--</span><span class="n">file</span> <span class="n">environment</span><span class="o">.</span><span class="n">yml</span>
 </pre></div>
 </div>
 </li>
 <li><p class="first">Activate the environment by typing:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="n">activate</span> <span class="n">snmachine</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="n">activate</span> <span class="n">snmachine</span>
 </pre></div>
 </div>
 </li>
@@ -193,17 +187,17 @@ There are two possible ways to set up snmachine:</p>
 <div><p><strong>Note: If you have tsch instead of bash this will not work!</strong> A simple
 workaround is to manually edit your PATH environment variable to point to the
 new anaconda environment:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>setenv PATH &lt;your path to anaconda&gt;/envs/snmachine/bin/:$PATH
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>setenv PATH &lt;your path to anaconda&gt;/envs/snmachine/bin/:$PATH
 </pre></div>
 </div>
 </div></blockquote>
 <ol class="arabic" start="4">
 <li><p class="first">Install snmachine by typing:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
 </pre></div>
 </div>
-<p>or if you&#8217;re developing:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">develop</span>
+<p>or if you’re developing:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">develop</span>
 </pre></div>
 </div>
 </li>
@@ -211,7 +205,7 @@ new anaconda environment:</p>
 </div>
 <div class="section" id="manual-dependency-installation">
 <h2>Manual Dependency Installation<a class="headerlink" href="#manual-dependency-installation" title="Permalink to this headline">¶</a></h2>
-<p>If you don&#8217;t want to use a conda environment, snmachine requires the following
+<p>If you don’t want to use a conda environment, snmachine requires the following
 packages (all of which are on either conda or pip):</p>
 <ul class="simple">
 <li>astropy&gt;=1.1.2</li>
@@ -232,22 +226,16 @@ packages (all of which are on either conda or pip):</p>
 <h2>Installation Caveats<a class="headerlink" href="#installation-caveats" title="Permalink to this headline">¶</a></h2>
 <p>snmachine has the ability to use nested sampling for some of the parameter
 estimates, which we have found to give much more reliable fits than least
-squares. However this depends on pymultinest
-(<a class="reference external" href="https://github.com/JohannesBuchner/PyMultiNest">https://github.com/JohannesBuchner/PyMultiNest</a>) being installed separately,
-since it requires manual compiling of Fortran code (but not it&#8217;s not a
+squares. However this depends on <a class="reference external" href="https://github.com/JohannesBuchner/PyMultiNest">pymultinest</a> being installed separately,
+since it requires manual compiling of Fortran code (but not it’s not a
 particularly difficult one).</p>
-<p>If you want to use neural networks, these are currently only available in the
-development version of scikit-learn (version 0.18). You will also need to
-install that separately to enable neural networks
-(see <a class="reference external" href="http://scikit-learn.org/stable/developers/contributing.html#git-repo">http://scikit-learn.org/stable/developers/contributing.html#git-repo</a>).</p>
+<p>If you want to use neural networks, these are available in newer versions of scikit-learn (version &gt;= 0.18).</p>
 </div>
 </div>
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -269,7 +257,7 @@ install that separately to enable neural networks
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -288,6 +276,7 @@ install that separately to enable neural networks
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
             VERSION:'1.0.0',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -305,14 +294,13 @@ install that separately to enable neural networks
     <script type="text/javascript" src="_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

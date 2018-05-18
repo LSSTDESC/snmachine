@@ -32,6 +32,9 @@ gh-pages:
 	mv -f html/_static ../_static
 	cp -r images/* ../_static
 
-	mv -f html/* ../
+	rm -rf ../_images
+	mv -f html/_images ../_images
+
+	mv -f html/* ../.
 	rm -fr html/
 	rm -fr doctrees/
