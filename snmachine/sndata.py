@@ -77,7 +77,369 @@ def plot_lc(lc):
     
     plt.legend(lines, filts, numpoints=1,loc='best')
 
-class Dataset:
+class EmptyDataset:
+    """
+    Empty data set, to fill up with light curves (of format astropy.table.Table) in your memory.
+    """
+
+    def __init__(self, folder=None, survey_name=None, filter_set=None):
+
+        """
+        Initialisation.
+        Parameters
+        ----------
+        folder : str
+            Root folder containing the data
+        survey_name : str
+            Specifies the name of the survey; needed for output folder name
+        filter_set : list, optional
+            List of possible filters used
+
+        """
+        if filter_set is None:
+            self.filter_set=[]
+        else:
+            self.filter_set=filter_set
+        self.rootdir=folder
+        self.survey_name=survey_name
+        self.data={}
+        self.object_names=[]
+        self.models={}
+
+    def set_filters(self, filter_set):
+        self.filter_set=filter_set
+
+    def set_rootdir(folder):
+        self.rootdir=folder
+        self.survey_name=folder.splot(os.path.sep)[-2]
+
+    def insert_lightcurve(self, lc):
+        name=lc.meta['name']
+        self.object_names=np.append(self.object_names,name)
+        self.data[name]=lc
+        for flt in np.unique(lc['filter']):
+            if not flt in self.filter_set:
+                print('Adding filter '+flt+' ...')
+                self.filter_set.append(flt)
+
+    def __plot_this(self, fname, title=True, loc='best'):
+        """
+        Internal function used by other functions to plot light curves.
+
+        Parameters
+        ----------
+        fname : str
+            The filename of the supernova (relative to data_root)
+        title : str, optional
+            Put a title on the plot
+        loc : str, optional
+            Location of legend
+        """
+
+        lc=self.data[fname]
+
+        #This selects the filters from the possible set that this object has measurements in and maintains the order
+        filts=sorted(set(self.filter_set) & set(np.unique(lc['filter'])), key = self.filter_set.index)
+        
+        #Keep track of the min and max values on the plot for resizing axes
+        min_x=np.inf
+        max_x=-np.inf
+        lines=[]
+        for j in range(len(filts)):
+            inds=np.where(lc['filter']==filts[j])[0]
+            t, F, F_err=lc['mjd'][inds], lc['flux'][inds], lc['flux_error'][inds]
+            #tdelt=t-t.min()
+            tdelt=t
+            if filts[j] in markers.keys():
+                mkr=markers[filts[j]]
+            else:
+                mkr='o'
+            
+            #Plot the model, if it has been set
+            if self.plot_model:
+                if fname in self.models.keys():
+                    mod=self.models[fname]
+                    if mod is not None:
+                        inds=np.where(mod['filter']==filts[j])[0]
+                        t_mod, F_mod=mod['mjd'][inds], mod['flux'][inds]
+                        plt.plot(t_mod, F_mod, color=colours[filts[j]])
+
+            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr, linestyle='none',  color=colours[filts[j]], markersize=4)
+            lines.append(l)
+            if tdelt.min()<min_x:
+                min_x=tdelt.min()
+            if tdelt.max()>max_x:
+                max_x=tdelt.max()
+                
+
+        ext=0.05*(max_x-min_x)
+        plt.xlim([min_x-ext, max_x+ext])
+        plt.xlabel('Time (days)')
+        plt.ylabel('Flux')
+        #plt.gca().tick_params(labelsize=8)
+        if title:
+            plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], lc.meta['type']))
+        labs=[]
+        for f in filts:
+            if f in labels.keys():
+                labs.append(labels[f])
+            else:
+                labs.append(f)
+        plt.legend(lines, labs, numpoints=1,loc=loc)
+        #plt.subplots_adjust(left=0.3)
+
+    def plot_lc(self, fname, plot_model=True, title=True, loc='best'):
+        """Public function to plot a single light curve.
+
+        Parameters
+        ----------
+        fname : str
+            The filename of the supernova (relative to data_root)
+        plot_model : bool, optional
+            Whether or not to overplot the model
+        title : str, optional
+            Put a title on the plot
+        loc : str, optional
+            Location of the legend
+        """
+        self.plot_model=plot_model
+        self.__plot_this(fname, title=title, loc=loc)
+        plt.show()
+
+    def __on_press(self, event):
+        """
+        Allows one to cycle through the supernovae in the dataset by hitting the left or right arrow keys.
+
+        Parameters
+        ----------
+        event : keyboard event object
+            Keyboard event (i.e. the left or right arrow button has been pressed)
+        """
+
+        event.canvas.figure.clear()
+        if event.key=='right' and self.__ind<len(self.object_names)-1:
+            self.__ind+=1
+        elif event.key=='left' and self.__ind>0:
+            self.__ind-=1
+        self.__plot_this(self.object_names[self.__ind])
+        event.canvas.draw()
+    
+    def plot_all(self, plot_model=True):
+        """
+        Plots all the supernovae in the dataset and allows the user to cycle through them with the left and
+        right arrow keys.
+
+        Parameters
+        ----------
+        plot_model : bool, optional
+            Whether or not to overplot the model.
+        """
+
+        if len(self.data)==0:
+            print('Data set does not contain any light curves - exiting!')
+            return
+        self.plot_model=plot_model #We use a class variable because this can't be passed directly to __on_press
+        fig = plt.figure()
+        self.__ind=-1
+        fig.canvas.mpl_connect('key_press_event', self.__on_press)
+        plt.plot([0, 0])
+        #subplots_adjust(right=0.95, top=0.95)
+        plt.show()
+      
+    def save_to_folder(self, outpath, overwrite=True):
+        """
+        Saves the light curves in one data set to a folder, including one '.LIST' file with all object names.
+        The format is the sncosmo standard, including a header for the metadata
+
+        Parameters
+        ----------
+        outpath : string
+            Path to folder that the light curve files will be saved to. If not existent, it will be created.
+        overwrite : bool, optional
+	    If the files already exist, do we overwrite them?
+           
+        """
+
+        #in case the path does not end in separator, add one for good measure
+        outpath=os.path.join(outpath,'')
+
+        if not os.path.exists(outpath):
+            os.makedirs(outpath)
+
+        foldername=outpath.split(os.path.sep)[-2]#the folder name will be the second to last item in the list
+
+        object_list_path=os.path.join(outpath,(outpath.split(os.path.sep)[-2]+'.LIST'))
+        if overwrite or not os.path.exists(object_list_path):
+            np.savetxt(object_list_path,self.object_names,fmt='%s')
+        for obj in self.object_names:
+            sncosmo.write_lc(self.data[obj],os.path.join(outpath,obj),format='ascii',overwrite=overwrite)
+
+    def get_object_names(self):
+        return d.object_names
+
+    def get_max_length(self):
+        """Gets the length (in days) of the longest observation in the dataset.
+        """
+        max_obs=0
+        for n in self.object_names:
+            times=self.data[n]['mjd']
+            dif=times.max()-times.min()
+            if dif>max_obs:
+                max_obs=dif
+        return max_obs
+
+    
+    def set_model(self, fit_sn, *args):
+        """
+        Can use any function to set the model for all objects in the data.
+
+        Parameters
+        ----------
+        fit_sn : function
+            A function which can take a light curve (astropy table) argument and a list of arguments and returns an astropy table
+        args : list, optional
+            Whatever arguments fit_sn requires
+        """
+        print ('Fitting supernova models...')
+        for obj in self.object_names:
+            self.models[obj]=fit_sn(self.data[obj], *args)
+        print ('Models fitted.')
+    
+  
+    def get_types(self):
+        """
+        Returns a list of the types of the entire dataset.
+
+        Returns
+        -------
+        `~numpy.ndarray`
+            Array of types
+        """
+        typs=[]
+        for o in self.object_names:
+            typs.append(self.data[o].meta['type'])
+        tab=Table(data=[self.object_names,typs],names=['Object','Type'])
+        return tab
+
+    def get_redshift(self):
+        """
+        Returns a list of the redshifts of the entire dataset.
+
+        Returns
+        -------
+        `~numpy.ndarray`
+            Array of redshifts
+        """
+        z=[]
+        for o in self.object_names:
+            if 'z' in self.data[o].meta:
+                z.append(self.data[o].meta['z'])
+            else:
+                z.append(-1)
+        return np.array(z)
+        
+    def sim_stats(self, **kwargs):
+        """
+        Prints information about the survey/simulation.
+
+        Parameters
+        ----------
+        indices : list-like, optional
+            List of indices to indicate which objects to consider. This allows you to, for example,
+        see the statistics of a training subsample.
+        plot_redshift : bool, optional
+            Plots a histogram of the redshift distribution
+        """
+        if len(self.data)==0:
+            print('Data set does not contain any light curves - exiting!')
+            return
+
+        if 'indices' in kwargs:
+            indices=kwargs['indices']
+        else:
+            indices=np.arange(len(self.object_names))
+        if 'plot_redshifts' in kwargs:
+            plot_redshifts=kwargs['plot_redshifts']
+        else:
+            plot_redshifts=True
+        
+        N=len(indices)
+        redshifts=np.zeros(N)
+        types=np.zeros(N)
+        for i in np.arange(N):
+            ind=indices[i]
+            lc=self.get_lightcurve(self.object_names[ind])
+            redshifts[i]=lc.meta['z']
+            types[i]=lc.meta['type']
+            
+        print()
+        print ('Total number of SNe: %d' %(N))
+        print()
+        ks=sntypes.keys()
+        ks=sorted(ks)
+        for k in ks:
+            nk=len(np.where(types==k)[0])
+            print ('Number of %s: %d (%0.2f%%)' %(sntypes[k],nk ,nk/N*100))
+        nk=len(np.where(types==-9)[0])
+        print ('Number of unknown: %d (%0.2f%%)' %(nk ,nk/N*100))
+        
+        if plot_redshifts==True:
+            plt.hist(redshifts[redshifts!=-9], 30, facecolor='#0057f6')
+            plt.xlabel('Redshift', fontsize=16)
+            plt.show()
+
+    def reduced_chi_squared(self, subset = 'none'):
+        """
+        Returns the reduced chi squared for each object, once a model has been set.
+
+        Parameters
+        ----------
+        subset : str or list-like, optional
+            List of a subset of object names. If not supplied, the full dataset will be used
+
+        Returns
+        -------
+        dict
+            Dictionary of reduced chi^2 for each object
+        """
+
+        if subset == 'none':
+            data_list = self.object_names
+        else:
+            data_list = subset
+        chi_dict ={}
+        for name in data_list:
+            lc=self.data[name]
+
+            #This selects the filters from the possible set that this object has measurements in and maintains the order
+            filts=sorted(set(self.filter_set) & set(np.unique(lc['filter'])), key = self.filter_set.index)
+            chi_2 = 0
+            N = 0 # counts total number of points
+            for j in range(len(filts)):
+                inds=np.where(lc['filter']==filts[j])[0]
+                t, F, F_err = np.array(lc['mjd'][inds]), np.array(lc['flux'][inds]), np.array(lc['flux_error'][inds])
+                #tdelt=t-t.min()
+                tdelt=t
+                N = N + len(tdelt)
+                if name in self.models:
+                    mod=self.models[name]
+                    if mod is not None:
+                        inds=np.where(mod['filter']==filts[j])[0]
+                        t_mod, F_mod = np.array(mod['mjd'][inds]), np.array(mod['flux'][inds])
+
+                        #interpolate the model so that we can compare the model with the data
+                        int_f = interpolate.interp1d(t_mod, F_mod, kind='cubic')
+                        F_mod_mjd = np.array(int_f(tdelt))
+                        summand=(F-F_mod_mjd)**2/(F_err**2)
+                        chi_2 = np.sum(summand) + chi_2
+
+            chi_dict[name] = chi_2 / N
+
+        return chi_dict
+
+
+
+class Dataset(EmptyDataset):
     """
     Class to manage the files from a single dataset. The base class works with data from the SPCC.
     This class can be inherited and overridden to work a completely different kind of dataset.
@@ -153,18 +515,6 @@ class Dataset:
         return np.sort(object_names)
 
     
-    
-    def get_max_length(self):
-        """Gets the length (in days) of the longest observation in the dataset.
-        """
-        max_obs=0
-        for n in self.object_names:
-            times=self.data[n]['mjd']
-            dif=times.max()-times.min()
-            if dif>max_obs:
-                max_obs=dif
-        return max_obs
-    
     def get_lightcurve(self, flname):
         """
         Given a filename, returns a light curve astropy table that conforms with sncosmo requirements
@@ -221,299 +571,6 @@ class Dataset:
         return tab
 
     
-    def __plot_this(self, fname, title=True, loc='best'):
-        """
-        Internal function used by other functions to plot light curves.
-
-        Parameters
-        ----------
-        fname : str
-            The filename of the supernova (relative to data_root)
-        title : str, optional
-            Put a title on the plot
-        loc : str, optional
-            Location of legend
-        """
-
-        lc=self.data[fname]
-
-        #This selects the filters from the possible set that this object has measurements in and maintains the order
-        filts=sorted(set(self.filter_set) & set(np.unique(lc['filter'])), key = self.filter_set.index)
-        
-        #Keep track of the min and max values on the plot for resizing axes
-        min_x=np.inf
-        max_x=-np.inf
-        lines=[]
-        for j in range(len(filts)):
-            inds=np.where(lc['filter']==filts[j])[0]
-            t, F, F_err=lc['mjd'][inds], lc['flux'][inds], lc['flux_error'][inds]
-            #tdelt=t-t.min()
-            tdelt=t
-            if filts[j] in markers.keys():
-                mkr=markers[filts[j]]
-            else:
-                mkr='o'
-            
-            #Plot the model, if it has been set
-            if self.plot_model:
-                if fname in self.models.keys():
-                    mod=self.models[fname]
-                    if mod is not None:
-                        inds=np.where(mod['filter']==filts[j])[0]
-                        t_mod, F_mod=mod['mjd'][inds], mod['flux'][inds]
-                        plt.plot(t_mod, F_mod, color=colours[filts[j]])
-
-            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr, linestyle='none',  color=colours[filts[j]], markersize=4)
-            lines.append(l)
-            if tdelt.min()<min_x:
-                min_x=tdelt.min()
-            if tdelt.max()>max_x:
-                max_x=tdelt.max()
-                
-
-        ext=0.05*(max_x-min_x)
-        plt.xlim([min_x-ext, max_x+ext])
-        plt.xlabel('Time (days)')
-        plt.ylabel('Flux')
-        #plt.gca().tick_params(labelsize=8)
-        if title:
-            plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], lc.meta['type']))
-        labs=[]
-        for f in filts:
-            if f in labels.keys():
-                labs.append(labels[f])
-            else:
-                labs.append(f)
-        plt.legend(lines, labs, numpoints=1,loc=loc)
-        #plt.subplots_adjust(left=0.3)
-        
-    
-    def set_model(self, fit_sn, *args):
-        """
-        Can use any function to set the model for all objects in the data.
-
-        Parameters
-        ----------
-        fit_sn : function
-            A function which can take a light curve (astropy table) argument and a list of arguments and returns an astropy table
-        args : list, optional
-            Whatever arguments fit_sn requires
-        """
-        print ('Fitting supernova models...')
-        for obj in self.object_names:
-            self.models[obj]=fit_sn(self.data[obj], *args)
-        print ('Models fitted.')
-    
-    def plot_lc(self, fname, plot_model=True, title=True, loc='best'):
-        """Public function to plot a single light curve.
-
-        Parameters
-        ----------
-        fname : str
-            The filename of the supernova (relative to data_root)
-        plot_model : bool, optional
-            Whether or not to overplot the model
-        title : str, optional
-            Put a title on the plot
-        loc : str, optional
-            Location of the legend
-        """
-        self.plot_model=plot_model
-        self.__plot_this(fname, title=title, loc=loc)
-        plt.show()
-
-    def __on_press(self, event):
-        """
-        Allows one to cycle through the supernovae in the dataset by hitting the left or right arrow keys.
-
-        Parameters
-        ----------
-        event : keyboard event object
-            Keyboard event (i.e. the left or right arrow button has been pressed)
-        """
-
-        event.canvas.figure.clear()
-        if event.key=='right' and self.__ind<len(self.object_names)-1:
-            self.__ind+=1
-        elif event.key=='left' and self.__ind>0:
-            self.__ind-=1
-        self.__plot_this(self.object_names[self.__ind])
-        event.canvas.draw()
-    
-    def plot_all(self, plot_model=True):
-        """
-        Plots all the supernovae in the dataset and allows the user to cycle through them with the left and
-        right arrow keys.
-
-        Parameters
-        ----------
-        plot_model : bool, optional
-            Whether or not to overplot the model.
-        """
-        self.plot_model=plot_model #We use a class variable because this can't be passed directly to __on_press
-        fig = plt.figure()
-        self.__ind=-1
-        fig.canvas.mpl_connect('key_press_event', self.__on_press)
-        plt.plot([0, 0])
-        #subplots_adjust(right=0.95, top=0.95)
-        plt.show()
-      
-    def save_to_folder(self, outpath, overwrite=True):
-        """
-        Saves the light curves in one data set to a folder, including one '.LIST' file with all object names.
-        The format is the sncosmo standard, including a header for the metadata
-
-        Parameters
-        ----------
-        outpath : string
-            Path to folder that the light curve files will be saved to. If not existent, it will be created.
-        overwrite : bool, optional
-	    If the files already exist, do we overwrite them?
-           
-        """
-
-        #in case the path does not end in separator, add one for good measure
-        outpath=os.path.join(outpath,'')
-
-        if not os.path.exists(outpath):
-            os.makedirs(outpath)
-
-        foldername=outpath.split(os.path.sep)[-2]#the folder name will be the second to last item in the list
-
-        object_list_path=os.path.join(outpath,(outpath.split(os.path.sep)[-2]+'.LIST'))
-        if overwrite or not os.path.exists(object_list_path):
-            np.savetxt(object_list_path,self.object_names,fmt='%s')
-        for obj in self.object_names:
-            sncosmo.write_lc(self.data[obj],os.path.join(outpath,obj),format='ascii',overwrite=overwrite)
-
-  
-    def get_types(self):
-        """
-        Returns a list of the types of the entire dataset.
-
-        Returns
-        -------
-        `~numpy.ndarray`
-            Array of types
-        """
-        typs=[]
-        for o in self.object_names:
-            typs.append(self.data[o].meta['type'])
-        tab=Table(data=[self.object_names,typs],names=['Object','Type'])
-        return tab
-
-    def get_redshift(self):
-        """
-        Returns a list of the redshifts of the entire dataset.
-
-        Returns
-        -------
-        `~numpy.ndarray`
-            Array of redshifts
-        """
-        z=[]
-        for o in self.object_names:
-            if 'z' in self.data[o].meta:
-                z.append(self.data[o].meta['z'])
-            else:
-                z.append(-1)
-        return np.array(z)
-        
-    def sim_stats(self, **kwargs):
-        """
-        Prints information about the survey/simulation.
-
-        Parameters
-        ----------
-        indices : list-like, optional
-            List of indices to indicate which objects to consider. This allows you to, for example,
-        see the statistics of a training subsample.
-        plot_redshift : bool, optional
-            Plots a histogram of the redshift distribution
-        """
-        if 'indices' in kwargs:
-            indices=kwargs['indices']
-        else:
-            indices=np.arange(len(self.object_names))
-        if 'plot_redshifts' in kwargs:
-            plot_redshifts=kwargs['plot_redshifts']
-        else:
-            plot_redshifts=True
-        
-        N=len(indices)
-        redshifts=np.zeros(N)
-        types=np.zeros(N)
-        for i in np.arange(N):
-            ind=indices[i]
-            lc=self.get_lightcurve(self.object_names[ind])
-            redshifts[i]=lc.meta['z']
-            types[i]=lc.meta['type']
-            
-        print()
-        print ('Total number of SNe: %d' %(N))
-        print()
-        ks=self.sntypes.keys()
-        ks.sort()
-        for k in ks:
-            nk=len(np.where(types==k)[0])
-            print ('Number of %s: %d (%0.2f%%)' %(self.sntypes[k],nk ,nk/N*100))
-        nk=len(np.where(types==-9)[0])
-        print ('Number of unknown: %d (%0.2f%%)' %(nk ,nk/N*100))
-        
-        if plot_redshifts==True:
-            plt.hist(redshifts[redshifts!=-9], 30, facecolor='#0057f6')
-            plt.xlabel('Redshift', fontsize=16)
-            plt.show()
-
-    def reduced_chi_squared(self, subset = 'none'):
-        """
-        Returns the reduced chi squared for each object, once a model has been set.
-
-        Parameters
-        ----------
-        subset : str or list-like, optional
-            List of a subset of object names. If not supplied, the full dataset will be used
-
-        Returns
-        -------
-        dict
-            Dictionary of reduced chi^2 for each object
-        """
-
-        if subset == 'none':
-            data_list = self.object_names
-        else:
-            data_list = subset
-        chi_dict ={}
-        for name in data_list:
-            lc=self.data[name]
-
-            #This selects the filters from the possible set that this object has measurements in and maintains the order
-            filts=sorted(set(self.filter_set) & set(np.unique(lc['filter'])), key = self.filter_set.index)
-            chi_2 = 0
-            N = 0 # counts total number of points
-            for j in range(len(filts)):
-                inds=np.where(lc['filter']==filts[j])[0]
-                t, F, F_err = np.array(lc['mjd'][inds]), np.array(lc['flux'][inds]), np.array(lc['flux_error'][inds])
-                #tdelt=t-t.min()
-                tdelt=t
-                N = N + len(tdelt)
-                if name in self.models:
-                    mod=self.models[name]
-                    if mod is not None:
-                        inds=np.where(mod['filter']==filts[j])[0]
-                        t_mod, F_mod = np.array(mod['mjd'][inds]), np.array(mod['flux'][inds])
-
-                        #interpolate the model so that we can compare the model with the data
-                        int_f = interpolate.interp1d(t_mod, F_mod, kind='cubic')
-                        F_mod_mjd = np.array(int_f(tdelt))
-                        summand=(F-F_mod_mjd)**2/(F_err**2)
-                        chi_2 = np.sum(summand) + chi_2
-
-            chi_dict[name] = chi_2 / N
-
-        return chi_dict
-
 
 
 class OpsimDataset(Dataset):
@@ -1138,48 +1195,3 @@ class SDSS_Simulations(Dataset):
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys', 'mag', 'mag_error'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux , 'data type':dtype })
 
         return tab
-
-class EmptyDataset(Dataset):
-    """
-    Empty data set, to fill up with light curves (of format astropy.table.Table) in your memory.
-    """
-
-    def __init__(self, folder=None, survey_name=None, filter_set=None):
-
-        """
-        Initialisation.
-        Parameters
-        ----------
-        folder : str
-            Root folder containing the data
-        survey_name : str
-            Specifies the name of the survey; needed for output folder name
-        filter_set : list, optional
-            List of possible filters used
-
-        """
-        if filter_set is None:
-            self.filter_set=[]
-        else:
-            self.filter_set=filter_set
-        self.rootdir=folder
-        self.survey_name=survey_name
-        self.data={}
-        self.object_names=[]
-        self.models={}
-
-    def set_filters(self, filter_set):
-        self.filter_set=filter_set
-
-    def set_rootdir(folder):
-        self.rootdir=folder
-        self.survey_name=folder.splot(os.path.sep)[-2]
-
-    def insert_lightcurve(self, lc):
-        name=lc.meta['name']
-        self.object_names=np.append(self.object_names,name)
-        self.data[name]=lc
-        for flt in np.unique(lc['filter']):
-            if not flt in self.filter_set:
-                print('Adding filter '+flt+' ...')
-                self.filter_set.append(flt)
