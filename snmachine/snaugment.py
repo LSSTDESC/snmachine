@@ -67,7 +67,7 @@ class GPAugment(SNAugment):
     Derived class that encapsulates data augmentation via Gaussian Processes
     """
 
-    def __init__(self, d, templates=None):
+    def __init__(self, d, templates=None, cadence_templates=None):
         """
         class constructor. 
 
@@ -80,6 +80,9 @@ class GPAugment(SNAugment):
              that are in the data set), then the augmentation step will take 
             these light curves to train the GPs on. If not, then every object 
             in the data set is considered fair game.
+        cadence_templates: list of strings
+            If given, the augmentation will sample the cadence for the new light
+            curves from these objects. If not, every object is fair game.
         """
 
         self.dataset=d
@@ -87,10 +90,12 @@ class GPAugment(SNAugment):
         self.meta['trained_gp']={}
         self.algorithm='GP augmentation'
         if templates is None:
-            templates=d.get_object_names()
-        self.meta['trained_gp']={}
-        self.meta['random_state']=np.random.RandomState()
-        self.meta['random_seed_state']=self.meta['random_state'].get_state()
+            self.templates=d.object_names
+        if cadence_templates is None:
+            self.cadence_templates=d.object_names
+
+        self.rng=np.random.RandomState()
+        self.random_seed=self.rng.get_state()
 
         self.original=d.get_object_names()
 
@@ -124,6 +129,8 @@ class GPAugment(SNAugment):
             g.set_parameter_vector(p)
             return -g.grad_log_likelihood(y,quiet=True)
         g=george.GP(initheta[0]**2*george.kernels.ExpSquaredKernel(metric=initheta[1]**2))
+        if len(x)==0:
+            return g
         g.compute(x,yerr)
         p0 = g.get_parameter_vector()
         results=op.minimize(nll,p0,jac=grad_nll,method='L-BFGS-B')
@@ -131,7 +138,7 @@ class GPAugment(SNAugment):
         g.set_parameter_vector(results.x)
         return g
 
-    def sample_cadence_filter(self,g,cadence,y):
+    def sample_cadence_filter(self,g,cadence,y,yerr,add_measurement_noise=True):
         """
         Given a trained GP, and a cadence of mjd values, produce a sample from the distribution
         defined by the GP, on that cadence. The error bars are set to the spread of the GP distribution
@@ -141,8 +148,8 @@ class GPAugment(SNAugment):
         -----------
         g: george.GP
             the trained Gaussian process object
-        cadence: dict of type {string:numpy.array}
-            the cadence defined by {filter1:mjds1, filter2:mjd2, ...}.
+        cadence: numpy.array
+            the cadence of mjd values.
         y: numpy array
             the flux values of the data that the GP has been trained on.
 
@@ -153,9 +160,17 @@ class GPAugment(SNAugment):
         fluxerr: numpy array
             error bars on the flux for the new sample
         """
-        mu,cov=g.predict(y,cadence)
-        flux=self.meta['random_state'].multivariate_normal(mu,cov)
-        fluxerr=np.sqrt(np.diag(cov))
+        if len(cadence)==0:
+            flux=np.array([])
+            fluxerr=np.array([])
+        else:
+            mu,cov=g.predict(y,cadence)
+            flux=self.rng.multivariate_normal(mu,cov)
+            fluxerr=np.sqrt(np.diag(cov))
+        #adding measurement error
+        if add_measurement_noise:
+            flux+=self.rng.randn(len(y))*yerr
+            fluxerr=np.sqrt(fluxerr**2+yerr**2)
         return flux,fluxerr
 
     def produce_new_lc(self,obj,cadence=None,savegp=True,samplez=True,name='dummy'):
@@ -165,10 +180,10 @@ class GPAugment(SNAugment):
 
         Parameters:
         -----------
-        obj: str
-           name of the object that we use as a template to train the GP on.
-        cadence: dict of type {string:numpy.array}, optional.
-           the cadence for the new light curve, defined by {filter:mjds}. If none is given, 
+        obj: str or astropy.table.Table
+           the object (or name thereof) that we use as a template to train the GP on.
+        cadence: str or dict of type {string:numpy.array}, optional.
+           the cadence for the new light curve, defined either by object name or by {filter:mjds}. If none is given, 
            then we pull the cadence of the template.
         savegp: bool, optional
            Do we save the trained GP in self.meta? This results in a speedup, but costs memory.
@@ -183,17 +198,37 @@ class GPAugment(SNAugment):
         new_lc: astropy.table.Table
            The new light curve
         """
-        obj_table=self.dataset.data[obj]
+
+        if type(obj) is Table:
+            obj_table=obj
+            obj_name=obj.meta['name']
+        elif type(obj) in [str,np.str_]:
+            obj_table=self.dataset.data[obj]
+            obj_name=str(obj)
+        else:
+            print('obj: type %s not recognised in produce_new_lc()!'%type(obj))
+            #todo: actually throw an error
+
         if cadence is None:
-            cadence=self.extract_cadence(obj)
+            cadence_dict=self.extract_cadence(obj)
+            add_measurement_noise=True
+        else:
+            print('warning: GP sampling does NOT include measurement noise, since sampling is performed on a different cadence!')
+            add_measurement_noise=False
+            if type(cadence) in [str,np.str_]:
+                cadence_dict=self.extract_cadence(cadence)
+            elif type(cadence) is dict:
+                cadence_dict=cadence
+            else:
+                print('cadence: type %s not recognised in produce_new_lc()!'%type(cadence))
+                #todo: actually throw an error            
 
 	#Either train a new set of GP on the template obj, or pull from metadata
-        if obj in self.meta['trained_gp'].keys():
+        if obj_name in self.meta['trained_gp'].keys():
             print('fetching')
-            all_g=self.meta['trained_gp'][obj]
+            all_g=self.meta['trained_gp'][obj_name]
         else:
             print('training')
-            self.meta['trained_gp'][obj]={}
             all_g={}
             for f in self.dataset.filter_set:
                 obj_f=obj_table[obj_table['filter']==f]
@@ -203,21 +238,22 @@ class GPAugment(SNAugment):
                 g=self.train_filter(x,y,yerr)
                 all_g[f]=g
             if savegp:
-                self.meta['trained_gp'][obj]=all_g
+                self.meta['trained_gp'][obj_name]=all_g
 
         #Produce new LC based on the set of GP
         if samplez and 'z_err' in obj_table.meta.keys():
-            newz=obj_table.meta['z']+obj_table.meta['z_err']*self.meta['random_state'].randn()
+            newz=obj_table.meta['z']+obj_table.meta['z_err']*self.rng.randn()
         else:
             newz=obj_table.meta['z']
-        new_lc_meta={'name':name,'z':newz,'type':obj_table.meta['type'], 'template': obj, 'augment_algo': self.algorithm}
+        new_lc_meta={'name':name,'z':newz,'type':obj_table.meta['type'], 'template': obj_name, 'augment_algo': self.algorithm}
         new_lc=Table(names=['mjd','filter','flux','flux_error'],dtype=['f','S64','f','f'],meta=new_lc_meta)
         for f in self.dataset.filter_set:
             obj_f=obj_table[obj_table['filter']==f]
             y=obj_f['flux']
-            flux,fluxerr=self.sample_cadence_filter(all_g[f],cadence[f],y)
-            filter_col=[f]*len(cadence[f])
-            dummy_table=Table((cadence[f],filter_col,flux,fluxerr),names=['mjd','filter','flux','flux_error'],dtype=['f','S64','f','f'])
+            yerr=obj_f['flux_error']
+            flux,fluxerr=self.sample_cadence_filter(all_g[f],cadence_dict[f],y,yerr,add_measurement_noise=add_measurement_noise)
+            filter_col=[f]*len(cadence_dict[f])
+            dummy_table=Table((cadence_dict[f],filter_col,flux,fluxerr),names=['mjd','filter','flux','flux_error'],dtype=['f','S64','f','f'])
             new_lc=vstack([new_lc,dummy_table])
 
 	#Sort by cadence, for cosmetics
@@ -230,20 +266,70 @@ class GPAugment(SNAugment):
 
         Parameters:
         -----------
-        obj: str
-            name of the object
+        obj: str or astropy.table.Table
+            (name of) the object
 
         Returns:
         --------
         cadence: dict of type {str:numpy.array}
             the cadence, in the format {filter1:mjd1, filter2:mjd2, ...}
         """
-        table=self.dataset.data[obj]
+        if type(obj) in [str, np.str_]:
+            table=self.dataset.data[obj]
+            objname=obj
+        elif type(obj) is Table:
+            table=obj
+            objname=table.meta['name']
+        else:
+            print('obj: type %s not recognised in extract_cadence()!'%type(obj))
         cadence={flt:np.array(table[table['filter']==flt]['mjd']) for flt in self.dataset.filter_set}
         return cadence
 
-    def augment(self, fractions):
+    def augment(self, numbers):
         """
         HIC SUNT DRACONES
         """
-        pass
+        dataset_types=self.dataset.get_types()
+        dataset_types['Type'][dataset_types['Type']>10]=dataset_types['Type'][dataset_types['Type']>10]//10
+
+        types=np.unique(dataset_types['Type'])
+
+        newnumbers=dict()
+        newobjects=[]
+        for t in types:
+            thistype_oldnumbers=len(dataset_types['Type'][dataset_types['Type']==t])
+            newnumbers[t]=numbers[t]-thistype_oldnumbers
+            thistype_templates=[dataset_types['Object'][i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.templates and dataset_types['Type'][i]==t]
+
+            if newnumbers[t]<0:
+                print('There are already %d objects of type %d in the original data set, cannot augment to %d!'%(thistype_oldnumbers,t,numbers[t]))
+                continue
+            elif newnumbers[t]==0:
+                continue
+            else:
+                for i in range(newnumbers[t]):
+                    #pick random template
+                    thistemplate=self.templates[self.rng.randint(0,len(self.templates))]
+                    #pick random cadence
+#                    thiscadence_template=self.cadence_templates[self.rng.randint(0,len(self.cadence_templates))]
+#                    thiscadence_template=thistemplate
+
+#                    cadence=self.extract_cadence(thiscadence_template)
+#                    new_name='augm_t%d_%d_'%(t,i) + thistemplate + '_' + thiscadence_template + '.DAT'
+                    new_name='augm_t%d_%d_'%(t,i) + thistemplate + '_.DAT'
+                    new_lightcurve=self.produce_new_lc(obj=thistemplate,name=new_name)#,cadence=cadence)
+
+                    self.dataset.insert_lightcurve(new_lightcurve)
+                    newobjects=np.append(newobjects,new_name)
+        return newobjects
+
+
+
+
+
+
+
+
+
+
+
