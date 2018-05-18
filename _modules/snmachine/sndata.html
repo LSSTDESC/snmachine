@@ -85,12 +85,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation and Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../pmodels.html">parametric_models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../snclassifier.html">snclassifier</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../sndata.html">sndata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../snfeatures.html">snfeatures</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../tsne_plot.html">tsne_plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../parallel.html">Running on Clusters / in Parallel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../API.html">API</a></li>
 </ul>
 
             
@@ -180,7 +176,7 @@
 <span class="n">markers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;desg&#39;</span><span class="p">:</span><span class="s1">&#39;^&#39;</span><span class="p">,</span> <span class="s1">&#39;desr&#39;</span><span class="p">:</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="s1">&#39;desi&#39;</span><span class="p">:</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="s1">&#39;desz&#39;</span><span class="p">:</span><span class="s1">&#39;*&#39;</span><span class="p">}</span>
 <span class="n">labels</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;desg&#39;</span><span class="p">:</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="s1">&#39;desr&#39;</span><span class="p">:</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="s1">&#39;desi&#39;</span><span class="p">:</span><span class="s1">&#39;i&#39;</span><span class="p">,</span> <span class="s1">&#39;desz&#39;</span><span class="p">:</span><span class="s1">&#39;z&#39;</span><span class="p">}</span>
 
-<div class="viewcode-block" id="plot_lc"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.plot_lc">[docs]</a><span class="k">def</span> <span class="nf">plot_lc</span><span class="p">(</span><span class="n">lc</span><span class="p">):</span>
+<div class="viewcode-block" id="plot_lc"><a class="viewcode-back" href="../../API.html#snmachine.sndata.plot_lc">[docs]</a><span class="k">def</span> <span class="nf">plot_lc</span><span class="p">(</span><span class="n">lc</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    External function to plot light curves.</span>
 
@@ -233,7 +229,7 @@
     
     <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">lines</span><span class="p">,</span> <span class="n">filts</span><span class="p">,</span> <span class="n">numpoints</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Dataset"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset">[docs]</a><span class="k">class</span> <span class="nc">Dataset</span><span class="p">:</span>
+<div class="viewcode-block" id="Dataset"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset">[docs]</a><span class="k">class</span> <span class="nc">Dataset</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class to manage the files from a single dataset. The base class works with data from the SPCC.</span>
 <span class="sd">    This class can be inherited and overridden to work a completely different kind of dataset.</span>
@@ -278,7 +274,7 @@
         <span class="c1">#We create an optional model set which can be set by whatever feature class used</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">=</span><span class="p">{}</span>
         
-<div class="viewcode-block" id="Dataset.get_object_names"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset.get_object_names">[docs]</a>    <span class="k">def</span> <span class="nf">get_object_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="Dataset.get_object_names"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset.get_object_names">[docs]</a>    <span class="k">def</span> <span class="nf">get_object_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Gets a list of the names of the files within the dataset.</span>
 
@@ -310,7 +306,7 @@
 
     
     
-<div class="viewcode-block" id="Dataset.get_max_length"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset.get_max_length">[docs]</a>    <span class="k">def</span> <span class="nf">get_max_length</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Dataset.get_max_length"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset.get_max_length">[docs]</a>    <span class="k">def</span> <span class="nf">get_max_length</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Gets the length (in days) of the longest observation in the dataset.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">max_obs</span><span class="o">=</span><span class="mi">0</span>
@@ -321,7 +317,7 @@
                 <span class="n">max_obs</span><span class="o">=</span><span class="n">dif</span>
         <span class="k">return</span> <span class="n">max_obs</span></div>
     
-<div class="viewcode-block" id="Dataset.get_lightcurve"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset.get_lightcurve">[docs]</a>    <span class="k">def</span> <span class="nf">get_lightcurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flname</span><span class="p">):</span>
+<div class="viewcode-block" id="Dataset.get_lightcurve"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset.get_lightcurve">[docs]</a>    <span class="k">def</span> <span class="nf">get_lightcurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flname</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Given a filename, returns a light curve astropy table that conforms with sncosmo requirements</span>
 
@@ -444,7 +440,7 @@
         <span class="c1">#plt.subplots_adjust(left=0.3)</span>
         
     
-<div class="viewcode-block" id="Dataset.set_model"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset.set_model">[docs]</a>    <span class="k">def</span> <span class="nf">set_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fit_sn</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+<div class="viewcode-block" id="Dataset.set_model"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset.set_model">[docs]</a>    <span class="k">def</span> <span class="nf">set_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fit_sn</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Can use any function to set the model for all objects in the data.</span>
 
@@ -460,7 +456,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span><span class="o">=</span><span class="n">fit_sn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">obj</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
         <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;Models fitted.&#39;</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="Dataset.plot_lc"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset.plot_lc">[docs]</a>    <span class="k">def</span> <span class="nf">plot_lc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">plot_model</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="Dataset.plot_lc"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset.plot_lc">[docs]</a>    <span class="k">def</span> <span class="nf">plot_lc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">plot_model</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Public function to plot a single light curve.</span>
 
 <span class="sd">        Parameters</span>
@@ -496,7 +492,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">__plot_this</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">object_names</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__ind</span><span class="p">])</span>
         <span class="n">event</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
     
-<div class="viewcode-block" id="Dataset.plot_all"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset.plot_all">[docs]</a>    <span class="k">def</span> <span class="nf">plot_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot_model</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="viewcode-block" id="Dataset.plot_all"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset.plot_all">[docs]</a>    <span class="k">def</span> <span class="nf">plot_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot_model</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Plots all the supernovae in the dataset and allows the user to cycle through them with the left and</span>
 <span class="sd">        right arrow keys.</span>
@@ -514,7 +510,7 @@
         <span class="c1">#subplots_adjust(right=0.95, top=0.95)</span>
         <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
         
-<div class="viewcode-block" id="Dataset.get_types"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset.get_types">[docs]</a>    <span class="k">def</span> <span class="nf">get_types</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Dataset.get_types"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset.get_types">[docs]</a>    <span class="k">def</span> <span class="nf">get_types</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a list of the types of the entire dataset.</span>
 
@@ -529,7 +525,7 @@
         <span class="n">tab</span><span class="o">=</span><span class="n">Table</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">object_names</span><span class="p">,</span><span class="n">typs</span><span class="p">],</span><span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Object&#39;</span><span class="p">,</span><span class="s1">&#39;Type&#39;</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">tab</span></div>
 
-<div class="viewcode-block" id="Dataset.get_redshift"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset.get_redshift">[docs]</a>    <span class="k">def</span> <span class="nf">get_redshift</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Dataset.get_redshift"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset.get_redshift">[docs]</a>    <span class="k">def</span> <span class="nf">get_redshift</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a list of the redshifts of the entire dataset.</span>
 
@@ -546,7 +542,7 @@
                 <span class="n">z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">z</span><span class="p">)</span></div>
         
-<div class="viewcode-block" id="Dataset.sim_stats"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset.sim_stats">[docs]</a>    <span class="k">def</span> <span class="nf">sim_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="Dataset.sim_stats"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset.sim_stats">[docs]</a>    <span class="k">def</span> <span class="nf">sim_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Prints information about the survey/simulation.</span>
 
@@ -592,7 +588,7 @@
             <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Redshift&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
             <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="Dataset.reduced_chi_squared"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.Dataset.reduced_chi_squared">[docs]</a>    <span class="k">def</span> <span class="nf">reduced_chi_squared</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subset</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="Dataset.reduced_chi_squared"><a class="viewcode-back" href="../../API.html#snmachine.sndata.Dataset.reduced_chi_squared">[docs]</a>    <span class="k">def</span> <span class="nf">reduced_chi_squared</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subset</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the reduced chi squared for each object, once a model has been set.</span>
 
@@ -643,7 +639,7 @@
 
 
 
-<div class="viewcode-block" id="OpsimDataset"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.OpsimDataset">[docs]</a><span class="k">class</span> <span class="nc">OpsimDataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
+<div class="viewcode-block" id="OpsimDataset"><a class="viewcode-back" href="../../API.html#snmachine.sndata.OpsimDataset">[docs]</a><span class="k">class</span> <span class="nc">OpsimDataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class to read in an LSST simulated dataset, based on OpSim runs and SNANA simulations.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -671,7 +667,7 @@
             <span class="n">shuffle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">object_names</span><span class="p">)</span>
             
         
-<div class="viewcode-block" id="OpsimDataset.get_data"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.OpsimDataset.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="OpsimDataset.get_data"><a class="viewcode-back" href="../../API.html#snmachine.sndata.OpsimDataset.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Reads in the simulated data</span>
 
@@ -730,7 +726,7 @@
         <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;</span><span class="si">%d</span><span class="s1"> objects read into memory.&#39;</span> <span class="o">%</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">))</span></div>
         
         
-<div class="viewcode-block" id="OpsimDataset.get_lightcurve"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.OpsimDataset.get_lightcurve">[docs]</a>    <span class="k">def</span> <span class="nf">get_lightcurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tab</span><span class="p">):</span>
+<div class="viewcode-block" id="OpsimDataset.get_lightcurve"><a class="viewcode-back" href="../../API.html#snmachine.sndata.OpsimDataset.get_lightcurve">[docs]</a>    <span class="k">def</span> <span class="nf">get_lightcurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tab</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Converts the sncosmo convention for the astropy tables to snmachine&#39;s.</span>
 
@@ -761,7 +757,7 @@
         <span class="k">return</span> <span class="n">tab_new</span></div></div>
         
 
-<div class="viewcode-block" id="SDSS_Data"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.SDSS_Data">[docs]</a><span class="k">class</span> <span class="nc">SDSS_Data</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>    
+<div class="viewcode-block" id="SDSS_Data"><a class="viewcode-back" href="../../API.html#snmachine.sndata.SDSS_Data">[docs]</a><span class="k">class</span> <span class="nc">SDSS_Data</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>    
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class to read in the SDSS supernovae dataset</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -803,7 +799,7 @@
         <span class="c1">#We create an optional model set which can be set by whatever feature class used</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">=</span><span class="p">{}</span>
 
-<div class="viewcode-block" id="SDSS_Data.get_SNe"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.SDSS_Data.get_SNe">[docs]</a>    <span class="k">def</span> <span class="nf">get_SNe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">subset_length</span><span class="p">):</span>
+<div class="viewcode-block" id="SDSS_Data.get_SNe"><a class="viewcode-back" href="../../API.html#snmachine.sndata.SDSS_Data.get_SNe">[docs]</a>    <span class="k">def</span> <span class="nf">get_SNe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">subset_length</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to take all supernovae from Master SDSS data file  and return a random sample of SNe of user-specified length</span>
 <span class="sd">        if requested</span>
@@ -837,7 +833,7 @@
 
         <span class="k">return</span> <span class="n">SN</span></div>
 
-<div class="viewcode-block" id="SDSS_Data.get_spectro"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.SDSS_Data.get_spectro">[docs]</a>    <span class="k">def</span> <span class="nf">get_spectro</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">subset_length</span><span class="p">,</span><span class="n">classification</span><span class="p">):</span>
+<div class="viewcode-block" id="SDSS_Data.get_spectro"><a class="viewcode-back" href="../../API.html#snmachine.sndata.SDSS_Data.get_spectro">[docs]</a>    <span class="k">def</span> <span class="nf">get_spectro</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">subset_length</span><span class="p">,</span><span class="n">classification</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to take all spectroscopically confirmed supernovae from Master file and return a random sample of SNe of user-specified length</span>
 <span class="sd">        if requested</span>
@@ -891,7 +887,7 @@
 
         <span class="k">return</span> <span class="n">SN</span></div>
 
-<div class="viewcode-block" id="SDSS_Data.get_photo"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.SDSS_Data.get_photo">[docs]</a>    <span class="k">def</span> <span class="nf">get_photo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">subset_length</span><span class="p">,</span><span class="n">classification</span><span class="p">):</span>
+<div class="viewcode-block" id="SDSS_Data.get_photo"><a class="viewcode-back" href="../../API.html#snmachine.sndata.SDSS_Data.get_photo">[docs]</a>    <span class="k">def</span> <span class="nf">get_photo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">subset_length</span><span class="p">,</span><span class="n">classification</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to take all purely photometric supernovae from Master file and return a   random sample of SNe of user-specified length</span>
 <span class="sd">        if requested</span>
@@ -939,7 +935,7 @@
 
         <span class="k">return</span> <span class="n">SN</span></div>
 
-<div class="viewcode-block" id="SDSS_Data.get_object_names"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.SDSS_Data.get_object_names">[docs]</a>    <span class="k">def</span> <span class="nf">get_object_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span><span class="n">subset_length</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">classification</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="SDSS_Data.get_object_names"><a class="viewcode-back" href="../../API.html#snmachine.sndata.SDSS_Data.get_object_names">[docs]</a>    <span class="k">def</span> <span class="nf">get_object_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span><span class="n">subset_length</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">classification</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Gets a list of the names of the files within the dataset.</span>
 <span class="sd">        Parameters</span>
@@ -976,7 +972,7 @@
                 <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;Invalid subset provided&#39;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="SDSS_Data.get_info"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.SDSS_Data.get_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">flname</span><span class="p">):</span>
+<div class="viewcode-block" id="SDSS_Data.get_info"><a class="viewcode-back" href="../../API.html#snmachine.sndata.SDSS_Data.get_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">flname</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function which takes file name of supernova and returns dictionary of spectroscopic and photometric redshifts and their errors when available as</span>
 <span class="sd">           well as the type of the supernova</span>
@@ -1020,7 +1016,7 @@
                     <span class="n">t</span> <span class="o">=</span> <span class="mi">2</span>
         <span class="k">return</span> <span class="n">z</span> <span class="p">,</span> <span class="n">z_err</span><span class="p">,</span> <span class="n">t</span></div>
 
-<div class="viewcode-block" id="SDSS_Data.get_lightcurve"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.SDSS_Data.get_lightcurve">[docs]</a>    <span class="k">def</span> <span class="nf">get_lightcurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flname</span><span class="p">):</span>
+<div class="viewcode-block" id="SDSS_Data.get_lightcurve"><a class="viewcode-back" href="../../API.html#snmachine.sndata.SDSS_Data.get_lightcurve">[docs]</a>    <span class="k">def</span> <span class="nf">get_lightcurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flname</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Given a filename, returns a light curve astropy table that conforms with sncosmo requirements</span>
 <span class="sd">        Parameters</span>
@@ -1098,7 +1094,7 @@
 
         <span class="k">return</span> <span class="n">tab</span></div></div>
     
-<div class="viewcode-block" id="SDSS_Simulations"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.SDSS_Simulations">[docs]</a><span class="k">class</span> <span class="nc">SDSS_Simulations</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
+<div class="viewcode-block" id="SDSS_Simulations"><a class="viewcode-back" href="../../API.html#snmachine.sndata.SDSS_Simulations">[docs]</a><span class="k">class</span> <span class="nc">SDSS_Simulations</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class to read in the SDSS simulations dataset</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1136,7 +1132,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">=</span><span class="p">{}</span>
 
 
-<div class="viewcode-block" id="SDSS_Simulations.get_data"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.SDSS_Simulations.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">subset_length</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">classification</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="SDSS_Simulations.get_data"><a class="viewcode-back" href="../../API.html#snmachine.sndata.SDSS_Simulations.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">subset_length</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">classification</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to get all data in same form as SDSS Data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1206,7 +1202,7 @@
 
         <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">invalid</span></div>
 
-<div class="viewcode-block" id="SDSS_Simulations.get_lightcurve"><a class="viewcode-back" href="../../sndata.html#snmachine.sndata.SDSS_Simulations.get_lightcurve">[docs]</a>    <span class="k">def</span> <span class="nf">get_lightcurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">):</span>
+<div class="viewcode-block" id="SDSS_Simulations.get_lightcurve"><a class="viewcode-back" href="../../API.html#snmachine.sndata.SDSS_Simulations.get_lightcurve">[docs]</a>    <span class="k">def</span> <span class="nf">get_lightcurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">):</span>
         
         <span class="n">mjd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lc</span><span class="p">[</span><span class="s1">&#39;MJD&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lc</span><span class="p">[</span><span class="s1">&#39;MJD&#39;</span><span class="p">]))</span> <span class="k">if</span> <span class="n">lc</span><span class="p">[</span><span class="s1">&#39;FLUXCAL&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
         <span class="n">flt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;sdss&#39;</span> <span class="o">+</span> <span class="n">lc</span><span class="p">[</span><span class="s1">&#39;FLT&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lc</span><span class="p">[</span><span class="s1">&#39;FLT&#39;</span><span class="p">]))</span> <span class="k">if</span> <span class="n">lc</span><span class="p">[</span><span class="s1">&#39;FLUXCAL&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>

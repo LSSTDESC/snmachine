@@ -40,18 +40,8 @@ Manual Dependency Installation
 If you don't want to use a conda environment, snmachine requires the following
 packages (all of which are on either conda or pip):
 
-- astropy>=1.1.2
-- cython>=0.23.4
-- jupyter>=1.0.0
-- matplotlib>=1.5.1
-- numpy>=1.10.4
-- scikit-learn>=0.17.1
-- scipy>=0.17.0
-- emcee>=2.1.0 [pip]
-- iminuit>=1.2 [pip]
-- sncosmo>=1.2.0 [pip]
-- pywavelets>=0.4.0 [pip]
-- george>=0.3.0
+.. literalinclude:: ../environment.yml
+    :lines: 6-
 
 Installation Caveats
 ====================
@@ -61,5 +51,3 @@ estimates, which we have found to give much more reliable fits than least
 squares. However this depends on `pymultinest <https://github.com/JohannesBuchner/PyMultiNest>`_ being installed separately,
 since it requires manual compiling of Fortran code (but not it's not a
 particularly difficult one).
-
-If you want to use neural networks, these are available in newer versions of scikit-learn (version >= 0.18).

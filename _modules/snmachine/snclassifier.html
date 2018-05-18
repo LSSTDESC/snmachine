@@ -85,12 +85,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation and Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../pmodels.html">parametric_models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../snclassifier.html">snclassifier</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../sndata.html">sndata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../snfeatures.html">snfeatures</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../tsne_plot.html">tsne_plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../parallel.html">Running on Clusters / in Parallel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../API.html">API</a></li>
 </ul>
 
             
@@ -189,7 +185,7 @@
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.&#39;</span><span class="p">)</span>
 
-<div class="viewcode-block" id="roc"><a class="viewcode-back" href="../../snclassifier.html#snmachine.snclassifier.roc">[docs]</a><span class="k">def</span> <span class="nf">roc</span><span class="p">(</span><span class="n">pr</span><span class="p">,</span> <span class="n">Yt</span><span class="p">,</span> <span class="n">true_class</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="roc"><a class="viewcode-back" href="../../API.html#snmachine.snclassifier.roc">[docs]</a><span class="k">def</span> <span class="nf">roc</span><span class="p">(</span><span class="n">pr</span><span class="p">,</span> <span class="n">Yt</span><span class="p">,</span> <span class="n">true_class</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Produce the false positive rate and true positive rate required to plot</span>
 <span class="sd">    a ROC curve, and the area under that curve.</span>
@@ -247,7 +243,7 @@
 
     <span class="k">return</span> <span class="n">fpr</span><span class="p">,</span> <span class="n">tpr</span><span class="p">,</span> <span class="n">auc</span></div>
     
-<div class="viewcode-block" id="plot_roc"><a class="viewcode-back" href="../../snclassifier.html#snmachine.snclassifier.plot_roc">[docs]</a><span class="k">def</span> <span class="nf">plot_roc</span><span class="p">(</span><span class="n">fpr</span><span class="p">,</span> <span class="n">tpr</span><span class="p">,</span> <span class="n">auc</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="p">[],</span> <span class="n">cols</span><span class="o">=</span><span class="p">[],</span>  <span class="n">label_size</span><span class="o">=</span><span class="mi">26</span><span class="p">,</span> <span class="n">tick_size</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">6</span><span class="p">)):</span>
+<div class="viewcode-block" id="plot_roc"><a class="viewcode-back" href="../../API.html#snmachine.snclassifier.plot_roc">[docs]</a><span class="k">def</span> <span class="nf">plot_roc</span><span class="p">(</span><span class="n">fpr</span><span class="p">,</span> <span class="n">tpr</span><span class="p">,</span> <span class="n">auc</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="p">[],</span> <span class="n">cols</span><span class="o">=</span><span class="p">[],</span>  <span class="n">label_size</span><span class="o">=</span><span class="mi">26</span><span class="p">,</span> <span class="n">tick_size</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">6</span><span class="p">)):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Plots a ROC curve or multiple curves. Can plot the results from multiple classifiers if fpr and tpr are arrays</span>
 <span class="sd">    where each column corresponds to a different classifier.</span>
@@ -311,7 +307,7 @@
     <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span></div>
     <span class="c1">#plt.show()</span>
     
-<div class="viewcode-block" id="F1"><a class="viewcode-back" href="../../snclassifier.html#snmachine.snclassifier.F1">[docs]</a><span class="k">def</span> <span class="nf">F1</span><span class="p">(</span><span class="n">pr</span><span class="p">,</span>  <span class="n">Yt</span><span class="p">,</span> <span class="n">true_class</span><span class="p">,</span> <span class="n">full_output</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="F1"><a class="viewcode-back" href="../../API.html#snmachine.snclassifier.F1">[docs]</a><span class="k">def</span> <span class="nf">F1</span><span class="p">(</span><span class="n">pr</span><span class="p">,</span>  <span class="n">Yt</span><span class="p">,</span> <span class="n">true_class</span><span class="p">,</span> <span class="n">full_output</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculate an F1 score for many probability threshold increments</span>
 <span class="sd">    and select the best one.</span>
@@ -375,7 +371,7 @@
         
         <span class="k">return</span> <span class="n">best_F1</span><span class="p">,</span> <span class="n">best_threshold</span></div>
 
-<div class="viewcode-block" id="FoM"><a class="viewcode-back" href="../../snclassifier.html#snmachine.snclassifier.FoM">[docs]</a><span class="k">def</span> <span class="nf">FoM</span><span class="p">(</span><span class="n">pr</span><span class="p">,</span>  <span class="n">Yt</span><span class="p">,</span> <span class="n">true_class</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">full_output</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="FoM"><a class="viewcode-back" href="../../API.html#snmachine.snclassifier.FoM">[docs]</a><span class="k">def</span> <span class="nf">FoM</span><span class="p">(</span><span class="n">pr</span><span class="p">,</span>  <span class="n">Yt</span><span class="p">,</span> <span class="n">true_class</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">full_output</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculate a Kessler FoM for many probability threshold increments</span>
 <span class="sd">    and select the best one.</span>
@@ -445,7 +441,7 @@
         <span class="k">return</span> <span class="n">best_FoM</span><span class="p">,</span> <span class="n">best_threshold</span></div>
 
 
-<div class="viewcode-block" id="OptimisedClassifier"><a class="viewcode-back" href="../../snclassifier.html#snmachine.snclassifier.OptimisedClassifier">[docs]</a><span class="k">class</span> <span class="nc">OptimisedClassifier</span><span class="p">():</span>
+<div class="viewcode-block" id="OptimisedClassifier"><a class="viewcode-back" href="../../API.html#snmachine.snclassifier.OptimisedClassifier">[docs]</a><span class="k">class</span> <span class="nc">OptimisedClassifier</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot;Implements an optimised classifier (although it can be run without optimisation). Equipped with interfaces to several</span>
 <span class="sd">    sklearn classes and functions.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -563,7 +559,7 @@
     
 
 
-<div class="viewcode-block" id="OptimisedClassifier.classify"><a class="viewcode-back" href="../../snclassifier.html#snmachine.snclassifier.OptimisedClassifier.classify">[docs]</a>    <span class="k">def</span> <span class="nf">classify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">):</span>
+<div class="viewcode-block" id="OptimisedClassifier.classify"><a class="viewcode-back" href="../../API.html#snmachine.snclassifier.OptimisedClassifier.classify">[docs]</a>    <span class="k">def</span> <span class="nf">classify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Run unoptimised classifier with initial parameters.</span>
 <span class="sd">        Parameters</span>
@@ -619,7 +615,7 @@
         <span class="n">fpr</span><span class="p">,</span> <span class="n">tpr</span><span class="p">,</span> <span class="n">auc</span><span class="o">=</span><span class="n">roc</span><span class="p">(</span><span class="n">probs</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">true_class</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">auc</span>
 
-<div class="viewcode-block" id="OptimisedClassifier.optimised_classify"><a class="viewcode-back" href="../../snclassifier.html#snmachine.snclassifier.OptimisedClassifier.optimised_classify">[docs]</a>    <span class="k">def</span> <span class="nf">optimised_classify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="OptimisedClassifier.optimised_classify"><a class="viewcode-back" href="../../API.html#snmachine.snclassifier.OptimisedClassifier.optimised_classify">[docs]</a>    <span class="k">def</span> <span class="nf">optimised_classify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Run optimised classifier using grid search with cross validation to choose optimal classifier parameters.</span>
 <span class="sd">        Parameters</span>
@@ -707,7 +703,7 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">probs</span>
 
-<div class="viewcode-block" id="run_pipeline"><a class="viewcode-back" href="../../snclassifier.html#snmachine.snclassifier.run_pipeline">[docs]</a><span class="k">def</span> <span class="nf">run_pipeline</span><span class="p">(</span><span class="n">features</span><span class="p">,</span><span class="n">types</span><span class="p">,</span><span class="n">output_name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="p">[],</span><span class="n">classifiers</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nb&#39;</span><span class="p">,</span><span class="s1">&#39;knn&#39;</span><span class="p">,</span><span class="s1">&#39;svm&#39;</span><span class="p">,</span><span class="s1">&#39;neural_network&#39;</span><span class="p">,</span><span class="s1">&#39;boost_dt&#39;</span><span class="p">],</span>
+<div class="viewcode-block" id="run_pipeline"><a class="viewcode-back" href="../../API.html#snmachine.snclassifier.run_pipeline">[docs]</a><span class="k">def</span> <span class="nf">run_pipeline</span><span class="p">(</span><span class="n">features</span><span class="p">,</span><span class="n">types</span><span class="p">,</span><span class="n">output_name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="p">[],</span><span class="n">classifiers</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nb&#39;</span><span class="p">,</span><span class="s1">&#39;knn&#39;</span><span class="p">,</span><span class="s1">&#39;svm&#39;</span><span class="p">,</span><span class="s1">&#39;neural_network&#39;</span><span class="p">,</span><span class="s1">&#39;boost_dt&#39;</span><span class="p">],</span>
                  <span class="n">training_set</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">param_dict</span><span class="o">=</span><span class="p">{},</span> <span class="n">nprocesses</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                  <span class="n">plot_roc_curve</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">return_classifier</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>

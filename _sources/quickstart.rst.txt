@@ -19,14 +19,14 @@ Unit tests
 
 Also, great way to check your installation of snmachine is to run the suite of unit tests. These allow you to check whether the software has been set up correctly and that each step is working properly. Please navigate to the `test` folder to run tests using the syntax,::
 
-    pytest *.py
+    py.test *.py
 
 If you would like to run a subset of tests you can run the command,::
 
-    pytest *.py -m 'slow'
+    py.test *.py -m 'slow'
 
 to run the tests that are the most cpu-intensive. Or conversely,::
 
-    pytest *.py -m 'not slow'
+    py.test *.py -m 'not slow'
 
 to run the tests of the basic functionality of `snmachine`.

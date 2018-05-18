@@ -43,12 +43,8 @@ The Astrophysical Journal Supplement Series, 225, 31
 
    install
    quickstart
-   pmodels
-   snclassifier
-   sndata
-   snfeatures
-   tsne_plot
    parallel
+   API
 
 Contributing to snmachine
 =========================

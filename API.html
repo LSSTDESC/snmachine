@@ -1,0 +1,1599 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>API &mdash; snmachine 1.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Running on Clusters / in Parallel" href="parallel.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> snmachine
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallel.html">Running on Clusters / in Parallel</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-snmachine.sndata">sndata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-snmachine.snfeatures">snfeatures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-snmachine.parametric_models">parameteric models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-snmachine.tsne_plot">tsne plot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-snmachine.snclassifier">snclassifier</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">snmachine</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>API</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/API.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="api">
+<h1>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-snmachine.sndata">
+<span id="sndata"></span><h2>sndata<a class="headerlink" href="#module-snmachine.sndata" title="Permalink to this headline">¶</a></h2>
+<p>Module containing Dataset classes. These read in data from various sources and turns the light curves into astropy tables that
+can be read by the rest of the code.</p>
+<dl class="class">
+<dt id="snmachine.sndata.Dataset">
+<em class="property">class </em><code class="descclassname">snmachine.sndata.</code><code class="descname">Dataset</code><span class="sig-paren">(</span><em>folder, subset='none', filter_set=['desg', 'desr', 'desi', 'desz']</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to manage the files from a single dataset. The base class works with data from the SPCC.
+This class can be inherited and overridden to work a completely different kind of dataset.
+All this class really needs is a list of object names and a method, get_lightcurve, which takes an individual object name and returns a light curve.
+Other functions provided here are for plotting and convenience.</p>
+<dl class="method">
+<dt id="snmachine.sndata.Dataset.get_lightcurve">
+<code class="descname">get_lightcurve</code><span class="sig-paren">(</span><em>flname</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset.get_lightcurve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset.get_lightcurve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a filename, returns a light curve astropy table that conforms with sncosmo requirements</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>flname</strong> (<em>str</em>) – The filename of the supernova (relative to data_root)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Light curve</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">astropy.table.Table</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.Dataset.get_max_length">
+<code class="descname">get_max_length</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset.get_max_length"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset.get_max_length" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the length (in days) of the longest observation in the dataset.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.Dataset.get_object_names">
+<code class="descname">get_object_names</code><span class="sig-paren">(</span><em>subset='none'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset.get_object_names"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset.get_object_names" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets a list of the names of the files within the dataset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>subset</strong> (<em>str</em><em> or </em><em>list-like</em><em>, </em><em>optional</em>) – Used to specify which files you want. Current setup is get_object_names will accept a list of
+indices, a list of actual object names as a subset or the keyword ‘spectro’.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.Dataset.get_redshift">
+<code class="descname">get_redshift</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset.get_redshift"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset.get_redshift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list of the redshifts of the entire dataset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Array of redshifts</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><cite>~numpy.ndarray</cite></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.Dataset.get_types">
+<code class="descname">get_types</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset.get_types"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset.get_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list of the types of the entire dataset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Array of types</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><cite>~numpy.ndarray</cite></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.Dataset.plot_all">
+<code class="descname">plot_all</code><span class="sig-paren">(</span><em>plot_model=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset.plot_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset.plot_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots all the supernovae in the dataset and allows the user to cycle through them with the left and
+right arrow keys.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>plot_model</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether or not to overplot the model.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.Dataset.plot_lc">
+<code class="descname">plot_lc</code><span class="sig-paren">(</span><em>fname</em>, <em>plot_model=True</em>, <em>title=True</em>, <em>loc='best'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset.plot_lc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset.plot_lc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Public function to plot a single light curve.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fname</strong> (<em>str</em>) – The filename of the supernova (relative to data_root)</li>
+<li><strong>plot_model</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether or not to overplot the model</li>
+<li><strong>title</strong> (<em>str</em><em>, </em><em>optional</em>) – Put a title on the plot</li>
+<li><strong>loc</strong> (<em>str</em><em>, </em><em>optional</em>) – Location of the legend</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.Dataset.reduced_chi_squared">
+<code class="descname">reduced_chi_squared</code><span class="sig-paren">(</span><em>subset='none'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset.reduced_chi_squared"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset.reduced_chi_squared" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the reduced chi squared for each object, once a model has been set.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>subset</strong> (<em>str</em><em> or </em><em>list-like</em><em>, </em><em>optional</em>) – List of a subset of object names. If not supplied, the full dataset will be used</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Dictionary of reduced chi^2 for each object</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.Dataset.set_model">
+<code class="descname">set_model</code><span class="sig-paren">(</span><em>fit_sn</em>, <em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset.set_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset.set_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Can use any function to set the model for all objects in the data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fit_sn</strong> (<em>function</em>) – A function which can take a light curve (astropy table) argument and a list of arguments and returns an astropy table</li>
+<li><strong>args</strong> (<em>list</em><em>, </em><em>optional</em>) – Whatever arguments fit_sn requires</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.Dataset.sim_stats">
+<code class="descname">sim_stats</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#Dataset.sim_stats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.Dataset.sim_stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints information about the survey/simulation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>indices</strong> (<em>list-like</em><em>, </em><em>optional</em>) – List of indices to indicate which objects to consider. This allows you to, for example,</li>
+<li><strong>the statistics of a training subsample.</strong> (<em>see</em>) – </li>
+<li><strong>plot_redshift</strong> (<em>bool</em><em>, </em><em>optional</em>) – Plots a histogram of the redshift distribution</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="snmachine.sndata.OpsimDataset">
+<em class="property">class </em><code class="descclassname">snmachine.sndata.</code><code class="descname">OpsimDataset</code><span class="sig-paren">(</span><em>folder, subset='none', mix=False, filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty']</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#OpsimDataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.OpsimDataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to read in an LSST simulated dataset, based on OpSim runs and SNANA simulations.</p>
+<dl class="method">
+<dt id="snmachine.sndata.OpsimDataset.get_data">
+<code class="descname">get_data</code><span class="sig-paren">(</span><em>folder</em>, <em>subset='none'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#OpsimDataset.get_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.OpsimDataset.get_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads in the simulated data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>folder</strong> (<em>str</em>) – Folder where simulations are located</li>
+<li><strong>subset</strong> (<em>str</em><em> or </em><em>list-like</em><em>, </em><em>optional</em>) – List of a subset of object names. If not supplied, the full dataset will be used</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.OpsimDataset.get_lightcurve">
+<code class="descname">get_lightcurve</code><span class="sig-paren">(</span><em>tab</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#OpsimDataset.get_lightcurve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.OpsimDataset.get_lightcurve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts the sncosmo convention for the astropy tables to snmachine’s.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>tab</strong> (<em>astropy.table.Table</em>) – Light curve</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="snmachine.sndata.SDSS_Data">
+<em class="property">class </em><code class="descclassname">snmachine.sndata.</code><code class="descname">SDSS_Data</code><span class="sig-paren">(</span><em>folder, subset='none', training_only=False, filter_set=['sdssu', 'sdssg', 'sdssr', 'sdssi', 'sdssz'], subset_length=False, classification='none'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#SDSS_Data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.SDSS_Data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to read in the SDSS supernovae dataset</p>
+<dl class="method">
+<dt id="snmachine.sndata.SDSS_Data.get_SNe">
+<code class="descname">get_SNe</code><span class="sig-paren">(</span><em>subset_length</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#SDSS_Data.get_SNe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.SDSS_Data.get_SNe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to take all supernovae from Master SDSS data file  and return a random sample of SNe of user-specified length
+if requested</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>subset_length</strong> (<em>int</em>) – Number of objects to return</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">List of object names</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list-like</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.SDSS_Data.get_info">
+<code class="descname">get_info</code><span class="sig-paren">(</span><em>flname</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#SDSS_Data.get_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.SDSS_Data.get_info" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Function which takes file name of supernova and returns dictionary of spectroscopic and photometric redshifts and their errors when available as</dt>
+<dd>well as the type of the supernova</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>flname</strong> (<em>str</em>) – Name of object</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Redshift, redshift error, type</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list-like</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.SDSS_Data.get_lightcurve">
+<code class="descname">get_lightcurve</code><span class="sig-paren">(</span><em>flname</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#SDSS_Data.get_lightcurve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.SDSS_Data.get_lightcurve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a filename, returns a light curve astropy table that conforms with sncosmo requirements
+:param flname: The filename of the supernova (relative to data_root)
+:type flname: str</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Light curve</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">astropy.table.Table</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.SDSS_Data.get_object_names">
+<code class="descname">get_object_names</code><span class="sig-paren">(</span><em>subset='none'</em>, <em>subset_length=False</em>, <em>classification='none'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#SDSS_Data.get_object_names"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.SDSS_Data.get_object_names" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets a list of the names of the files within the dataset.
+:param subset: List of a subset of object names. If not supplied, the full dataset will be used
+:type subset: str or list-like, optional
+:param subset_length: Number of objects to return (False to return all)
+:type subset_length: bool or int, optional
+:param classification: Can specify a particular type of supernova to return (‘none’ for all types)
+:type classification: str, optional</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Object names</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list-like</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.SDSS_Data.get_photo">
+<code class="descname">get_photo</code><span class="sig-paren">(</span><em>subset_length</em>, <em>classification</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#SDSS_Data.get_photo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.SDSS_Data.get_photo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to take all purely photometric supernovae from Master file and return a   random sample of SNe of user-specified length
+if requested
+:param subset_length: Number of objects to return (False to return all)
+:type subset_length: bool or int
+:param classification: Can specify a particular type of supernova to return (‘none’ for all types)
+:type classification: str</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">List of object names</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list-like</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.SDSS_Data.get_spectro">
+<code class="descname">get_spectro</code><span class="sig-paren">(</span><em>subset_length</em>, <em>classification</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#SDSS_Data.get_spectro"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.SDSS_Data.get_spectro" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to take all spectroscopically confirmed supernovae from Master file and return a random sample of SNe of user-specified length
+if requested</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>subset_length</strong> (<em>bool</em><em> or </em><em>int</em>) – Number of objects to return (False to return all)</li>
+<li><strong>classification</strong> (<em>str</em>) – Can specify a particular type of supernova to return (‘none’ for all types)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">List of object names</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list-like</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="snmachine.sndata.SDSS_Simulations">
+<em class="property">class </em><code class="descclassname">snmachine.sndata.</code><code class="descname">SDSS_Simulations</code><span class="sig-paren">(</span><em>folder, subset='none', training_only=False, filter_set=['sdssu', 'sdssg', 'sdssr', 'sdssi', 'sdssz'], subset_length=False, classification='none'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#SDSS_Simulations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.SDSS_Simulations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to read in the SDSS simulations dataset</p>
+<dl class="method">
+<dt id="snmachine.sndata.SDSS_Simulations.get_data">
+<code class="descname">get_data</code><span class="sig-paren">(</span><em>subset='none'</em>, <em>subset_length=False</em>, <em>classification='none'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#SDSS_Simulations.get_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.SDSS_Simulations.get_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to get all data in same form as SDSS Data</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.sndata.SDSS_Simulations.get_lightcurve">
+<code class="descname">get_lightcurve</code><span class="sig-paren">(</span><em>lc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#SDSS_Simulations.get_lightcurve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.SDSS_Simulations.get_lightcurve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a filename, returns a light curve astropy table that conforms with sncosmo requirements</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>flname</strong> (<em>str</em>) – The filename of the supernova (relative to data_root)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Light curve</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">astropy.table.Table</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="snmachine.sndata.plot_lc">
+<code class="descclassname">snmachine.sndata.</code><code class="descname">plot_lc</code><span class="sig-paren">(</span><em>lc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/sndata.html#plot_lc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.sndata.plot_lc" title="Permalink to this definition">¶</a></dt>
+<dd><p>External function to plot light curves.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>lc</strong> (<em>astropy.table.Table</em>) – Light curve</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-snmachine.snfeatures">
+<span id="snfeatures"></span><h2>snfeatures<a class="headerlink" href="#module-snmachine.snfeatures" title="Permalink to this headline">¶</a></h2>
+<p>Module for feature extraction on supernova light curves.</p>
+<dl class="class">
+<dt id="snmachine.snfeatures.Features">
+<em class="property">class </em><code class="descclassname">snmachine.snfeatures.</code><code class="descname">Features</code><a class="reference internal" href="_modules/snmachine/snfeatures.html#Features"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.Features" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class to define basic functionality for extracting features from supernova datasets. Users are not
+restricted to inheriting from this class, but any Features class must contain the functions extract_features
+and fit_sn.</p>
+<dl class="method">
+<dt id="snmachine.snfeatures.Features.convert_astropy_array">
+<code class="descname">convert_astropy_array</code><span class="sig-paren">(</span><em>tab</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#Features.convert_astropy_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.Features.convert_astropy_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to convert an astropy table (floats only) into a numpy array.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.Features.goodness_of_fit">
+<code class="descname">goodness_of_fit</code><span class="sig-paren">(</span><em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#Features.goodness_of_fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.Features.goodness_of_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test (for any feature set) how well the reconstruction from the features fits each of the objects in the dataset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>d</strong> (<a class="reference internal" href="#snmachine.sndata.Dataset" title="snmachine.sndata.Dataset"><em>Dataset</em></a>) – Dataset object.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Table with the reduced Chi2 for each object</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">astropy.table.Table</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.Features.posterior_predictor">
+<code class="descname">posterior_predictor</code><span class="sig-paren">(</span><em>lc</em>, <em>nparams</em>, <em>chi2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#Features.posterior_predictor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.Features.posterior_predictor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes posterior predictive p-value to see if the model fits sufficient well.
+<strong>*UNTESTED*</strong></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lc</strong> (<em>astropy.table.Table</em>) – Light curve</li>
+<li><strong>nparams</strong> (<em>int</em>) – The number of parameters in the model. For the wavelets, this will be the number of PCA coefficients. For the parametric
+models, this will be the number parameters per model multiplied by the number of filters. For the template models, this is simply the number
+of parameters in the model.</li>
+<li><strong>chi2</strong> (<em>array-like</em>) – An array of chi2 values for each set of parameter space in the parameter samples. This is easy to obtain as -2*loglikelihood output
+from a multinest or mcmc chain. For features such as the wavelets, this will have to be separately calculated by drawing thousands of curves
+consistent with the coefficients and their errors and then computing the chi2.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The posterior predictive p-value. If this number is too close to 0 or 1 it implies the model is a poor fit.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="snmachine.snfeatures.ParametricFeatures">
+<em class="property">class </em><code class="descclassname">snmachine.snfeatures.</code><code class="descname">ParametricFeatures</code><span class="sig-paren">(</span><em>model_choice</em>, <em>sampler='leastsq'</em>, <em>limits=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#ParametricFeatures"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.ParametricFeatures" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fits a few options of generalised, parametric models to the data.</p>
+<dl class="method">
+<dt id="snmachine.snfeatures.ParametricFeatures.extract_features">
+<code class="descname">extract_features</code><span class="sig-paren">(</span><em>d</em>, <em>chain_directory='chains'</em>, <em>save_output=True</em>, <em>n_attempts=20</em>, <em>nprocesses=1</em>, <em>n_walkers=100</em>, <em>n_steps=500</em>, <em>walker_spread=0.1</em>, <em>burn=50</em>, <em>nlp=1000</em>, <em>starting_point=None</em>, <em>convert_to_binary=True</em>, <em>n_iter=0</em>, <em>restart=False</em>, <em>seed=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#ParametricFeatures.extract_features"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.ParametricFeatures.extract_features" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit parametric models and return best-fitting parameters as features.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>d</strong> (<em>Dataset object</em>) – Dataset</li>
+<li><strong>chain_directory</strong> (<em>str</em>) – Where to save the chains</li>
+<li><strong>save_output</strong> (<em>bool</em>) – Whether or not to save the intermediate output (if Bayesian inference is used instead of least squares)</li>
+<li><strong>n_attempts</strong> (<em>int</em>) – Allow the minimiser to start in new random locations if the fit is bad. Put n_attempts=1 to fit only once
+with the default starting position.</li>
+<li><strong>nprocesses</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of processors to use for parallelisation (shared memory only)</li>
+<li><strong>n_walkers</strong> (<em>int</em>) – emcee parameter - number of walkers to use</li>
+<li><strong>n_steps</strong> (<em>int</em>) – emcee parameter - total number of steps</li>
+<li><strong>walker_spread</strong> (<em>float</em>) – emcee parameter - standard deviation of distribution of starting points of walkers</li>
+<li><strong>burn</strong> (<em>int</em>) – emcee parameter - length of burn-in</li>
+<li><strong>nlp</strong> (<em>int</em>) – multinest parameter - number of live points</li>
+<li><strong>starting_point</strong> (<em>None</em><em> or </em><em>array-like</em>) – Starting points of parameters for leastsq or emcee</li>
+<li><strong>convert_to_binary</strong> (<em>bool</em>) – multinest parameter - whether or not to convert ascii output files to binary</li>
+<li><strong>n_iter</strong> (<em>int</em>) – leastsq parameter - number of iterations to avoid local minima</li>
+<li><strong>restart</strong> (<em>bool</em>) – Whether or not t restart from existing multinest chains</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Best-fitting parameters</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">astropy.table.Table</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.ParametricFeatures.fit_sn">
+<code class="descname">fit_sn</code><span class="sig-paren">(</span><em>lc</em>, <em>features</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#ParametricFeatures.fit_sn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.ParametricFeatures.fit_sn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fits the chosen parametric model to a given light curve.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lc</strong> (<em>astropy.table.Table</em>) – Light curve</li>
+<li><strong>features</strong> (<em>astropy.table.Table</em>) – Model parameters</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Fitted light curve</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">astropy.table.Table</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.ParametricFeatures.lnprob_emcee">
+<code class="descname">lnprob_emcee</code><span class="sig-paren">(</span><em>params</em>, <em>x</em>, <em>y</em>, <em>yerr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#ParametricFeatures.lnprob_emcee"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.ParametricFeatures.lnprob_emcee" title="Permalink to this definition">¶</a></dt>
+<dd><p>Likelihood function for emcee</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>params</strong> – </li>
+<li><strong>x</strong> – </li>
+<li><strong>y</strong> – </li>
+<li><strong>yerr</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.ParametricFeatures.run_emcee">
+<code class="descname">run_emcee</code><span class="sig-paren">(</span><em>d</em>, <em>obj</em>, <em>save_output</em>, <em>chain_directory</em>, <em>n_walkers</em>, <em>n_steps</em>, <em>walker_spread</em>, <em>burn</em>, <em>starting_point</em>, <em>seed=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#ParametricFeatures.run_emcee"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.ParametricFeatures.run_emcee" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs emcee on all the filter bands of a given light curve, fitting the model to each one and extracting the best fitting parameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>d</strong> (<em>Dataset object</em>) – Dataset</li>
+<li><strong>obj</strong> (<em>str</em>) – Object name</li>
+<li><strong>save_output</strong> (<em>bool</em>) – Whether or not to save the intermediate output</li>
+<li><strong>chain_directory</strong> (<em>str</em>) – Where to save the chains</li>
+<li><strong>n_walkers</strong> (<em>int</em>) – emcee parameter - number of walkers to use</li>
+<li><strong>n_steps</strong> (<em>int</em>) – emcee parameter - total number of steps</li>
+<li><strong>walker_spread</strong> (<em>float</em>) – emcee parameter - standard deviation of distribution of starting points of walkers</li>
+<li><strong>burn</strong> (<em>int</em>) – emcee parameter - length of burn-in</li>
+<li><strong>starting_point</strong> (<em>None</em><em> or </em><em>array-like</em>) – Starting points of parameters</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Best fitting parameters (at the maximum posterior)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">astropy.table.Table</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="snmachine.snfeatures.TemplateFeatures">
+<em class="property">class </em><code class="descclassname">snmachine.snfeatures.</code><code class="descname">TemplateFeatures</code><span class="sig-paren">(</span><em>model=['Ia'], sampler='leastsq', lsst_bands=False, lsst_dir='../lsst_bands/'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#TemplateFeatures"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.TemplateFeatures" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calls sncosmo to fit a variety of templates to the data. The number of features will depend on the templates
+chosen (e.g. salt2, nugent2p etc.)</p>
+<dl class="method">
+<dt id="snmachine.snfeatures.TemplateFeatures.extract_features">
+<code class="descname">extract_features</code><span class="sig-paren">(</span><em>d</em>, <em>save_chains=False</em>, <em>chain_directory='chains'</em>, <em>use_redshift=False</em>, <em>nprocesses=1</em>, <em>restart=False</em>, <em>seed=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#TemplateFeatures.extract_features"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.TemplateFeatures.extract_features" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract template features for a dataset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>d</strong> (<em>Dataset object</em>) – Dataset</li>
+<li><strong>save_chains</strong> (<em>bool</em>) – Whether or not to save the intermediate output (if Bayesian inference is used instead of least squares)</li>
+<li><strong>chain_directory</strong> (<em>str</em>) – Where to save the chains</li>
+<li><strong>use_redshift</strong> (<em>bool</em>) – Whether or not to use provided redshift when fitting objects</li>
+<li><strong>nprocesses</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of processors to use for parallelisation (shared memory only)</li>
+<li><strong>restart</strong> (<em>bool</em>) – Whether or not to restart from multinest chains</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Table of fitted model parameters.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">astropy.table.Table</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.TemplateFeatures.fit_sn">
+<code class="descname">fit_sn</code><span class="sig-paren">(</span><em>lc</em>, <em>features</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#TemplateFeatures.fit_sn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.TemplateFeatures.fit_sn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fits the chosen template model to a given light curve.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lc</strong> (<em>astropy.table.Table</em>) – Light curve</li>
+<li><strong>features</strong> (<em>astropy.table.Table</em>) – Model parameters</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Fitted light curve</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">astropy.table.Table</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.TemplateFeatures.registerBands">
+<code class="descname">registerBands</code><span class="sig-paren">(</span><em>dirname</em>, <em>prefix=None</em>, <em>suffix=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#TemplateFeatures.registerBands"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.TemplateFeatures.registerBands" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register LSST bandpasses with sncosmo.
+Courtesy of Rahul Biswas</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="snmachine.snfeatures.WaveletFeatures">
+<em class="property">class </em><code class="descclassname">snmachine.snfeatures.</code><code class="descname">WaveletFeatures</code><span class="sig-paren">(</span><em>wavelet='sym2'</em>, <em>ngp=100</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses wavelets to decompose the data and then reduces dimensionality of the feature space using PCA.</p>
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.GP">
+<code class="descname">GP</code><span class="sig-paren">(</span><em>obj, d, ngp=200, xmin=0, xmax=170, initheta=[500, 20], gpalgo='george'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.GP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.GP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit a Gaussian process curve at specific evenly spaced points along a light curve.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>obj</strong> (<em>str</em>) – Object name</li>
+<li><strong>d</strong> (<em>Dataset object</em>) – Dataset</li>
+<li><strong>/ int</strong><strong>, </strong><strong>optional</strong> (<em>ngp</em>) – Number of points to evaluate Gaussian Process at</li>
+<li><strong>xmin</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimim time to evaluate at</li>
+<li><strong>xmax</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum time to evaluate at</li>
+<li><strong>initheta</strong> (<em>list-like</em><em>, </em><em>optional</em>) – Initial values for theta parameters. These should be roughly the scale length in the y &amp; x directions.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Table with evaluated Gaussian process curve and errors</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">astropy.table.Table</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Wraps internal module-level function in order to circumvent multiprocessing module limitations in dealing with
+objects when parallelising.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.best_coeffs">
+<code class="descname">best_coeffs</code><span class="sig-paren">(</span><em>vals</em>, <em>tol=0.98</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.best_coeffs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.best_coeffs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine the minimum number of PCA components required to adequately describe the dataset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>vals</strong> (<em>list-like</em>) – List of eigenvalues (ordered largest to smallest)</li>
+<li><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – How much ‘energy’ or information must be retained in the dataset.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The required number of coefficients to retain the requested amount of “information”.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">int</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.extract_GP">
+<code class="descname">extract_GP</code><span class="sig-paren">(</span><em>d</em>, <em>ngp</em>, <em>xmin</em>, <em>xmax</em>, <em>initheta</em>, <em>save_output</em>, <em>output_root</em>, <em>nprocesses</em>, <em>gpalgo='george'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.extract_GP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.extract_GP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>d</strong> (<em>Dataset object</em>) – Dataset</li>
+<li><strong>ngp</strong> (<em>int</em>) – Number of points to evaluate Gaussian Process at</li>
+<li><strong>xmin</strong> (<em>float</em>) – Minimim time to evaluate at</li>
+<li><strong>xmax</strong> (<em>float</em>) – Maximum time to evaluate at</li>
+<li><strong>initheta</strong> (<em>list-like</em>) – Initial values for theta parameters. These should be roughly the scale length in the y &amp; x directions.</li>
+<li><strong>save_output</strong> (<em>bool</em>) – Whether or not to save the output</li>
+<li><strong>output_root</strong> (<em>str</em>) – Output directory</li>
+<li><strong>nprocesses</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of processors to use for parallelisation (shared memory only)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.extract_features">
+<code class="descname">extract_features</code><span class="sig-paren">(</span><em>d, initheta=[500, 20], save_output='none', output_root='features', nprocesses=1, restart='none', gpalgo='george', xmin=None, xmax=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.extract_features"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.extract_features" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>d</strong> (<em>Dataset object</em>) – Dataset</li>
+<li><strong>initheta</strong> (<em>list-like</em><em>, </em><em>optional</em>) – Initial values for theta parameters. These should be roughly the scale length in the y &amp; x directions.</li>
+<li><strong>save_output</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether or not to save the output</li>
+<li><strong>output_root</strong> (<em>str</em><em>, </em><em>optional</em>) – Output directory</li>
+<li><strong>nprocesses</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of processors to use for parallelisation (shared memory only)</li>
+<li><strong>restart</strong> (<em>str</em><em>, </em><em>optional</em>) – Either ‘none’ to start from scratch, ‘gp’ to restart from saved Gaussian processes, or ‘wavelet’ to
+restart from saved wavelet decompositions (will look in output_root for the previously saved outputs).</li>
+<li><strong>log</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether or not to take the logarithm of the final PCA components. Recommended setting is False (legacy code).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Table of features (first column object names, the rest are the PCA coefficient values)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">astropy.table.Table</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.extract_pca">
+<code class="descname">extract_pca</code><span class="sig-paren">(</span><em>object_names</em>, <em>wavout</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.extract_pca"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.extract_pca" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dimensionality reduction of wavelet coefficients using PCA.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>object_names</strong> (<em>list-like</em>) – Object names corresponding to each row of the wavelet coefficient array.</li>
+<li><strong>wavout</strong> (<em>array</em>) – Wavelet coefficient array, each row corresponds to an object, each column is a coefficient.</li>
+<li><strong>log</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Astropy table containing PCA features.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">astropy.table.Table</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.extract_wavelets">
+<code class="descname">extract_wavelets</code><span class="sig-paren">(</span><em>d</em>, <em>wav</em>, <em>mlev</em>, <em>nprocesses</em>, <em>save_output</em>, <em>output_root</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.extract_wavelets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.extract_wavelets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform wavelet decomposition on all objects in dataset. Output is stored as astropy table for each object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>d</strong> (<em>Dataset object</em>) – Dataset</li>
+<li><strong>wav</strong> (<em>str</em><em> or </em><em>swt.Wavelet object</em>) – Which wavelet family to use</li>
+<li><strong>mlev</strong> (<em>int</em>) – Max depth</li>
+<li><strong>nprocesses</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of processors to use for parallelisation (shared memory only)</li>
+<li><strong>save_output</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether or not to save the output</li>
+<li><strong>output_root</strong> (<em>str</em><em>, </em><em>optional</em>) – Output directory</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>wavout</strong> (<em>array</em>) – A numpy array of the wavelet coefficients where each row is an object and each column a different coefficient</li>
+<li><strong>wavout_err</strong> (<em>array</em>) – A numpy array storing the (assuming Gaussian) error on each coefficient.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.fit_sn">
+<code class="descname">fit_sn</code><span class="sig-paren">(</span><em>lc</em>, <em>comps</em>, <em>vec</em>, <em>mn</em>, <em>xmin</em>, <em>xmax</em>, <em>filter_set</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.fit_sn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.fit_sn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fits a single object using previously run PCA components. Performs the full inverse wavelet transform.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lc</strong> (<em>astropy.table.Table</em>) – Light curve</li>
+<li><strong>comps</strong> (<em>astropy.table.Table</em>) – The PCA coefficients for each object (i.e. the astropy table of wavelet features from by extract_features).</li>
+<li><strong>vec</strong> (<em>array-like</em>) – PCA component vectors as array (each column is a vector, ordered from most to least significant)</li>
+<li><strong>mn</strong> (<em>array-like</em>) – Mean vector</li>
+<li><strong>xmin</strong> (<em>float</em>) – The minimum on the x axis (as defined for the original GP decomposition)</li>
+<li><strong>xmax</strong> (<em>float</em>) – The maximum on the x axis (as defined for the original GP decomposition)</li>
+<li><strong>filter_set</strong> (<em>list-like</em>) – The full set of filters of the original dataset</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Fitted light curve</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">astropy.table.Table</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.iswt">
+<code class="descname">iswt</code><span class="sig-paren">(</span><em>coefficients</em>, <em>wavelet</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.iswt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.iswt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs inverse wavelet transform.
+M. G. Marino to complement pyWavelets’ swt.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>coefficients</strong> (<em>array</em>) – approx and detail coefficients, arranged in level value
+exactly as output from swt:
+e.g. [(cA1, cD1), (cA2, cD2), …, (cAn, cDn)]</li>
+<li><strong>wavelet</strong> (<em>str</em><em> or </em><em>swt.Wavelet</em>) – Either the name of a wavelet or a Wavelet object</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The inverse transformed array</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.pca">
+<code class="descname">pca</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.pca"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.pca" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs PCA decomposition of a feature array X.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>X</strong> (<em>array</em>) – Array of features to perform PCA on.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>vals</strong> (<em>list-like</em>) – Ordered array of eigenvalues</li>
+<li><strong>vec</strong> (<em>array</em>) – Ordered array of eigenvectors, where each column is an eigenvector.</li>
+<li><strong>mn</strong> (<em>array</em>) – The mean of the dataset, which is subtracted before PCA is performed.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Although SVD is considerably more efficient than eigh, it seems more numerically unstable and results in many more components
+being required to adequately describe the dataset, at least for the wavelet feature sets considered.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.project_pca">
+<code class="descname">project_pca</code><span class="sig-paren">(</span><em>X</em>, <em>eig_vec</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.project_pca"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.project_pca" title="Permalink to this definition">¶</a></dt>
+<dd><p>Project a vector onto a PCA axis (i.e. transform data to PCA space).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>X</strong> (<em>array</em>) – Vector of original data (for one object).</li>
+<li><strong>eig_vec</strong> (<em>array</em>) – Array of eigenvectors, first column most significant.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Coefficients of eigen vectors</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.restart_from_gp">
+<code class="descname">restart_from_gp</code><span class="sig-paren">(</span><em>d</em>, <em>output_root</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.restart_from_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.restart_from_gp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allows the restarted of the feature extraction process from previously saved Gaussian Process curves.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>d</strong> (<em>Dataset object</em>) – The same dataset (object) on which the previous GP analysis was performed.</li>
+<li><strong>output_root</strong> (<em>str</em>) – Location of GP objects</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.restart_from_wavelets">
+<code class="descname">restart_from_wavelets</code><span class="sig-paren">(</span><em>d</em>, <em>output_root</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.restart_from_wavelets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.restart_from_wavelets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allows the restarted of the feature extraction process from previously saved wavelet decompositions. This
+allows you to quickly try different dimensionality reduction (e.g. PCA) algorithms on the wavelets.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>d</strong> (<em>Dataset object</em>) – The same dataset (object) on which the previous wavelet analysis was performed.</li>
+<li><strong>output_root</strong> (<em>str</em>) – Location of previously decomposed wavelet coefficients</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>wavout</strong> (<em>array</em>) – A numpy array of the wavelet coefficients where each row is an object and each column a different coefficient</li>
+<li><strong>wavout_err</strong> (<em>array</em>) – A similar numpy array storing the (assuming Gaussian) error on each coefficient.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snfeatures.WaveletFeatures.wavelet_decomp">
+<code class="descname">wavelet_decomp</code><span class="sig-paren">(</span><em>lc</em>, <em>wav</em>, <em>mlev</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#WaveletFeatures.wavelet_decomp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.WaveletFeatures.wavelet_decomp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform a wavelet decomposition on a single light curve.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lc</strong> (<em>astropy.table.Table</em>) – Light curve</li>
+<li><strong>wav</strong> (<em>str</em><em> or </em><em>swt.Wavelet object</em>) – Which wavelet family to use</li>
+<li><strong>mlev</strong> (<em>int</em>) – Max depth</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Decomposed coefficients in each filter.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">astropy.table.Table</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="snmachine.snfeatures.get_MAP">
+<code class="descclassname">snmachine.snfeatures.</code><code class="descname">get_MAP</code><span class="sig-paren">(</span><em>chain_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#get_MAP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.get_MAP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read maximum posterior parameters from a stats file of multinest.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>chain_name</strong> (<em>str</em>) – Root for the chain files</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Best-fitting parameters</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list-like</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="snmachine.snfeatures.output_time">
+<code class="descclassname">snmachine.snfeatures.</code><code class="descname">output_time</code><span class="sig-paren">(</span><em>tm</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snfeatures.html#output_time"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snfeatures.output_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple function to output the time nicely formatted.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>tm</strong> (<em>Input time in seconds.</em>) – </td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-snmachine.parametric_models">
+<span id="parameteric-models"></span><h2>parameteric models<a class="headerlink" href="#module-snmachine.parametric_models" title="Permalink to this headline">¶</a></h2>
+<p>Module for parametric models for use in snfeatures module</p>
+<dl class="class">
+<dt id="snmachine.parametric_models.KarpenkaModel">
+<em class="property">class </em><code class="descclassname">snmachine.parametric_models.</code><code class="descname">KarpenkaModel</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/parametric_models.html#KarpenkaModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.parametric_models.KarpenkaModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parametric model as implemented in Karpenka et al. (<a class="reference external" href="http://arxiv.org/abs/1208.1264">http://arxiv.org/abs/1208.1264</a>)</p>
+<dl class="method">
+<dt id="snmachine.parametric_models.KarpenkaModel.evaluate">
+<code class="descname">evaluate</code><span class="sig-paren">(</span><em>t</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/parametric_models.html#KarpenkaModel.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.parametric_models.KarpenkaModel.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate the function at given values of t</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>ndarray</em>) – The time steps over which to evaluate (starting at 0)</li>
+<li><strong>params</strong> (<em>list-like</em>) – The parameters of the model</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Function values evaluated at t</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="snmachine.parametric_models.NewlingModel">
+<em class="property">class </em><code class="descclassname">snmachine.parametric_models.</code><code class="descname">NewlingModel</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/parametric_models.html#NewlingModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.parametric_models.NewlingModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parametric model as implemented in Newling et al. (<a class="reference external" href="http://arxiv.org/abs/1010.1005">http://arxiv.org/abs/1010.1005</a>)</p>
+<dl class="method">
+<dt id="snmachine.parametric_models.NewlingModel.evaluate">
+<code class="descname">evaluate</code><span class="sig-paren">(</span><em>t</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/parametric_models.html#NewlingModel.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.parametric_models.NewlingModel.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate the function at given values of t</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>ndarray</em>) – The time steps over which to evaluate (starting at 0)</li>
+<li><strong>params</strong> (<em>list-like</em>) – The parameters of the model</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Function values evaluated at t</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-snmachine.tsne_plot">
+<span id="tsne-plot"></span><h2>tsne plot<a class="headerlink" href="#module-snmachine.tsne_plot" title="Permalink to this headline">¶</a></h2>
+<p>Utility script for making nice t-SNE plots (<a class="reference external" href="https://lvdmaaten.github.io/tsne/">https://lvdmaaten.github.io/tsne/</a>)</p>
+<dl class="function">
+<dt id="snmachine.tsne_plot.get_tsne">
+<code class="descclassname">snmachine.tsne_plot.</code><code class="descname">get_tsne</code><span class="sig-paren">(</span><em>feats</em>, <em>objs</em>, <em>perplexity=100</em>, <em>seed=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/tsne_plot.html#get_tsne"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.tsne_plot.get_tsne" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the transformed features running the sklearn t-SNE code.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>feats</strong> (<em>astropy.table.Table</em>) – Input features</li>
+<li><strong>objs</strong> (<em>list</em>) – Subset of objects to run on (t-SNE is slow for large numbers, 2000 randomly selected objects is a good compromise)</li>
+<li><strong>perplexity</strong> (<em>float</em><em>, </em><em>optional</em>) – t-SNE parameter which controls (roughly speaking) how sensitive the t-SNE plot is to small details</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Xfit</strong> – Transformed, embedded 2-d features</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="snmachine.tsne_plot.plot">
+<code class="descclassname">snmachine.tsne_plot.</code><code class="descname">plot</code><span class="sig-paren">(</span><em>feats</em>, <em>types</em>, <em>objs=[]</em>, <em>seed=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/tsne_plot.html#plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.tsne_plot.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to run t-SNE and plot</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>feats</strong> (<em>astropy.table.Table</em>) – Input features</li>
+<li><strong>types</strong> (<em>array</em>) – Types of the supernovae (to colour the points appropriately)</li>
+<li><strong>objs</strong> (<em>list</em>) – Subset of objects to run on (t-SNE is slow for large numbers, 2000 randomly selected objects is a good compromise)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="snmachine.tsne_plot.plot_tsne">
+<code class="descclassname">snmachine.tsne_plot.</code><code class="descname">plot_tsne</code><span class="sig-paren">(</span><em>Xfit</em>, <em>types</em>, <em>loc='best'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/tsne_plot.html#plot_tsne"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.tsne_plot.plot_tsne" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the resulting t-SNE embedded features.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>Xfit</strong> (<em>array</em>) – Transformed, embedded 2-d features</li>
+<li><strong>types</strong> (<em>array</em>) – Types of the supernovae (to colour the points appropriately)</li>
+<li><strong>loc</strong> (<em>str</em><em>, </em><em>optional</em>) – Location of the legend in the plot</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-snmachine.snclassifier">
+<span id="snclassifier"></span><h2>snclassifier<a class="headerlink" href="#module-snmachine.snclassifier" title="Permalink to this headline">¶</a></h2>
+<p>Utility module mostly wrapping sklearn functionality and providing utility functions.</p>
+<dl class="function">
+<dt id="snmachine.snclassifier.F1">
+<code class="descclassname">snmachine.snclassifier.</code><code class="descname">F1</code><span class="sig-paren">(</span><em>pr</em>, <em>Yt</em>, <em>true_class</em>, <em>full_output=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snclassifier.html#F1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snclassifier.F1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate an F1 score for many probability threshold increments
+and select the best one.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>pr</strong> (<em>array</em>) – An array of probability scores, either a 1d array of size N_samples or an nd array,
+in which case the column corresponding to the true class will be used.</li>
+<li><strong>Yt</strong> (<em>array</em>) – An array of class labels, of size (N_samples,)</li>
+<li><strong>true_class</strong> (<em>int</em>) – which class is taken to be the “true class” (e.g. Ia vs everything else)</li>
+<li><strong>full_output</strong> (<em>bool</em><em>, </em><em>optional</em>) – If true returns two vectors corresponding to F1 as a function of threshold, instead of the best value.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>best_F1</strong> (<em>float</em>) – (If full_output=False) The largest F1 value</li>
+<li><strong>best_threshold</strong> (<em>array</em>) – (If full_output=False) The probability threshold corresponding to best_F1</li>
+<li><strong>f1</strong> (<em>array</em>) – (If full_output=True) F1 as a function of threshold.</li>
+<li><strong>threshold</strong> (<em>array</em>) – (If full_output=True) Vector of thresholds (from 0 to 1)</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="snmachine.snclassifier.FoM">
+<code class="descclassname">snmachine.snclassifier.</code><code class="descname">FoM</code><span class="sig-paren">(</span><em>pr</em>, <em>Yt</em>, <em>true_class=1</em>, <em>full_output=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snclassifier.html#FoM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snclassifier.FoM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate a Kessler FoM for many probability threshold increments
+and select the best one.</p>
+<p>FoM is defined as:
+FoM = TP^2/((TP+FN)(TP+3*FP))</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>pr</strong> (<em>array</em>) – An array of probability scores, either a 1d array of size N_samples or an nd array,
+in which case the column corresponding to the true class will be used.</li>
+<li><strong>Yt</strong> (<em>array</em>) – An array of class labels, of size (N_samples,)</li>
+<li><strong>true_class</strong> (<em>int</em>) – which class is taken to be the “true class” (e.g. Ia vs everything else)</li>
+<li><strong>full_output</strong> (<em>bool</em><em>, </em><em>optional</em>) – If true returns two vectors corresponding to F1 as a function of threshold, instead of the best value.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>best_FoM</strong> (<em>float</em>) – (If full_output=False) The largest FoM value</li>
+<li><strong>best_threshold</strong> (<em>array</em>) – (If full_output=False) The probability threshold corresponding to best_FoM</li>
+<li><strong>fom</strong> (<em>array</em>) – (If full_output=True) FoM as a function of threshold.</li>
+<li><strong>threshold</strong> (<em>array</em>) – (If full_output=True) Vector of thresholds (from 0 to 1)</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="snmachine.snclassifier.OptimisedClassifier">
+<em class="property">class </em><code class="descclassname">snmachine.snclassifier.</code><code class="descname">OptimisedClassifier</code><span class="sig-paren">(</span><em>classifier</em>, <em>optimise=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snclassifier.html#OptimisedClassifier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snclassifier.OptimisedClassifier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements an optimised classifier (although it can be run without optimisation). Equipped with interfaces to several
+sklearn classes and functions.</p>
+<dl class="method">
+<dt id="snmachine.snclassifier.OptimisedClassifier.classify">
+<code class="descname">classify</code><span class="sig-paren">(</span><em>X_train</em>, <em>y_train</em>, <em>X_test</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snclassifier.html#OptimisedClassifier.classify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snclassifier.OptimisedClassifier.classify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run unoptimised classifier with initial parameters.
+:param X_train: Array of training features of shape (n_train,n_features)
+:type X_train: array
+:param y_train: Array of known classes of shape (n_train)
+:type y_train: array
+:param X_test: Array of validation features of shape (n_test,n_features)
+:type X_test: array</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>Yfit</strong> (<em>array</em>) – Predicted classes for X_test</li>
+<li><strong>probs</strong> (<em>array</em>)</li>
+<li><em>(If self.prob=True) Probability for each object to belong to each class.</em></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="snmachine.snclassifier.OptimisedClassifier.optimised_classify">
+<code class="descname">optimised_classify</code><span class="sig-paren">(</span><em>X_train</em>, <em>y_train</em>, <em>X_test</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snclassifier.html#OptimisedClassifier.optimised_classify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snclassifier.OptimisedClassifier.optimised_classify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run optimised classifier using grid search with cross validation to choose optimal classifier parameters.
+:param X_train: Array of training features of shape (n_train,n_features)
+:type X_train: array
+:param y_train: Array of known classes of shape (n_train)
+:type y_train: array
+:param X_test: Array of validation features of shape (n_test,n_features)
+:type X_test: array
+:param params: Allows the user to specify which parameters and over what ranges to optimise. If not set,</p>
+<blockquote>
+<div>defaults will be used.</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>true_class</strong> (<em>int</em><em>, </em><em>optional</em>) – The class determined to be the desired class (e.g. Ias, which might correspond to class 1). This allows
+the user to optimise for different classes (based on ROC curve AUC).</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>Yfit</strong> (<em>array</em>) – Predicted classes for X_test</li>
+<li><strong>probs</strong> (<em>array</em>)</li>
+<li><em>(If self.prob=True) Probability for each object to belong to each class.</em></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="snmachine.snclassifier.plot_roc">
+<code class="descclassname">snmachine.snclassifier.</code><code class="descname">plot_roc</code><span class="sig-paren">(</span><em>fpr</em>, <em>tpr</em>, <em>auc</em>, <em>labels=[]</em>, <em>cols=[]</em>, <em>label_size=26</em>, <em>tick_size=18</em>, <em>line_width=3</em>, <em>figsize=(8</em>, <em>6)</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snclassifier.html#plot_roc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snclassifier.plot_roc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots a ROC curve or multiple curves. Can plot the results from multiple classifiers if fpr and tpr are arrays
+where each column corresponds to a different classifier.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fpr</strong> (<em>array</em>) – An array containing the false positive rate at each probability threshold</li>
+<li><strong>tpr</strong> (<em>array</em>) – An array containing the true positive rate at each probability threshold</li>
+<li><strong>auc</strong> (<em>float</em>) – The area under the ROC curve</li>
+<li><strong>labels</strong> (<em>list</em><em>, </em><em>optional</em>) – Labels of each curve (e.g. ML algorithm names)</li>
+<li><strong>cols</strong> (<em>list</em><em>, </em><em>optional</em>) – Colors of the line(s)</li>
+<li><strong>label_size</strong> (<em>float</em><em>, </em><em>optional</em>) – Size of x and y axis labels.</li>
+<li><strong>tick_size</strong> (<em>float</em><em>, </em><em>optional</em>) – Size of tick labels.</li>
+<li><strong>line_width</strong> (<em>float</em><em>, </em><em>optional</em>) – Line width</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="snmachine.snclassifier.roc">
+<code class="descclassname">snmachine.snclassifier.</code><code class="descname">roc</code><span class="sig-paren">(</span><em>pr</em>, <em>Yt</em>, <em>true_class=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snclassifier.html#roc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snclassifier.roc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce the false positive rate and true positive rate required to plot
+a ROC curve, and the area under that curve.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>pr</strong> (<em>array</em>) – An array of probability scores, either a 1d array of size N_samples or an nd array,
+in which case the column corresponding to the true class will be used.</li>
+<li><strong>Yt</strong> (<em>array</em>) – An array of class labels, of size (N_samples,)</li>
+<li><strong>true_class</strong> (<em>int</em>) – which class is taken to be the “true class” (e.g. Ia vs everything else)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>fpr</strong> (<em>array</em>) – An array containing the false positive rate at each probability threshold</li>
+<li><strong>tpr</strong> (<em>array</em>) – An array containing the true positive rate at each probability threshold</li>
+<li><strong>auc</strong> (<em>float</em>) – The area under the ROC curve</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="snmachine.snclassifier.run_pipeline">
+<code class="descclassname">snmachine.snclassifier.</code><code class="descname">run_pipeline</code><span class="sig-paren">(</span><em>features, types, output_name='', columns=[], classifiers=['nb', 'knn', 'svm', 'neural_network', 'boost_dt'], training_set=0.7, param_dict={}, nprocesses=1, scale=True, plot_roc_curve=True, return_classifier=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/snmachine/snclassifier.html#run_pipeline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#snmachine.snclassifier.run_pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function to classify a dataset with a number of classification methods. This does assume your test
+set has known values to compare against. Returns, if requested, the classifier objects to run on future test sets.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>features</strong> (<em>astropy.table.Table</em><em> or </em><em>array</em>) – Features either in the form of a table or array</li>
+<li><strong>types</strong> (<em>astropy.table.Table</em><em> or </em><em>array</em>) – Classes, either in the form of a table or array</li>
+<li><strong>output_name</strong> (<em>str</em><em>, </em><em>optional</em>) – Full root path and name for output (e.g. ‘&lt;output_path&gt;/salt2-run-‘)</li>
+<li><strong>columns</strong> (<em>list</em><em>, </em><em>optional</em>) – If you want to run a subset of columns</li>
+<li><strong>classifiers</strong> (<em>list</em><em>, </em><em>optional</em>) – Which available ML classifiers to use</li>
+<li><strong>training_set</strong> (<em>float</em><em> or </em><em>list</em><em>, </em><em>optional</em>) – If a float, this is the fraction of objects that will be used as training set. If a list, it’s assumed these are
+the ID’s of the objects to be used</li>
+<li><strong>param_dict</strong> (<em>dict</em><em>, </em><em>optional</em>) – Use to run different ranges of hyperparameters for the classifiers when optimising</li>
+<li><strong>nprocesses</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of processors for multiprocessing (shared memory only). Each classifier will then be run in parallel.</li>
+<li><strong>scale</strong> (<em>bool</em><em>, </em><em>optional</em>) – Rescale features using sklearn’s preprocessing Scalar class (highly recommended this is True)</li>
+<li><strong>plot_roc_curve</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether or not to plot the ROC curve at the end</li>
+<li><strong>return_classifier</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether or not to return the actual classifier objects (due to the limitations of multiprocessing, this can’t
+be done in parallel at the moment).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">(If return_classifier=True) Dictionary of fitted sklearn Classifier objects</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="parallel.html" class="btn btn-neutral" title="Running on Clusters / in Parallel" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Michelle Lochner, Robert Schuhmann, Jason McEwen, Hiranya Peiris, Rahul Biswas, Ofer Lahav, Johnny Holland, Max Winter.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

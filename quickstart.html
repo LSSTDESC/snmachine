@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="parametric_models" href="pmodels.html" />
+    <link rel="next" title="Running on Clusters / in Parallel" href="parallel.html" />
     <link rel="prev" title="Installation and Setup" href="install.html" /> 
 
   
@@ -91,12 +91,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#unit-tests">Unit tests</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="pmodels.html">parametric_models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="snclassifier.html">snclassifier</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sndata.html">sndata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="snfeatures.html">snfeatures</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tsne_plot.html">tsne_plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="parallel.html">Running on Clusters / in Parallel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="API.html">API</a></li>
 </ul>
 
             
@@ -175,15 +171,15 @@
 <div class="section" id="unit-tests">
 <h2>Unit tests<a class="headerlink" href="#unit-tests" title="Permalink to this headline">¶</a></h2>
 <p>Also, great way to check your installation of snmachine is to run the suite of unit tests. These allow you to check whether the software has been set up correctly and that each step is working properly. Please navigate to the <cite>test</cite> folder to run tests using the syntax,:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytest</span> <span class="o">*.</span><span class="n">py</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">py</span><span class="o">.</span><span class="n">test</span> <span class="o">*.</span><span class="n">py</span>
 </pre></div>
 </div>
 <p>If you would like to run a subset of tests you can run the command,:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytest</span> <span class="o">*.</span><span class="n">py</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;slow&#39;</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">py</span><span class="o">.</span><span class="n">test</span> <span class="o">*.</span><span class="n">py</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;slow&#39;</span>
 </pre></div>
 </div>
 <p>to run the tests that are the most cpu-intensive. Or conversely,:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytest</span> <span class="o">*.</span><span class="n">py</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;not slow&#39;</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">py</span><span class="o">.</span><span class="n">test</span> <span class="o">*.</span><span class="n">py</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;not slow&#39;</span>
 </pre></div>
 </div>
 <p>to run the tests of the basic functionality of <cite>snmachine</cite>.</p>
@@ -198,7 +194,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="pmodels.html" class="btn btn-neutral float-right" title="parametric_models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="parallel.html" class="btn btn-neutral float-right" title="Running on Clusters / in Parallel" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="install.html" class="btn btn-neutral" title="Installation and Setup" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

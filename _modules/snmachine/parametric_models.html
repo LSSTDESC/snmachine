@@ -85,12 +85,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation and Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../pmodels.html">parametric_models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../snclassifier.html">snclassifier</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../sndata.html">sndata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../snfeatures.html">snfeatures</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../tsne_plot.html">tsne_plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../parallel.html">Running on Clusters / in Parallel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../API.html">API</a></li>
 </ul>
 
             
@@ -160,7 +156,7 @@
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<div class="viewcode-block" id="NewlingModel"><a class="viewcode-back" href="../../pmodels.html#snmachine.parametric_models.NewlingModel">[docs]</a><span class="k">class</span> <span class="nc">NewlingModel</span><span class="p">:</span>
+<div class="viewcode-block" id="NewlingModel"><a class="viewcode-back" href="../../API.html#snmachine.parametric_models.NewlingModel">[docs]</a><span class="k">class</span> <span class="nc">NewlingModel</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Parametric model as implemented in Newling et al. (http://arxiv.org/abs/1010.1005)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -217,7 +213,7 @@
         
         <span class="k">return</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">t</span><span class="p">)</span><span class="o">*</span><span class="n">y1</span><span class="o">+</span><span class="n">t</span><span class="o">*</span><span class="n">y2</span><span class="o">+</span><span class="n">t</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">t</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">a</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">t</span><span class="p">)</span><span class="o">+</span><span class="n">b</span><span class="o">*</span><span class="n">t</span><span class="p">)</span>
 
-<div class="viewcode-block" id="NewlingModel.evaluate"><a class="viewcode-back" href="../../pmodels.html#snmachine.parametric_models.NewlingModel.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<div class="viewcode-block" id="NewlingModel.evaluate"><a class="viewcode-back" href="../../API.html#snmachine.parametric_models.NewlingModel.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Evaluate the function at given values of t</span>
 
@@ -255,7 +251,7 @@
         <span class="k">return</span> <span class="n">Ft</span></div></div>
 
 
-<div class="viewcode-block" id="KarpenkaModel"><a class="viewcode-back" href="../../pmodels.html#snmachine.parametric_models.KarpenkaModel">[docs]</a><span class="k">class</span> <span class="nc">KarpenkaModel</span><span class="p">:</span>
+<div class="viewcode-block" id="KarpenkaModel"><a class="viewcode-back" href="../../API.html#snmachine.parametric_models.KarpenkaModel">[docs]</a><span class="k">class</span> <span class="nc">KarpenkaModel</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Parametric model as implemented in Karpenka et al. (http://arxiv.org/abs/1208.1264)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -288,7 +284,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">lower_limit</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">limits</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">upper_limit</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">limits</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
             
-<div class="viewcode-block" id="KarpenkaModel.evaluate"><a class="viewcode-back" href="../../pmodels.html#snmachine.parametric_models.KarpenkaModel.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<div class="viewcode-block" id="KarpenkaModel.evaluate"><a class="viewcode-back" href="../../API.html#snmachine.parametric_models.KarpenkaModel.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Evaluate the function at given values of t</span>
 

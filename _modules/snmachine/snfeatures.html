@@ -85,12 +85,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation and Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../pmodels.html">parametric_models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../snclassifier.html">snclassifier</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../sndata.html">sndata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../snfeatures.html">snfeatures</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../tsne_plot.html">tsne_plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../parallel.html">Running on Clusters / in Parallel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../API.html">API</a></li>
 </ul>
 
             
@@ -761,7 +757,7 @@
         <span class="k">return</span> <span class="kc">None</span>
 
 
-<div class="viewcode-block" id="output_time"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.output_time">[docs]</a><span class="k">def</span> <span class="nf">output_time</span><span class="p">(</span><span class="n">tm</span><span class="p">):</span>
+<div class="viewcode-block" id="output_time"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.output_time">[docs]</a><span class="k">def</span> <span class="nf">output_time</span><span class="p">(</span><span class="n">tm</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Simple function to output the time nicely formatted.</span>
 
@@ -782,7 +778,7 @@
     <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;Time taken is&#39;</span><span class="p">,</span> <span class="n">out</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="get_MAP"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.get_MAP">[docs]</a><span class="k">def</span> <span class="nf">get_MAP</span><span class="p">(</span><span class="n">chain_name</span><span class="p">):</span>
+<div class="viewcode-block" id="get_MAP"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.get_MAP">[docs]</a><span class="k">def</span> <span class="nf">get_MAP</span><span class="p">(</span><span class="n">chain_name</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Read maximum posterior parameters from a stats file of multinest.</span>
 
@@ -805,7 +801,7 @@
     <span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">:]]</span>
     <span class="k">return</span> <span class="n">params</span></div>
 
-<div class="viewcode-block" id="Features"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.Features">[docs]</a><span class="k">class</span> <span class="nc">Features</span><span class="p">:</span>
+<div class="viewcode-block" id="Features"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.Features">[docs]</a><span class="k">class</span> <span class="nc">Features</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Base class to define basic functionality for extracting features from supernova datasets. Users are not</span>
 <span class="sd">    restricted to inheriting from this class, but any Features class must contain the functions extract_features</span>
 <span class="sd">    and fit_sn.</span>
@@ -819,7 +815,7 @@
     <span class="k">def</span> <span class="nf">fit_sn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">pass</span>
         
-<div class="viewcode-block" id="Features.goodness_of_fit"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.Features.goodness_of_fit">[docs]</a>    <span class="k">def</span> <span class="nf">goodness_of_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+<div class="viewcode-block" id="Features.goodness_of_fit"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.Features.goodness_of_fit">[docs]</a>    <span class="k">def</span> <span class="nf">goodness_of_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Test (for any feature set) how well the reconstruction from the features fits each of the objects in the dataset.</span>
 
@@ -860,7 +856,7 @@
             
         <span class="k">return</span> <span class="n">rcs</span></div>
 
-<div class="viewcode-block" id="Features.posterior_predictor"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.Features.posterior_predictor">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_predictor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">,</span> <span class="n">nparams</span><span class="p">,</span> <span class="n">chi2</span><span class="p">):</span>
+<div class="viewcode-block" id="Features.posterior_predictor"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.Features.posterior_predictor">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_predictor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">,</span> <span class="n">nparams</span><span class="p">,</span> <span class="n">chi2</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Computes posterior predictive p-value to see if the model fits sufficient well.</span>
 <span class="sd">        ***UNTESTED***</span>
@@ -901,7 +897,7 @@
             <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;Model fit unsatisfactory, p value=&#39;</span><span class="p">,</span> <span class="n">p_value</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">p_value</span></div>
     
-<div class="viewcode-block" id="Features.convert_astropy_array"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.Features.convert_astropy_array">[docs]</a>    <span class="k">def</span> <span class="nf">convert_astropy_array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tab</span><span class="p">):</span>
+<div class="viewcode-block" id="Features.convert_astropy_array"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.Features.convert_astropy_array">[docs]</a>    <span class="k">def</span> <span class="nf">convert_astropy_array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tab</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Convenience function to convert an astropy table (floats only) into a numpy array.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -909,7 +905,7 @@
         <span class="k">return</span> <span class="n">out_array</span></div></div>
 
         
-<div class="viewcode-block" id="TemplateFeatures"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.TemplateFeatures">[docs]</a><span class="k">class</span> <span class="nc">TemplateFeatures</span><span class="p">(</span><span class="n">Features</span><span class="p">):</span>
+<div class="viewcode-block" id="TemplateFeatures"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.TemplateFeatures">[docs]</a><span class="k">class</span> <span class="nc">TemplateFeatures</span><span class="p">(</span><span class="n">Features</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calls sncosmo to fit a variety of templates to the data. The number of features will depend on the templates </span>
 <span class="sd">    chosen (e.g. salt2, nugent2p etc.)</span>
@@ -958,7 +954,7 @@
                     <span class="s1">&#39;nugent-sn2l&#39;</span><span class="p">:{</span><span class="s1">&#39;z&#39;</span><span class="p">:(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">)},</span> 
                     <span class="s1">&#39;nugent-sn1bc&#39;</span><span class="p">:{</span><span class="s1">&#39;z&#39;</span><span class="p">:(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">)}}</span>
         
-<div class="viewcode-block" id="TemplateFeatures.extract_features"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.TemplateFeatures.extract_features">[docs]</a>    <span class="k">def</span> <span class="nf">extract_features</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">save_chains</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">chain_directory</span><span class="o">=</span><span class="s1">&#39;chains&#39;</span><span class="p">,</span> <span class="n">use_redshift</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nprocesses</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">restart</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">seed</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="TemplateFeatures.extract_features"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.TemplateFeatures.extract_features">[docs]</a>    <span class="k">def</span> <span class="nf">extract_features</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">save_chains</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">chain_directory</span><span class="o">=</span><span class="s1">&#39;chains&#39;</span><span class="p">,</span> <span class="n">use_redshift</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nprocesses</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">restart</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">seed</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Extract template features for a dataset.</span>
 
@@ -1079,7 +1075,7 @@
         <span class="k">return</span> <span class="n">all_output</span></div>
         
         
-<div class="viewcode-block" id="TemplateFeatures.fit_sn"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.TemplateFeatures.fit_sn">[docs]</a>    <span class="k">def</span> <span class="nf">fit_sn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">,</span> <span class="n">features</span><span class="p">):</span>
+<div class="viewcode-block" id="TemplateFeatures.fit_sn"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.TemplateFeatures.fit_sn">[docs]</a>    <span class="k">def</span> <span class="nf">fit_sn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">,</span> <span class="n">features</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fits the chosen template model to a given light curve.</span>
 
@@ -1130,7 +1126,7 @@
             <span class="n">output</span><span class="o">=</span><span class="n">vstack</span><span class="p">((</span><span class="n">output</span><span class="p">,</span> <span class="n">newtable</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">output</span></div>
 
-<div class="viewcode-block" id="TemplateFeatures.registerBands"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.TemplateFeatures.registerBands">[docs]</a>    <span class="k">def</span> <span class="nf">registerBands</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="TemplateFeatures.registerBands"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.TemplateFeatures.registerBands">[docs]</a>    <span class="k">def</span> <span class="nf">registerBands</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Register LSST bandpasses with sncosmo.</span>
 <span class="sd">           Courtesy of Rahul Biswas&quot;&quot;&quot;</span>
         <span class="n">bands</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">]</span>
@@ -1140,7 +1136,7 @@
             <span class="n">bp</span> <span class="o">=</span> <span class="n">sncosmo</span><span class="o">.</span><span class="n">Bandpass</span><span class="p">(</span><span class="n">wave</span><span class="o">=</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">trans</span><span class="o">=</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;lsst&#39;</span><span class="o">+</span><span class="n">band</span><span class="p">)</span>
             <span class="n">sncosmo</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">bp</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div></div>
             
-<div class="viewcode-block" id="ParametricFeatures"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.ParametricFeatures">[docs]</a><span class="k">class</span> <span class="nc">ParametricFeatures</span><span class="p">(</span><span class="n">Features</span><span class="p">):</span>
+<div class="viewcode-block" id="ParametricFeatures"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.ParametricFeatures">[docs]</a><span class="k">class</span> <span class="nc">ParametricFeatures</span><span class="p">(</span><span class="n">Features</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Fits a few options of generalised, parametric models to the data.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1186,7 +1182,7 @@
 
 
 
-<div class="viewcode-block" id="ParametricFeatures.extract_features"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.ParametricFeatures.extract_features">[docs]</a>    <span class="k">def</span> <span class="nf">extract_features</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">chain_directory</span><span class="o">=</span><span class="s1">&#39;chains&#39;</span><span class="p">,</span> <span class="n">save_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_attempts</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">nprocesses</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_walkers</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> 
+<div class="viewcode-block" id="ParametricFeatures.extract_features"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.ParametricFeatures.extract_features">[docs]</a>    <span class="k">def</span> <span class="nf">extract_features</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">chain_directory</span><span class="o">=</span><span class="s1">&#39;chains&#39;</span><span class="p">,</span> <span class="n">save_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_attempts</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">nprocesses</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_walkers</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> 
     <span class="n">n_steps</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">walker_spread</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">burn</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">nlp</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">starting_point</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">convert_to_binary</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">restart</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">seed</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit parametric models and return best-fitting parameters as features.</span>
@@ -1287,7 +1283,7 @@
         <span class="k">return</span> <span class="n">output</span></div>
         
         
-<div class="viewcode-block" id="ParametricFeatures.fit_sn"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.ParametricFeatures.fit_sn">[docs]</a>    <span class="k">def</span> <span class="nf">fit_sn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">,</span> <span class="n">features</span><span class="p">):</span>
+<div class="viewcode-block" id="ParametricFeatures.fit_sn"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.ParametricFeatures.fit_sn">[docs]</a>    <span class="k">def</span> <span class="nf">fit_sn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">,</span> <span class="n">features</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fits the chosen parametric model to a given light curve.</span>
 
@@ -1330,7 +1326,7 @@
         
 
         
-<div class="viewcode-block" id="ParametricFeatures.run_emcee"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.ParametricFeatures.run_emcee">[docs]</a>    <span class="k">def</span> <span class="nf">run_emcee</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">save_output</span><span class="p">,</span> <span class="n">chain_directory</span><span class="p">,</span>  <span class="n">n_walkers</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">walker_spread</span><span class="p">,</span> <span class="n">burn</span><span class="p">,</span> <span class="n">starting_point</span><span class="p">,</span> <span class="n">seed</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="ParametricFeatures.run_emcee"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.ParametricFeatures.run_emcee">[docs]</a>    <span class="k">def</span> <span class="nf">run_emcee</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">save_output</span><span class="p">,</span> <span class="n">chain_directory</span><span class="p">,</span>  <span class="n">n_walkers</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">walker_spread</span><span class="p">,</span> <span class="n">burn</span><span class="p">,</span> <span class="n">starting_point</span><span class="p">,</span> <span class="n">seed</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Runs emcee on all the filter bands of a given light curve, fitting the model to each one and extracting the best fitting parameters.</span>
 
@@ -1430,7 +1426,7 @@
         <span class="k">return</span> <span class="n">output</span></div>
     
 
-<div class="viewcode-block" id="ParametricFeatures.lnprob_emcee"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.ParametricFeatures.lnprob_emcee">[docs]</a>    <span class="k">def</span> <span class="nf">lnprob_emcee</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">yerr</span><span class="p">):</span>
+<div class="viewcode-block" id="ParametricFeatures.lnprob_emcee"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.ParametricFeatures.lnprob_emcee">[docs]</a>    <span class="k">def</span> <span class="nf">lnprob_emcee</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">yerr</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Likelihood function for emcee</span>
 
@@ -1454,7 +1450,7 @@
             <span class="k">return</span> <span class="o">-</span><span class="n">chi2</span><span class="o">/</span><span class="mf">2.</span></div></div>
         
         
-<div class="viewcode-block" id="WaveletFeatures"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures">[docs]</a><span class="k">class</span> <span class="nc">WaveletFeatures</span><span class="p">(</span><span class="n">Features</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures">[docs]</a><span class="k">class</span> <span class="nc">WaveletFeatures</span><span class="p">(</span><span class="n">Features</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Uses wavelets to decompose the data and then reduces dimensionality of the feature space using PCA.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1491,7 +1487,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">mlev</span><span class="o">=</span><span class="n">pywt</span><span class="o">.</span><span class="n">swt_max_level</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ngp</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="WaveletFeatures.extract_features"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.extract_features">[docs]</a>    <span class="k">def</span> <span class="nf">extract_features</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">initheta</span><span class="o">=</span><span class="p">[</span><span class="mi">500</span><span class="p">,</span> <span class="mi">20</span><span class="p">],</span> <span class="n">save_output</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span><span class="n">output_root</span><span class="o">=</span><span class="s1">&#39;features&#39;</span><span class="p">,</span> <span class="n">nprocesses</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">restart</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">gpalgo</span><span class="o">=</span><span class="s1">&#39;george&#39;</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.extract_features"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.extract_features">[docs]</a>    <span class="k">def</span> <span class="nf">extract_features</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">initheta</span><span class="o">=</span><span class="p">[</span><span class="mi">500</span><span class="p">,</span> <span class="mi">20</span><span class="p">],</span> <span class="n">save_output</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span><span class="n">output_root</span><span class="o">=</span><span class="s1">&#39;features&#39;</span><span class="p">,</span> <span class="n">nprocesses</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">restart</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">gpalgo</span><span class="o">=</span><span class="s1">&#39;george&#39;</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.</span>
 
@@ -1545,7 +1541,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span></div>
 
 
-<div class="viewcode-block" id="WaveletFeatures.fit_sn"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.fit_sn">[docs]</a>    <span class="k">def</span> <span class="nf">fit_sn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">,</span> <span class="n">comps</span><span class="p">,</span> <span class="n">vec</span><span class="p">,</span>  <span class="n">mn</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">filter_set</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.fit_sn"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.fit_sn">[docs]</a>    <span class="k">def</span> <span class="nf">fit_sn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">,</span> <span class="n">comps</span><span class="p">,</span> <span class="n">vec</span><span class="p">,</span>  <span class="n">mn</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">filter_set</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fits a single object using previously run PCA components. Performs the full inverse wavelet transform.</span>
 
@@ -1604,7 +1600,7 @@
         <span class="k">return</span> <span class="n">output</span></div>
 
 
-<div class="viewcode-block" id="WaveletFeatures.restart_from_gp"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.restart_from_gp">[docs]</a>    <span class="k">def</span> <span class="nf">restart_from_gp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">output_root</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.restart_from_gp"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.restart_from_gp">[docs]</a>    <span class="k">def</span> <span class="nf">restart_from_gp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">output_root</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Allows the restarted of the feature extraction process from previously saved Gaussian Process curves.</span>
 
@@ -1625,7 +1621,7 @@
             <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
                 <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;IOError, file &#39;</span><span class="p">,</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;does not exist.&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="WaveletFeatures.restart_from_wavelets"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.restart_from_wavelets">[docs]</a>    <span class="k">def</span> <span class="nf">restart_from_wavelets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">output_root</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.restart_from_wavelets"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.restart_from_wavelets">[docs]</a>    <span class="k">def</span> <span class="nf">restart_from_wavelets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">output_root</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Allows the restarted of the feature extraction process from previously saved wavelet decompositions. This</span>
 <span class="sd">        allows you to quickly try different dimensionality reduction (e.g. PCA) algorithms on the wavelets.</span>
@@ -1671,7 +1667,7 @@
 
         <span class="k">return</span> <span class="n">wavout</span><span class="p">,</span> <span class="n">wavout_err</span></div>
 
-<div class="viewcode-block" id="WaveletFeatures.extract_GP"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.extract_GP">[docs]</a>    <span class="k">def</span> <span class="nf">extract_GP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">ngp</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">initheta</span><span class="p">,</span> <span class="n">save_output</span><span class="p">,</span>  <span class="n">output_root</span><span class="p">,</span> <span class="n">nprocesses</span><span class="p">,</span> <span class="n">gpalgo</span><span class="o">=</span><span class="s1">&#39;george&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.extract_GP"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.extract_GP">[docs]</a>    <span class="k">def</span> <span class="nf">extract_GP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">ngp</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">initheta</span><span class="p">,</span> <span class="n">save_output</span><span class="p">,</span>  <span class="n">output_root</span><span class="p">,</span> <span class="n">nprocesses</span><span class="p">,</span> <span class="n">gpalgo</span><span class="o">=</span><span class="s1">&#39;george&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.</span>
 
@@ -1717,7 +1713,7 @@
 
         <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;Time taken for Gaussian process regression&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t1</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="WaveletFeatures.GP"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.GP">[docs]</a>    <span class="k">def</span> <span class="nf">GP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">ngp</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="mi">170</span><span class="p">,</span> <span class="n">initheta</span><span class="o">=</span><span class="p">[</span><span class="mi">500</span><span class="p">,</span> <span class="mi">20</span><span class="p">],</span> <span class="n">gpalgo</span><span class="o">=</span><span class="s1">&#39;george&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.GP"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.GP">[docs]</a>    <span class="k">def</span> <span class="nf">GP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">ngp</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="mi">170</span><span class="p">,</span> <span class="n">initheta</span><span class="o">=</span><span class="p">[</span><span class="mi">500</span><span class="p">,</span> <span class="mi">20</span><span class="p">],</span> <span class="n">gpalgo</span><span class="o">=</span><span class="s1">&#39;george&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit a Gaussian process curve at specific evenly spaced points along a light curve.</span>
 
@@ -1749,7 +1745,7 @@
         <span class="k">return</span> <span class="n">_GP</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">ngp</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">initheta</span><span class="p">,</span> <span class="n">gpalgo</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="WaveletFeatures.wavelet_decomp"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.wavelet_decomp">[docs]</a>    <span class="k">def</span> <span class="nf">wavelet_decomp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">,</span> <span class="n">wav</span><span class="p">,</span> <span class="n">mlev</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.wavelet_decomp"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.wavelet_decomp">[docs]</a>    <span class="k">def</span> <span class="nf">wavelet_decomp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lc</span><span class="p">,</span> <span class="n">wav</span><span class="p">,</span> <span class="n">mlev</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Perform a wavelet decomposition on a single light curve.</span>
 
@@ -1804,7 +1800,7 @@
 
         <span class="k">return</span> <span class="n">output</span></div>
 
-<div class="viewcode-block" id="WaveletFeatures.extract_wavelets"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.extract_wavelets">[docs]</a>    <span class="k">def</span> <span class="nf">extract_wavelets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">wav</span><span class="p">,</span> <span class="n">mlev</span><span class="p">,</span> <span class="n">nprocesses</span><span class="p">,</span> <span class="n">save_output</span><span class="p">,</span> <span class="n">output_root</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.extract_wavelets"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.extract_wavelets">[docs]</a>    <span class="k">def</span> <span class="nf">extract_wavelets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">wav</span><span class="p">,</span> <span class="n">mlev</span><span class="p">,</span> <span class="n">nprocesses</span><span class="p">,</span> <span class="n">save_output</span><span class="p">,</span> <span class="n">output_root</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Perform wavelet decomposition on all objects in dataset. Output is stored as astropy table for each object.</span>
 
@@ -1861,7 +1857,7 @@
         <span class="k">return</span> <span class="n">wavout</span><span class="p">,</span> <span class="n">wavout_err</span></div>
 
 
-<div class="viewcode-block" id="WaveletFeatures.pca"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.pca">[docs]</a>    <span class="k">def</span> <span class="nf">pca</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.pca"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.pca">[docs]</a>    <span class="k">def</span> <span class="nf">pca</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Performs PCA decomposition of a feature array X.</span>
 
@@ -1905,7 +1901,7 @@
         <span class="n">inds</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">vals</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">vals</span><span class="p">[</span><span class="n">inds</span><span class="p">],</span> <span class="n">vec</span><span class="p">[:,</span> <span class="n">inds</span><span class="p">],</span> <span class="n">mn</span></div>
 
-<div class="viewcode-block" id="WaveletFeatures.best_coeffs"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.best_coeffs">[docs]</a>    <span class="k">def</span> <span class="nf">best_coeffs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vals</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.98</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.best_coeffs"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.best_coeffs">[docs]</a>    <span class="k">def</span> <span class="nf">best_coeffs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vals</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.98</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Determine the minimum number of PCA components required to adequately describe the dataset.</span>
 
@@ -1933,7 +1929,7 @@
         <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;No dimensionality reduction achieved. All components of the PCA are required.&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="o">-</span><span class="mi">1</span></div>
 
-<div class="viewcode-block" id="WaveletFeatures.project_pca"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.project_pca">[docs]</a>    <span class="k">def</span> <span class="nf">project_pca</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">eig_vec</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.project_pca"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.project_pca">[docs]</a>    <span class="k">def</span> <span class="nf">project_pca</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">eig_vec</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Project a vector onto a PCA axis (i.e. transform data to PCA space).</span>
 
@@ -1955,7 +1951,7 @@
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">A</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="WaveletFeatures.extract_pca"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.extract_pca">[docs]</a>    <span class="k">def</span> <span class="nf">extract_pca</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">object_names</span><span class="p">,</span>  <span class="n">wavout</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.extract_pca"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.extract_pca">[docs]</a>    <span class="k">def</span> <span class="nf">extract_pca</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">object_names</span><span class="p">,</span>  <span class="n">wavout</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Dimensionality reduction of wavelet coefficients using PCA.</span>
 
@@ -2003,7 +1999,7 @@
         <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;Time for PCA&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t1</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">wavs</span><span class="p">,</span><span class="n">vals</span><span class="p">,</span><span class="n">vec</span><span class="p">,</span><span class="n">mn</span></div>
 
-<div class="viewcode-block" id="WaveletFeatures.iswt"><a class="viewcode-back" href="../../snfeatures.html#snmachine.snfeatures.WaveletFeatures.iswt">[docs]</a>    <span class="k">def</span> <span class="nf">iswt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">,</span> <span class="n">wavelet</span><span class="p">):</span>
+<div class="viewcode-block" id="WaveletFeatures.iswt"><a class="viewcode-back" href="../../API.html#snmachine.snfeatures.WaveletFeatures.iswt">[docs]</a>    <span class="k">def</span> <span class="nf">iswt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">,</span> <span class="n">wavelet</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Performs inverse wavelet transform.</span>
 <span class="sd">        M. G. Marino to complement pyWavelets&#39; swt.</span>
