@@ -601,7 +601,7 @@ class Dataset(EmptyDataset):
     
 
 
-class OpsimDataset(Dataset):
+class OpsimDataset(EmptyDataset):
     """
     Class to read in an LSST simulated dataset, based on OpSim runs and SNANA simulations.
     """
@@ -719,7 +719,7 @@ class OpsimDataset(Dataset):
         return tab_new
         
 
-class SDSS_Data(Dataset):    
+class SDSS_Data(EmptyDataset):    
     """
     Class to read in the SDSS supernovae dataset
     """
@@ -1056,7 +1056,7 @@ class SDSS_Data(Dataset):
 
         return tab
     
-class SDSS_Simulations(Dataset):
+class SDSS_Simulations(EmptyDataset):
     """
     Class to read in the SDSS simulations dataset
     """
