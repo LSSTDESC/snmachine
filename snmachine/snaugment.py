@@ -28,7 +28,7 @@ class SNAugment:
         self.meta={}#This can contain any metadata that the augmentation 
                     #process produces, and we want to keep track of.
         self.algorithm=None
-        self.original=d.get_object_names()#this is a list of object names that
+        self.original=d.object_names.copy()#this is a list of object names that
                                           #were in the data set prior to 
                                           #augmenting. 
                                           #DO NOT TOUCH FOR SELFISH PURPOSES
@@ -90,14 +90,14 @@ class GPAugment(SNAugment):
         self.meta['trained_gp']={}
         self.algorithm='GP augmentation'
         if templates is None:
-            self.templates=d.object_names
+            self.templates=d.object_names.copy()
         if cadence_templates is None:
-            self.cadence_templates=d.object_names
+            self.cadence_templates=d.object_names.copy()
 
         self.rng=np.random.RandomState()
         self.random_seed=self.rng.get_state()
 
-        self.original=d.get_object_names()
+        self.original=d.object_names.copy()
 
     def train_filter(self,x,y,yerr,initheta=[100,20]):
         """
@@ -226,6 +226,9 @@ class GPAugment(SNAugment):
 	#Either train a new set of GP on the template obj, or pull from metadata
         if obj_name in self.meta['trained_gp'].keys():
             print('fetching')
+#            print(obj_name)
+#            print(self.dataset.filter_set)
+#            print(type(self.dataset.filter_set[0]))
             all_g=self.meta['trained_gp'][obj_name]
         else:
             print('training')
@@ -316,9 +319,8 @@ class GPAugment(SNAugment):
 
 #                    cadence=self.extract_cadence(thiscadence_template)
 #                    new_name='augm_t%d_%d_'%(t,i) + thistemplate + '_' + thiscadence_template + '.DAT'
-                    new_name='augm_t%d_%d_'%(t,i) + thistemplate + '_.DAT'
+                    new_name='augm_t%d_%d_'%(t,i) + thistemplate# + '.DAT'
                     new_lightcurve=self.produce_new_lc(obj=thistemplate,name=new_name)#,cadence=cadence)
-
                     self.dataset.insert_lightcurve(new_lightcurve)
                     newobjects=np.append(newobjects,new_name)
         return newobjects

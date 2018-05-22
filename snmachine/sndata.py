@@ -118,9 +118,9 @@ class EmptyDataset:
         self.object_names=np.append(self.object_names,name)
         self.data[name]=lc
         for flt in np.unique(lc['filter']):
-            if not flt in self.filter_set:
-                print('Adding filter '+flt+' ...')
-                self.filter_set.append(flt)
+            if not str(flt) in self.filter_set:
+                print('Adding filter '+str(flt)+' ...')
+                self.filter_set.append(str(flt))
 
     def __plot_this(self, fname, title=True, loc='best'):
         """
