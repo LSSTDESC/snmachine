@@ -249,14 +249,14 @@ class GPAugment(SNAugment):
         else:
             newz=obj_table.meta['z']
         new_lc_meta={'name':name,'z':newz,'type':obj_table.meta['type'], 'template': obj_name, 'augment_algo': self.algorithm}
-        new_lc=Table(names=['mjd','filter','flux','flux_error'],dtype=['f','S64','f','f'],meta=new_lc_meta)
+        new_lc=Table(names=['mjd','filter','flux','flux_error'],dtype=['f','U','f','f'],meta=new_lc_meta)
         for f in self.dataset.filter_set:
             obj_f=obj_table[obj_table['filter']==f]
             y=obj_f['flux']
             yerr=obj_f['flux_error']
             flux,fluxerr=self.sample_cadence_filter(all_g[f],cadence_dict[f],y,yerr,add_measurement_noise=add_measurement_noise)
-            filter_col=[f]*len(cadence_dict[f])
-            dummy_table=Table((cadence_dict[f],filter_col,flux,fluxerr),names=['mjd','filter','flux','flux_error'],dtype=['f','S64','f','f'])
+            filter_col=[str(f)]*len(cadence_dict[f])
+            dummy_table=Table((cadence_dict[f],filter_col,flux,fluxerr),names=['mjd','filter','flux','flux_error'],dtype=['f','U','f','f'])
             new_lc=vstack([new_lc,dummy_table])
 
 	#Sort by cadence, for cosmetics
@@ -304,15 +304,18 @@ class GPAugment(SNAugment):
             newnumbers[t]=numbers[t]-thistype_oldnumbers
             thistype_templates=[dataset_types['Object'][i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.templates and dataset_types['Type'][i]==t]
 
+
             if newnumbers[t]<0:
                 print('There are already %d objects of type %d in the original data set, cannot augment to %d!'%(thistype_oldnumbers,t,numbers[t]))
                 continue
             elif newnumbers[t]==0:
                 continue
             else:
+#                print('now dealing with type: '+str(t))
+#                print('templates: '+str(thistype_templates))
                 for i in range(newnumbers[t]):
                     #pick random template
-                    thistemplate=self.templates[self.rng.randint(0,len(self.templates))]
+                    thistemplate=thistype_templates[self.rng.randint(0,len(thistype_templates))]
                     #pick random cadence
 #                    thiscadence_template=self.cadence_templates[self.rng.randint(0,len(self.cadence_templates))]
 #                    thiscadence_template=thistemplate
@@ -322,6 +325,7 @@ class GPAugment(SNAugment):
                     new_name='augm_t%d_%d_'%(t,i) + thistemplate# + '.DAT'
                     new_lightcurve=self.produce_new_lc(obj=thistemplate,name=new_name)#,cadence=cadence)
                     self.dataset.insert_lightcurve(new_lightcurve)
+#                    print('types: '+str(new_lightcurve.meta['type'])+' '+str(self.dataset.data[thistemplate].meta['type']))
                     newobjects=np.append(newobjects,new_name)
         return newobjects
 
