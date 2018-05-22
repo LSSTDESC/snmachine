@@ -20,7 +20,7 @@ class SNAugment:
 
         Parameters: (why would you call this constructor in the first place?)
         ----------
-        d: sndata object
+        d : sndata object
             the supernova data set we want to augment
 
         """
@@ -44,7 +44,7 @@ class SNAugment:
 
         Parameters:
         ----------
-        obj: list of strings
+        obj : list of strings
             These are the objects we will remove. If None is given, then we
             remove all augmented objects that have not been in the data set
             when we created the SNAugment object.
@@ -73,14 +73,14 @@ class GPAugment(SNAugment):
 
         Parameters:
         ----------
-        d: sndata object
+        d : sndata object
             the supernova data set we want to augment
-        templates: list of strings
+        templates : list of strings
             If the templates argument is given (as a list of object names
              that are in the data set), then the augmentation step will take 
             these light curves to train the GPs on. If not, then every object 
             in the data set is considered fair game.
-        cadence_templates: list of strings
+        cadence_templates : list of strings
             If given, the augmentation will sample the cadence for the new light
             curves from these objects. If not, every object is fair game.
         """
@@ -106,19 +106,19 @@ class GPAugment(SNAugment):
 
         Parameters:
         -----------
-        x: numpy array
+        x : numpy array
             mjd values for the cadence
-        y: numpy array
+        y : numpy array
             flux values
-        yerr: numpy array
+        yerr : numpy array
             errors on the flux
-        initheta: list, optional
+        initheta : list, optional
             initial values for the hyperparameters. They should roughly correspond to the
             spread in y and x direction.
 
         Returns:
         -------
-        g: george.GP
+        g : george.GP
             the trained GP object
         """
         def nll(p):
@@ -146,18 +146,18 @@ class GPAugment(SNAugment):
 
         Parameters:
         -----------
-        g: george.GP
+        g : george.GP
             the trained Gaussian process object
-        cadence: numpy.array
+        cadence : numpy.array
             the cadence of mjd values.
-        y: numpy array
+        y : numpy array
             the flux values of the data that the GP has been trained on.
 
         Returns:
         --------
-        flux: numpy array
+        flux : numpy array
             flux values for the new sample
-        fluxerr: numpy array
+        fluxerr : numpy array
             error bars on the flux for the new sample
         """
         if len(cadence)==0:
@@ -180,17 +180,17 @@ class GPAugment(SNAugment):
 
         Parameters:
         -----------
-        obj: str or astropy.table.Table
+        obj : str or astropy.table.Table
            the object (or name thereof) that we use as a template to train the GP on.
-        cadence: str or dict of type {string:numpy.array}, optional.
+        cadence : str or dict of type {string:numpy.array}, optional.
            the cadence for the new light curve, defined either by object name or by {filter:mjds}. If none is given, 
            then we pull the cadence of the template.
-        savegp: bool, optional
+        savegp : bool, optional
            Do we save the trained GP in self.meta? This results in a speedup, but costs memory.
-        samplez: bool, optional
+        samplez : bool, optional
            Do we give the new light curve a random redshift value drawn from a Gaussian of location
            and width defined by the template? If not, we just take the value of the template.
-        name: str, optional
+        name : str, optional
            object name of the new light curve. 
 
         Returns:
@@ -269,12 +269,12 @@ class GPAugment(SNAugment):
 
         Parameters:
         -----------
-        obj: str or astropy.table.Table
+        obj : str or astropy.table.Table
             (name of) the object
 
         Returns:
         --------
-        cadence: dict of type {str:numpy.array}
+        cadence : dict of type {str:numpy.array}
             the cadence, in the format {filter1:mjd1, filter2:mjd2, ...}
         """
         if type(obj) in [str, np.str_]:
@@ -288,12 +288,27 @@ class GPAugment(SNAugment):
         cadence={flt:np.array(table[table['filter']==flt]['mjd']) for flt in self.dataset.filter_set}
         return cadence
 
-    def augment(self, numbers):
+    def augment(self, numbers, return_names=False, **kwargs):
         """
-        HIC SUNT DRACONES
+        High-level wrapper of GP augmentation: The dataset will be augmented to the numbers by type. 
+        Parameters:
+        ----------
+        numbers : dict of type int:int
+            The numbers to which the data set will be augmented, by type. Keys are the types, 
+            values are the numbers of light curves pertaining to a type after augmentation.
+            Types that do not appear in this dict will not be touched.
+        return_names : bool
+            If True, we return a list of names of the objects that have been added into the data set
+        kwargs :
+            Additional arguments that will be handed verbatim to produce_new_lc. Interesting choices
+            include savegp=False and samplez=True
+        Returns:
+        --------
+        newobjects : list of str
+            The new object names that have been created by augmentation.
         """
         dataset_types=self.dataset.get_types()
-        dataset_types['Type'][dataset_types['Type']>10]=dataset_types['Type'][dataset_types['Type']>10]//10
+        dataset_types['Type'][dataset_types['Type']>10]=dataset_types['Type'][dataset_types['Type']>10]//10#NB: this is specific to a particular remapping of indices!!
 
         types=np.unique(dataset_types['Type'])
 
@@ -323,7 +338,7 @@ class GPAugment(SNAugment):
 #                    cadence=self.extract_cadence(thiscadence_template)
 #                    new_name='augm_t%d_%d_'%(t,i) + thistemplate + '_' + thiscadence_template + '.DAT'
                     new_name='augm_t%d_%d_'%(t,i) + thistemplate# + '.DAT'
-                    new_lightcurve=self.produce_new_lc(obj=thistemplate,name=new_name)#,cadence=cadence)
+                    new_lightcurve=self.produce_new_lc(obj=thistemplate,name=new_name,**kwargs)#,cadence=cadence)
                     self.dataset.insert_lightcurve(new_lightcurve)
 #                    print('types: '+str(new_lightcurve.meta['type'])+' '+str(self.dataset.data[thistemplate].meta['type']))
                     newobjects=np.append(newobjects,new_name)
