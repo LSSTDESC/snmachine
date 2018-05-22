@@ -107,13 +107,36 @@ class EmptyDataset:
         self.models={}
 
     def set_filters(self, filter_set):
+        """
+        Setting the filter set of an empty data set
+        Parameters
+        ----------
+        filter_set : array of str
+            filters to be added
+        """
         self.filter_set=filter_set
 
     def set_rootdir(folder):
+        """
+        Setting the root directory containing light curves
+        Parameters
+        ----------
+        folder : str
+            name of the folder
+        """
         self.rootdir=folder
         self.survey_name=folder.splot(os.path.sep)[-2]
 
     def insert_lightcurve(self, lc):
+        """
+        Wraps the insertion of a new light curve into a data set. Also includes
+        the new object names and possibly new filters into the data set metadata.
+        The new object name needs to be in the header.
+        Parameters
+        ----------
+        lc : astropy.table.Table
+            new light curve
+        """
         name=lc.meta['name']
         self.object_names=np.append(self.object_names,name)
         self.data[name]=lc
@@ -246,10 +269,11 @@ class EmptyDataset:
         #subplots_adjust(right=0.95, top=0.95)
         plt.show()
       
-    def save_to_folder(self, outpath, overwrite=True):
+    def save_to_folder(self, outpath, overwrite=True, listname=None):
         """
-        Saves the light curves in one data set to a folder, including one '.LIST' file with all object names.
-        The format is the sncosmo standard, including a header for the metadata
+        Saves the light curves in one data set to a folder, including one '.LIST' file with all object names
+        (the name can be changed if desired). The light curve format is the sncosmo standard, including a 
+        header for the metadata
 
         Parameters
         ----------
@@ -257,6 +281,8 @@ class EmptyDataset:
             Path to folder that the light curve files will be saved to. If not existent, it will be created.
         overwrite : bool, optional
 	    If the files already exist, do we overwrite them?
+        listname : str
+            Hand this argument to this routine if you want the list to be stored under a different name
            
         """
 
@@ -267,8 +293,10 @@ class EmptyDataset:
             os.makedirs(outpath)
 
         foldername=outpath.split(os.path.sep)[-2]#the folder name will be the second to last item in the list
-
-        object_list_path=os.path.join(outpath,(outpath.split(os.path.sep)[-2]+'.LIST'))
+        if listname==None:
+            object_list_path=os.path.join(outpath,(outpath.split(os.path.sep)[-2]+'.LIST'))
+        else:
+            object_list_path=os.path.join(outpath,listname)
         if overwrite or not os.path.exists(object_list_path):
             np.savetxt(object_list_path,self.object_names,fmt='%s')
         for obj in self.object_names:
