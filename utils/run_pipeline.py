@@ -57,11 +57,10 @@ if dataset=='des':
 
         if 'redshift' in sys.argv:
             use_redshift=True
-            run_name='des_z'
+            run_name='des_z_augment'
         else:
             use_redshift=False
-            run_name='des_no_z'
-
+            run_name='des_no_z_augment'
         if 'non-repr' in sys.argv:
             train_choice='non-repr'
             repr=False
@@ -242,18 +241,26 @@ if dataset=='des':
     #Root directory for simulated data. Replace with your own path.
     #Note: the use of os.path.join means you don't have to worry about operating system-specific things like which way the slashes go
     if laptop:
-        rt=os.path.join(os.path.sep, 'home', 'robert', 'data_sets', 'sne', 'spcc', 'SIMGEN_PUBLIC_DES',  '')
+        rt=os.path.join(os.path.sep, 'home', 'robert', 'data_sets', 'sne', 'spcc', 'SIMGEN_PUBLIC_DES_AUGM',  '')
     else:
-        rt=os.path.join(os.path.sep, homedir, 'data_sets', 'sne','des', 'SIMGEN_PUBLIC_DES','')
+        rt=os.path.join(os.path.sep, homedir, 'data_sets', 'sne', 'des', 'SIMGEN_PUBLIC_DES_AUGM', '')
+        # rt=os.path.join(os.path.sep, 'home', 'roberts','data_sets', 'sne','des', 'SIMGEN_PUBLIC_DES_AUGM','')
 
     #Subset tells the initialiser to only load a subset of the data, in this case only the spectroscopic data
-    d=sndata.Dataset(rt,subset=subset)
+#    d=sndata.Dataset(rt,subset=subset)
+    d=sndata.EmptyDataset(folder=rt)
+    for obj in subset:
+        lc=sncosmo.read_lc(rt+obj)
+#        print(lc.meta)
+        d.insert_lightcurve(lc)
+#        print('Inserted light curve of object '+str(obj))
 
     #Extract the types for all objects. This is specific to this example
     #types=np.zeros(len(d.object_names),dtype=int)
     #for i in range(len(d.object_names)):
     #    obj=d.object_names[i]
     #    types[i]=d.data[obj].meta['type']
+
 
     types=d.get_types()
 
