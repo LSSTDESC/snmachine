@@ -1,0 +1,21 @@
+dataset: des
+laptop: False
+template_model: Ia
+nproc: 2
+lim: 10000000
+feature_sets:
+- wavelets
+cls:
+- nb
+- boost_dt
+- knn
+- svm
+- random_forest
+use_redshift: False
+sampler: nested
+restart_from_features: True
+restart_from_chains: False
+read_from_output: False
+plot_data: False
+select_training_data: True
+train_choice: non-repr
