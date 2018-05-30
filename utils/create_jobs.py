@@ -114,11 +114,15 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--dataset', help='What dataset is being used',
                         type=str, default='des')
 
+    parser.add_argument('-op', '--path_to_object_list', help='Path to list of'
+                        'objects', type=str,
+                        default=homedir+'/data_sets/sne/des/SIMGEN_PUBLIC_DES/SIMGEN_PUBLIC_DES.LIST')
+
     parser.add_argument('-r', '--redshift', help='Use redshift or not',
                         type=bool, default=False)
 
     parser.add_argument('-t', '--train_choice', help='Representivitie or'
-            'non-Representivitie training data',
+                        'non-Representivitie training data',
                         type=str, default='repr')
 
     parser.add_argument('-n12', '--num12cores', help='Number of 12 cores'
@@ -145,14 +149,18 @@ if __name__ == "__main__":
     subset_name=arguments.dataset+'_subset_%d'
     fullset_name=arguments.dataset+'_fullset'
 
-    if arguments.dataset=='des':
-        survey_name='SIMGEN_PUBLIC_DES'
-        #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-        rootdir=homedir + '/data_sets/sne/des/'+survey_name+'/'
-        if subset=='spectro':
-            objects=np.genfromtxt('DES_spectro.list', dtype='str')
-        else:
-            objects=np.genfromtxt(rootdir+survey_name+'.LIST', dtype='str') #Our list of objects to split up
+    print(arguments.path_to_object_list)
+
+    objects=np.genfromtxt(arguments.path_to_object_list, dtype='str') #Our list of objects to split up
+
+    # if arguments.dataset=='des':
+    #     survey_name='SIMGEN_PUBLIC_DES'
+    #     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
+    #     rootdir=homedir + '/data_sets/sne/des/'+survey_name+'/'
+    #     if subset=='spectro':
+    #         objects=np.genfromtxt('DES_spectro.list', dtype='str')
+    #     else:
+    #         objects=np.genfromtxt(rootdir+survey_name+'.LIST', dtype='str') #Our list of objects to split up
 
      # elif dataset=='sdss':
      #     survey_name='SMP_Data'
