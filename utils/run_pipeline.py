@@ -244,7 +244,7 @@ if dataset=='des':
     if laptop:
         rt=os.path.join(os.path.sep, 'home', 'robert', 'data_sets', 'sne', 'spcc', 'SIMGEN_PUBLIC_DES',  '')
     else:
-        rt=os.path.join(os.path.sep, homedir, 'data_sets', 'sne','des', 'SIMGEN_PUBLIC_DES','')
+        rt=os.path.join(os.path.sep, 'share', 'hypatia', 'snmachine_resources', 'data', 'DES', 'SIMGEN_PUBLIC_DES','')
 
     #Subset tells the initialiser to only load a subset of the data, in this case only the spectroscopic data
     d=sndata.Dataset(rt,subset=subset)
