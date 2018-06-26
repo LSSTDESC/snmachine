@@ -719,6 +719,100 @@ class OpsimDataset(EmptyDataset):
         return tab_new
         
 
+class LSSTCadenceSimulations(OpsimDataset):
+    """
+    Class to read in the SNANA cadence simulations, which are divided into chunks.
+    """
+
+    def __init__(self, folder, subset='none', mix=False, filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty']):
+        """
+        Initialisation.
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located
+        subset : str or list-like, optional
+            List of a subset of object names. If not supplied, the full dataset will be used
+        mix : bool, optional
+            The output of the simulations is often highly ordered, this randomly permutes the objects when they're read in
+        filter_set : list-like, optional
+            Set of possible filters
+        """
+        super().__init__(folder,subset,mix,filter_set)
+
+
+    def get_data(self, folder, subset='none'):
+        """
+        Reads in the simulated data
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located
+        subset : str or list-like, optional
+            List of a subset of object names. If not supplied, the full dataset will be used
+
+        """
+        indices=range(1,21)
+
+        data_Ia=[]
+        data_nIa=[]
+
+        print ('Reading data...')
+        for i in indices:
+            print('chunk %02d'%i)
+            if (not isinstance(subset,basestring)) and (all(isinstance(l,basestring) for l in subset)):
+                #We have to deal with separate Ia and nIa fits files
+                Ia_head=os.path.join(folder,'RH_LSST_WFD_Ia-%02d_HEAD.FITS'%i)
+                nIa_head=os.path.join(folder,'RH_LSST_WFD_NONIa-%02d_HEAD.FITS'%i)
+
+                df = fits.open(Ia_head)[1].data
+                subset=np.char.strip(subset) #If these are read from the header they have to be stripped of white space
+
+                Ia_ids=subset[np.in1d(subset,np.char.strip(df['SNID']))]
+
+                df = fits.open(nIa_head)[1].data
+                nIa_ids=subset[np.in1d(subset,np.char.strip(df['SNID']))]
+
+                thischunk_Ia =  sncosmo.read_snana_fits(Ia_head, os.path.join(folder,'RH_LSST_WFD_Ia-%02d_PHOT.FITS'%i),snids=Ia_ids)
+                thischunk_nIa =  sncosmo.read_snana_fits(nIa_head, os.path.join(folder,'RH_LSST_WFD_NONIa-%02d_PHOT.FITS'%i),snids=nIa_ids)
+            else:
+                thischunk_Ia =  sncosmo.read_snana_fits(os.path.join(folder,'RH_LSST_WFD_Ia-%02d_HEAD.FITS'%i), os.path.join(folder,'RH_LSST_WFD_Ia-%02d_PHOT.FITS'%i))
+                thischunk_nIa =  sncosmo.read_snana_fits(os.path.join(folder,'RH_LSST_WFD_NONIa-%02d_HEAD.FITS'%i), os.path.join(folder,'RH_LSST_WFD_NONIa-%02d_PHOT.FITS'%i))
+
+            data_Ia+=thischunk_Ia
+            data_nIa+=thischunk_nIa
+
+
+        if isinstance(subset,basestring)and subset=='Ia':
+            all_data=data_Ia
+        elif isinstance(subset,basestring) and subset=='nIa':
+            all_data=data_nIa
+        else:
+            all_data=data_Ia+data_nIa
+        self.data={}
+        self.object_names=[]
+
+        invalid=0 #Some objects may have empty data
+
+        for i in range(len(all_data)):
+            snid=all_data[i].meta['SNID']
+            if isinstance(subset,basestring) or ((snid in subset) or (i in subset)):
+                self.object_names.append((str)(snid))
+                lc=self.get_lightcurve(all_data[i])
+                if len(lc['mjd']>0):
+                    self.data[snid]=lc
+                else:
+                    invalid+=1
+        if invalid>0:
+            print ('%d objects were invalid and not added to the dataset.' %invalid)
+        self.object_names=np.array(self.object_names, dtype='str')
+        print ('%d objects read into memory.' %len(self.data))
+
+
+
+
 class SDSS_Data(EmptyDataset):    
     """
     Class to read in the SDSS supernovae dataset
