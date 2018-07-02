@@ -5,6 +5,8 @@ Installation and Setup
 snmachine is now compatible with Python2 and Python3.
 There are two possible ways to set up snmachine:
 
+.. _conda-install:
+
 Using Conda
 ===========
 

@@ -88,9 +88,13 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Running on Clusters / in Parallel</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#snmachine-nersc"><cite>snmachine</cite> &#64; NERSC</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#snmachine-on-nersc"><cite>snmachine</cite> on NERSC</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#setting-up-snmachine-on-jupyter-nersc">Setting up <cite>snmachine</cite> on Jupyter &#64; NERSC</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#running-jobs-nersc">Running jobs &#64; NERSC</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#snmachine-on-hypatia"><cite>snmachine</cite> on Hypatia</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#run-pipeline-instructions-temporary">Run pipeline instructions (temporary)</a></li>
 </ul>
 </li>
 </ul>
@@ -162,11 +166,11 @@
             
   <div class="section" id="running-on-clusters-in-parallel">
 <h1>Running on Clusters / in Parallel<a class="headerlink" href="#running-on-clusters-in-parallel" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="snmachine-nersc">
-<h2><cite>snmachine</cite> &#64; NERSC<a class="headerlink" href="#snmachine-nersc" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="snmachine-on-nersc">
+<h2><cite>snmachine</cite> on NERSC<a class="headerlink" href="#snmachine-on-nersc" title="Permalink to this headline">¶</a></h2>
 <p>To run <cite>snmachine</cite> on NERSC first open an ssh connection to NERSC, set your shell to bash shell, and run the following from the command line:</p>
 <p><code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">PATH=/global/projecta/projectdirs/lsst/groups/SN/miniconda3/bin:$PATH</span></code></p>
-<p>Then to use <cite>snmachine</cite> any time all that is needed is to activate the environment using,:</p>
+<p>Then to use <cite>snmachine</cite> any time all that is needed is to activate the environment using,</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">module</span> <span class="n">load</span> <span class="n">python</span>
 <span class="n">source</span> <span class="n">activate</span> <span class="n">snmachine</span>
 </pre></div>
@@ -178,10 +182,56 @@
 <span class="o">-</span> <span class="o">/</span><span class="k">global</span><span class="o">/</span><span class="n">projecta</span><span class="o">/</span><span class="n">projectdirs</span><span class="o">/</span><span class="n">lsst</span><span class="o">/</span><span class="n">groups</span><span class="o">/</span><span class="n">SN</span><span class="o">/</span><span class="n">miniconda3</span><span class="o">/</span><span class="n">envs</span>
 </pre></div>
 </div>
-<p>or append this to your existing <code class="docutils literal notranslate"><span class="pre">.condarc</span></code> file. Be sure to access Jupyter via the <a class="reference external" href="https://jupyter-dev.nersc.gov/">Jupyter-Dev hub</a> , and not the Jupyter-Hub via ‘MyNERSC’ pages. Then, when prompted or accessing the notebook file, choose the <code class="docutils literal notranslate"><span class="pre">Python</span> <span class="pre">[conda</span> <span class="pre">env:snmachine]`</span></code> kernel. This can be found under Kernel tab in the top menu bar. Now <cite>snmachine</cite> will be accessible through your Jupyter notebook.</p>
+<p>or append this to your existing <code class="docutils literal notranslate"><span class="pre">.condarc</span></code> file. Be sure to access Jupyter via the <a class="reference external" href="https://jupyter-dev.nersc.gov/">Jupyter-Dev hub</a> , and not the Jupyter-Hub via ‘MyNERSC’ pages. Then, when prompted or accessing the notebook file, choose the <code class="docutils literal notranslate"><span class="pre">Python</span> <span class="pre">[conda</span> <span class="pre">env:snmachine]</span></code> kernel. This can be found under Kernel tab in the top menu bar. Now <cite>snmachine</cite> will be accessible through your Jupyter notebook.</p>
 </div>
 <div class="section" id="running-jobs-nersc">
 <h3>Running jobs &#64; NERSC<a class="headerlink" href="#running-jobs-nersc" title="Permalink to this headline">¶</a></h3>
+<p>This will be implmented in the future.</p>
+</div>
+</div>
+<div class="section" id="snmachine-on-hypatia">
+<h2><cite>snmachine</cite> on Hypatia<a class="headerlink" href="#snmachine-on-hypatia" title="Permalink to this headline">¶</a></h2>
+<p>First, login to Hypatia with your credentials via the ssh method.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ssh</span> <span class="n">USERNAME</span><span class="nd">@hypatia</span><span class="o">-</span><span class="n">login</span><span class="o">.</span><span class="n">hpc</span><span class="o">.</span><span class="n">phys</span><span class="o">.</span><span class="n">ucl</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span>
+</pre></div>
+</div>
+<p>If you have not already setup <cite>snmachine</cite>, you will need to clone the <cite>snmachine</cite> repository,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">LSSTDESC</span><span class="o">/</span><span class="n">snmachine</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+<p>and install the package as usual, following steps 2 through 4 in the conda installation guide, <a class="reference internal" href="install.html#conda-install"><span class="std std-ref">Using Conda</span></a>. You should now be setup to run <cite>snmachine</cite> as normal on Hypatia.</p>
+<div class="section" id="run-pipeline-instructions-temporary">
+<h3>Run pipeline instructions (temporary)<a class="headerlink" href="#run-pipeline-instructions-temporary" title="Permalink to this headline">¶</a></h3>
+<p>These instructions are a temporary (as of July 2nd 2018) guide to run the jobs pipeline on Hypatia at UCL.</p>
+<ol class="arabic">
+<li><p class="first">With a working installation of <cite>snmachine</cite> you will first need to switch to the <code class="docutils literal notranslate"><span class="pre">issue/38/refactor-utils-cjonly</span></code> branch and pull the latest commits.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">checkout</span> <span class="n">issue</span><span class="o">/</span><span class="mi">38</span><span class="o">/</span><span class="n">refactor</span><span class="o">-</span><span class="n">utils</span><span class="o">-</span><span class="n">cjonly</span>
+<span class="n">git</span> <span class="n">pull</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Navigate to the <code class="docutils literal notranslate"><span class="pre">snmachine/utils</span></code> folder and execute,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">create_jobs</span><span class="o">.</span><span class="n">py</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<ul>
+<li><p class="first">NOTE: If this fails it is possible that the <code class="docutils literal notranslate"><span class="pre">create_jobs.py</span></code> script did not find the data files specified by default. In order to try again, first, remove the <code class="docutils literal notranslate"><span class="pre">snmachine/utils/jobs</span></code> folder. Then, you can then pass your own list of data through the <code class="docutils literal notranslate"><span class="pre">-op</span></code> argument flag. In doing so you should specify the location to a <code class="docutils literal notranslate"><span class="pre">*.LIST</span></code> file that contains a list of all the objects that you want to run. An example of this is,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">create_jobs</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">op</span> <span class="o">/</span><span class="n">share</span><span class="o">/</span><span class="n">hypatia</span><span class="o">/</span><span class="n">snmachine_resources</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">DES</span><span class="o">/</span><span class="n">SIMGEN_PUBLIC_DES</span><span class="o">/</span><span class="n">SIMGEN_PUBLIC_DES</span><span class="o">.</span><span class="n">LIST</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<ol class="arabic" start="3">
+<li><p class="first">Next navigate to the newly created <code class="docutils literal notranslate"><span class="pre">snmachine/utils/jobs</span></code> folder and execute:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sh</span> <span class="n">run_all</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Your jobs will now be in the queue to execute on the nodes specified in the <code class="docutils literal notranslate"><span class="pre">create_jobs.py</span></code> script. You can monitor their progress through the <code class="docutils literal notranslate"><span class="pre">showq</span></code> and <code class="docutils literal notranslate"><span class="pre">qstat</span></code> shell commands.</p>
+</li>
+</ol>
 </div>
 </div>
 </div>
