@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
     parser.add_argument('-op', '--path_to_object_list', help='Path to list of'
                         'objects', type=str,
-                        default='/share/hypatia/snmachine_resources/data/DES/SIMGEN_PUBLIC_DES/SIMGEN_PUBLIC_DES.LIST')
+                        default='/share/hypatia/snmachine_resources/data/DES_spcc/SIMGEN_PUBLIC_DES/SIMGEN_PUBLIC_DES.LIST')
 
     parser.add_argument('-r', '--redshift', help='Use redshift or not',
                         type=bool, default=False)
@@ -135,6 +135,7 @@ if __name__ == "__main__":
     try:
         arguments = parser.parse_args()
 
+        print(arguments)
         # arguemts.dataset='des'
         subset='none'
         # arguments.train_choice='repr'
@@ -148,10 +149,11 @@ if __name__ == "__main__":
         subset_name=arguments.dataset+'_subset_%d'
         fullset_name=arguments.dataset+'_fullset'
 
-        print(arguments.path_to_object_list)
+        print('path to list of objects ', arguments.path_to_object_list)
 
         objects=np.genfromtxt(arguments.path_to_object_list, dtype='str') #Our list of objects to split up
 
+        print('Done reading the csv to an array\n')
         # if arguments.dataset=='des':
         #     survey_name='SIMGEN_PUBLIC_DES'
         #     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
@@ -181,6 +183,7 @@ if __name__ == "__main__":
 
         nobj=len(objects) #Total number of objects
 
+        print('Now figure out distribution\n')
         #Figure out how many objects go onto cores24 processors and how many on cores12
         proc12=arguments.num12cores*12 #Total number of cores12 processors
         proc24=arguments.num24cores*24
@@ -196,6 +199,8 @@ if __name__ == "__main__":
             obj24=np.array_split(objects[nobj12:], arguments.num24cores)
         else:
             obj24=[]
+
+        print('split files for data parallelization\n')
         #We write each set of objects to file and use it as an argument to run_pipeline.py to find the subset
         for i in range(arguments.num12cores):
             subs=subset_name %i
