@@ -67,7 +67,7 @@ class GPAugment(SNAugment):
     Derived class that encapsulates data augmentation via Gaussian Processes
     """
 
-    def __init__(self, d, stencils=None, cadence_stencils=None):
+    def __init__(self, d, stencils=None, cadence_stencils=None, stencil_weights=None, cadence_stencil_weights=None):
         """
         class constructor. 
 
@@ -83,6 +83,12 @@ class GPAugment(SNAugment):
 	cadence_stencils : list of strings
             If given, the augmentation will sample the cadence for the new light
             curves from these objects. If not, every object is fair game.
+        stencil_weights : np.array or list of float
+            If given, these weights are the probabilities with which the respective
+            stencils will be picked in the augmentation step. If not given, we will
+            use uniform weights.
+        cadence_stencil_weights : np.array or list of float
+            Like stencil_weights, but for the cadence stencils.
         """
 
         self.dataset=d
@@ -91,8 +97,26 @@ class GPAugment(SNAugment):
         self.algorithm='GP augmentation'
         if stencils is None:
             self.stencils=d.object_names.copy()
+        else:
+            self.stencils=stencils
         if cadence_stencils is None:
             self.cadence_stencils=d.object_names.copy()
+        else:
+            self.cadence_stencils=cadence_stencils
+
+        if stencil_weights is not None:
+            assert np.all(stencil_weights >= 0.), 'Stencil weights need to be larger than zero!'
+            stencil_weights=np.array(stencil_weights)
+            self.stencil_weights=stencil_weights/sum(stencil_weights)
+        else:
+            self.stencil_weights=np.ones(len(self.stencils))/len(self.stencils)
+
+        if cadence_stencil_weights is not None:
+            assert np.all(cadence_stencil_weigths >= 0.), 'Cadence stencil weights need to be larger than zero!'
+            cadence_stencil_weights=np.array(cadence_stencil_weights)
+            self.cadence_stencil_weights=cadence_stencil_weights/sum(cadence_stencil_weights)
+        else:
+            self.cadence_stencil_weights=np.ones(len(self.cadence_stencils))/len(self.cadence_stencils)
 
         self.rng=np.random.RandomState()
         self.random_seed=self.rng.get_state()
@@ -318,6 +342,7 @@ class GPAugment(SNAugment):
             thistype_oldnumbers=len(dataset_types['Type'][dataset_types['Type']==t])
             newnumbers[t]=numbers[t]-thistype_oldnumbers
             thistype_stencils=[dataset_types['Object'][i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.stencils and dataset_types['Type'][i]==t]
+            thistype_stencil_weights=[self.stencil_weights[i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.stencils and dataset_types['Type'][i]==t]
 
 
             if newnumbers[t]<0:
@@ -330,7 +355,8 @@ class GPAugment(SNAugment):
 #                print('stencils: '+str(thistype_stencils))
                 for i in range(newnumbers[t]):
                     #pick random stencil
-                    thisstencil=thistype_stencils[self.rng.randint(0,len(thistype_stencils))]
+#                    thisstencil=thistype_stencils[self.rng.randint(0,len(thistype_stencils))]
+                    thisstencil=self.rng.choice(thistype_stencils,p=thistype_stencil_weights/np.sum(thistype_stencil_weights))
                     #pick random cadence
 #                    thiscadence_stencil=self.cadence_stencils[self.rng.randint(0,len(self.cadence_stencils))]
 #                    thiscadence_stencil=thisstencil
