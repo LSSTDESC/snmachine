@@ -176,6 +176,8 @@ class GPAugment(SNAugment):
             the cadence of mjd values.
         y : numpy array
             the flux values of the data that the GP has been trained on.
+        add_measurement_noise : bool, optional
+            cf the documentation of snaugment.GPAugment.produce_new_lc
 
         Returns:
         --------
@@ -197,7 +199,7 @@ class GPAugment(SNAugment):
             fluxerr=np.sqrt(fluxerr**2+yerr**2)
         return flux,fluxerr
 
-    def produce_new_lc(self,obj,cadence=None,savegp=True,samplez=True,name='dummy'):
+    def produce_new_lc(self,obj,cadence=None,savegp=True,samplez=True,name='dummy',add_measurement_noise=True):
         """
         Assemble a new light curve from a stencil. If the stencil already has been used
         and the resulting GPs have been saved, then we use those. If not, we train a new GP.
@@ -216,6 +218,11 @@ class GPAugment(SNAugment):
            and width defined by the stencil? If not, we just take the value of the stencil.
         name : str, optional
            object name of the new light curve. 
+        add_measurement_noise : bool, optional
+           Usually, the data is modelled as y_i = f(t_i) + eps_i, where f is a gaussianly-distributed function, and 
+           where eps_i are iid Gaussian RVs with variances sigma_i**2. If this flag is unset, we return a sample from 
+           the GP f and its stddev. If it is set, we return y*_j including the measurement noise (also in the error bar).
+           If this is unclear, please consult Rasmussen/Williams chapter 2.2.
 
         Returns:
         --------
@@ -235,10 +242,10 @@ class GPAugment(SNAugment):
 
         if cadence is None:
             cadence_dict=self.extract_cadence(obj)
-            add_measurement_noise=True
         else:
-            print('warning: GP sampling does NOT include measurement noise, since sampling is performed on a different cadence!')
-            add_measurement_noise=False
+            if add_measurement_noise:
+                print('warning: GP sampling does NOT include measurement noise, since sampling is performed on a different cadence!')
+                add_measurement_noise=False
             if type(cadence) in [str,np.str_]:
                 cadence_dict=self.extract_cadence(cadence)
             elif type(cadence) is dict:
