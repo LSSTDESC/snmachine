@@ -219,9 +219,9 @@ class GPAugment(SNAugment):
         name : str, optional
            object name of the new light curve. 
         add_measurement_noise : bool, optional
-           Usually, the data is modelled as y_i = f(t_i) + eps_i, where f is a gaussianly-distributed function, and 
-           where eps_i are iid Gaussian RVs with variances sigma_i**2. If this flag is unset, we return a sample from 
-           the GP f and its stddev. If it is set, we return y*_j including the measurement noise (also in the error bar).
+           Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i, where f is a gaussianly-distributed function, and 
+           where eps_i are iid Normal RVs, and sigma_i are the measurement error bars. If this flag is unset, we return a 
+           sample from the GP f and its stddev. If it is set, we return y*_j including the measurement noise (also in the error bar).
            If this is unclear, please consult Rasmussen/Williams chapter 2.2.
 
         Returns:
