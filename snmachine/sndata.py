@@ -525,7 +525,7 @@ class Dataset(EmptyDataset):
         """
         if isinstance(subset,basestring):
             if subset=='spectro':
-                object_names= np.genfromtxt(self.rootdir+'spectro.list', dtype='U').flatten()
+                object_names= np.genfromtxt(self.rootdir+'DES_spectro.list', dtype='U').flatten()
             else:
                 object_names= np.genfromtxt(self.rootdir+self.survey_name+'.LIST', dtype='U')
         elif all(isinstance(l,basestring) for l in subset):
@@ -674,7 +674,7 @@ class OpsimDataset(EmptyDataset):
         print ('Reading data...')
         
         for i in range(len(all_data)):
-            snid=all_data[i].meta['SNID']
+            snid=all_data[i].meta['SNID'].decode('UTF-8')
             if isinstance(subset,basestring) or ((snid in subset) or (i in subset)):
                 self.object_names.append((str)(snid))
                 lc=self.get_lightcurve(all_data[i])
@@ -705,16 +705,16 @@ class OpsimDataset(EmptyDataset):
         tab_new.rename_column('FLUXCAL','flux')
         tab_new.rename_column('FLUXCALERR','flux_error')
         tab_new.rename_column('FLT','filter')
-        tab_new=Table(tab_new, dtype=['f', 'f', 'f', 'S64'])
+        tab_new=Table(tab_new, dtype=['f', 'f', 'f', 'U5'])
         old_filts=['u', 'g', 'r', 'i', 'z', 'Y']
         for f in range(len(old_filts)):
-            tab_new['filter'][tab_new['filter']==old_filts[f]]=self.filter_set[f]
+            tab_new['filter'][tab_new['filter'] == old_filts[f]]=self.filter_set[f]
         zp=Column(name='zp', data=np.array([27.5]*len(tab_new['mjd'])))
         zpsys=Column(name='zpsys', data=['ab']*len(tab_new['mjd']))
         tab_new.add_column(zp)
         tab_new.add_column(zpsys)
         
-        tab_new.meta={'name':tab.meta['SNID'], 'z':tab.meta['REDSHIFT_FINAL'], 'z_err':tab.meta['REDSHIFT_FINAL_ERR'], 'type':tab.meta['SNTYPE'], 
+        tab_new.meta={'name':tab.meta['SNID'].decode('UTF-8'), 'z':tab.meta['REDSHIFT_FINAL'], 'z_err':tab.meta['REDSHIFT_FINAL_ERR'], 'type':tab.meta['SNTYPE'], 
         'initial_observation_time':start_mjd}
         return tab_new
         
@@ -724,7 +724,7 @@ class LSSTCadenceSimulations(OpsimDataset):
     Class to read in the SNANA cadence simulations, which are divided into chunks.
     """
 
-    def __init__(self, folder, subset='none', mix=False, filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty']):
+    def __init__(self, folder, subset='none', mix=False, filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'], indices=range(1,21)):
         """
         Initialisation.
 
@@ -738,7 +738,10 @@ class LSSTCadenceSimulations(OpsimDataset):
             The output of the simulations is often highly ordered, this randomly permutes the objects when they're read in
         filter_set : list-like, optional
             Set of possible filters
+        indices : list of ints
+            List of indices that index the fits files which each store one chunk of the simulated light curves.
         """
+        self.indices=indices
         super().__init__(folder,subset,mix,filter_set)
 
 
@@ -754,13 +757,12 @@ class LSSTCadenceSimulations(OpsimDataset):
             List of a subset of object names. If not supplied, the full dataset will be used
 
         """
-        indices=range(1,21)
 
         data_Ia=[]
         data_nIa=[]
 
         print ('Reading data...')
-        for i in indices:
+        for i in self.indices:
             print('chunk %02d'%i)
             if (not isinstance(subset,basestring)) and (all(isinstance(l,basestring) for l in subset)):
                 #We have to deal with separate Ia and nIa fits files
@@ -769,7 +771,6 @@ class LSSTCadenceSimulations(OpsimDataset):
 
                 df = fits.open(Ia_head)[1].data
                 subset=np.char.strip(subset) #If these are read from the header they have to be stripped of white space
-
                 Ia_ids=subset[np.in1d(subset,np.char.strip(df['SNID']))]
 
                 df = fits.open(nIa_head)[1].data
@@ -797,7 +798,9 @@ class LSSTCadenceSimulations(OpsimDataset):
         invalid=0 #Some objects may have empty data
 
         for i in range(len(all_data)):
-            snid=all_data[i].meta['SNID']
+            if i%1e4==0:
+                print('%dk'%(i//1e3))
+            snid=all_data[i].meta['SNID'].decode('UTF-8')
             if isinstance(subset,basestring) or ((snid in subset) or (i in subset)):
                 self.object_names.append((str)(snid))
                 lc=self.get_lightcurve(all_data[i])
