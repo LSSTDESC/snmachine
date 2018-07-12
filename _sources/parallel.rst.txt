@@ -39,7 +39,11 @@ First, login to Hypatia with your credentials via the ssh method. ::
 
     ssh USERNAME@hypatia-login.hpc.phys.ucl.ac.uk
 
-If you have not already setup `snmachine`, you will need to clone the `snmachine` repository, ::
+Next you will need to import python into your node using ::
+
+    module load python
+
+Then, if you have not already setup `snmachine`, you will need to clone the `snmachine` repository, ::
 
     git clone https://github.com/LSSTDESC/snmachine.git
 
@@ -53,8 +57,8 @@ These instructions are a temporary (as of July 2nd 2018) guide to run the jobs p
 
 1. With a working installation of `snmachine` you will first need to switch to the ``issue/38/refactor-utils-cjonly`` branch and pull the latest commits. ::
 
-    git checkout issue/38/refactor-utils-cjonly
     git pull
+    git checkout issue/38/refactor-utils-cjonly
 
 2. Navigate to the ``snmachine/utils`` folder and execute, ::
 
@@ -62,7 +66,7 @@ These instructions are a temporary (as of July 2nd 2018) guide to run the jobs p
 
 * NOTE: If this fails it is possible that the ``create_jobs.py`` script did not find the data files specified by default. In order to try again, first, remove the ``snmachine/utils/jobs`` folder. Then, you can then pass your own list of data through the ``-op`` argument flag. In doing so you should specify the location to a ``*.LIST`` file that contains a list of all the objects that you want to run. An example of this is, ::
 
-    python create_jobs.py -op /share/hypatia/snmachine_resources/data/DES/SIMGEN_PUBLIC_DES/SIMGEN_PUBLIC_DES.LIST
+    python create_jobs.py -op /share/hypatia/snmachine_resources/data/DES_spcc/SIMGEN_PUBLIC_DES/SIMGEN_PUBLIC_DES.LIST
 
 3. Next navigate to the newly created ``snmachine/utils/jobs`` folder and execute::
 

@@ -195,7 +195,11 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ssh</span> <span class="n">USERNAME</span><span class="nd">@hypatia</span><span class="o">-</span><span class="n">login</span><span class="o">.</span><span class="n">hpc</span><span class="o">.</span><span class="n">phys</span><span class="o">.</span><span class="n">ucl</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span>
 </pre></div>
 </div>
-<p>If you have not already setup <cite>snmachine</cite>, you will need to clone the <cite>snmachine</cite> repository,</p>
+<p>Next you will need to import python into your node using</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">module</span> <span class="n">load</span> <span class="n">python</span>
+</pre></div>
+</div>
+<p>Then, if you have not already setup <cite>snmachine</cite>, you will need to clone the <cite>snmachine</cite> repository,</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">LSSTDESC</span><span class="o">/</span><span class="n">snmachine</span><span class="o">.</span><span class="n">git</span>
 </pre></div>
 </div>
@@ -205,8 +209,8 @@
 <p>These instructions are a temporary (as of July 2nd 2018) guide to run the jobs pipeline on Hypatia at UCL.</p>
 <ol class="arabic">
 <li><p class="first">With a working installation of <cite>snmachine</cite> you will first need to switch to the <code class="docutils literal notranslate"><span class="pre">issue/38/refactor-utils-cjonly</span></code> branch and pull the latest commits.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">checkout</span> <span class="n">issue</span><span class="o">/</span><span class="mi">38</span><span class="o">/</span><span class="n">refactor</span><span class="o">-</span><span class="n">utils</span><span class="o">-</span><span class="n">cjonly</span>
-<span class="n">git</span> <span class="n">pull</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">pull</span>
+<span class="n">git</span> <span class="n">checkout</span> <span class="n">issue</span><span class="o">/</span><span class="mi">38</span><span class="o">/</span><span class="n">refactor</span><span class="o">-</span><span class="n">utils</span><span class="o">-</span><span class="n">cjonly</span>
 </pre></div>
 </div>
 </li>
@@ -218,7 +222,7 @@
 </ol>
 <ul>
 <li><p class="first">NOTE: If this fails it is possible that the <code class="docutils literal notranslate"><span class="pre">create_jobs.py</span></code> script did not find the data files specified by default. In order to try again, first, remove the <code class="docutils literal notranslate"><span class="pre">snmachine/utils/jobs</span></code> folder. Then, you can then pass your own list of data through the <code class="docutils literal notranslate"><span class="pre">-op</span></code> argument flag. In doing so you should specify the location to a <code class="docutils literal notranslate"><span class="pre">*.LIST</span></code> file that contains a list of all the objects that you want to run. An example of this is,</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">create_jobs</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">op</span> <span class="o">/</span><span class="n">share</span><span class="o">/</span><span class="n">hypatia</span><span class="o">/</span><span class="n">snmachine_resources</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">DES</span><span class="o">/</span><span class="n">SIMGEN_PUBLIC_DES</span><span class="o">/</span><span class="n">SIMGEN_PUBLIC_DES</span><span class="o">.</span><span class="n">LIST</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">create_jobs</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">op</span> <span class="o">/</span><span class="n">share</span><span class="o">/</span><span class="n">hypatia</span><span class="o">/</span><span class="n">snmachine_resources</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">DES_spcc</span><span class="o">/</span><span class="n">SIMGEN_PUBLIC_DES</span><span class="o">/</span><span class="n">SIMGEN_PUBLIC_DES</span><span class="o">.</span><span class="n">LIST</span>
 </pre></div>
 </div>
 </li>
