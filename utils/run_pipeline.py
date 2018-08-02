@@ -18,7 +18,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-dataset='des'
+dataset='cadence_rolling'
 laptop=False
 template_model='Ia'
 
@@ -122,6 +122,18 @@ elif 'lsst' in dataset:
         subset='none'
         subset_name=dataset
 
+elif 'cadence' in dataset:
+    run_name=
+    subset=
+    subset_name=
+
+    if 'redshift' in sys.argv:
+        use_redshift=True
+        run_name+='_z'
+    else:
+        use_redshift=False
+        run_name+='_no_z'
+    train_choice=
 
 elif dataset=='sdss':
     #run_name='lsst_10'

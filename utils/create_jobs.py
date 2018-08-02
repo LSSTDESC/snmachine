@@ -229,3 +229,53 @@ if __name__ == "__main__":
     except parser.error(""):
         print("Invalid argument inputs")
         sys.exit()
+=======
+elif 'cadence' in dataset:
+    if dataset=='cadence_rolling':
+        survey_name='Rolling_3_80_reshuffled_WFD'
+    elif dataset=='cadence_minion':
+        survey_name='minion_1016_WFD'
+    rootdir='/share/hypatia/snmachine_resources/data/LSST_cadence_sims/'+survey_name+'/FullLightCurveFitsFiles/RH_LSST_SNMIX_WFD/'
+    objects=np.genfromtxt(rootdir+'.LIST',dtype='str')
+
+
+nobj=len(objects) #Total number of objects
+
+#Figure out how many objects go onto cores24 processors and how many on cores12
+nobj12=(int)(nobj/(proc12+proc24)*proc12)
+nobj24=nobj-nobj12
+
+#Split the data as evenly as possible amongst processors
+if n12>0:
+    obj12=np.array_split(objects[:nobj12], n12)
+else:
+    obj12=[]
+if n24>0:
+    obj24=np.array_split(objects[nobj12:], n24)
+else:
+    obj24=[]
+
+#We write each set of objects to file and use it as an argument to run_pipeline.py to find the subset
+for i in range(n12):
+    subs=subset_name %i
+    np.savetxt(job_dir+subs+'.txt', obj12[i], fmt='%s')
+    make_job_script(12, subs, extra_flags='no-class')
+
+for j in range(n24):
+    subs=subset_name %(j+len(obj12))
+    np.savetxt(job_dir+subs+'.txt', obj24[j], fmt='%s')
+    make_job_script(24,subs, extra_flags='no-class')
+
+#This is the job that does the classification, and is executed on one single node only
+np.savetxt(job_dir+fullset_name+'.txt', objects, fmt='%s')
+if n24>0:
+    make_job_script(24, fullset_name, extra_flags='no-xtr')
+    make_job_script(24, fullset_name, extra_flags='preprocess')
+elif n12>0:
+    make_job_script(12, fullset_name, extra_flags='no-xtr')
+    make_job_script(12, fullset_name, extra_flags='preprocess')
+else:
+    print('You gave me no nodes to work on. Do not do that again.')
+
+make_job_spawner(n12, n24, job_dir, subset_name)
+>>>>>>> augment

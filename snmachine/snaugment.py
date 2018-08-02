@@ -67,7 +67,7 @@ class GPAugment(SNAugment):
     Derived class that encapsulates data augmentation via Gaussian Processes
     """
 
-    def __init__(self, d, templates=None, cadence_templates=None):
+    def __init__(self, d, stencils=None, cadence_stencils=None, stencil_weights=None, cadence_stencil_weights=None):
         """
         class constructor. 
 
@@ -75,24 +75,48 @@ class GPAugment(SNAugment):
         ----------
         d : sndata object
             the supernova data set we want to augment
-        templates : list of strings
-            If the templates argument is given (as a list of object names
+        stencils : list of strings
+            If the stencils argument is given (as a list of object names
              that are in the data set), then the augmentation step will take 
             these light curves to train the GPs on. If not, then every object 
             in the data set is considered fair game.
-        cadence_templates : list of strings
+	cadence_stencils : list of strings
             If given, the augmentation will sample the cadence for the new light
             curves from these objects. If not, every object is fair game.
+        stencil_weights : np.array or list of float
+            If given, these weights are the probabilities with which the respective
+            stencils will be picked in the augmentation step. If not given, we will
+            use uniform weights.
+        cadence_stencil_weights : np.array or list of float
+            Like stencil_weights, but for the cadence stencils.
         """
 
         self.dataset=d
         self.meta={}
         self.meta['trained_gp']={}
         self.algorithm='GP augmentation'
-        if templates is None:
-            self.templates=d.object_names.copy()
-        if cadence_templates is None:
-            self.cadence_templates=d.object_names.copy()
+        if stencils is None:
+            self.stencils=d.object_names.copy()
+        else:
+            self.stencils=stencils
+        if cadence_stencils is None:
+            self.cadence_stencils=d.object_names.copy()
+        else:
+            self.cadence_stencils=cadence_stencils
+
+        if stencil_weights is not None:
+            assert np.all(stencil_weights >= 0.), 'Stencil weights need to be larger than zero!'
+            stencil_weights=np.array(stencil_weights)
+            self.stencil_weights=stencil_weights/sum(stencil_weights)
+        else:
+            self.stencil_weights=np.ones(len(self.stencils))/len(self.stencils)
+
+        if cadence_stencil_weights is not None:
+            assert np.all(cadence_stencil_weigths >= 0.), 'Cadence stencil weights need to be larger than zero!'
+            cadence_stencil_weights=np.array(cadence_stencil_weights)
+            self.cadence_stencil_weights=cadence_stencil_weights/sum(cadence_stencil_weights)
+        else:
+            self.cadence_stencil_weights=np.ones(len(self.cadence_stencils))/len(self.cadence_stencils)
 
         self.rng=np.random.RandomState()
         self.random_seed=self.rng.get_state()
@@ -152,6 +176,8 @@ class GPAugment(SNAugment):
             the cadence of mjd values.
         y : numpy array
             the flux values of the data that the GP has been trained on.
+        add_measurement_noise : bool, optional
+            cf the documentation of snaugment.GPAugment.produce_new_lc
 
         Returns:
         --------
@@ -173,25 +199,30 @@ class GPAugment(SNAugment):
             fluxerr=np.sqrt(fluxerr**2+yerr**2)
         return flux,fluxerr
 
-    def produce_new_lc(self,obj,cadence=None,savegp=True,samplez=True,name='dummy'):
+    def produce_new_lc(self,obj,cadence=None,savegp=True,samplez=True,name='dummy',add_measurement_noise=True):
         """
-        Assemble a new light curve from a template. If the template already has been used
+        Assemble a new light curve from a stencil. If the stencil already has been used
         and the resulting GPs have been saved, then we use those. If not, we train a new GP.
 
         Parameters:
         -----------
         obj : str or astropy.table.Table
-           the object (or name thereof) that we use as a template to train the GP on.
+           the object (or name thereof) that we use as a stencil to train the GP on.
         cadence : str or dict of type {string:numpy.array}, optional.
            the cadence for the new light curve, defined either by object name or by {filter:mjds}. If none is given, 
-           then we pull the cadence of the template.
+           then we pull the cadence of the stencil.
         savegp : bool, optional
            Do we save the trained GP in self.meta? This results in a speedup, but costs memory.
         samplez : bool, optional
            Do we give the new light curve a random redshift value drawn from a Gaussian of location
-           and width defined by the template? If not, we just take the value of the template.
+           and width defined by the stencil? If not, we just take the value of the stencil.
         name : str, optional
            object name of the new light curve. 
+        add_measurement_noise : bool, optional
+           Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i, where f is a gaussianly-distributed function, and 
+           where eps_i are iid Normal RVs, and sigma_i are the measurement error bars. If this flag is unset, we return a 
+           sample from the GP f and its stddev. If it is set, we return y*_j including the measurement noise (also in the error bar).
+           If this is unclear, please consult Rasmussen/Williams chapter 2.2.
 
         Returns:
         --------
@@ -211,10 +242,10 @@ class GPAugment(SNAugment):
 
         if cadence is None:
             cadence_dict=self.extract_cadence(obj)
-            add_measurement_noise=True
         else:
-            print('warning: GP sampling does NOT include measurement noise, since sampling is performed on a different cadence!')
-            add_measurement_noise=False
+            if add_measurement_noise:
+                print('warning: GP sampling does NOT include measurement noise, since sampling is performed on a different cadence!')
+                add_measurement_noise=False
             if type(cadence) in [str,np.str_]:
                 cadence_dict=self.extract_cadence(cadence)
             elif type(cadence) is dict:
@@ -223,7 +254,7 @@ class GPAugment(SNAugment):
                 print('cadence: type %s not recognised in produce_new_lc()!'%type(cadence))
                 #todo: actually throw an error            
 
-	#Either train a new set of GP on the template obj, or pull from metadata
+	#Either train a new set of GP on the stencil obj, or pull from metadata
         if obj_name in self.meta['trained_gp'].keys():
             print('fetching')
 #            print(obj_name)
@@ -248,7 +279,7 @@ class GPAugment(SNAugment):
             newz=obj_table.meta['z']+obj_table.meta['z_err']*self.rng.randn()
         else:
             newz=obj_table.meta['z']
-        new_lc_meta={'name':name,'z':newz,'type':obj_table.meta['type'], 'template': obj_name, 'augment_algo': self.algorithm}
+        new_lc_meta={'name':name,'z':newz,'type':obj_table.meta['type'], 'stencil': obj_name, 'augment_algo': self.algorithm}
         new_lc=Table(names=['mjd','filter','flux','flux_error'],dtype=['f','U','f','f'],meta=new_lc_meta)
         for f in self.dataset.filter_set:
             obj_f=obj_table[obj_table['filter']==f]
@@ -317,7 +348,8 @@ class GPAugment(SNAugment):
         for t in types:
             thistype_oldnumbers=len(dataset_types['Type'][dataset_types['Type']==t])
             newnumbers[t]=numbers[t]-thistype_oldnumbers
-            thistype_templates=[dataset_types['Object'][i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.templates and dataset_types['Type'][i]==t]
+            thistype_stencils=[dataset_types['Object'][i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.stencils and dataset_types['Type'][i]==t]
+            thistype_stencil_weights=[self.stencil_weights[i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.stencils and dataset_types['Type'][i]==t]
 
 
             if newnumbers[t]<0:
@@ -327,20 +359,21 @@ class GPAugment(SNAugment):
                 continue
             else:
 #                print('now dealing with type: '+str(t))
-#                print('templates: '+str(thistype_templates))
+#                print('stencils: '+str(thistype_stencils))
                 for i in range(newnumbers[t]):
-                    #pick random template
-                    thistemplate=thistype_templates[self.rng.randint(0,len(thistype_templates))]
+                    #pick random stencil
+#                    thisstencil=thistype_stencils[self.rng.randint(0,len(thistype_stencils))]
+                    thisstencil=self.rng.choice(thistype_stencils,p=thistype_stencil_weights/np.sum(thistype_stencil_weights))
                     #pick random cadence
-#                    thiscadence_template=self.cadence_templates[self.rng.randint(0,len(self.cadence_templates))]
-#                    thiscadence_template=thistemplate
+#                    thiscadence_stencil=self.cadence_stencils[self.rng.randint(0,len(self.cadence_stencils))]
+#                    thiscadence_stencil=thisstencil
 
-#                    cadence=self.extract_cadence(thiscadence_template)
-#                    new_name='augm_t%d_%d_'%(t,i) + thistemplate + '_' + thiscadence_template + '.DAT'
-                    new_name='augm_t%d_%d_'%(t,i) + thistemplate# + '.DAT'
-                    new_lightcurve=self.produce_new_lc(obj=thistemplate,name=new_name,**kwargs)#,cadence=cadence)
+#                    cadence=self.extract_cadence(thiscadence_stencil)
+#                    new_name='augm_t%d_%d_'%(t,i) + thisstencil + '_' + thiscadence_stencil + '.DAT'
+                    new_name='augm_t%d_%d_'%(t,i) + thisstencil# + '.DAT'
+                    new_lightcurve=self.produce_new_lc(obj=thisstencil,name=new_name,**kwargs)#,cadence=cadence)
                     self.dataset.insert_lightcurve(new_lightcurve)
-#                    print('types: '+str(new_lightcurve.meta['type'])+' '+str(self.dataset.data[thistemplate].meta['type']))
+#                    print('types: '+str(new_lightcurve.meta['type'])+' '+str(self.dataset.data[thisstencil].meta['type']))
                     newobjects=np.append(newobjects,new_name)
         return newobjects
 
