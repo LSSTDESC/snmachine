@@ -1,0 +1,100 @@
+SURVEY: DES   
+SNID:   474704   
+IAUC:    UNKNOWN 
+PHOTOMETRY_VERSION: DES 
+SNTYPE:  -9 
+FILTERS: griz 
+RA:      48.000000  deg 
+DECL:    0.000000  deg 
+MAGTYPE: LOG10  
+MAGREF:    
+FAKE:    2   (=> simulated LC with snlc_sim.exe) 
+MWEBV:   0.0713    MW E(B-V) 
+REDSHIFT_HELIO:   0.73292 +- 0.02710  (Helio, z_best) 
+REDSHIFT_FINAL:   0.73292 +- 0.02710  (CMB) 
+REDSHIFT_SPEC:    -9.00000 +- 9.00000  
+REDSHIFT_STATUS: OK 
+ 
+HOST_GALAXY_GALID:   13342 
+HOST_GALAXY_PHOTO-Z:   0.7329  +- 0.0271  
+
+
+
+SIM_MODEL:  mlcs2k2.SNchallenge  3  (name index) 
+SIM_NON1a:      0   (non1a index) 
+SIM_COMMENT:  SN Type = Ia , MODEL = mlcs2k2.SNchallenge  
+SIM_LIBID:  3  
+SIM_REDSHIFT:  0.7523  
+SIM_HOSTLIB_TRUEZ:  0.7500  (actual Z of hostlib) 
+SIM_HOSTLIB_GALID:  13342  
+SIM_DLMU:      43.338673  mag   [ -5*log10(10pc/dL) ]  
+SIM_RA:        48.000000 deg  
+SIM_DECL:      0.000000 deg  
+SIM_MWEBV:   0.0775   (MilkyWay E(B-V)) 
+SIM_AVTAU:        0.250   (dN/dAV = exp(-AV/AVTAU)) 
+SIM_AV:         0.375  mag  (host extinction at 5510 A)
+SIM_RV:         1.936   (CCM89 extinction parameter) 
+SIM_PEAKMAG:   26.49  24.34  23.84  23.72  (griz obs)
+SIM_EXPOSURE:     1.0    1.0    1.0    1.0  (griz obs)
+SIM_PEAKMJD:   56346.371094  days 
+SIM_DELTA:     -0.291  mag  (MLCS lumi-par) 
+SIM_STRETCH:    1.291  
+SIM_MAGDIM:    0.382  
+SIM_SEARCHEFF_MASK:  3  (bits 1,2=> found by software,humans) 
+SIM_SEARCHEFF:  1.0000  (spectro-search efficiency (ignores pipelines)) 
+SIM_TRESTMIN:   -36.05   days 
+SIM_TRESTMAX:     2.65   days 
+SIM_RISETIME_SHIFT:   0.0 days 
+SIM_FALLTIME_SHIFT:   0.0 days 
+
+SEARCH_PEAKMJD:   56344.801  
+
+
+# ============================================ 
+# TERSE LIGHT CURVE OUTPUT: 
+#
+NOBS: 40 
+NVAR: 9 
+VARLIST:  MJD  FLT FIELD   FLUXCAL   FLUXCALERR   SNR    MAG     MAGERR  SIM_MAG
+OBS:  56283.203  g NULL  -3.091e+00   6.285e+00  -0.49   99.000    5.000   99.000
+OBS:  56283.211  r NULL   2.383e+00   3.325e+00   0.72   99.000    5.000   99.000
+OBS:  56283.215  i NULL  -2.709e+00   5.816e+00  -0.47   99.000    5.000   99.000
+OBS:  56283.223  z NULL   1.282e+00   5.042e+00   0.25   99.000    5.000   99.000
+OBS:  56288.199  g NULL  -8.941e-01   1.179e+01  -0.08   99.000    5.000   99.000
+OBS:  56288.215  r NULL   4.140e+00   6.181e+00   0.67   99.000    5.000   99.000
+OBS:  56289.109  i NULL   4.651e+00   7.080e+00   0.66   99.000    5.000   99.000
+OBS:  56289.125  z NULL   8.460e+00   5.424e+00   1.56   99.000    5.000   99.000
+OBS:  56292.098  g NULL   5.200e+00   1.165e+01   0.45   99.000    5.000   99.000
+OBS:  56292.102  r NULL   5.209e+00   4.827e+00   1.08   99.000    5.000   99.000
+OBS:  56292.191  i NULL  -8.984e-01   5.599e+00  -0.16   99.000    5.000   99.000
+OBS:  56292.199  z NULL  -2.687e+00   5.158e+00  -0.52   99.000    5.000   99.000
+OBS:  56304.051  g NULL   7.540e-01   2.480e+00   0.30   99.000    5.000   99.000
+OBS:  56304.055  r NULL   1.972e-01   1.657e+00   0.12   99.000    5.000   99.000
+OBS:  56304.070  i NULL   3.116e-01   2.506e+00   0.12   99.000    5.000   99.000
+OBS:  56304.086  z NULL   3.110e+00   3.934e+00   0.79   99.000    5.000   99.000
+OBS:  56312.055  g NULL  -7.192e-01   7.568e+00  -0.10  128.000    0.000   43.485
+OBS:  56312.066  r NULL  -4.393e+00   2.963e+00  -1.48  128.000    0.000   41.448
+OBS:  56312.090  i NULL  -1.864e+00   5.020e+00  -0.37  128.000    0.000   40.490
+OBS:  56312.113  z NULL   1.021e+00   5.428e+00   0.19   27.477  100.523   40.249
+OBS:  56320.043  g NULL   1.444e+00   6.168e+00   0.23   27.101  100.899   29.072
+OBS:  56320.051  r NULL   8.403e-01   2.491e+00   0.34   27.689  100.311   26.467
+OBS:  56320.059  i NULL   1.576e+00   3.655e+00   0.43   27.006  100.994   25.917
+OBS:  56320.070  z NULL   5.230e+00   4.396e+00   1.19   25.704    1.993   25.804
+OBS:  56328.047  g NULL   1.692e+00   3.355e+00   0.50   26.929  101.071   27.133
+OBS:  56328.055  r NULL   9.833e+00   2.420e+00   4.06   25.018    0.307   25.052
+OBS:  56328.070  i NULL   1.388e+01   4.061e+00   3.42   24.644    0.376   24.675
+OBS:  56328.086  z NULL   1.194e+01   6.787e+00   1.76   24.807    0.913   24.528
+OBS:  56336.062  g NULL   3.261e+00   3.710e+00   0.88   26.217  101.783   26.166
+OBS:  56336.082  r NULL   1.509e+01   3.036e+00   4.97   24.553    0.245   24.314
+OBS:  56337.062  i NULL   2.372e+01   2.979e+00   7.96   24.062    0.146   23.968
+OBS:  56337.078  z NULL   2.893e+01   3.791e+00   7.63   23.847    0.152   23.874
+OBS:  56345.039  g NULL   5.014e+00   7.143e+00   0.70   25.750  102.250   26.417
+OBS:  56345.055  r NULL   2.036e+01   3.802e+00   5.36   24.228    0.224   24.316
+OBS:  56346.055  i NULL   3.634e+01   6.035e+00   6.02   23.599    0.197   23.837
+DETECTION:  6 MJDs satisfy g+r+i+z 
+OBS:  56348.027  z NULL   3.281e+01   5.063e+00   6.48   23.710    0.182   23.716
+OBS:  56350.023  g NULL   4.507e+00   6.833e+00   0.66   25.865  102.135   26.586
+OBS:  56350.027  r NULL   1.658e+01   3.959e+00   4.19   24.451    0.296   24.450
+OBS:  56350.035  i NULL   3.679e+01   6.727e+00   5.47   23.586    0.219   23.867
+OBS:  56351.023  z NULL   2.736e+01   6.123e+00   4.47   23.907    0.275   23.725
+END: 
