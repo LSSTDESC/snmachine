@@ -31,12 +31,10 @@ def make_job_script(ppn, subset_name, train_choice, extra_flags=''):
 #PBS -S /bin/tcsh\n \
 #PBS -q %s\n \
 #PBS -l walltime=99:00:00\n' %(node_string,queue))
-    # fl.write('source .tcshrc\n')
     fl.write('source ' + homedir + '/snmachine/install/setup.sh\n')
     fl.write('cd ' + homedir + '/snmachine/	\n')
 
     fl.write('python ' + homedir + '/snmachine/utils/run_pipeline.py %s%s.txt %d %s %s %s\n' %(job_dir, subset_name, ppn, reds, train_choice, extra_flags))
-    #fl.write('python /home/michelle/SN_Class/snmachine/run_pipeline.py %s%s.txt\n' %(job_dir, subset_name))
     fl.close()
 
 def make_job_spawner(job_dir, n12, n24, subset_root):
@@ -55,51 +53,16 @@ def make_job_spawner(job_dir, n12, n24, subset_root):
     fl.write('qsub -W depend=afterok%s %s\n'%(joblist, os.path.join(job_dir, fullset_name+'.pbs')) )
     fl.close()
 
-# if dataset=='des':
-#     survey_name='SIMGEN_PUBLIC_DES'
-#     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-#     rootdir=homedir + '/data_sets/sne/des/'+survey_name+'/'
-#     if subset=='spectro':
-#         objects=np.genfromtxt('DES_spectro.list', dtype='str')
-#     else:
-#         objects=np.genfromtxt(rootdir+survey_name+'.LIST', dtype='str') #Our list of objects to split up
-    #print(objects[0])
-    #print(type(objects[0]))
-
-# elif dataset=='sdss':
-#     survey_name='SMP_Data'
-#     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-#     rootdir=homedir + '/data_sets/sne/sdss/'+survey_name+'/'
-#     if subset=='spectro':
-#         objects=np.genfromtxt(rootdir+'spectro.list', dtype='str')
-#     else:
-#         objects=np.genfromtxt(rootdir+survey_name+'.list', dtype='str') #Our list of objects to split up
-
-# elif 'lsst' in dataset:
-#     if dataset=='lsst_main':
-#         survey_name='ENIGMA_1189_10YR_MAIN'
-#     else:
-#         survey_name='ENIGMA_1189_10YR_DDF'
-#     rootdir='/home/mlochner/sn/'+survey_name+'/'
-#     objects=np.genfromtxt(rootdir+'high_SNR_snids.txt', dtype='str')
-    #objects=np.loadtxt('missing_objects.txt',dtype='str')
-
 if __name__ == "__main__":
 
-    # good_nodes=range(13, 18)+range(19,24) #We want to avoid node 18 (and any nodes that aren't free of course)
-    #good_nodes=[15, 19, 21, 22, 23, 24]
-    # good_nodes=[14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
     good_nodes=[]
-    # good_nodes=[25, 26, 27, 28]
     node_ind=0
 
     homedir = os.environ['HOME']
 
-    # job_dir= homedir + '/data_sets/sne/des/jobs/'
     utils_dir = os.environ.get('PWD')
     job_dir = utils_dir + '/jobs/'
-    # job_dir = homedir + '/snmachine/jobs/'
-    #job_dir='jobs/'
+
     if not os.path.exists(job_dir):
         os.makedirs(job_dir)
 
@@ -139,21 +102,11 @@ if __name__ == "__main__":
         # arguemts.dataset='des'
         subset='none'
         # arguments.train_choice='repr'
-
         # arguments.redshift=False
         if arguments.redshift:
             reds='redshift'
         else:
             reds=''
-
-        # elif 'cadence' in dataset:
-        #     if dataset=='cadence_rolling':
-        #         survey_name='Rolling_3_80_reshuffled_WFD'
-        #     elif dataset=='cadence_minion':
-        #         survey_name='minion_1016_WFD'
-        #     rootdir='/share/hypatia/snmachine_resources/data/LSST_cadence_sims/'+survey_name+'/FullLightCurveFitsFiles/RH_LSST_SNMIX_WFD/'
-        #     objects=np.genfromtxt(rootdir+'.LIST',dtype='str')
-
 
         subset_name=arguments.dataset+'_subset_%d'
         fullset_name=arguments.dataset+'_fullset'
@@ -163,32 +116,6 @@ if __name__ == "__main__":
         objects=np.genfromtxt(arguments.path_to_object_list, dtype='str') #Our list of objects to split up
 
         print('Done reading the csv to an array\n')
-        # if arguments.dataset=='des':
-        #     survey_name='SIMGEN_PUBLIC_DES'
-        #     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-        #     rootdir=homedir + '/data_sets/sne/des/'+survey_name+'/'
-        #     if subset=='spectro':
-        #         objects=np.genfromtxt('DES_spectro.list', dtype='str')
-        #     else:
-        #         objects=np.genfromtxt(rootdir+survey_name+'.LIST', dtype='str') #Our list of objects to split up
-
-         # elif dataset=='sdss':
-         #     survey_name='SMP_Data'
-         #     #rootdir='/home/michelle/SN_Class/Simulations/'+survey_name+'/'
-         #     rootdir=homedir + '/data_sets/sne/sdss/'+survey_name+'/'
-         #     if subset=='spectro':
-         #         objects=np.genfromtxt(rootdir+'spectro.list', dtype='str')
-         #     else:
-         #         objects=np.genfromtxt(rootdir+survey_name+'.list', dtype='str') #Our list of objects to split up
-
-         # elif 'lsst' in dataset:
-         #     if dataset=='lsst_main':
-         #         survey_name='ENIGMA_1189_10YR_MAIN'
-         #     else:
-         #         survey_name='ENIGMA_1189_10YR_DDF'
-         #     rootdir='/home/mlochner/sn/'+survey_name+'/'
-         #     objects=np.genfromtxt(rootdir+'high_SNR_snids.txt', dtype='str')
-         #    objects=np.loadtxt('missing_objects.txt',dtype='str') -- not used
 
         nobj=len(objects) #Total number of objects
 
@@ -238,44 +165,3 @@ if __name__ == "__main__":
     except parser.error(""):
         print("Invalid argument inputs")
         sys.exit()
-
-# nobj=len(objects) #Total number of objects
-
-# #Figure out how many objects go onto cores24 processors and how many on cores12
-# nobj12=(int)(nobj/(proc12+proc24)*proc12)
-# nobj24=nobj-nobj12
-
-# #Split the data as evenly as possible amongst processors
-# if n12>0:
-#     obj12=np.array_split(objects[:nobj12], n12)
-# else:
-#     obj12=[]
-# if n24>0:
-#     obj24=np.array_split(objects[nobj12:], n24)
-# else:
-#     obj24=[]
-
-# #We write each set of objects to file and use it as an argument to run_pipeline.py to find the subset
-# for i in range(n12):
-#     subs=subset_name %i
-#     np.savetxt(job_dir+subs+'.txt', obj12[i], fmt='%s')
-#     make_job_script(12, subs, extra_flags='no-class')
-
-# for j in range(n24):
-#     subs=subset_name %(j+len(obj12))
-#     np.savetxt(job_dir+subs+'.txt', obj24[j], fmt='%s')
-#     make_job_script(24,subs, extra_flags='no-class')
-
-# #This is the job that does the classification, and is executed on one single node only
-# np.savetxt(job_dir+fullset_name+'.txt', objects, fmt='%s')
-# if n24>0:
-#     make_job_script(24, fullset_name, extra_flags='no-xtr')
-#     make_job_script(24, fullset_name, extra_flags='preprocess')
-# elif n12>0:
-#     make_job_script(12, fullset_name, extra_flags='no-xtr')
-#     make_job_script(12, fullset_name, extra_flags='preprocess')
-# else:
-#     print('You gave me no nodes to work on. Do not do that again.')
-
-# make_job_spawner(n12, n24, job_dir, subset_name)
-# >>>>>>> augment
