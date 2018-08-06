@@ -110,3 +110,6 @@ jobs/
 
 # Do not track user specific setup file that points to Multinest installation
 install/setup.sh
+
+# Do not track example notebook output files
+examples/output_*
