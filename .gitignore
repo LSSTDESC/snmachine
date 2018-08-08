@@ -113,3 +113,9 @@ install/setup.sh
 
 # Do not track example notebook output files
 examples/output_*
+
+# Do not type logs of dataset
+examples/*.csv
+
+# Do not track data generated from example notebook
+snmachine/example_data/output_*
