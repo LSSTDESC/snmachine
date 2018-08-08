@@ -724,7 +724,7 @@ class LSSTCadenceSimulations(OpsimDataset):
     Class to read in the SNANA cadence simulations, which are divided into chunks.
     """
 
-    def __init__(self, folder, subset='none', mix=False, filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'], indices=range(1,21)):
+    def __init__(self, folder, prefix_Ia, prefix_NONIa, subset='none', mix=False, filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'], indices=range(1,21)):
         """
         Initialisation.
 
@@ -741,6 +741,8 @@ class LSSTCadenceSimulations(OpsimDataset):
         indices : list of ints
             List of indices that index the fits files which each store one chunk of the simulated light curves.
         """
+        self.prefix_Ia=prefix_Ia
+        self.prefix_NONIa=prefix_NONIa
         self.indices=indices
         super().__init__(folder,subset,mix,filter_set)
 
@@ -765,9 +767,14 @@ class LSSTCadenceSimulations(OpsimDataset):
         for i in self.indices:
             print('chunk %02d'%i)
             if (not isinstance(subset,basestring)) and (all(isinstance(l,basestring) for l in subset)):
+
+                # fits file prefix
+                # prefix_Ia = 'RBTEST_WFD_1aCC_Y10_G10_Ia-'
+                # prefix_NONIa = 'RBTEST_WFD_1aCC_Y10_G10_NONIa-'
+
                 #We have to deal with separate Ia and nIa fits files
-                Ia_head=os.path.join(folder,'RH_LSST_WFD_Ia-%02d_HEAD.FITS'%i)
-                nIa_head=os.path.join(folder,'RH_LSST_WFD_NONIa-%02d_HEAD.FITS'%i)
+                Ia_head=os.path.join(folder,prefix_Ia+'%02d_HEAD.FITS'%i)
+                nIa_head=os.path.join(folder,prefix_NONIa+'%02d_HEAD.FITS'%i)
 
                 df = fits.open(Ia_head)[1].data
                 subset=np.char.strip(subset) #If these are read from the header they have to be stripped of white space
@@ -776,11 +783,11 @@ class LSSTCadenceSimulations(OpsimDataset):
                 df = fits.open(nIa_head)[1].data
                 nIa_ids=subset[np.in1d(subset,np.char.strip(df['SNID']))]
 
-                thischunk_Ia =  sncosmo.read_snana_fits(Ia_head, os.path.join(folder,'RH_LSST_WFD_Ia-%02d_PHOT.FITS'%i),snids=Ia_ids)
-                thischunk_nIa =  sncosmo.read_snana_fits(nIa_head, os.path.join(folder,'RH_LSST_WFD_NONIa-%02d_PHOT.FITS'%i),snids=nIa_ids)
+                thischunk_Ia =  sncosmo.read_snana_fits(Ia_head, os.path.join(folder,prefix_Ia+'%02d_PHOT.FITS'%i),snids=Ia_ids)
+                thischunk_nIa =  sncosmo.read_snana_fits(nIa_head, os.path.join(folder,prefix_NONIa+'%02d_PHOT.FITS'%i),snids=nIa_ids)
             else:
-                thischunk_Ia =  sncosmo.read_snana_fits(os.path.join(folder,'RH_LSST_WFD_Ia-%02d_HEAD.FITS'%i), os.path.join(folder,'RH_LSST_WFD_Ia-%02d_PHOT.FITS'%i))
-                thischunk_nIa =  sncosmo.read_snana_fits(os.path.join(folder,'RH_LSST_WFD_NONIa-%02d_HEAD.FITS'%i), os.path.join(folder,'RH_LSST_WFD_NONIa-%02d_PHOT.FITS'%i))
+                thischunk_Ia = sncosmo.read_snana_fits(os.path.join(folder,prefix_Ia+'%04d_HEAD.FITS'%i), os.path.join(folder,prefix_Ia+'%04d_PHOT.FITS'%i))
+                thischunk_nIa = sncosmo.read_snana_fits(os.path.join(folder,prefix_NONIa+'%04d_HEAD.FITS'%i), os.path.join(folder,prefix_NONIa+'%04d_PHOT.FITS'%i))
 
             data_Ia+=thischunk_Ia
             data_nIa+=thischunk_nIa
