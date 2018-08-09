@@ -62,35 +62,35 @@ def roc(pr, Yt, true_class=0):
     Y_test = Yt.copy()
     min_class = (int)(Y_test.min())  # This is to deal with starting class assignment at 1.
     Y_test = Y_test.squeeze()
-    
+
     if len(pr.shape)>1:
         probs_1 = probs[:, true_class-min_class]
     else:
         probs_1 = probs
-    
+
     threshold = np.linspace(0., 1., 50)  # 50 evenly spaced numbers between 0,1
 
     # This creates an array where each column is the prediction for each threshold
     preds = np.tile(probs_1, (len(threshold), 1)).T >= np.tile(threshold, (len(probs_1), 1))
     Y_bool = (Y_test == true_class)
     Y_bool = np.tile(Y_bool, (len(threshold), 1)).T
-    
+
     TP = (preds & Y_bool).sum(axis=0)
     FP = (preds & ~Y_bool).sum(axis=0)
     TN = (~preds & ~Y_bool).sum(axis=0)
     FN = (~preds & Y_bool).sum(axis=0)
-    
+
     tpr = np.zeros(len(TP))
     tpr[TP != 0] = TP[TP != 0]/(TP[TP != 0] + FN[TP != 0])
     fpr = FP/(FP+TN)
-    
+
     fpr = np.array(fpr)[::-1]
     tpr = np.array(tpr)[::-1]
-    
+
     auc = trapz(tpr, fpr)
 
     return fpr, tpr, auc
-    
+
 def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, line_width=3, figsize=(8,6)):
     """
     Plots a ROC curve or multiple curves. Can plot the results from multiple classifiers if fpr and tpr are arrays
@@ -120,7 +120,7 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, li
     if not isinstance(cols, basestring) and len(cols)==0:
         cols=['#185aa9','#008c48','#ee2e2f','#f47d23','#662c91','#a21d21','#b43894','#010202']
 
-    
+
     #This should work regardless of whether it's one or many roc curves
     #fig=plt.figure(figsize=figsize)
     fig=plt.gcf()
@@ -128,7 +128,7 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, li
     ax.set_color_cycle(cols)
     ax.plot(fpr, tpr, lw=line_width)
     # ax.plot(fpr, tpr)
-    
+
     ax.tick_params(axis='both', which='major', labelsize=tick_size)
 
     ax.xaxis.set_major_locator(plt.MaxNLocator(6))
@@ -137,11 +137,11 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, li
     plt.ylabel('True positive rate (completeness)', fontsize=label_size)
 #     plt.xlabel('False positive rate (contamination)')
 #     plt.ylabel('True positive rate (completeness)')
-    
+
     #Robust against the possibility of AUC being a single number instead of list
     if not isinstance(auc, collections.Sequence):
         auc=[auc]
-    
+
     if len(labels)>0:
         labs=[]
         for i in range(len(labels)):
@@ -154,7 +154,7 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, li
     plt.legend(labs, loc='lower right',  bbox_to_anchor=(0.95, 0.05))
     plt.tight_layout()
     #plt.show()
-    
+
 def F1(pr,  Yt, true_class, full_output=False):
     """
     Calculate an F1 score for many probability threshold increments
@@ -189,24 +189,24 @@ def F1(pr,  Yt, true_class, full_output=False):
     Y_test=Yt.copy()
     min_class=Y_test.min() #This is to deal with starting class assignment at 1.
     Y_test = Y_test.squeeze()
-    
+
     if len(pr.shape)>1:
         probs_1=probs[:, true_class-min_class]
     else:
         probs_1=probs
-    
+
     threshold = np.arange(0, 1, 0.01)
 
     #This creates an array where each column is the prediction for each threshold
     preds=np.tile(probs_1, (len(threshold), 1)).T>np.tile(threshold, (len(probs_1), 1))
     Y_bool=(Y_test==true_class)
     Y_bool=np.tile(Y_bool, (len(threshold), 1)).T
-    
+
     TP=(preds & Y_bool).sum(axis=0)
     FP=(preds & ~Y_bool).sum(axis=0)
     TN=(~preds & ~Y_bool).sum(axis=0)
     FN=(~preds & Y_bool).sum(axis=0)
-    
+
     f1=np.zeros(len(TP))
     f1[TP!=0]=2*TP[TP!=0]/(2*TP[TP!=0]+FN[TP!=0]+FP[TP!=0])
 
@@ -216,7 +216,7 @@ def F1(pr,  Yt, true_class, full_output=False):
         best_F1 = f1.max()
         best_threshold_index = np.argmax(f1)
         best_threshold = threshold[best_threshold_index]
-        
+
         return best_F1, best_threshold
 
 def FoM(pr,  Yt, true_class=1, full_output=False):
@@ -252,29 +252,29 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
 
     """
     weight = 3.0
-    
+
     probs=pr.copy()
     Y_test=Yt.copy()
     min_class=Y_test.min() #This is to deal with starting class assignment at 1.
     Y_test = Y_test.squeeze()
-    
+
     if len(pr.shape)>1:
         probs_1=probs[:, true_class-min_class]
     else:
         probs_1=probs
-    
+
     threshold = np.arange(0, 1, 0.01)
 
     #This creates an array where each column is the prediction for each threshold
     preds=np.tile(probs_1, (len(threshold), 1)).T>np.tile(threshold, (len(probs_1), 1))
     Y_bool=(Y_test==true_class)
     Y_bool=np.tile(Y_bool, (len(threshold), 1)).T
-    
+
     TP=(preds & Y_bool).sum(axis=0)
     FP=(preds & ~Y_bool).sum(axis=0)
     TN=(~preds & ~Y_bool).sum(axis=0)
     FN=(~preds & Y_bool).sum(axis=0)
-    
+
     fom=np.zeros(len(TP))
     fom[TP!=0]=TP[TP!=0]**2/(TP[TP!=0]+FN[TP!=0])/(TP[TP!=0]+weight*FP[TP!=0])
 
@@ -285,7 +285,7 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
         best_FoM = fom.max()
         best_threshold_index = np.argmax(fom)
         best_threshold = threshold[best_threshold_index]
-        
+
         return best_FoM, best_threshold
 
 
@@ -293,7 +293,7 @@ class OptimisedClassifier():
     """Implements an optimised classifier (although it can be run without optimisation). Equipped with interfaces to several
     sklearn classes and functions.
     """
-    
+
     NB_param_dict = {}
     KNN_param_dict = {'n_neighbors':list(range(1, 180, 5)), 'weights':['distance']}
     SVM_param_dict = {'C':np.logspace(-2, 5, 5), 'gamma':np.logspace(-8, 3, 5)}
@@ -308,11 +308,11 @@ class OptimisedClassifier():
     Boost_RF_param_dict = {'base_estimator':[RandomForestClassifier(400, 'entropy'),
                                              RandomForestClassifier(600, 'entropy')],'n_estimators':list([2, 3, 5, 10])}
 
-    
+
     #Dictionary to hold good default ranges for parameters for each classifier.
     params={'svm':SVM_param_dict, 'knn':KNN_param_dict, 'decision_tree':DT_param_dict,'random_forest':RF_param_dict,
             'boost_dt':Boost_param_dict, 'boost_rf':Boost_RF_param_dict, 'nb':NB_param_dict, 'neural_network':NN_param_dict}
-    
+
     def __init__(self, classifier, optimise=True,  **kwargs):
         """
         Wrapper around sklearn classifiers
@@ -327,7 +327,7 @@ class OptimisedClassifier():
             Keyword arguments passed directly to the classifier
         """
 
-        
+
         self.classifier_name=classifier
         if isinstance(classifier, basestring):
             #Choose from available classifiers, with default parameters best for SNe (unless overridden)
@@ -335,7 +335,7 @@ class OptimisedClassifier():
                 self.prob=kwargs.pop('probability')
             else:
                 self.prob=True #By default we want to always return probabilities. User can override this.
-            
+
             try:
                 if classifier=='svm':
                     if 'kernel' in kwargs:
@@ -343,7 +343,7 @@ class OptimisedClassifier():
                     else:
                         kern='rbf'
                     self.clf=svm.SVC(kernel=kern, probability = self.prob, **kwargs)
-                
+
                 elif classifier=='knn':
                     if 'n_neighbours' in kwargs:
                         n=kwargs.pop('n_neighbours')
@@ -354,7 +354,7 @@ class OptimisedClassifier():
                     else:
                         wgts='distance'
                     self.clf=neighbors.KNeighborsClassifier(n_neighbors = n,  weights=wgts, **kwargs)
-                    
+
                 elif classifier=='random_forest':
                     self.clf = RandomForestClassifier(**kwargs)
                 elif classifier=='decision_tree':
@@ -384,7 +384,7 @@ class OptimisedClassifier():
                     print ('Choice of built-in classifiers:')
                     print (choice_of_classifiers)
                     sys.exit(0)
-                    
+
             except TypeError:
                 #Gracefully catch errors of sending the wrong kwargs to the classifiers
                 print()
@@ -394,17 +394,17 @@ class OptimisedClassifier():
                 print ('Does not belong to classifier', classifier)
                 print()
                 sys.exit(0)
-            
-                
+
+
         else:
             #This is already some sklearn classifier or an object that behaves like one
-            self.clf=classifier 
-        
+            self.clf=classifier
+
         print ('Created classifier of type:')
         print (self.clf)
         print()
-            
-    
+
+
 
 
     def classify(self, X_train, y_train, X_test):
@@ -428,7 +428,7 @@ class OptimisedClassifier():
         """
 
         self.clf.fit(X_train, y_train)
-        if self.prob: #Probabilities requested  
+        if self.prob: #Probabilities requested
             probs=self.clf.predict_proba(X_test)
             Yfit=probs.argmax(axis=1) #Each object is assigned the class with highest probability
             classes=np.unique(y_train)
@@ -439,7 +439,7 @@ class OptimisedClassifier():
             Yfit=self.clf.predict(X_test)
             #scr=self.clf.score(X_test, y_test)
             return Yfit
-    
+
     def __custom_auc_score(self, estimator, X, Y):
         """
         Custom scoring method for use with GridSearchCV.
@@ -497,18 +497,18 @@ class OptimisedClassifier():
 #            if self.classifier_name=='svm':
 #                n_features=len(X_train[0, :]) #Update now the number of features is known
 #                params['gamma']=[1/(n_features**2), 1/n_features, 1/np.sqrt(n_features)]
-                
+
         if 'true_class' in kwargs:
             self.true_class=kwargs['true_class']
         else:
             self.true_class=1
-            
+
         self.clf=grid_search.GridSearchCV(self.clf, params, scoring=self.__custom_auc_score, cv=5)
-        
+
         self.clf.fit(X_train, y_train) #This actually does the grid search
         best_params=self.clf.best_params_
         print ('Optimised parameters:', best_params)
-        
+
         for k in best_params.keys():
             #This is the safest way to check if something is a number
             try:
@@ -521,12 +521,12 @@ class OptimisedClassifier():
                     print()
                     print('WARNING: Upper boundary on parameter', k, 'may be too low. Optimum may not have been reached.')
                     print()
-                
+
             except (ValueError, TypeError):
                 pass #Ignore a parameter that isn't numerical
-            
-        
-        if self.prob: #Probabilities requested  
+
+
+        if self.prob: #Probabilities requested
             probs=self.clf.predict_proba(X_test)
             Yfit=probs.argmax(axis=1).tolist() #Each object is assigned the class with highest probability
             classes=np.unique(y_train)
@@ -716,7 +716,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
 
     if plot_roc_curve:
         plot_roc(FPR, TPR, AUC, labels=classifiers,label_size=16,tick_size=12,line_width=1.5)
-        plt.show()
+        plt.show(block=False)
 
     if return_classifier:
         return classifier_objects
