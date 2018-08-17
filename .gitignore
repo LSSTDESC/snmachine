@@ -118,7 +118,7 @@ examples/output_*
 examples/*.csv
 #
 # Do not track image files
-examples/*.png
+examples/plots/
 
 # Do not track data generated from example notebook
 snmachine/example_data/output_*
