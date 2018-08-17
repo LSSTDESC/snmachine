@@ -42,7 +42,7 @@ import sncosmo
 # In[3]:
 
 
-dataset='lsst'
+dataset='kraken_2026_ddf'
 
 
 # In[4]:
@@ -84,8 +84,8 @@ print(outdir)
 
 
 #Data root
-rt="/Users/tallamjr/PhD/project/data/CadenceCompare/RBTEST_DDF_IaCC_Y10_G10/"
-# rt="/share/hypatia/snmachine_resources/RBTEST_DDF_IaCC_Y10_G10/"
+# rt="/Users/tallamjr/PhD/project/data/CadenceCompare/RBTEST_DDF_IaCC_Y10_G10/"
+rt="/share/hypatia/snmachine_resources/RBTEST_DDF_IaCC_Y10_G10/"
 print(rt)
 
 
@@ -103,7 +103,8 @@ print(rt)
 # fits file prefix
 prefix_Ia = 'RBTEST_DDF_MIXED_Y10_G10_Ia-'
 prefix_NONIa = 'RBTEST_DDF_MIXED_Y10_G10_NONIa-'
-dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,2))
+# dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,2))
+dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa)
 
 
 # In[ ]:
