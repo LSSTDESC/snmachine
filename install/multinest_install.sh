@@ -79,7 +79,7 @@ fi
 git clone https://github.com/JohannesBuchner/PyMultiNest  $pymnestdir
 echo ">> Building PyMultiNest"
 pushd $pymnestdir
-python setup.py install --user
+python setup.py install
 popd
 
 echo "------------------ libaray paths"
