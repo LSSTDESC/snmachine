@@ -1555,7 +1555,7 @@ class WaveletFeatures(Features):
             #Pool and map can only really work with single-valued functions
             partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
 
-            out=p.map(partial_GP, d.object_names)
+            out=p.map(partial_GP, d.object_names, chunksize=1)
             for i in range(len(out)):
                 obj=d.object_names[i]
                 d.models[obj]=out[i]
