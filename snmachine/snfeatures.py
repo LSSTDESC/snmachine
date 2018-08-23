@@ -1335,7 +1335,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none', gpalgo='george', xmin=None, xmax=None):
+    def extract_features(self, d, initheta=[500, 20], save_output=None, output_root='features', nprocesses=40, restart='none', gpalgo='george', xmin=None, xmax=None):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1363,7 +1363,8 @@ class WaveletFeatures(Features):
             Table of features (first column object names, the rest are the PCA coefficient values)
         """
 
-        if save_output is not 'none':
+        if save_output is not None and not os.path.exists(output_root):
+            print("No output directory found; creating output root directory :\n{}".format(output_root))
             subprocess.call(['mkdir', output_root])
         if xmin is None:
             xmin=0
