@@ -31,9 +31,9 @@ jobid=9999
 homedir = os.environ['HOME']
 username = os.environ.get('USER')
 
-final_outdir=os.path.join('24p_output_%s_no_z' %dataset,'')
+final_outdir=os.path.join('output_data', 'output_%s_no_z' %dataset,'')
 # final_outdir=os.path.join(os.path.sep, homedir, 'data_sets', 'sne', 'sn_output','output_%s' %(run_name), '')
-outdir=os.path.join(os.path.sep, 'share','data1', username, 'cadencetmp_24', '')
+outdir=os.path.join(os.path.sep, 'share','data1', username, 'cadencetmp_n1', '')
 
 print('temp outdir '+outdir)
 print('final outdir '+final_outdir)
@@ -139,6 +139,8 @@ prefix_NONIa = 'RBTEST_DDF_MIXED_Y10_G10_NONIa-'
 dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,2))
 # dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa)
 
+# SCATTER
+
 #For now we restrict ourselves to three supernova types: Ia (1), II (2) and Ibc (3)
 types=dat.get_types()
 print(type(types))
@@ -166,8 +168,12 @@ read_from_file=False #We can use this flag to quickly rerun from saved features
 # out_features_dat=os.path.join(example_data, out_features,'features') #Where we save the extracted features to
 # subprocess.call(['mkdir', '-p',out_features_dat])
 
-run_name=os.path.join(example_data, out_features,'%s_all' %dataset)
-print(run_name)
+## Not used ------------------------
+# print("EXAMPLE DATA NAME:\n{}".format(example_data))
+
+run_name=os.path.join(out_features,'%s_all' %dataset)
+# run_name=os.path.join(example_data, out_features,'%s_all' %dataset)
+print("RUN NAME:\n{}".format(run_name))
 
 
 # t-SNE plots:
@@ -197,7 +203,19 @@ else:
     PCA_vec=waveFeats.PCA_eigenvectors
     PCA_mean=waveFeats.PCA_mean
 
-dat.set_model(waveFeats.fit_sn,wave_features,PCA_vec,PCA_mean,0,dat.get_max_length(),dat.filter_set)
+# BARRIER
+# wait for all files to be written
+
+# GATHER
+
+# Combine all rank_wavelets.dat files together in a single file called
+# run_name_wavelets_all.data, then:
+
+#     wave_features=Table.read('%s_wavelets.dat' %run_name, format='ascii')
+
+#This code takes the fitted parameters and generates the model light curve for
+# plotting purposes.
+# dat.set_model(waveFeats.fit_sn,wave_features,PCA_vec,PCA_mean,0,dat.get_max_length(),dat.filter_set)
 
 plt.figure(1)
 tsne_plot.plot(wave_features,join(wave_features,types)['Type'])
