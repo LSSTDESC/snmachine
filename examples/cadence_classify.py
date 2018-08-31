@@ -22,7 +22,6 @@ def process():
 
 if __name__ == "__main__":
 
-# jobid=8740
     args = process()
     jobid = args['jobid']
 
@@ -50,11 +49,10 @@ if __name__ == "__main__":
 
     final_outdir=os.path.join('output_data', 'output_%s_no_z' %dataset,'')
 
-    ## READ IN TYPES SINGLE FILE
+    ## READ IN ENTIRE DATASET
     dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,21))
     # dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa)
 
-    #For now we restrict ourselves to three supernova types: Ia (1), II (2) and Ibc (3)
     types=dat.get_types()
     print(type(types))
 
@@ -63,7 +61,8 @@ if __name__ == "__main__":
     # awk_command = "awk -F ',' '{print $2}' ../examples/types.csv | uniq -c"
     # subprocess.call(awk_command, shell=True)
 
-    # Like for SPCC example notebook where we restrict ourselves to three supernova types: Ia (1), II (2) and Ibc (3) by carrying out the following pre-proccessing steps
+    # Like for SPCC example notebook where we restrict ourselves to three supernova types:
+    # Ia (1), II (2) and Ibc (3) by carrying out the following pre-proccessing steps
     types['Type'] = types['Type']-100
 
     types['Type'][np.floor(types['Type']/10)==2]=2
@@ -71,24 +70,34 @@ if __name__ == "__main__":
 
     dat.data[dat.object_names[0]]
 
-    # READ IN WAVELET DATA
-    # Copy int to finaldir
+    # RESTART FROM WAVELETS
+    # Copy int to finaldir and read in raw wavelets
     wavelet_feats=snfeatures.WaveletFeatures(wavelet='sym2', ngp=100)
-
-    # waveints='/share/data1/tallam/'
-
     wave_raw, wave_err=wavelet_feats.restart_from_wavelets(dat, os.path.join(final_outdir, 'int', ''))
-
     wavelet_features,vals,vec,means=wavelet_feats.extract_pca(dat.object_names.copy(), wave_raw)
 
-    # wave_features=Table.read("/share/data1/tallam/{}_all_wavelets.dat".format(jobid), format='ascii')
+    # RESTART FROM GPs
+    # TODO:
+    # - Have a flag to choose whether to restart from GPs or Wavelts
+    # wave_features=waveFeats.extract_features(dat,nprocesses=6,output_root=out_int,save_output='all')
+    # wave_features.write('{}_wavelets_rank_{}.dat'.format(run_name, rank), format='ascii')
+    # np.savetxt('%s_wavelets_PCA_vals.dat' %run_name,waveFeats.PCA_eigenvals)
+    # np.savetxt('%s_wavelets_PCA_vec.dat' %run_name,waveFeats.PCA_eigenvectors)
+    # np.savetxt('%s_wavelets_PCA_mean.dat' %run_name,waveFeats.PCA_mean)
+    # PCA_vals=waveFeats.PCA_eigenvals
+    # PCA_vec=waveFeats.PCA_eigenvectors
+    # PCA_mean=waveFeats.PCA_mean
+
+    ## T-SNE
+    # TODO:
+    # - Currently memory issues when attempting to plot over entire dataset
 
     # plt.figure(1)
     # tsne_plot.plot(wavelet_features,join(wavelet_features,types)['Type'])
     # plt.savefig("plots/{}_Wavelets_RF_tSNE_{}.png".format(dataset, jobid))
     # plt.close(1)
 
-    ## Classify
+    ## CLASSIFY
 
     nproc=4
 
