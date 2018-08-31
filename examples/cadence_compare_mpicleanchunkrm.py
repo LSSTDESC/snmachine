@@ -180,7 +180,7 @@ if __name__ == "__main__":
         # prefix_NONIa = 'RBTEST_DDF_MIXED_Y10_G10_NONIa-'
 
         # dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,2))
-        dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=[8])
+        dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=[rank])
         # dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa)
 
         #For now we restrict ourselves to three supernova types: Ia (1), II (2) and Ibc (3)
