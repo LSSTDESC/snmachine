@@ -22,7 +22,7 @@ try:
     has_multinest=True
 except ImportError:
     has_multinest=False
-    
+
 try:
     import emcee
     has_emcee=True
@@ -124,7 +124,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
         else:
             output=vstack((output, newtable))
     if save_output=='gp' or save_output=='all':
-        output.write(os.path.join(output_root, 'gp_'+obj), format='ascii')        
+        output.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
     return output
 
 
@@ -277,17 +277,17 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
             """
             up=model.upper_limit
             low=model.lower_limit
-            
+
             for i in range(nparams):
                 cube[i]=cube[i]*(up[i]-low[i])+low[i]
             return cube
-            
-            
+
+
         lc=d.data[obj]
         filts=np.unique(lc['filter'])
-        
+
         n_params=len(model.param_names)
-        
+
         #err_plus=[pname+'_err+' for pname in self.model.param_names]
         #err_minus=[pname+'_err-' for pname in self.model.param_names]
         labels=['Object']
@@ -297,15 +297,15 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
                 labels.append(f+'-'+p)
 
         output=Table(names=labels, dtype=['U32']+['f']*(len(labels)-1))
-    
-        
+
+
         row=[obj]
         for f in d.filter_set:
             t1=time.time()
             if f in filts:
                 #current values for x,y and err are set each time multinest is called
                 x, y, err=np.column_stack((lc['mjd'][lc['filter']==f], lc['flux'][lc['filter']==f], lc['flux_error'][lc['filter']==f])).T
-                
+
                 def loglike_multinest(cube, ndim, nparams):
                     """Loglikelihood function specifically for multinest. This would be called for one filter, for one object.
                     @param cube A ctypes pointer to the parameter cube (actually just the current parameter values).
@@ -319,22 +319,22 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
                         params[i]=cube[i]
                     #params=[ 26.97634888,   45.13123322,    2.59183478,    0.12057552,    7.65392637]
                     ynew=model.evaluate(x, params)
-                    
+
                     chi2=np.sum(((y-ynew)*(y-ynew))/err/err)
                     #print 'likelihood', -chi2/2.
                     return -chi2/2.
-                
+
                 chain_name=os.path.join(chain_directory, '%s-%s-%s-' %(obj.split('.')[0], f, model.model_name))
-                
+
                 if not restart or not os.path.exists(chain_name+'stats.dat'):
                     #Gives the ability to restart from existing chains if they exist
-                    pymultinest.run(loglike_multinest, prior_multinest, n_params, importance_nested_sampling = False, init_MPI=False, 
-                    resume = False, verbose = False, sampling_efficiency = 'parameter', n_live_points = nlp, outputfiles_basename=chain_name, 
+                    pymultinest.run(loglike_multinest, prior_multinest, n_params, importance_nested_sampling = False, init_MPI=False,
+                    resume = False, verbose = False, sampling_efficiency = 'parameter', n_live_points = nlp, outputfiles_basename=chain_name,
                     multimodal=False, max_iter=n_iter, seed=seed)
-                    
+
                 #An=Analyzer(n_params, chain_name)
                 #best_params=An.get_best_fit()['parameters']
-                
+
 #                chain=np.loadtxt(chain_name+'.txt')
 #                best_params=np.median(chain, axis=0)[2:]
                 best_params=get_MAP(chain_name)
@@ -363,23 +363,23 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
                 row+=[0]*len(model.param_names) #I'm not sure if it makes the most sense to fill in missing values with zeroes...
             #print 'Time for object', obj, 'filter', f,':', (time.time()-t1)
             np.savetxt(os.path.join(chain_directory,'%s-%s-%s-.time' %(obj.split('.')[0], f, model.model_name)), [time.time()-t1])
-            
+
         output.add_row(row)
-            
+
         return output
-    
+
     except:
         #Sometimes things just break
         print ('ERROR in', obj)
         print (sys.exc_info()[0])
         print (sys.exc_info()[1])
         traceback.print_tb(sys.exc_info()[2])
-        
-        return None
-        
 
-    
-    
+        return None
+
+
+
+
 def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds, seed=-1):
     """
     Fit template-based supernova models using least squares.
@@ -439,7 +439,7 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds, seed=-1):
     output.add_row(row)
 
     return output
-        
+
 
 def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  nlp=1000, convert_to_binary=True, use_redshift=False, short_name='', restart=False, seed=-1):
     """
@@ -540,15 +540,15 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
             model=sncosmo.Model(model_name,effects=[dust],effect_names=['host'], effect_frames=['rest'])
         else:
             model=sncosmo.Model(model_name)
-        
+
         n_params=len(model.param_names)
-        
+
         #err_plus=[pname+'_err+' for pname in self.model.param_names]
         #err_minus=[pname+'_err-' for pname in self.model.param_names]
         labels=['Object']+model.param_names
-        
+
         t1=time.time()
-        
+
         #Convert the astropy table to numpy array outside the likelihood function to avoid repeated calls
         X={}
         Y={}
@@ -558,27 +558,27 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
             X[filt]=x
             Y[filt]=y
             E[filt]=err
-        
 
-        
+
+
         chain_name=os.path.join(chain_directory, '%s-%s-' %(obj.split('.')[0], short_name))
-        
+
         if use_redshift:
             ndim=len(model.param_names)-1
         else:
             ndim=len(model.param_names)
-        
-        
+
+
         if not restart or not os.path.exists(chain_name+'stats.dat'):
             pymultinest.run(loglike_multinest, prior_multinest, ndim, importance_nested_sampling = False, init_MPI=False,
-            resume = False, verbose = False, sampling_efficiency = 'parameter', n_live_points = nlp, outputfiles_basename=chain_name, 
+            resume = False, verbose = False, sampling_efficiency = 'parameter', n_live_points = nlp, outputfiles_basename=chain_name,
             multimodal=False, seed=seed)
-        
+
         best_params=get_MAP(chain_name)
-        
+
         if use_redshift:
             best_params=[lc.meta['z']]+best_params
-            
+
 
         if convert_to_binary and not restart:
             s='%s-%s-' %(obj.split('.')[0], short_name)
@@ -589,19 +589,19 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
                 x=np.loadtxt(infile)
                 np.save(outfile, x)
                 os.system('rm %s' %infile)
-                
+
 
         np.savetxt(os.path.join(chain_directory,'%s-%s-.time' %(obj.split('.')[0], short_name)), [time.time()-t1])
 
         return np.array(best_params)
-    
+
     except:
         #Sometimes things just break
         print ('ERROR in', obj)
         print (sys.exc_info()[0])
         print (sys.exc_info()[1])
         traceback.print_tb(sys.exc_info()[2])
-        
+
         return None
 
 
@@ -655,14 +655,14 @@ class Features:
     and fit_sn.
     """
     def __init__(self):
-        self.p_limit=0.05 #At what point to we suggest a model has been a bad fit. 
-        
+        self.p_limit=0.05 #At what point to we suggest a model has been a bad fit.
+
     def extract_features(self):
         pass
-        
+
     def fit_sn(self):
         pass
-        
+
     def goodness_of_fit(self, d):
         """
         Test (for any feature set) how well the reconstruction from the features fits each of the objects in the dataset.
@@ -701,7 +701,7 @@ class Features:
                 yfit=fit(x)
                 chi2.append(sum((yfit-y)**2/e**2)/(len(x)-1))
             rcs.add_row([obj]+chi2)
-            
+
         return rcs
 
     def posterior_predictor(self, lc, nparams, chi2):
@@ -740,11 +740,11 @@ class Features:
         print (chi2.min(), chi2.max())
         chi2=np.sort(chi2)
         p_value=np.count_nonzero(chi2>chi2_limit)/len(chi2)
-        
+
         if p_value>self.p_limit:
             print ('Model fit unsatisfactory, p value=', p_value)
         return p_value
-    
+
     def convert_astropy_array(self, tab):
         """
         Convenience function to convert an astropy table (floats only) into a numpy array.
@@ -752,10 +752,10 @@ class Features:
         out_array= np.array([tab[c] for c in tab.columns]).T
         return out_array
 
-        
+
 class TemplateFeatures(Features):
     """
-    Calls sncosmo to fit a variety of templates to the data. The number of features will depend on the templates 
+    Calls sncosmo to fit a variety of templates to the data. The number of features will depend on the templates
     chosen (e.g. salt2, nugent2p etc.)
     """
     def __init__(self, model=['Ia'], sampler='leastsq',lsst_bands=False,lsst_dir='../lsst_bands/'):
@@ -778,7 +778,7 @@ class TemplateFeatures(Features):
         if lsst_bands:
             self.registerBands(lsst_dir,prefix='approxLSST_',suffix='_total.dat')
         self.model_names=model
-        self.templates={'Ia':'salt2-extended','salt2':'salt2-extended', 'mlcs2k2':'mlcs2k2', 'II':'nugent-sn2n','IIn':'nugent-sn2n','IIp':'nugent-sn2p', 'IIl':'nugent-sn2l', 
+        self.templates={'Ia':'salt2-extended','salt2':'salt2-extended', 'mlcs2k2':'mlcs2k2', 'II':'nugent-sn2n','IIn':'nugent-sn2n','IIp':'nugent-sn2p', 'IIl':'nugent-sn2l',
         'Ibc':'nugent-sn1bc',  'Ib':'nugent-sn1bc',  'Ic':'nugent-sn1bc'}
         self.short_names={'Ia':'salt2', 'mlcs2k2':'mlcs'} #Short names because of limitations in Multinest
         if sampler=='nested':
@@ -793,15 +793,15 @@ class TemplateFeatures(Features):
             except ImportError:
                 print ('MCMC sampling selected but emcee is not installed. Defaulting to least squares.')
                 sampler='leastsq'
-                
+
         self.sampler=sampler
-        self.bounds={'salt2-extended':{'z':(0.01, 1.5), 't0':(-100,100),'x0':(-1e-3, 1e-3), 'x1':(-3, 3), 'c':(-0.5, 0.5)}, 
-                    'mlcs2k2':{'z':(0.01, 1.5), 't0':(-100,100), 'amplitude':(0, 1e-17), 'delta':(-1.0,1.8),'hostebv':(0, 1),'hostr_v':(-7.0, 7.0)}, 
-                    'nugent-sn2n':{'z':(0.01, 1.5)}, 
-                    'nugent-sn2p':{'z':(0.01, 1.5)}, 
-                    'nugent-sn2l':{'z':(0.01, 1.5)}, 
+        self.bounds={'salt2-extended':{'z':(0.01, 1.5), 't0':(-100,100),'x0':(-1e-3, 1e-3), 'x1':(-3, 3), 'c':(-0.5, 0.5)},
+                    'mlcs2k2':{'z':(0.01, 1.5), 't0':(-100,100), 'amplitude':(0, 1e-17), 'delta':(-1.0,1.8),'hostebv':(0, 1),'hostr_v':(-7.0, 7.0)},
+                    'nugent-sn2n':{'z':(0.01, 1.5)},
+                    'nugent-sn2p':{'z':(0.01, 1.5)},
+                    'nugent-sn2l':{'z':(0.01, 1.5)},
                     'nugent-sn1bc':{'z':(0.01, 1.5)}}
-        
+
     def extract_features(self, d, save_chains=False, chain_directory='chains', use_redshift=False, nprocesses=1, restart=False, seed=-1):
         """
         Extract template features for a dataset.
@@ -847,17 +847,17 @@ class TemplateFeatures(Features):
             #     labels=['Object']+params
             # else:
             #     labels=['Object']+params+['Chisq']
-            
+
             #output=Table(names=labels, dtype=['S32']+['f']*(len(labels)-1))
             output = Table(names=labels, dtype=['U32'] + ['f'] * (len(labels) - 1))
-            
+
             k=0
             if nprocesses<2:
                 for obj in d.object_names:
                     if k%100==0:
                         print (k, 'objects fitted')
                     lc=d.data[obj]
-                    
+
                     if self.sampler=='mcmc':
                         if seed!=-1:
                             np.random.seed(seed)
@@ -868,7 +868,7 @@ class TemplateFeatures(Features):
                             tab.write(os.path.join(chain_directory, obj.split('.')[0]+'_emcee_'+mod_name), format='ascii')
                         best=res['parameters'].flatten('F').tolist()
                     elif self.sampler=='nested':
-                        best=_run_multinest_templates(obj, d, self.templates[mod_name], self.bounds[self.templates[mod_name]], chain_directory=chain_directory,  
+                        best=_run_multinest_templates(obj, d, self.templates[mod_name], self.bounds[self.templates[mod_name]], chain_directory=chain_directory,
                         nlp=1000, convert_to_binary=False, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart, seed=seed)
                         best=best.tolist()
                     elif self.sampler=='leastsq':
@@ -878,12 +878,12 @@ class TemplateFeatures(Features):
                             prms=prms[1:]
                             bnds=self.bounds[self.templates[mod_name]].copy()
                             bnds.pop('z', None)
-                            res, fitted_model=sncosmo.fit_lc(lc, self.model, vparam_names=prms, 
+                            res, fitted_model=sncosmo.fit_lc(lc, self.model, vparam_names=prms,
                                 bounds=bnds, minsnr=0)
                         else:
-                            
-                            res, fitted_model=sncosmo.fit_lc(lc, self.model, vparam_names=self.model.param_names, 
-                                bounds=self.bounds[self.templates[mod_name]], minsnr=0)               
+
+                            res, fitted_model=sncosmo.fit_lc(lc, self.model, vparam_names=self.model.param_names,
+                                bounds=self.bounds[self.templates[mod_name]], minsnr=0)
                         best=res['parameters'].flatten('F').tolist()#+[res['chisq']]
                     row=[obj]+best
                     output.add_row(row)
@@ -892,7 +892,7 @@ class TemplateFeatures(Features):
                     all_output=output
                 else:
                     all_output=join(all_output, output)
-            
+
             else:
                 if self.sampler=='leastsq':
                     p=Pool(nprocesses, maxtasksperchild=1)
@@ -907,7 +907,7 @@ class TemplateFeatures(Features):
                         all_output=vstack((all_output, output))
                 elif self.sampler=='nested':
                     p=Pool(nprocesses, maxtasksperchild=1)
-                    partial_func=partial(_run_multinest_templates, d=d, model_name=self.templates[mod_name], bounds=self.bounds[self.templates[mod_name]], 
+                    partial_func=partial(_run_multinest_templates, d=d, model_name=self.templates[mod_name], bounds=self.bounds[self.templates[mod_name]],
                     chain_directory=chain_directory, nlp=1000, convert_to_binary=True, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart, seed=seed)
                     out=p.map(partial_func, d.object_names)
 
@@ -917,12 +917,12 @@ class TemplateFeatures(Features):
                         all_output=output
                     else:
                         all_output=vstack((all_output, output))
-                        
+
         print (len(all_output), 'objects fitted')
         output_time(time.time()-t1)
         return all_output
-        
-        
+
+
     def fit_sn(self, lc, features):
         """
         Fits the chosen template model to a given light curve.
@@ -942,18 +942,18 @@ class TemplateFeatures(Features):
         obj=lc.meta['name']
         tab=features[features['Object']==obj]
         params=np.array([tab[c] for c in tab.columns[1:]]).flatten()
-             
+
         if len(params)==0:
             print ('No feature set found for', obj)
             return None
-        
+
         model_name=self.templates[self.model_names[0]]
         if model_name=='mlcs2k2':
             dust=sncosmo.CCM89Dust()
             model=sncosmo.Model(model_name,effects=[dust],effect_names=['host'], effect_frames=['rest'])
         else:
             model=sncosmo.Model(model_name)
-        
+
         param_dict={}
         for i in range(len(model.param_names)):
             param_dict[model.param_names[i]]=params[i]
@@ -966,7 +966,7 @@ class TemplateFeatures(Features):
             x=lc['mjd'][lc['filter']==filt]
             xnew=np.linspace(0, x.max()-x.min(), 100)
             P=params
-            
+
             ynew=model.bandflux(filt, xnew, zp=27.5, zpsys='ab')
 
             newtable=Table([xnew+x.min(), ynew, [filt]*len(xnew)], names=labels)
@@ -983,12 +983,12 @@ class TemplateFeatures(Features):
             data = np.loadtxt(fname)
             bp = sncosmo.Bandpass(wave=data[:, 0], trans=data[:, 1], name='lsst'+band)
             sncosmo.registry.register(bp, force=True)
-            
+
 class ParametricFeatures(Features):
     """
     Fits a few options of generalised, parametric models to the data.
     """
-    
+
     def __init__(self, model_choice, sampler='leastsq', limits=None):
         """
         Initialisation
@@ -1017,20 +1017,20 @@ class ParametricFeatures(Features):
             print ('Your selected model is not in the parametric_models package. Either choose an existing model,  or implement a new one in that package.')
             print ('Make sure any new models are included in the model_choices dictionary in the ParametricFeatures class.')
             sys.exit()
-            
+
         if sampler=='nested' and not has_multinest:
             print ('Nested sampling selected but pymultinest is not installed. Defaulting to least squares.')
             sampler='leastsq'
-                
+
         elif sampler=='mcmc' and not has_emcee:
             print ('MCMC sampling selected but emcee is not installed. Defaulting to least squares.')
             sampler='leastsq'
-            
+
         self.sampler=sampler
 
 
 
-    def extract_features(self, d, chain_directory='chains', save_output=True, n_attempts=20, nprocesses=1, n_walkers=100, 
+    def extract_features(self, d, chain_directory='chains', save_output=True, n_attempts=20, nprocesses=1, n_walkers=100,
     n_steps=500, walker_spread=0.1, burn=50, nlp=1000, starting_point=None, convert_to_binary=True, n_iter=0, restart=False, seed=-1):
         """
         Fit parametric models and return best-fitting parameters as features.
@@ -1077,7 +1077,7 @@ class ParametricFeatures(Features):
         self.chain_directory=chain_directory
         t1=time.time()
         output=[]
-        
+
         #obj=d.object_names[0]
         if nprocesses<2:
             k=0
@@ -1092,7 +1092,7 @@ class ParametricFeatures(Features):
                     newtable=self.run_emcee(d, obj, save_output, chain_directory,   n_walkers, n_steps, walker_spread, burn, starting_point)
                 else:
                     newtable=_run_multinest(obj, d, self.model, chain_directory, nlp, convert_to_binary, n_iter, restart, seed=seed)
-                
+
                 if len(output)==0:
                     output=newtable
                 else:
@@ -1108,7 +1108,7 @@ class ParametricFeatures(Features):
                     output=vstack((output, out[i]))
             elif self.sampler=='nested':
                 p=Pool(nprocesses, maxtasksperchild=1)
-                partial_func=partial(_run_multinest, d=d, model=self.model,chain_directory=chain_directory, 
+                partial_func=partial(_run_multinest, d=d, model=self.model,chain_directory=chain_directory,
                 nlp=nlp, convert_to_binary=convert_to_binary, n_iter=n_iter, restart=restart, seed=seed)
                 #Pool starts a number of threads, all of which may try to tackle all of the data. Better to take it in chunks
                 output=[]
@@ -1129,8 +1129,8 @@ class ParametricFeatures(Features):
         print (len(output), 'objects fitted')
         output_time(time.time()-t1)
         return output
-        
-        
+
+
     def fit_sn(self, lc, features):
         """
         Fits the chosen parametric model to a given light curve.
@@ -1149,11 +1149,11 @@ class ParametricFeatures(Features):
         """
         obj=lc.meta['name']
         params=features[features['Object']==obj]
-        
+
         if len(params)==0:
             print ('No feature set found for', obj)
             return None
-        
+
         filts=np.unique(lc['filter'])
         labels=['mjd', 'flux', 'filter']
         output=Table(names=labels, dtype=['f', 'f', 'U32'],  meta={'name':obj})
@@ -1162,7 +1162,7 @@ class ParametricFeatures(Features):
         for filt in filts:
             x=lc['mjd'][lc['filter']==filt]
             xnew=np.linspace(0, x.max()-x.min(), 100)
-            
+
             #inds=[s for s in cols if filt in s]
             inds=np.where([filt in s for s in cols])[0]
             P=np.array(prms[inds],dtype='float')
@@ -1171,9 +1171,9 @@ class ParametricFeatures(Features):
             newtable=Table([xnew+x.min(), ynew, [filt]*len(xnew)], names=labels)
             output=vstack((output, newtable))
         return output
-        
 
-        
+
+
     def run_emcee(self, d, obj, save_output, chain_directory,  n_walkers, n_steps, walker_spread, burn, starting_point, seed=-1):
         """
         Runs emcee on all the filter bands of a given light curve, fitting the model to each one and extracting the best fitting parameters.
@@ -1212,15 +1212,15 @@ class ParametricFeatures(Features):
             P=X[inds]
             P=np.array([P[c] for c in P.columns]).flatten()
             return P
-        
+
         lc=d.data[obj]
         filts=np.unique(lc['filter'])
-        
+
         if(seed!=-1):
             np.random.seed(seed)
 
         n_params=len(self.model.param_names)
-        
+
         #err_plus=[pname+'_err+' for pname in self.model.param_names]
         #err_minus=[pname+'_err-' for pname in self.model.param_names]
         labels=['Object']
@@ -1237,33 +1237,33 @@ class ParametricFeatures(Features):
             if f in filts:
                 #This is pretty specific to current setup
                 chain_name=os.path.join(self.chain_directory, '%s-%s-%s-' %(obj.split('.')[0], f, self.model_name))
-                
+
                 x, y, yerr=np.array(lc['mjd'][lc['filter']==f]), np.array(lc['flux'][lc['filter']==f]), np.array(lc['flux_error'][lc['filter']==f])
-                
-                
+
+
                 if starting_point is None:
                     #Initialise randomly in parameter space
                     iniparams=np.random(n_params)*(self.model.upper_limit-self.model.lower_limit)+self.model.lower_limit
                 else:
                     #A starting point from a least squares run can be given as an astropy table
                     iniparams=get_params(starting_point, obj, f)
-                
+
                 pos = [iniparams + walker_spread*np.randn(n_params) for i in range(n_walkers)]
-                
+
                 sampler = emcee.EnsembleSampler(n_walkers, n_params, self.lnprob_emcee, args=(x, y, yerr))
                 pos, prob, state = sampler.run_mcmc(pos, burn) #Remove burn-in
                 sampler.reset()
                 pos, prob, state = sampler.run_mcmc(pos, n_steps)
-                
+
                 samples = sampler.flatchain
                 lnpost=sampler.flatlnprobability
-                
+
                 if save_output:
                     np.savetxt(chain_directory+'emcee_chain_%s_%s_%s' %(self.model_name, f, (str)(obj)), np.column_stack((samples, lnpost)))
                 #Maximum posterior params
                 ind=lnpost.argmax()
                 best_params=samples[ind, :]
-                
+
                 #Expects first the parameters, then -sigma then +sigma
                 row+=best_params
             else:
@@ -1272,7 +1272,7 @@ class ParametricFeatures(Features):
 
         print ('Time per filter', (time.time()-t1)/len(d.filter_set))
         return output
-    
+
 
     def lnprob_emcee(self, params, x, y, yerr):
         """
@@ -1296,8 +1296,8 @@ class ParametricFeatures(Features):
             ynew=self.model.evaluate(x, params)
             chi2=np.sum((y-ynew)*(y-ynew)/yerr/yerr)
             return -chi2/2.
-        
-        
+
+
 class WaveletFeatures(Features):
     """
     Uses wavelets to decompose the data and then reduces dimensionality of the feature space using PCA.
@@ -1555,7 +1555,7 @@ class WaveletFeatures(Features):
             #Pool and map can only really work with single-valued functions
             partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
 
-            out=p.map(partial_GP, d.object_names, chunksize=1)
+            out=p.map(partial_GP, d.object_names)
             for i in range(len(out)):
                 obj=d.object_names[i]
                 d.models[obj]=out[i]
