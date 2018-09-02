@@ -33,8 +33,8 @@ def copy_files(delete=True):
         os.makedirs(os.path.join(final_outdir, 'classifications', ''))
 
     if delete:
-        os.system('rsync -avq --exclude %s --remove-source-files %s* %s'%(out_int, outdir, final_outdir))
-        os.system('rm -r %s'%(outdir))
+        os.system('rsync -avq --remove-source-files %s* %s'%(outdir, final_outdir))
+        # os.system('rm -r %s'%(outdir))
     else:
         os.system('rsync -avq %s* %s'%(outdir, final_outdir))
 
@@ -88,14 +88,22 @@ if __name__ == "__main__":
     print('final outdir '+final_outdir)
 
     if rank == 0:
+
         print("MASTER NODE::{}".format(rank))
 
-        # print("I'M WAITING ...")
+        print("I'M WAITING ...")
 
-        # comm.barrier()
+        comm.barrier()
 
-        # print("I WAITED")
+        print("I WAITED")
 
+        for i in range(size-1):
+            LIST_WAVELETS="ls /share/data1/tallam/cadencetmp_{}_{}/int/wavelet_*".format(jobid, i+1)
+            subprocess.call(LIST_WAVELETS, shell=True)
+
+        print("FINISHED")
+        comm.abort()
+        # Does not finish -- might need -m flag to python script ------
         # remove_excess_headers = "sed '1!{{/^Object/d}}' /state/parition1/{}_wavelets.dat > /share/data1/tallam/{}_wavelets.dat".format(jobid)
         # subprocess.call(remove_excess_headers, shell=True)
     # # if rank == 0:
