@@ -1,0 +1,4 @@
+dataset : "kraken_2026_wfd"
+dataroot: "/share/hypatia/snmachine_resources/RBTEST_WFD_1aCC_Y10_G10/"
+prefix_Ia: "RBTEST_WFD_1aCC_Y10_G10_Ia-"
+prefix_NONIa: "RBTEST_WFD_1aCC_Y10_G10_NONIa-"
