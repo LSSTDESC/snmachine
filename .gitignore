@@ -122,3 +122,6 @@ examples/plots/
 
 # Do not track data generated from example notebook
 snmachine/example_data/output_*
+
+# Do not track mpi4py backtrace debugging files
+*.btr
