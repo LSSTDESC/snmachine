@@ -105,14 +105,18 @@ if __name__ == "__main__":
     print(snclassifier.choice_of_classifiers)
 
     # ### Wavelet features
-    out_class=os.path.join(final_outdir, 'classifications', '')
+    out_class=os.path.join(final_outdir, 'classifications_{}'.format(jobid), '')
+    try:
+        subprocess.call(['mkdir',out_class])
+    except IOError:
+        print("Already exists, use another name...")
+        exit()
 
-    subprocess.call(['mkdir',out_class])
 
     plt.figure(2)
     clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
                               classifiers=['random_forest'], training_set=0.05, nprocesses=nproc)
-    plt.savefig("plots/{}_Wavelets_RF_ROC_{}.png".format(dataset, jobid))
+    plt.savefig("plots/{}_Wavelets_RF_ROC_05_{}.png".format(dataset, jobid))
     plt.close(2)
 
     plt.close('all')
