@@ -1,0 +1,4 @@
+dataset : "kraken_2026_ddf"
+dataroot: "/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperSims/v1/kraken_2026/RBTEST_DDF_IaCC_Y10_G10/"
+prefix_Ia: "RBTEST_DDF_MIXED_Y10_G10_Ia-"
+prefix_NONIa: "RBTEST_DDF_MIXED_Y10_G10_NONIa-"
