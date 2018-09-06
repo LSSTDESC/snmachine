@@ -102,7 +102,7 @@ if __name__ == "__main__":
             subprocess.call(LIST_WAVELETS, shell=True)
 
         print("FINISHED")
-        comm.abort()
+        comm.Abort()
         # Does not finish -- might need -m flag to python script ------
         # remove_excess_headers = "sed '1!{{/^Object/d}}' /state/parition1/{}_wavelets.dat > /share/data1/tallam/{}_wavelets.dat".format(jobid)
         # subprocess.call(remove_excess_headers, shell=True)
