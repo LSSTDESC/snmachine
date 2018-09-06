@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
     plt.figure(2)
     clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
-                              classifiers=['random_forest'], nprocesses=nproc)
+                              classifiers=['random_forest'], training_set=0.05, nprocesses=nproc)
     plt.savefig("plots/{}_Wavelets_RF_ROC_{}.png".format(dataset, jobid))
     plt.close(2)
 
