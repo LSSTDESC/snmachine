@@ -107,6 +107,10 @@ if __name__ == "__main__":
             LIST_WAVELETS="ls /share/data1/tallam/cadencetmp_{}_{}/int/wavelet_*".format(jobid, i+1)
             subprocess.call(LIST_WAVELETS, shell=True)
 
+            # final_int=os.path.join(final_outdir, 'int', '')
+            # RSYNC_FILES="rsync -ravh /share/data1/tallam/cadencetmp_{}_{}/int/wavelet_* {}".format(jobid, i+1, final_int)
+            # subprocess.call(RSYNC_FILES, shell=True)
+
         print("FINISHED")
         comm.Abort()
         # Does not finish -- might need -m flag to python script ------
