@@ -593,6 +593,9 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     """
     t1= time.time()
 
+    training_ratio = int(training_set*1000)
+    training_ratio = str(training_ratio)
+
     if isinstance(features,Table):
         #The features are in astropy table format and must be converted to a numpy array before passing to sklearn
 
@@ -703,13 +706,13 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
             dat=np.column_stack((index_column,probs))
             nms=['Object']+typs
             tab=Table(dat,dtype=['S64']+['f']*probs.shape[1],names=nms)
-            flname=output_name+cls+'.probs'
+            flname=output_name+cls+training_ratio+'.probs'
             tab.write(flname,format='ascii')
 
             tab=Table(np.column_stack((fpr, tpr)),names=['FPR','TPR'])
-            tab.write(output_name+cls+'.roc',format='ascii')
+            tab.write(output_name+cls+training_ratio+'.roc',format='ascii')
 
-            np.savetxt(output_name+cls+'.auc',[auc])
+            np.savetxt(output_name+cls+training_ratio+'.auc',[auc])
 
     print()
     print ('Time taken ', (time.time()-t1)/60., 'minutes')
