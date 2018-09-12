@@ -99,6 +99,13 @@ if __name__ == "__main__":
 
     ## CLASSIFY
 
+    training_sets = params.get("training_set", None)
+    print("The proportion used for training is :\n{}%".format(training_sets))
+    print(type(training_sets)) # Should be a list
+
+    classifiers = params.get("classifiers", None)
+    print("Classifiers :\n{}".format(classifiers))
+
     nproc=4
 
     # Print available classifiers
