@@ -57,9 +57,9 @@ if __name__ == "__main__":
     print(type(types))
 
     # If we write this table to file and inpsect the format of supernova types we find there are 6 variants:
-    # ascii.write(types, 'types.csv', format='csv', fast_writer=True)
-    # awk_command = "awk -F ',' '{print $2}' ../examples/types.csv | uniq -c"
-    # subprocess.call(awk_command, shell=True)
+    ascii.write(types, '{}{}_types.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
+    LIST_TYPES = "awk -F ',' '{{print $2}}' {}{}_types.csv | sort | uniq -c".format(final_outdir, dataset)
+    subprocess.call(LIST_TYPES, shell=True)
 
     # Like for SPCC example notebook where we restrict ourselves to three supernova types:
     # Ia (1), II (2) and Ibc (3) by carrying out the following pre-proccessing steps
