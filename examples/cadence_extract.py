@@ -84,6 +84,12 @@ if __name__ == "__main__":
     out_class=os.path.join(outdir, 'classifications', '')
     out_int=os.path.join(outdir, 'int', '')
 
+    if not os.path.exists(final_outdir):
+        os.makedirs(final_outdir)
+        os.makedirs(os.path.join(final_outdir, 'features', ''))
+        os.makedirs(os.path.join(final_outdir, 'int', ''))
+        os.makedirs(os.path.join(final_outdir, 'classifications', ''))
+
     print('temp outdir '+outdir)
     print('final outdir '+final_outdir)
 
@@ -153,11 +159,6 @@ if __name__ == "__main__":
         # out_class=os.path.join(outdir, 'classifications', '')
         # out_int=os.path.join(outdir, 'int', '')
 
-        if not os.path.exists(final_outdir):
-            os.makedirs(final_outdir)
-            os.makedirs(os.path.join(final_outdir, 'features', ''))
-            os.makedirs(os.path.join(final_outdir, 'int', ''))
-            os.makedirs(os.path.join(final_outdir, 'classifications', ''))
 
         if os.path.isdir(outdir):
 
