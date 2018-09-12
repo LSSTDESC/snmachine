@@ -2,3 +2,11 @@ dataset : "kraken_2026_wfd"
 dataroot: "/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperSims/v1/kraken_2026/RBTEST_WFD_1aCC_Y10_G10/"
 prefix_Ia: "RBTEST_WFD_1aCC_Y10_G10_Ia-"
 prefix_NONIa: "RBTEST_WFD_1aCC_Y10_G10_NONIa-"
+training_set:
+    - 0.05
+    - 0.04
+    - 0.03
+    - 0.02
+    - 0.01
+classifiers:
+    - 'random_forest'
