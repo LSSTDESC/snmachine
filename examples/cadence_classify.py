@@ -113,18 +113,30 @@ if __name__ == "__main__":
 
     # ### Wavelet features
     out_class=os.path.join(final_outdir, 'classifications_{}'.format(jobid), '')
+    out_plots=os.path.join(out_class, 'plots', '')
     try:
         subprocess.call(['mkdir',out_class])
+        subprocess.call(['mkdir',out_plots])
     except IOError:
         print("Already exists, use another name...")
         exit()
 
 
-    plt.figure(2)
-    clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
-                              classifiers=['random_forest'], training_set=0.05, nprocesses=nproc)
-    plt.savefig("plots/{}_Wavelets_RF_ROC_05_{}.png".format(dataset, jobid))
-    plt.close(2)
+    # plt.figure(2)
+    # plt.figure(figsize=(12,6))
+    for training_set in training_sets:
 
-    plt.close('all')
+        print("Working on :\n {}".format(training_set))
+        clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
+                                  classifiers=classifiers,
+                                  training_set=training_set, nprocesses=nproc,
+                                  plot_roc_curve=False)
 
+    # plt.xlabel(r'False positive rate (contamination)')
+    # plt.ylabel(r'True positive rate (completeness)')
+
+    # plt.title(r'{} ROC Wavelet Features + Random Forest Algortihm with {} Training Set'.format(dataset, training_set))
+    # plt.savefig("{}Wavelets_RF_ROC_{}.png".format(out_plots, jobid))
+    # plt.close(2)
+
+    # plt.close('all')
