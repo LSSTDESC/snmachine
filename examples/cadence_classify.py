@@ -1,5 +1,6 @@
 from __future__ import division
 from snmachine import sndata, snfeatures, snclassifier, tsne_plot, example_data
+from sklearn.externals import joblib
 from argparse import ArgumentParser
 import numpy as np
 import matplotlib.pyplot as plt
@@ -106,7 +107,7 @@ if __name__ == "__main__":
     classifiers = params.get("classifiers", None)
     print("Classifiers :\n{}".format(classifiers))
 
-    nproc=4
+    nproc=1
 
     # Print available classifiers
     print(snclassifier.choice_of_classifiers)
@@ -130,8 +131,13 @@ if __name__ == "__main__":
         clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
                                   classifiers=classifiers,
                                   training_set=training_set, nprocesses=nproc,
-                                  plot_roc_curve=False)
+                                  plot_roc_curve=False, return_classifier=True)
 
+        training_ratio = int(training_set*1000)
+        training_ratio = str(training_ratio)
+        joblib.dump(clss, '{}{}_model.pkl'.format(out_class, training_ratio))
+
+    exit()
     # plt.xlabel(r'False positive rate (contamination)')
     # plt.ylabel(r'True positive rate (completeness)')
 
