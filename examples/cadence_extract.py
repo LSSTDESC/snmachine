@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     final_outdir=os.path.join('output_data', 'output_%s_no_z' %dataset,'')
 
-    outdir=os.path.join(os.path.sep, 'share','data1', username, 'cadencetmp_{}_{}'.format(jobid, rank), '')
+    outdir=os.path.join(os.path.sep, 'share','data1', username, '{}_cadencetmp_{}_{}'.format(dataset, jobid, rank), '')
 
     out_features=os.path.join(outdir, 'features', '')
     out_class=os.path.join(outdir, 'classifications', '')
@@ -98,12 +98,12 @@ if __name__ == "__main__":
         print("I WAITED")
 
         for i in range(size-1):
-            LIST_WAVELETS="ls /share/data1/tallam/cadencetmp_{}_{}/int/wavelet_*".format(jobid, i+1)
+            LIST_WAVELETS="ls /share/data1/tallam/{}_cadencetmp_{}_{}/int/wavelet_*".format(dataset, jobid, i+1)
             subprocess.call(LIST_WAVELETS, shell=True)
 
-            # final_int=os.path.join(final_outdir, 'int', '')
-            # RSYNC_FILES="rsync -ravh /share/data1/tallam/cadencetmp_{}_{}/int/wavelet_* {}".format(jobid, i+1, final_int)
-            # subprocess.call(RSYNC_FILES, shell=True)
+            final_int=os.path.join(final_outdir, 'int', '')
+            RSYNC_FILES="rsync -ravh /share/data1/tallam/{}_cadencetmp_{}_{}/int/wavelet_* {}".format(dataset, jobid, i+1, final_int)
+            subprocess.call(RSYNC_FILES, shell=True)
 
         print("FINISHED")
         comm.Abort()
