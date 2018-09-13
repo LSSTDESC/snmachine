@@ -48,4 +48,4 @@ echo This jobs runs on the following machines:
 cat $PBS_NODEFILE | uniq > ./jobs/logs/machinefiles/machine.file.$JOBID
 echo PBS_NODEFILE=$PBS_NODEFILE
 # export PYTHONPATH=$PYTHONPATH:/home/tallam/.conda/envs/astrotog_hpc/bin/python
-mpirun -np 1 -genvlist PATH,LD_LIBRARY_PATH,LD_RUN_PATH,PYTHONPATH --machinefile $PBS_NODEFILE python -W"ignore" cadence_plot.py -c $CONFIG
+mpirun -np 1 -genvlist PATH,LD_LIBRARY_PATH,LD_RUN_PATH,PYTHONPATH --machinefile $PBS_NODEFILE python -W"ignore" cadence_plot.py -c $CONFIG -j $JOBID
