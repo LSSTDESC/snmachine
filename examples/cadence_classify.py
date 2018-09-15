@@ -72,7 +72,10 @@ if __name__ == "__main__":
     types['Type'][np.floor(types['Type']/10)==2]=2
     types['Type'][np.floor(types['Type']/10)==3]=3
 
-    dat.data[dat.object_names[0]]
+    # dat.data[dat.object_names[0]]
+    training_objects = dat.object_names[:2000]
+    training_set = list(training_objects)
+    print(type(training_set)) # Should be a list
 
     # RESTART FROM WAVELETS
     # Copy int to finaldir and read in raw wavelets
@@ -103,9 +106,9 @@ if __name__ == "__main__":
 
     ## CLASSIFY
 
-    training_sets = params.get("training_set", None)
-    print("The proportion used for training is :\n{}%".format(training_sets))
-    print(type(training_sets)) # Should be a list
+    # training_sets = params.get("training_set", None)
+    # print("The proportion used for training is :\n{}%".format(training_sets))
+
 
     classifiers = params.get("classifiers", None)
     print("Classifiers :\n{}".format(classifiers))
@@ -117,10 +120,10 @@ if __name__ == "__main__":
 
     # ### Wavelet features
     out_class=os.path.join(final_outdir, 'classifications_{}'.format(jobid), '')
-    out_plots=os.path.join(out_class, 'plots', '')
+    # out_plots=os.path.join(out_class, 'plots', '')
     try:
         subprocess.call(['mkdir',out_class])
-        subprocess.call(['mkdir',out_plots])
+        # subprocess.call(['mkdir',out_plots])
     except IOError:
         print("Already exists, use another name...")
         exit()
@@ -128,17 +131,19 @@ if __name__ == "__main__":
 
     # plt.figure(2)
     # plt.figure(figsize=(12,6))
-    for training_set in training_sets:
+    print("Using {} SNe for training".format(len(training_set)))
+    print(training_set)
+    # for training_set in training_sets:
 
-        print("Working on :\n {}".format(training_set))
-        clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
-                                  classifiers=classifiers,
-                                  training_set=training_set, nprocesses=nproc,
-                                  plot_roc_curve=False, return_classifier=True)
+    # print("Working on :\n {}".format(training_set))
+    clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
+                              classifiers=classifiers,
+                              training_set=training_set, nprocesses=nproc,
+                              plot_roc_curve=False, return_classifier=True)
 
-        training_ratio = int(training_set*1000)
-        training_ratio = str(training_ratio)
-        joblib.dump(clss, '{}{}_model.pkl'.format(out_class, training_ratio))
+    # training_ratio = int(training_set*1000)
+    # training_ratio = str(training_ratio)
+    joblib.dump(clss, '{}{}_model.pkl'.format(out_class, len(training_objects)))
 
     exit()
     # plt.xlabel(r'False positive rate (contamination)')
