@@ -51,7 +51,10 @@ if __name__ == "__main__":
     final_outdir=os.path.join('output_data', 'output_%s_no_z' %dataset,'')
 
     ## READ IN ENTIRE DATASET
-    dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,21))
+    if 'wfd' in dataset:
+        dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,5))
+    else:
+        dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,21))
     # dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa)
 
     types=dat.get_types()
