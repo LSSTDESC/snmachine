@@ -3,10 +3,6 @@ dataroot: "/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperSims/v
 prefix_Ia: "RBTEST_DDF_MIXED_Y10_G10_Ia-"
 prefix_NONIa: "RBTEST_DDF_MIXED_Y10_G10_NONIa-"
 training_set:
-    - 0.009
-    - 0.007
-    - 0.005
-    - 0.003
-    - 0.001
+    - 0.0195
 classifiers:
     - 'random_forest'

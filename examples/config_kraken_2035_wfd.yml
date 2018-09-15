@@ -1,8 +1,0 @@
-dataset : "kraken_2035_wfd"
-dataroot: "/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperSims/v1/kraken_2035/RBTEST_DDF_IaCC_Y10_G10_kraken_2035/"
-prefix_Ia: "RBTEST_WFD_1aCC_Y10_G10_Ia-"
-prefix_NONIa: "RBTEST_WFD_1aCC_Y10_G10_NONIa-"
-training_set:
-    - 0.05
-classifiers:
-    - 'random_forest'

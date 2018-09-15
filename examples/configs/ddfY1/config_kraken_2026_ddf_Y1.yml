@@ -1,0 +1,6 @@
+dataset : "kraken_2026_ddf_Y1"
+dataroot: "/share/hypatia/snmachine_resources/data/cwp/DDFY1/RH_kraken_2026_ddf_DDF_1aONLY_Y1_G10/"
+prefix_Ia: "RH_DDF_1aONLY_Y1_G10_Ia-"
+prefix_NONIa: "RH_DDF_1aONLY_Y1_G10_NONIa-"
+classifiers:
+    - 'random_forest'
