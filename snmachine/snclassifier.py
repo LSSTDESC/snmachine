@@ -593,7 +593,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     """
     t1= time.time()
 
-    training_ratio = int(training_set*1000)
+    training_ratio = len(training_set)
     training_ratio = str(training_ratio)
 
     if isinstance(features,Table):
