@@ -1,6 +1,6 @@
 dataset : "colossus_2664_wfd_Y10"
 dataroot: "/share/hypatia/snmachine_resources/data/cwp/WFDY10/RH_colossus_2664_wfd_WFD_1aONLY_Y10_G10/"
-prefix_Ia: "RBTEST_WFD_1aCC_Y10_G10_Ia-"
-prefix_NONIa: "RBTEST_WFD_1aCC_Y10_G10_NONIa-"
+prefix_Ia: "RH_WFD_1aONLY_Y10_G10_Ia-"
+prefix_NONIa: "RH_WFD_1aONLY_Y10_G10_NONIa-"
 classifiers:
     - 'random_forest'

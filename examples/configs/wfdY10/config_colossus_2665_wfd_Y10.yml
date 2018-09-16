@@ -1,15 +1,6 @@
-dataset : "kraken_2026_wfd"
-dataroot: "/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperSims/v1/kraken_2026/RBTEST_WFD_1aCC_Y10_G10/"
-prefix_Ia: "RBTEST_WFD_1aCC_Y10_G10_Ia-"
-prefix_NONIa: "RBTEST_WFD_1aCC_Y10_G10_NONIa-"
-training_set:
-    - 0.05
-    - 0.03
-    - 0.01
-    - 0.009
-    - 0.007
-    - 0.005
-    - 0.003
-    - 0.001
+dataset : "colossus_2665_wfd_Y10"
+dataroot: "/share/hypatia/snmachine_resources/data/cwp/WFDY10/RH_colossus_2665_wfd_WFD_1aONLY_Y10_G10/"
+prefix_Ia: "RH_WFD_1aONLY_Y10_G10_Ia-"
+prefix_NONIa: "RH_WFD_1aONLY_Y10_G10_NONIa-"
 classifiers:
     - 'random_forest'
