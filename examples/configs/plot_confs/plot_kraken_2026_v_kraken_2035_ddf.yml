@@ -1,11 +1,9 @@
 rocs:
-    - file: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/classifications_8931/waveletsrandom_forest2.roc'
-      auc: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/classifications_8931/waveletsrandom_forest2.auc'
-      ratio: 0.02
-      types: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/kraken_2026_ddf_types.csv'
-      sim: 'kraken_2026_ddf'
-    - file: '/home/tallam/snmachine/examples/output_data/output_kraken_2035_ddf_no_z/classifications_8971/waveletsrandom_forest10.roc'
-      auc: '/home/tallam/snmachine/examples/output_data/output_kraken_2035_ddf_no_z/classifications_8971/waveletsrandom_forest10.auc'
-      ratio: 0.01
-      types: '/home/tallam/snmachine/examples/output_data/output_kraken_2035_ddf_no_z/kraken_2035_ddf_types.csv'
-      sim: 'kraken_2035_ddf'
+    - file: '/home/tallam/snmachine/examples/output_data/output_colossus_2664_ddf_Y1_no_z/classifications_9123/waveletsrandom_forest2000.roc'
+      auc: '/home/tallam/snmachine/examples/output_data/output_colossus_2664_ddf_Y1_no_z/classifications_9123/waveletsrandom_forest2000.auc'
+      norm_types: '/home/tallam/snmachine/examples/output_data/output_colossus_2664_ddf_Y1_no_z/colossus_2664_ddf_Y1_types_normalised.csv'
+      probs: '/home/tallam/snmachine/examples/output_data/output_colossus_2664_ddf_Y1_no_z/classifications_9123/waveletsrandom_forest2000.probs'
+    - file: '/home/tallam/snmachine/examples/output_data/output_colossus_2665_ddf_Y1_no_z/classifications_9124/waveletsrandom_forest2000.roc'
+      auc: '/home/tallam/snmachine/examples/output_data/output_colossus_2665_ddf_Y1_no_z/classifications_9124/waveletsrandom_forest2000.auc'
+      norm_types: '/home/tallam/snmachine/examples/output_data/output_colossus_2665_ddf_Y1_no_z/colossus_2665_ddf_Y1_types_normalised.csv'
+      probs: '/home/tallam/snmachine/examples/output_data/output_colossus_2665_ddf_Y1_no_z/classifications_9124/waveletsrandom_forest2000.probs'
