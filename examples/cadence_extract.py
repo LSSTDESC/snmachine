@@ -239,7 +239,7 @@ if __name__ == "__main__":
             PCA_vec=np.loadtxt('%s_wavelets_PCA_vec.dat' %run_name)
             PCA_mean=np.loadtxt('%s_wavelets_PCA_mean.dat' %run_name)
         else:
-            wave_features=waveFeats.extract_features(dat,nprocesses=6,output_root=out_int,save_output='all')
+            wave_features=waveFeats.extract_features(dat,nprocesses=40,output_root=out_int,save_output='all')
             wave_features.write('{}_wavelets_rank_{}.dat'.format(run_name, rank), format='ascii')
             np.savetxt('%s_wavelets_PCA_vals.dat' %run_name,waveFeats.PCA_eigenvals)
             np.savetxt('%s_wavelets_PCA_vec.dat' %run_name,waveFeats.PCA_eigenvectors)
