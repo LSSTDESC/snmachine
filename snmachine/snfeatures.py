@@ -16,12 +16,12 @@ import scipy.optimize as op
 from iminuit import Minuit, describe
 import traceback
 
-try:
-    import pymultinest
-    from pymultinest.analyse import Analyzer
-    has_multinest=True
-except ImportError:
-    has_multinest=False
+# try:
+#     import pymultinest
+#     from pymultinest.analyse import Analyzer
+#     has_multinest=True
+# except ImportError:
+#     has_multinest=False
 
 try:
     import emcee
@@ -1335,7 +1335,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output=None, output_root='features', nprocesses=40, restart='none', gpalgo='george', xmin=None, xmax=None):
+    def extract_features(self, d, initheta=[500, 20], save_output=None, output_root='features', nprocesses=24, restart='none', gpalgo='george', xmin=None, xmax=None):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
