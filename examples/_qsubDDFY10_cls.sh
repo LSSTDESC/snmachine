@@ -1,0 +1,14 @@
+# qsub -v CONFIG=configs/ddfY10/config_colossus_2664_ddf_Y10.yml -N cls_colossus_2664_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_colossus_2665_ddf_Y10.yml -N cls_colossus_2665_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_colossus_2667_ddf_Y10.yml -N cls_colossus_2667_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_kraken_2026_ddf_Y10.yml -N cls_kraken_2026_ddf_Y10 jobs/classify.pbs
+qsub -v CONFIG=configs/ddfY10/config_kraken_2035_ddf_Y10.yml -N cls_kraken_2035_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_kraken_2036_ddf_Y10.yml -N cls_kraken_2036_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_kraken_2042_ddf_Y10.yml -N cls_kraken_2042_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_kraken_2044_ddf_Y10.yml -N cls_kraken_2044_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_mothra_2045_ddf_Y10.yml -N cls_mothra_2045_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_mothra_2049_ddf_Y10.yml -N cls_mothra_2049_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_nexus_2097_ddf_Y10.yml -N cls_nexus_2097_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_pontus_2002_ddf_Y10.yml -N cls_pontus_2002_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_pontus_2489_ddf_Y10.yml -N cls_pontus_2489_ddf_Y10 jobs/classify.pbs
+# qsub -v CONFIG=configs/ddfY10/config_pontus_2502_ddf_Y10.yml -N cls_pontus_2502_ddf_Y10 jobs/classify.pbs
