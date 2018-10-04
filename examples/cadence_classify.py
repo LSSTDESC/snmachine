@@ -2,6 +2,7 @@ from __future__ import division
 from snmachine import sndata, snfeatures, snclassifier, tsne_plot, example_data
 from sklearn.externals import joblib
 from argparse import ArgumentParser
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 import time, os, pywt, subprocess
@@ -52,7 +53,7 @@ if __name__ == "__main__":
 
     ## READ IN ENTIRE DATASET
     if 'wfd' in dataset:
-        dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,5))
+        dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,2))
     else:
         dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,21))
     # dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa)
@@ -71,11 +72,18 @@ if __name__ == "__main__":
 
     types['Type'][np.floor(types['Type']/10)==2]=2
     types['Type'][np.floor(types['Type']/10)==3]=3
+    types['Type'][np.floor(types['Type']/10)==4]=4
+
+    print(types)
+    ascii.write(types, '{}{}_types_normalised.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
 
     # dat.data[dat.object_names[0]]
-    training_objects = dat.object_names[:2000]
+    # training_objects = dat.object_names[:2000]
+    training_objects = dat.object_names[:]
     training_set = list(training_objects)
     print(type(training_set)) # Should be a list
+
+    training_set = random.sample(training_set, 2000)
 
     # RESTART FROM WAVELETS
     # Copy int to finaldir and read in raw wavelets
@@ -143,7 +151,7 @@ if __name__ == "__main__":
 
     # training_ratio = int(training_set*1000)
     # training_ratio = str(training_ratio)
-    joblib.dump(clss, '{}{}_model.pkl'.format(out_class, len(training_objects)))
+    joblib.dump(clss, '{}{}_model.pkl'.format(out_class, len(training_set)))
 
     exit()
     # plt.xlabel(r'False positive rate (contamination)')
