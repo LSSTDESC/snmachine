@@ -5,9 +5,9 @@
 #PBS -o jobs/logs/
 #PBS -e jobs/logs/stderr/
 #PBS -V
-#PBS -l nodes=1:ppn=40,walltime=99:00:00
+#PBS -l nodes=1:ppn=12,walltime=99:00:00
 #PBS -r n
-#PBS -q cores40
+#PBS -q compute
 echo $PBS_O_WORKDIR
 echo $PBS_ENVIRONMENT
 echo $PBS_JOBID
@@ -20,6 +20,7 @@ cd $HOME/snmachine
 source activate snmachine
 pip install mpi4py
 pip install pandas
+pip install seaborn
 # pip install latex
 export PATH="/usr/bin/latex:$PATH"
 which python

@@ -5,9 +5,9 @@
 #PBS -o jobs/logs/
 #PBS -e jobs/logs/stderr/
 #PBS -V
-#PBS -l nodes=1:ppn=40,walltime=99:00:00
+#PBS -l nodes=1:ppn=12,walltime=99:00:00
 #PBS -r n
-#PBS -q cores40
+#PBS -q compute
 echo $PBS_O_WORKDIR
 echo $PBS_ENVIRONMENT
 echo $PBS_JOBID
@@ -47,4 +47,4 @@ echo This jobs runs on the following machines:
 cat $PBS_NODEFILE | uniq > ./jobs/logs/machinefiles/machine.file.$JOBID
 echo PBS_NODEFILE=$PBS_NODEFILE
 # export PYTHONPATH=$PYTHONPATH:/home/tallam/.conda/envs/astrotog_hpc/bin/python
-mpirun -np 1 -genvlist PATH,LD_LIBRARY_PATH,LD_RUN_PATH,PYTHONPATH --machinefile $PBS_NODEFILE python -W"ignore" cadence_classify.py -c $CONFIG -j $JOBID
+time mpirun -np 1 -genvlist PATH,LD_LIBRARY_PATH,LD_RUN_PATH,PYTHONPATH --machinefile $PBS_NODEFILE python -W"ignore" cadence_classify.py -c $CONFIG -j $JOBID
