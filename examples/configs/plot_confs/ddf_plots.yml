@@ -1,19 +1,19 @@
 dataset: 'kraken_2026_ddf'
 jobid: 8939
 rocs:
-    - file: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/classifications_8939/waveletsrandom_forest1.roc'
+    - file: '/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperClassResults/output_data/output_kraken_2026_ddf_no_z/classifications_8939/waveletsrandom_forest1.roc'
       ratio: 0.001
-    - file: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/classifications_8939/waveletsrandom_forest3.roc'
+    - file: '/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperClassResults/output_data/output_kraken_2026_ddf_no_z/classifications_8939/waveletsrandom_forest3.roc'
       ratio: 0.003
-    - file: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/classifications_8939/waveletsrandom_forest5.roc'
+    - file: '/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperClassResults/output_data/output_kraken_2026_ddf_no_z/classifications_8939/waveletsrandom_forest5.roc'
       ratio: 0.005
-    - file: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/classifications_8939/waveletsrandom_forest7.roc'
+    - file: '/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperClassResults/output_data/output_kraken_2026_ddf_no_z/classifications_8939/waveletsrandom_forest7.roc'
       ratio: 0.007
-    - file: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/classifications_8939/waveletsrandom_forest9.roc'
+    - file: '/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperClassResults/output_data/output_kraken_2026_ddf_no_z/classifications_8939/waveletsrandom_forest9.roc'
       ratio: 0.009
-    - file: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/classifications_8931/waveletsrandom_forest10.roc'
+    - file: '/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperClassResults/output_data/output_kraken_2026_ddf_no_z/classifications_8931/waveletsrandom_forest10.roc'
       ratio: 0.01
-    - file: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/classifications_8931/waveletsrandom_forest30.roc'
+    - file: '/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperClassResults/output_data/output_kraken_2026_ddf_no_z/classifications_8931/waveletsrandom_forest30.roc'
       ratio: 0.03
-    - file: '/home/tallam/snmachine/examples/output_data/output_kraken_2026_ddf_no_z/classifications_8931/waveletsrandom_forest50.roc'
+    - file: '/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperClassResults/output_data/output_kraken_2026_ddf_no_z/classifications_8931/waveletsrandom_forest50.roc'
       ratio: 0.05
