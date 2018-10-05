@@ -12,7 +12,6 @@ import sklearn.metrics
 import sncosmo
 import yaml
 
-# TODO
 
 def process():
     parser = ArgumentParser(description="Configuration for cadence comparisons")
@@ -23,22 +22,6 @@ def process():
     arguments = parser.parse_args()
     return vars(arguments)
 
-def copy_files(delete=True):
-    print('Copying files ...')
-    t1=time.time()
-    if not os.path.exists(final_outdir):
-        os.makedirs(final_outdir)
-        os.makedirs(os.path.join(final_outdir, 'features', ''))
-        os.makedirs(os.path.join(final_outdir, 'int', ''))
-        os.makedirs(os.path.join(final_outdir, 'classifications', ''))
-
-    if delete:
-        os.system('rsync -avq --remove-source-files %s* %s'%(outdir, final_outdir))
-        # os.system('rm -r %s'%(outdir))
-    else:
-        os.system('rsync -avq %s* %s'%(outdir, final_outdir))
-
-    print('Time taken for file copying '+str(time.time()-t1))
 
 if __name__ == "__main__":
 
@@ -107,40 +90,6 @@ if __name__ == "__main__":
 
         print("FINISHED")
         comm.Abort()
-        # Does not finish -- might need -m flag to python script ------
-        # remove_excess_headers = "sed '1!{{/^Object/d}}' /state/parition1/{}_wavelets.dat > /share/data1/tallam/{}_wavelets.dat".format(jobid)
-        # subprocess.call(remove_excess_headers, shell=True)
-    # # if rank == 0:
-    # #     run_name=os.path.join(out_features,'%s_all' %dataset)
-        # wave_features=Table.read("/state/partition1/{}_wavelets.dat".format(jobid), format='ascii')
-
-        # ## READ IN TYPES SINGLE FILE
-
-        # plt.figure(1)
-        # tsne_plot.plot(wave_features,join(wave_features,types)['Type'])
-        # plt.savefig("plots/{}_Wavelets_RF_tSNE_{}.png".format(dataset, jobid))
-        # plt.close(1)
-
-        # ## Classify
-
-        # nproc=4
-
-        # # Print available classifiers
-        # print(snclassifier.choice_of_classifiers)
-
-        # # ### Wavelet features
-
-        # subprocess.call(['mkdir',out_class])
-
-        # plt.figure(2)
-        # clss=snclassifier.run_pipeline(wave_features,types,output_name=os.path.join(out_class,'wavelets'),
-        #                           classifiers=['random_forest'], nprocesses=nproc)
-        # plt.savefig("plots/{}_Wavelets_RF_ROC_{}.png".format(dataset, jobid))
-        # plt.close(2)
-
-        # plt.close('all')
-
-        # copy_files()
 
     elif rank > 0:
 
@@ -150,12 +99,6 @@ if __name__ == "__main__":
         somefile="/state/partition1/somefile.txt"
         subprocess.call(['touch', somefile])
         print("LOOKING FOR FILE IN SCRATCH:\n{}".format(os.path.isfile(somefile)))
-
-        # This is where to save intermediate output for the feature extraction method.
-        # In some cases (such as the wavelets), these  files can be quite large.
-        # out_features=os.path.join(outdir, 'features', '')
-        # out_class=os.path.join(outdir, 'classifications', '')
-        # out_int=os.path.join(outdir, 'int', '')
 
         if not os.path.exists(final_outdir):
             os.makedirs(final_outdir)
@@ -184,36 +127,12 @@ if __name__ == "__main__":
 
         print(outdir)
         #Data root
-        # rt="/share/hypatia/snmachine_resources/RBTEST_DDF_IaCC_Y10_G10/"
         print(rt)
 
-        # fits file prefix
-        # prefix_Ia = 'RBTEST_DDF_MIXED_Y10_G10_Ia-'
-        # prefix_NONIa = 'RBTEST_DDF_MIXED_Y10_G10_NONIa-'
-
-        # dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=range(1,2))
         dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa, indices=[rank])
-        # dat=sndata.LSSTCadenceSimulations(rt, prefix_Ia, prefix_NONIa)
-
-        #For now we restrict ourselves to three supernova types: Ia (1), II (2) and Ibc (3)
-        types=dat.get_types()
-        print(type(types))
-
-        # If we write this table to file and inpsect the format of supernova types we find there are 6 variants:
-        # ascii.write(types, 'types.csv', format='csv', fast_writer=True)
-        # awk_command = "awk -F ',' '{print $2}' ../examples/types.csv | uniq -c"
-        # subprocess.call(awk_command, shell=True)
-
-        # Like for SPCC example notebook where we restrict ourselves to three supernova types: Ia (1), II (2) and Ibc (3) by carrying out the following pre-proccessing steps
-        types['Type'] = types['Type']-100
-
-        types['Type'][np.floor(types['Type']/10)==2]=2
-        types['Type'][np.floor(types['Type']/10)==3]=3
 
         dat.data[dat.object_names[0]]
-
         # ## Extract features for the data
-
         print("Rank : {} has data {} : ".format(rank, dat))
 
         # The next step is to extract useful features from the data. This can often take a long time, depending on the feature extraction method, so it's a good idea to save these to file (`snmachine` by default saves to astropy tables)
@@ -247,50 +166,3 @@ if __name__ == "__main__":
             PCA_vals=waveFeats.PCA_eigenvals
             PCA_vec=waveFeats.PCA_eigenvectors
             PCA_mean=waveFeats.PCA_mean
-
-
-        # Then bring back together. Barrier after they all done. Node 0.
-        # BARRIER
-        # wait for all files to be written
-        # comm.barrier() -------------
-
-        # GATHER
-
-        # Combine all rank_wavelets.dat files together in a single file called
-        # combine_wavelet_features = "cat {0}_wavelets_rank_{1}.dat >> /state/partition1/{2}_wavelets.dat".format(run_name, rank, jobid)
-        # subprocess.call(combine_wavelet_features, shell=True)
-
-        # comm.barrier()
-
-        ## WRITE TYPES ------- Send to parition1
-        ## COMBINE TYPES ------- Send to parition1
-
-        # remove_excess_headers = "sed '1!{{/^Object/d}}' /state/parition1/{1}_wavelets.dat > /state/partition1/{1}_wavelets.dat".format(run_name, jobid)
-        # subprocess.call(remove_excess_headers, shell=True)
-    # # if rank == 0:
-    # #     run_name=os.path.join(out_features,'%s_all' %dataset)
-        # wave_features=Table.read("/state/partition1/{0}_wavelets.dat".format(jobid, run_name), format='ascii')
-
-        # plt.figure(1)
-        # tsne_plot.plot(wave_features,join(wave_features,types)['Type'])
-        # plt.savefig("plots/{}_Wavelets_RF_tSNE_{}.png".format(dataset, jobid))
-        # plt.close(1)
-
-        # ## Classify
-
-        # nproc=4
-
-        # # Print available classifiers
-        # print(snclassifier.choice_of_classifiers)
-
-        # # ### Wavelet features
-
-        # plt.figure(2)
-        # clss=snclassifier.run_pipeline(wave_features,types,output_name=os.path.join(out_class,'wavelets'),
-        #                           classifiers=['random_forest'], nprocesses=nproc)
-        # plt.savefig("plots/{}_Wavelets_RF_ROC_{}.png".format(dataset, jobid))
-        # plt.close(2)
-
-        # plt.close('all')
-
-        # copy_files()
