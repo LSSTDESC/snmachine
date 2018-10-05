@@ -104,21 +104,7 @@ if __name__ == "__main__":
     # PCA_vec=waveFeats.PCA_eigenvectors
     # PCA_mean=waveFeats.PCA_mean
 
-    ## T-SNE
-    # TODO:
-    # - Currently memory issues when attempting to plot over entire dataset
-
-    # plt.figure(1)
-    # tsne_plot.plot(wavelet_features,join(wavelet_features,types)['Type'])
-    # plt.savefig("plots/{}_Wavelets_RF_tSNE_{}.png".format(dataset, jobid))
-    # plt.close(1)
-
     ## CLASSIFY
-
-    # training_sets = params.get("training_set", None)
-    # print("The proportion used for training is :\n{}%".format(training_sets))
-
-
     classifiers = params.get("classifiers", None)
     print("Classifiers :\n{}".format(classifiers))
 
@@ -142,7 +128,6 @@ if __name__ == "__main__":
     # plt.figure(figsize=(12,6))
     print("Using {} SNe for training".format(len(training_set)))
     print(training_set)
-    # for training_set in training_sets:
 
     # print("Working on :\n {}".format(training_set))
     clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
@@ -155,11 +140,3 @@ if __name__ == "__main__":
     joblib.dump(clss, '{}{}_model.pkl'.format(out_class, len(training_set)))
 
     exit()
-    # plt.xlabel(r'False positive rate (contamination)')
-    # plt.ylabel(r'True positive rate (completeness)')
-
-    # plt.title(r'{} ROC Wavelet Features + Random Forest Algortihm with {} Training Set'.format(dataset, training_set))
-    # plt.savefig("{}Wavelets_RF_ROC_{}.png".format(out_plots, jobid))
-    # plt.close(2)
-
-    # plt.close('all')
