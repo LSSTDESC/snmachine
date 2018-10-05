@@ -5,9 +5,9 @@ import itertools
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-# from matplotlib import rc
-# plt.rc('text', usetex=True)
-# plt.rc('font', family='serif')
+from matplotlib import rc
+plt.rc('text', usetex=False)
+plt.rc('font', family='serif')
 import time, os, pywt, subprocess
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
@@ -119,16 +119,19 @@ if __name__ == "__main__":
 
         sim = rocs[i]['sim']
 
-        y_true = pd.read_csv(rocs[i]['norm_types']) #colossus_2665_ddf_Y1_types_normalised.csv
-        y_pred = pd.read_csv(rocs[i]['probs'], sep='\s+') #waveletrandom_forest2000.probs
+        y_true = pd.read_csv(rocs[i]['norm_types'], engine='python') #colossus_2665_ddf_Y1_types_normalised.csv
+        y_pred = pd.read_csv(rocs[i]['probs'], sep='\s+', engine='python') #waveletrandom_forest2000.probs
 
         results = pd.merge(y_pred, y_true, left_on = 'Object', right_on = 'Object')
+        print(results)
 
         # new_true = results.filter(['Object','Type'], axis=1)
         new_true = results.filter(['Type'], axis=1)
+        print(new_true)
 
         # new_pred = results.filter(['Object','1', '2', '3', '4'], axis=1)
         new_pred = results.filter(['1', '2', '3', '4'], axis=1)
+        print(new_pred)
         # new_pred = new_pred.idxmax(axis=1)
 
         new_true = new_true.values
@@ -150,7 +153,6 @@ if __name__ == "__main__":
 
         cm = confusion_matrix(y_trues, y_preds)
         print("Confusion Matrix:\n{}".format(cm))
-        title = r"ROC Wavelet Features & Random Forest Algorithm"
         # plot_confusion_matrix(cm, title)
         row_sums = cm.sum(axis=1, keepdims=True)
         norm_conf_mx = cm / row_sums
@@ -161,42 +163,35 @@ if __name__ == "__main__":
         sns.heatmap(norm_conf_mx, square=True, annot=True, cbar=False, fmt='.2f')
         plt.xlabel('predicted value')
         plt.ylabel('true value')
-        title = "title"
-        plt.title('{}'.format(title));
+        # title = "Confusion Matrix for : {}".format(sim)
+        plt.title(r"Confusion Matrix for : {{}}".format(sim))
         plt.savefig("{}wavelets_rf_confusionmatrix_{}{}.png".format(out_plots, jobid, sim))
 
     plt.close('all')
-
-    ## T-SNE
-    # TODO:
-    # - Currently memory issues when attempting to plot over entire dataset
-
-    # plt.figure(1)
-    # tsne_plot.plot(wavelet_features,join(wavelet_features,types)['Type'])
-    # plt.savefig("plots/{}_Wavelets_RF_tSNE_{}.png".format(dataset, jobid))
-    # plt.close(1)
+    ########################################
 
     plt.figure(figsize=(12,6))
     for i in range(len(rocs)):
 
-        df = pd.read_csv(rocs[i]['file'], sep='\s+')
+        df = pd.read_csv(rocs[i]['file'], sep='\s+', engine='python')
         fpr = df['FPR']
         tpr = df['TPR']
 
-        auc = pd.read_csv(rocs[i]['auc'], sep='\s+', header=None)
+        auc = pd.read_csv(rocs[i]['auc'], sep='\s+', header=None, engine='python')
         auc = auc.values[0][0]
 
-        total_num_sne = pd.read_csv(rocs[i]['types'], sep='\s+')
+        total_num_sne = pd.read_csv(rocs[i]['types'], sep='\s+', engine='python')
         # num_sne = rocs[i]['ratio']*total_num_sne.shape[0]
         # num_sne = int(num_sne)
         num_sne = 2000
 
         sim = rocs[i]['sim']
 
-        plot_roc_curve(fpr, tpr, label="{}. Training on {} SNe, AUC = {:.2f}".format(sim, num_sne, auc))
+        # plot_roc_curve(fpr, tpr, label="{}. Training on {} SNe, AUC = {:.3f}".format(sim, num_sne, auc))
+        plot_roc_curve(fpr, tpr, label="{}. AUC = {:.3f}".format(sim, auc))
         plt.legend(loc="lower right")
 
-    title = r"ROC Wavelet Features & Random Forest Algorithm"
+    title = r"ROC Wavelet Features & Random Forest Algorithm Trained on 2000 Objects"
     plt.title(title)
-    plt.savefig("{}Wavelets_RF_ROC_{}.png".format(out_plots, jobid))
+    plt.savefig("{}wavelets_rf_ROC_{}.png".format(out_plots, jobid))
     plt.close('all')
