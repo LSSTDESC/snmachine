@@ -77,12 +77,13 @@ if __name__ == "__main__":
     print(types)
     ascii.write(types, '{}{}_types_normalised.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
 
-    # dat.data[dat.object_names[0]]
-    # training_objects = dat.object_names[:2000]
+    # Get object names from data
     training_objects = dat.object_names[:]
+    # Turn this into a Python list
     training_set = list(training_objects)
     print(type(training_set)) # Should be a list
 
+    # Randomly select 2000 objects from this Python list of objects
     training_set = random.sample(training_set, 2000)
 
     # RESTART FROM WAVELETS
