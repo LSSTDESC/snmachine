@@ -59,7 +59,7 @@ if __name__ == "__main__":
     homedir = os.environ['HOME']
     username = os.environ.get('USER')
 
-    final_outdir=os.path.join('output_data', 'output_%s_no_z' %dataset,'')
+    final_outdir=os.path.join('share', 'hypatia', 'snmachine_resources', 'data', 'LSST_Cadence_WhitePaperClassResults', 'output_data', 'output_%s_no_z' %dataset,'')
 
     outdir=os.path.join(os.path.sep, 'share','data1', username, '{}_cadencetmp_{}_{}'.format(dataset, jobid, rank), '')
 
