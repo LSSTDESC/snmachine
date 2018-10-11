@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
         sim = rocs[i]['sim']
 
-        y_true = pd.read_csv(rocs[i]['norm_types'], engine='python') #colossus_2665_ddf_Y1_types_normalised.csv
+        y_true = pd.read_csv(rocs[i]['types'], engine='python') #colossus_2665_ddf_Y1_types_normalised.csv
         y_pred = pd.read_csv(rocs[i]['probs'], sep='\s+', engine='python') #waveletrandom_forest2000.probs
 
         results = pd.merge(y_pred, y_true, left_on = 'Object', right_on = 'Object')
@@ -130,7 +130,8 @@ if __name__ == "__main__":
         print(new_true)
 
         # new_pred = results.filter(['Object','1', '2', '3', '4'], axis=1)
-        new_pred = results.filter(['1', '2', '3', '4'], axis=1)
+        # new_pred = results.filter(['1', '2', '3', '4'], axis=1)
+        new_pred = results.filter(['101', '120', '121', '122', '123', '132', '133', '142'], axis=1)
         print(new_pred)
         # new_pred = new_pred.idxmax(axis=1)
 
