@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 from sklearn import svm
 from sklearn import neighbors
 from sklearn import grid_search
-from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
@@ -464,8 +463,8 @@ class OptimisedClassifier():
 
         """
         probs=estimator.predict_proba(X)
+        # Consider 120 as Type Ia, positive class
         fpr, tpr, auc=roc(probs, Y, true_class=120)
-        # auc = roc_auc_score(Y, probs)
         return auc
 
     def optimised_classify(self, X_train, y_train, X_test, **kwargs):
@@ -598,6 +597,8 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     """
     t1= time.time()
 
+    # Do check whether a list of objects is provided for training or we are
+    # considering a training ratio
     if isinstance(training_set, list):
         training_ratio = len(training_set)
         training_ratio = str(training_ratio)
@@ -689,9 +690,9 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     for i in range(len(classifiers)):
         cls=classifiers[i]
         probs=probabilities[cls]
+        # Consider 120 as Type Ia, positive class
         fpr, tpr, auc=roc(probs, y_test, true_class=120)
-        # fpr, tpr, _ = roc_curve(y_test, probs)
-        # auc = roc_auc_score(y_test, probs)
+        # Consider 120 as Type Ia, positive class
         fom, thresh_fom=FoM(probs, y_test, true_class=120, full_output=False)
 
         print ('Classifier', cls+':', 'AUC =', auc, 'FoM =', fom)
@@ -734,4 +735,3 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
 
     if return_classifier:
         return classifier_objects
-
