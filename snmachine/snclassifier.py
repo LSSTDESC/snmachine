@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from sklearn import svm
 from sklearn import neighbors
 from sklearn import grid_search
+from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
@@ -64,7 +65,8 @@ def roc(pr, Yt, true_class=0):
     Y_test = Y_test.squeeze()
 
     if len(pr.shape)>1:
-        probs_1 = probs[:, true_class-min_class]
+        # probs_1 = probs[:, true_class-min_class]
+        probs_1 = probs[:, 7]
     else:
         probs_1 = probs
 
@@ -191,7 +193,8 @@ def F1(pr,  Yt, true_class, full_output=False):
     Y_test = Y_test.squeeze()
 
     if len(pr.shape)>1:
-        probs_1=probs[:, true_class-min_class]
+        # probs_1=probs[:, true_class-min_class]
+        probs_1 = probs[:, 7]
     else:
         probs_1=probs
 
@@ -259,7 +262,8 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
     Y_test = Y_test.squeeze()
 
     if len(pr.shape)>1:
-        probs_1=probs[:, true_class-min_class]
+        # probs_1=probs[:, true_class-min_class]
+        probs_1 = probs[:, 7]
     else:
         probs_1=probs
 
@@ -460,7 +464,8 @@ class OptimisedClassifier():
 
         """
         probs=estimator.predict_proba(X)
-        fpr, tpr, auc=roc(probs, Y, true_class=1)
+        fpr, tpr, auc=roc(probs, Y, true_class=120)
+        # auc = roc_auc_score(Y, probs)
         return auc
 
     def optimised_classify(self, X_train, y_train, X_test, **kwargs):
@@ -593,8 +598,12 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     """
     t1= time.time()
 
-    training_ratio = len(training_set)
-    training_ratio = str(training_ratio)
+    if isinstance(training_set, list):
+        training_ratio = len(training_set)
+        training_ratio = str(training_ratio)
+    else:
+        training_ratio = training_set*100
+        training_ratio = str(training_ratio)
 
     if isinstance(features,Table):
         #The features are in astropy table format and must be converted to a numpy array before passing to sklearn
@@ -680,8 +689,10 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     for i in range(len(classifiers)):
         cls=classifiers[i]
         probs=probabilities[cls]
-        fpr, tpr, auc=roc(probs, y_test, true_class=1)
-        fom, thresh_fom=FoM(probs, y_test, true_class=1, full_output=False)
+        fpr, tpr, auc=roc(probs, y_test, true_class=120)
+        # fpr, tpr, _ = roc_curve(y_test, probs)
+        # auc = roc_auc_score(y_test, probs)
+        fom, thresh_fom=FoM(probs, y_test, true_class=120, full_output=False)
 
         print ('Classifier', cls+':', 'AUC =', auc, 'FoM =', fom)
 
