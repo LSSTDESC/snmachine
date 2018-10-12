@@ -21,7 +21,6 @@ print(__version__)
 setup(
     name='snmachine',
     version=__version__,
-    # packages=['snmachine', 'gapp', 'gapp.covfunctions'],
     packages=['snmachine'],
     packagedir={PACKAGENAME:'snmachine'},
     include_package_data=True,
