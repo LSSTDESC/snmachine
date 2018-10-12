@@ -85,7 +85,7 @@ if __name__ == "__main__":
     print(type(training_set)) # Should be a list
 
     # Randomly select 2000 objects from this Python list of objects
-    training_set = random.sample(training_set, 2000)
+    training_set = random.sample(training_set, 10000)
 
     # RESTART FROM WAVELETS
     # Copy int to finaldir and read in raw wavelets
@@ -130,14 +130,16 @@ if __name__ == "__main__":
     print("Using {} SNe for training".format(len(training_set)))
     print(training_set)
 
+    pc = 0.7
+
     # print("Working on :\n {}".format(training_set))
     clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
-                              classifiers=classifiers,
-                              training_set=training_set, nprocesses=nproc,
+                              classifiers=classifiers, nprocesses=nproc,
                               plot_roc_curve=False, return_classifier=True)
 
     # training_ratio = int(training_set*1000)
     # training_ratio = str(training_ratio)
-    joblib.dump(clss, '{}{}_model.pkl'.format(out_class, len(training_set)))
+    # joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, len(training_set)))
+    joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, pc))
 
     exit()
