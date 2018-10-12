@@ -49,7 +49,7 @@ if __name__ == "__main__":
     prefix_NONIa = params.get("prefix_NONIa", None)
     print("The data prefix for NON Ia's is:\n{}".format(prefix_NONIa))
 
-    final_outdir=os.path.join('share', 'hypatia', 'snmachine_resources', 'data', 'LSST_Cadence_WhitePaperClassResults', 'output_data', 'output_%s_no_z' %dataset,'')
+    final_outdir="/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperClassResults/output_data/output_{}_no_z/".format(dataset)
     # final_outdir=os.path.join('output_data', 'output_%s_no_z' %dataset,'')
 
     ## READ IN ENTIRE DATASET
@@ -69,14 +69,14 @@ if __name__ == "__main__":
 
     # Like for SPCC example notebook where we restrict ourselves to three supernova types:
     # Ia (1), II (2) and Ibc (3) by carrying out the following pre-proccessing steps
-    types['Type'] = types['Type']-100
+    # types['Type'] = types['Type']-100
 
-    types['Type'][np.floor(types['Type']/10)==2]=2
-    types['Type'][np.floor(types['Type']/10)==3]=3
-    types['Type'][np.floor(types['Type']/10)==4]=4
+    # types['Type'][np.floor(types['Type']/10)==2]=2
+    # types['Type'][np.floor(types['Type']/10)==3]=3
+    # types['Type'][np.floor(types['Type']/10)==4]=4
 
-    print(types)
-    ascii.write(types, '{}{}_types_normalised.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
+    # print(types)
+    # ascii.write(types, '{}{}_types_normalised.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
 
     # Get object names from data
     training_objects = dat.object_names[:]
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     print(type(training_set)) # Should be a list
 
     # Randomly select 2000 objects from this Python list of objects
-    training_set = random.sample(training_set, 2000)
+    training_set = random.sample(training_set, 10000)
 
     # RESTART FROM WAVELETS
     # Copy int to finaldir and read in raw wavelets
@@ -130,14 +130,16 @@ if __name__ == "__main__":
     print("Using {} SNe for training".format(len(training_set)))
     print(training_set)
 
+    pc = 0.7
+
     # print("Working on :\n {}".format(training_set))
     clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
-                              classifiers=classifiers,
-                              training_set=training_set, nprocesses=nproc,
+                              classifiers=classifiers, nprocesses=nproc,
                               plot_roc_curve=False, return_classifier=True)
 
     # training_ratio = int(training_set*1000)
     # training_ratio = str(training_ratio)
-    joblib.dump(clss, '{}{}_model.pkl'.format(out_class, len(training_set)))
+    # joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, len(training_set)))
+    joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, pc))
 
     exit()
