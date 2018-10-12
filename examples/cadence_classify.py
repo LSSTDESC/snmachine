@@ -69,14 +69,14 @@ if __name__ == "__main__":
 
     # Like for SPCC example notebook where we restrict ourselves to three supernova types:
     # Ia (1), II (2) and Ibc (3) by carrying out the following pre-proccessing steps
-    types['Type'] = types['Type']-100
+    # types['Type'] = types['Type']-100
 
-    types['Type'][np.floor(types['Type']/10)==2]=2
-    types['Type'][np.floor(types['Type']/10)==3]=3
-    types['Type'][np.floor(types['Type']/10)==4]=4
+    # types['Type'][np.floor(types['Type']/10)==2]=2
+    # types['Type'][np.floor(types['Type']/10)==3]=3
+    # types['Type'][np.floor(types['Type']/10)==4]=4
 
-    print(types)
-    ascii.write(types, '{}{}_types_normalised.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
+    # print(types)
+    # ascii.write(types, '{}{}_types_normalised.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
 
     # Get object names from data
     training_objects = dat.object_names[:]
