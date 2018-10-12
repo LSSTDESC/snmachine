@@ -21,7 +21,8 @@ print(__version__)
 setup(
     name='snmachine',
     version=__version__,
-    packages=['snmachine', 'gapp', 'gapp.covfunctions'],
+    # packages=['snmachine', 'gapp', 'gapp.covfunctions'],
+    packages=['snmachine'],
     packagedir={PACKAGENAME:'snmachine'},
     include_package_data=True,
     package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz', 'example_data/output_spcc_no_z/features/*.dat']},
