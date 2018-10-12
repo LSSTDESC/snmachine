@@ -49,7 +49,7 @@ if __name__ == "__main__":
     prefix_NONIa = params.get("prefix_NONIa", None)
     print("The data prefix for NON Ia's is:\n{}".format(prefix_NONIa))
 
-    final_outdir=os.path.join('share', 'hypatia', 'snmachine_resources', 'data', 'LSST_Cadence_WhitePaperClassResults', 'output_data', 'output_%s_no_z' %dataset,'')
+    final_outdir="/share/hypatia/snmachine_resources/data/LSST_Cadence_WhitePaperClassResults/output_data/output_{}_no_z/".format(dataset)
     # final_outdir=os.path.join('output_data', 'output_%s_no_z' %dataset,'')
 
     ## READ IN ENTIRE DATASET
