@@ -123,25 +123,28 @@ if __name__ == "__main__":
         y_pred = pd.read_csv(rocs[i]['probs'], sep='\s+', engine='python') #waveletrandom_forest2000.probs
 
         results = pd.merge(y_pred, y_true, left_on = 'Object', right_on = 'Object')
-        print(results)
+        print("RESULTS:\n{}".format(results))
 
         # new_true = results.filter(['Object','Type'], axis=1)
         new_true = results.filter(['Type'], axis=1)
-        print(new_true)
+        print("NEW TRUE:\n{}".format(new_true))
 
         # new_pred = results.filter(['Object','1', '2', '3', '4'], axis=1)
         # new_pred = results.filter(['1', '2', '3', '4'], axis=1)
         new_pred = results.filter(['101', '120', '121', '122', '123', '132', '133', '142'], axis=1)
-        print(new_pred)
+        print("NEW PRED:\n{}".format(new_pred))
         # new_pred = new_pred.idxmax(axis=1)
 
         new_true = new_true.values
         print(type(new_true))
-        new_pred = new_pred.values
+        # new_pred = new_pred.values
         print(type(new_pred))
 
-        y_preds = np.argmax(new_pred, axis=1)
-        y_preds = y_preds+1
+        y_preds = new_pred.idxmax(axis=1)
+        y_preds = np.array(y_preds)
+        y_preds = y_preds.astype(int)
+        # y_preds = np.argmax(new_pred, axis=1)
+        # y_preds = y_preds+1
         print(y_preds)
         print(y_preds.shape)
         print(type(y_preds))
@@ -165,7 +168,7 @@ if __name__ == "__main__":
         plt.xlabel('predicted value')
         plt.ylabel('true value')
         # title = "Confusion Matrix for : {}".format(sim)
-        plt.title(r"Confusion Matrix for : {{}}".format(sim))
+        plt.title("Confusion Matrix for : {}".format(sim))
         plt.savefig("{}wavelets_rf_confusionmatrix_{}{}.png".format(out_plots, jobid, sim))
 
     plt.close('all')
