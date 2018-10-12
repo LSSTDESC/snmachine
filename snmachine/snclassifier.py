@@ -17,7 +17,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from scipy.integrate import trapz
-from astropy.table import Table,join
+from astropy.table import Table,join,unique
 import sys, collections,time
 from functools import partial
 from multiprocessing import Pool
@@ -33,7 +33,7 @@ try:
 except ImportError:
     print ('Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.')
 
-def roc(pr, Yt, true_class=0):
+def roc(pr, Yt, true_class=0, num_classes=8):
     """
     Produce the false positive rate and true positive rate required to plot
     a ROC curve, and the area under that curve.
@@ -47,6 +47,8 @@ def roc(pr, Yt, true_class=0):
         An array of class labels, of size (N_samples,)
     true_class : int
         which class is taken to be the "true class" (e.g. Ia vs everything else)
+    num_classes : int
+        How many classes are we considering to compare against
 
     Returns
     -------
@@ -65,7 +67,8 @@ def roc(pr, Yt, true_class=0):
 
     if len(pr.shape)>1:
         # probs_1 = probs[:, true_class-min_class]
-        probs_1 = probs[:, 7]
+        # probs_1 = probs[:, 7]
+        probs_1 = probs[:, num_classes-1] # -1 since 0 based indexing of numpy
     else:
         probs_1 = probs
 
@@ -221,7 +224,7 @@ def F1(pr,  Yt, true_class, full_output=False):
 
         return best_F1, best_threshold
 
-def FoM(pr,  Yt, true_class=1, full_output=False):
+def FoM(pr,  Yt, true_class=1, num_classes=8, full_output=False):
     """
     Calculate a Kessler FoM for many probability threshold increments
     and select the best one.
@@ -238,6 +241,8 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
         An array of class labels, of size (N_samples,)
     true_class : int
         which class is taken to be the "true class" (e.g. Ia vs everything else)
+    num_classes : int
+        How many classes are we considering to compare against
     full_output : bool, optional
         If true returns two vectors corresponding to F1 as a function of threshold, instead of the best value.
 
@@ -262,7 +267,8 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
 
     if len(pr.shape)>1:
         # probs_1=probs[:, true_class-min_class]
-        probs_1 = probs[:, 7]
+        # probs_1 = probs[:, 7]
+        probs_1 = probs[:, num_classes-1] # -1 since 0 based indexing of numpy
     else:
         probs_1=probs
 
@@ -606,6 +612,8 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
         training_ratio = training_set*100
         training_ratio = str(training_ratio)
 
+    num_classes = len(unique(types))
+
     if isinstance(features,Table):
         #The features are in astropy table format and must be converted to a numpy array before passing to sklearn
 
@@ -691,9 +699,9 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
         cls=classifiers[i]
         probs=probabilities[cls]
         # Consider 120 as Type Ia, positive class
-        fpr, tpr, auc=roc(probs, y_test, true_class=120)
+        fpr, tpr, auc=roc(probs, y_test, true_class=120, num_classes=num_classes)
         # Consider 120 as Type Ia, positive class
-        fom, thresh_fom=FoM(probs, y_test, true_class=120, full_output=False)
+        fom, thresh_fom=FoM(probs, y_test, true_class=120, num_classes=num_classes, full_output=False)
 
         print ('Classifier', cls+':', 'AUC =', auc, 'FoM =', fom)
 
