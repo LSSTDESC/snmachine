@@ -84,8 +84,10 @@ if __name__ == "__main__":
     training_set = list(training_objects)
     print(type(training_set)) # Should be a list
 
-    # Randomly select 2000 objects from this Python list of objects
-    training_set = random.sample(training_set, 10000)
+    # Randomly select 2000 objects from this Python list of objects, OR chose a
+    # float between 0 and 1 of the percentage of the training set to use.
+    training_set = random.sample(training_set, 5000)
+    # training_set = 0.7
 
     # RESTART FROM WAVELETS
     # Copy int to finaldir and read in raw wavelets
