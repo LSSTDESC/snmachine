@@ -129,19 +129,21 @@ if __name__ == "__main__":
 
     # plt.figure(2)
     # plt.figure(figsize=(12,6))
-    print("Using {} SNe for training".format(len(training_set)))
-    print(training_set)
-
-    pc = 0.7
 
     # print("Working on :\n {}".format(training_set))
     clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
-                              classifiers=classifiers, nprocesses=nproc,
+                              training_set=training_set, classifiers=classifiers, nprocesses=nproc,
                               plot_roc_curve=False, return_classifier=True)
 
     # training_ratio = int(training_set*1000)
     # training_ratio = str(training_ratio)
-    # joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, len(training_set)))
-    joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, pc))
+
+    if isinstance(training_set, list):
+        joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, len(training_set)))
+        print("{} SNe used for training:".format(len(training_set)))
+        print(training_set)
+    else:
+        joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, training_set))
+        print("{}% of dataset used for training, and {}% used as a test set".format(int(training_set*100), int((1-training_set)*100)))
 
     exit()
