@@ -612,7 +612,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
         training_ratio = training_set*100
         training_ratio = str(training_ratio)
 
-    num_classes = len(unique(types))
+    num_classes = len(unique(types, keys="Type"))
 
     if isinstance(features,Table):
         #The features are in astropy table format and must be converted to a numpy array before passing to sklearn
