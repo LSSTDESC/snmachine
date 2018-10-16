@@ -1,5 +1,6 @@
 .DS_Store
-examples/
+examples/output_data/
+examples/plots/
 install/
 snmachine/example_data/
 
