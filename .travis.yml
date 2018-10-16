@@ -1,0 +1,49 @@
+# safelist
+branches:
+  only:
+  - "issue/62/CI"
+  # - "master"
+  # - "develop"
+before_install:
+  - "echo $PWD"
+  # - "sed -i \"s|https://github.com/LSSTDESC/snmachine.git|https://tallamjr:$GITHUB_ACCESS_TOKEN@github.com/LSSTDESC/snmachine.git|\" .gitmodules"
+  # - "git submodule update --init --recursive"
+  # - "echo -e 'machine github.com\n  login $GITHUB_ACCESS_TOKEN' > ~/.netrc"
+  # - "git lfs install"
+  # - "which git-lfs"
+  # - "git pull --all"
+  # - "ls data/"
+  # - "git lfs pull"
+# env:
+#   matrix:
+#     secure: JvYk3x2/kABObBEbUyjYmeb/3VJITLZlu0qilpCntraXI2yp9vYmfrRXI/LZNkRIw4k6QQu73ZcjinIyfP/Ym48RoKDYTqni+8BVchhGjuqV+HT3FjVs0AgnP1gadrEQGtL9oHtIKyYNzu9HYD8MGpUTX+gFb+v/N+jgVm0mpRS/DRg2cECMR79qnnIx9fC/P6JDUttK2WHmG2F7ZmPs69wIHUYOKBRtLNs+gB1w7SGEH1fkTSBUunOeQdSmX0pfLKJeAza78Arv+v6RgifnsGJIhVN/WNU0vY7b5lIoF6dk7Uh6zuOjxl2vVSolSU3PdpkV8ykO89FoHNkAudI1RvM9LohJT3aPBbJ4FjzlpcZZ+D81UjgAJcbjf8qk2QScALxY1yHR4cAhx9ZZOaAkmjnxNs7ODHI9th+M/U38xr24r3dnvZ2BzAzuqdrsekMhFFbDEfjvjMF9f0t68raudl9YCooB6f1lwWNbiu0ymTwFLym8ruXGzMy/49plPuHjf6JVX6cQleKZXQaE6hjawu2rdMyQOlzXU/B1062yd0a3DZgrZBlMvaQFA9nDAXYDCKr3kQcVq8ESEutM9wKwMI3ORIn5W/UmZRnO+7Q5htx6pWmCi6TZnDF67hK2N3F2zz1npk5xmVjh3HVGP1vVs6a06LhYMIyoXPqtc6Omvpg=
+git:
+  submodules: false
+install:
+  - "sudo apt-get update"
+  - "if [[ \"$TRAVIS_PYTHON_VERSION\" == \"2.7\" ]]; then wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh; else wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh; fi"
+  - "bash miniconda.sh -b -p $HOME/miniconda"
+  - "export PATH=\"$HOME/miniconda/bin:$PATH\""
+  - "hash -r"
+  - "conda config --set always_yes yes --set changeps1 no"
+  - "conda update -q conda"
+  - "conda info -a"
+  # - "cd snmachine"
+  - "conda env create -f environment.yml"
+  - "source activate snmachine"
+  - "python setup.py install"
+  # - "cd .."
+  - "conda install pandas"
+  # - "sudo apt-get install texlive-latex-recommended"
+  # - "sudo apt-get install texlive-latex-extra"
+  # - "sudo apt-get install texlive-fonts-recommended"
+  # - "sudo apt-get install chktex"
+  # - "sudo apt-get install dvipng"
+  # - "sudo apt-get install pandoc"
+  # - "pip install --upgrade jupyter"
+  # - "pip install nbconvert"
+language: python
+python:
+  - "3.6"
+script:
+  - "jupyter nbconvert --ExecutePreprocessor.kernel_name=python --ExecutePreprocessor.timeout=600 --to html --execute notebooks/prelim_EDA.ipynb"
