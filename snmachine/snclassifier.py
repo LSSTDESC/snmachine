@@ -6,6 +6,7 @@ from __future__ import division
 from past.builtins import basestring
 import numpy as np
 import os
+import itertools
 if not 'DISPLAY' in os.environ:
     import matplotlib
     matplotlib.use('Agg')
@@ -16,6 +17,7 @@ from sklearn import grid_search
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import confusion_matrix as sklearn_cm
 from scipy.integrate import trapz
 from astropy.table import Table,join
 import sys, collections,time
@@ -154,7 +156,59 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, li
     plt.legend(labs, loc='lower right',  bbox_to_anchor=(0.95, 0.05))
     plt.tight_layout()
     #plt.show()
-    
+   
+def compute_confusion_matrix(Yfit,Ytrue):
+    '''
+    Wraps the scikit-learn routine to compute the confusion matrix.
+
+    Parameters
+    ----------
+    Yfit : list
+         predicted classes for the test set
+    Ytrue : list
+         true classes for the test set
+
+    Returns
+    -------
+    confusion_matrix: numpy.array
+    '''
+    return sklearn_cm(y_true=Ytrue,y_pred=Yfit)
+
+def plot_confusion_matrix(cm,normalise=False,labels=['Ia','II','Ibc'],title='Confusion matrix'):
+    '''
+    Make a plot from a pre-computed confusion matrix.
+
+    Parameters
+    ----------
+    cm : np.array
+       The confusion matrix, as computed by the snclassifier.compute_confusion_matrix
+    normalise : boolean, optional
+       If False, we use the absolute numbers in each matrix entry. If True, we use the 
+       fractions within each true class
+    labels : list of str
+       Labels for each class that appear in the plot
+    title : str
+       Surprisingly, this is the title for the plot.
+    '''
+    plt.figure()
+    if normalise:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(labels))
+    plt.xticks(tick_marks, labels, rotation=45)
+    plt.yticks(tick_marks, labels)
+    fmt = '.2f' if normalise else 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),horizontalalignment="center",
+            color="white" if cm[i, j] > thresh else "black")
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    #plt.show()
+ 
 def F1(pr,  Yt, true_class, full_output=False):
     """
     Calculate an F1 score for many probability threshold increments
@@ -553,7 +607,7 @@ def __call_classifier(classifier, X_train, y_train, X_test, param_dict,return_cl
 
 def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn','svm','neural_network','boost_dt'],
                  training_set=0.7, param_dict={}, nprocesses=1, scale=True,
-                 plot_roc_curve=True,return_classifier=False):
+                 plot_roc_curve=True,return_classifier=False,classifiers_for_cm_plots=[]):
     """
     Utility function to classify a dataset with a number of classification methods. This does assume your test
     set has known values to compare against. Returns, if requested, the classifier objects to run on future test sets.
@@ -716,6 +770,21 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
 
     if plot_roc_curve:
         plot_roc(FPR, TPR, AUC, labels=classifiers,label_size=16,tick_size=12,line_width=1.5)
+        plt.show()
+
+    if classifiers_for_cm_plots is None:
+        classifiers_for_cm_plots=[]
+
+    if classifiers_for_cm_plots is 'all':
+        classifiers_for_cm_plots=classifiers
+
+    for cls in classifiers_for_cm_plots:
+        if cls not in classifiers:
+            print('%s not in our choice of classifiers!'%cls)
+            continue
+        y_fit=(1+probabilities[cls].argmax(axis=1)).tolist()
+        cm=compute_confusion_matrix(y_fit,y_test)
+        plot_confusion_matrix(cm,title='Confusion matrix for %s'%cls)
         plt.show()
 
     if return_classifier:

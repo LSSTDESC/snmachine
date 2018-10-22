@@ -1,5 +1,5 @@
 import pytest
-from snmachine import sndata, snfeatures, tsne_plot
+from snmachine import sndata, snfeatures, tsne_plot, example_data
 import sys, os, subprocess
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,8 +8,9 @@ import matplotlib.pyplot as plt
 from astropy.table import join, Table
 import sncosmo
 
-test_data_path=os.path.join('..', 'examples', 'SPCC_SUBSET', '')
-precomp_features_path=os.path.join('..', 'examples', 'output_spcc_no_z', 'features', 'spcc_all_templates.dat')
+# test_data_path=os.path.join('..', 'examples', 'SPCC_SUBSET', '')
+test_data_path=os.path.join(example_data, 'SPCC_SUBSET', '') 
+precomp_features_path=os.path.join(example_data, 'output_spcc_no_z', 'features', 'spcc_all_templates.dat')
 #example_name='DES_SN001695.DAT'
 #example_name='DES_SN084250.DAT'
 example_name='DES_SN013866.DAT'
