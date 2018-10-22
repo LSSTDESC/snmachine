@@ -127,7 +127,7 @@ class EmptyDataset:
         self.rootdir=folder
         self.survey_name=folder.splot(os.path.sep)[-2]
 
-    def insert_lightcurve(self, lc):
+    def insert_lightcurve(self, lc, subtract_min=True):
         """
         Wraps the insertion of a new light curve into a data set. Also includes
         the new object names and possibly new filters into the data set metadata.
@@ -139,6 +139,8 @@ class EmptyDataset:
         """
         name=lc.meta['name']
         self.object_names=np.append(self.object_names,name)
+        if subtract_min:
+            lc['mjd']-=lc['mjd'].min()
         self.data[name]=lc
         for flt in np.unique(lc['filter']):
             if not str(flt) in self.filter_set:
@@ -1087,6 +1089,7 @@ class SDSS_Data(EmptyDataset):
         astropy.table.Table
             Light curve
         """
+        print(flname)
         fl=open(self.rootdir+flname,'r')
         mjd=[]
         flt=[] # band
