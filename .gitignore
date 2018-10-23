@@ -104,3 +104,30 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Do not track job scripts that are created by utils/create_jobs.py
+utils/jobs/
+
+# Do not track user specific setup file that points to Multinest installation
+install/setup.sh
+
+# Do not track example notebook output files
+examples/output_*
+
+# Do not type logs of dataset
+examples/*.csv
+#
+# Do not track image files
+examples/plots/
+
+# Do not track log files from cadence analysis
+examples/jobs/logs
+examples/jobs/prev
+
+# Do not track data generated from example notebook
+snmachine/example_data/output_*
+
+.DS_Store
+
+# Do not track mpi4py backtrace debugging files
+*.btr
