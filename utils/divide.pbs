@@ -1,0 +1,12 @@
+#!/bin/tcsh -f
+ #PBS -V
+ #PBS -l nodes=1:ppn=1
+ #PBS -r n
+ #PBS -S /bin/tcsh
+ #PBS -q compute
+ #PBS -l walltime=99:00:00
+ #PBS -l mem=40GB
+ #PBS -N divide
+source .tcshrc
+cd /home/roberts/sne/snmachine/	
+time python /home/roberts/sne/snmachine/utils/divide.py
