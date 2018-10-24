@@ -15,6 +15,7 @@ from astropy.table import Table, Column
 from astropy.io import fits
 import pandas as pd
 import sys
+import pickle
 from random import shuffle, sample
 from scipy import interpolate
 import sncosmo
@@ -272,7 +273,7 @@ class EmptyDataset:
             return
         self.plot_model=plot_model #We use a class variable because this can't be passed directly to __on_press
         fig = plt.figure()
-        self.__ind=-1
+        self.__ind = -1
         fig.canvas.mpl_connect('key_press_event', self.__on_press)
         plt.plot([0, 0])
         #subplots_adjust(right=0.95, top=0.95)
@@ -348,7 +349,7 @@ class EmptyDataset:
 
         Returns
         -------
-        `~numpy.ndarray`
+        `astropy.table.Table`
             Array of types
         """
         typs=[]
@@ -1337,8 +1338,9 @@ class plasticc_data(EmptyDataset):
     chunks.
     """
 
-    def __init__(self, folder, data_file, mix=False, filter_set=['lsstu',
-                 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'], survey_name='lsst'):
+    def __init__(self, folder, pickle_file=None, data_file=None,
+                 meta_file=None, mix=False, filter_set=['lsstu',
+                 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'], survey_name='lsst', from_pickle=True):
         """
         Initialisation.
 
@@ -1346,22 +1348,77 @@ class plasticc_data(EmptyDataset):
         ----------
         folder : str
             Folder where simulations are located
-        subset : str or list-like, optional
-            List of a subset of object names. If not supplied, the full dataset
-            will be used
+        pickle_file: str
+            Filename of the pickled instance of sndata class
+        data_file: str
+            Filename of the pandas dataframe which is has the lc data
+        meta_file: str
+            Filename of the pandas dataframe containing the metadata for the light curves
         mix : bool, optional
             The output of the simulations is often highly ordered, this
             randomly permutes the objects when they're read in
         filter_set : list-like, optional
             Set of possible filters
-        indices : list of ints
-            List of indices that index the fits files which each store one
-            chunk of the simulated light curves.
+        from_pickle: boolean
+            Whether or not to create the instance from a pickled instance of the class
         """
-        super().__init__(folder, survey_name, filter_set)
-        self.get_data(folder, data_file)
-        if mix is True:
-            self.mix()
+        if from_pickle is True:
+            return self.de_pickle(folder, pickle_file)
+
+        else:
+            super().__init__(folder, survey_name, filter_set)
+            self.get_data(folder, data_file)
+            self.get_set_meta(folder, meta_file)
+            if mix is True:
+                self.mix()
+
+    def de_pickle(self, folder, pickle_file):
+        """
+        Unpickles a previous instance of the class
+
+        """
+        f = open(folder + '/' + pickle_file, 'rb')
+        unpickled_inst = pickle.load(f)
+        f.close()
+        return unpickled_inst
+
+    def get_set_meta(self, folder, meta_file):
+        """
+        Reads in the meta file for the plasticc data
+
+        Currrently this doesn't handle what to do if we have different zs
+
+        """
+        metadata = []
+        print('Reading metadata...')
+        metadata = pd.read_csv(folder + '/' + meta_file, sep=',', index_col = self.id_col)
+
+        self.remap_types(metadata)
+
+        num_obj = len(self.object_names)
+        for i, o in enumerate(self.object_names):
+            if int(math.fmod(i, num_obj*0.1)) == 0:
+                print('{}%'.format(int(i/(num_obj*0.01))))
+            for col in metadata.columns:
+                if re.search('id', col):
+                    self.data[o].meta['name'] = metadata.at[o, col]
+                elif re.search('target', col):
+                    self.data[o].meta['type'] = self.dict_2_sn_types[str(metadata.at[o, col])]
+                elif re.search('z', col):
+                    self.data[o].meta['z'] = metadata.at[o, col]
+                else:
+                    self.data[o].meta[col] = metadata.at[o, col]
+        print('Finished setting the metadata for {}k objects.'.format(num_obj))
+
+    def remap_types(self, metadata):
+        user_types = metadata['target'].unique()
+        snmachine_types = np.arange(stop=len(user_types))
+        self.dict_2_sn_types = {}
+        self.dict_2_user_types = {}
+        for i in range(len(user_types)):
+            self.dict_2_sn_types[str(user_types)] = snmachine_types[i]
+            self.dict_2_user_types[str(snmachine_types[i])] = user_types[i]
+
 
     def get_data(self, folder, data_file):
         """
@@ -1378,12 +1435,11 @@ class plasticc_data(EmptyDataset):
         """
 
         data = []
-        metadata = []
         self.data = {}
         self.object_names = []
 
         print('Reading data...')
-        data = pd.read_csv(file, sep=',')
+        data = pd.read_csv(folder + '/' + data_file, sep=',')
         invalid = 0  # Some objects may have empty data
 
         # Abstract column names from dataset
@@ -1393,9 +1449,11 @@ class plasticc_data(EmptyDataset):
             if re.search('id', col):
                 self.id_col = col
 
+        num_obj = len(data[self.id_col].unique())
+
         for i, id in enumerate(data[self.id_col].unique()):
-            if math.fmod(i, 1e4) == 0:
-                print('{}k'.format((i//1e3)))
+            if int(math.fmod(i, num_obj*0.1)) == 0:
+                print('{}%'.format(int(i/(num_obj*0.01))))
             self.object_names.append(str(id))
             lc = self.pandas_2_astro(pandas_lc=data.query('{0} == {1}'.format(self.id_col, id)))
             if len(lc[self.mjd_col] > 0):
