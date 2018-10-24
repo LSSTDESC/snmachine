@@ -1337,6 +1337,16 @@ class plasticc_data(EmptyDataset):
     Class to read in the SNANA cadence simulations, which are divided into
     chunks.
     """
+    def __new__(cls, folder, pickle_file=None, from_pickle=True, *args, **kwargs):
+        if from_pickle is True:
+            f = open(folder + '/' + pickle_file, 'rb')
+            inst = pickle.load(f)
+            f.close()
+            # if not isinstance(inst, cls):
+            #    raise TypeError('Unpickled object is not of type {}'.format(cls))
+        else:
+            inst = super(plasticc_data, cls).__new__(cls, *args, **kwargs)
+        return inst
 
     def __init__(self, folder, pickle_file=None, data_file=None,
                  meta_file=None, mix=False, filter_set=['lsstu',
@@ -1362,25 +1372,12 @@ class plasticc_data(EmptyDataset):
         from_pickle: boolean
             Whether or not to create the instance from a pickled instance of the class
         """
-        if from_pickle is True:
-            return self.de_pickle(folder, pickle_file)
 
-        else:
-            super().__init__(folder, survey_name, filter_set)
-            self.get_data(folder, data_file)
-            self.get_set_meta(folder, meta_file)
-            if mix is True:
-                self.mix()
-
-    def de_pickle(self, folder, pickle_file):
-        """
-        Unpickles a previous instance of the class
-
-        """
-        f = open(folder + '/' + pickle_file, 'rb')
-        unpickled_inst = pickle.load(f)
-        f.close()
-        return unpickled_inst
+        super().__init__(folder, survey_name, filter_set)
+        self.get_data(folder, data_file)
+        self.get_set_meta(folder, meta_file)
+        if mix is True:
+            self.mix()
 
     def get_set_meta(self, folder, meta_file):
         """
@@ -1407,12 +1404,12 @@ class plasticc_data(EmptyDataset):
                 elif re.search('z', col):
                     self.data[o].meta['z'] = metadata.at[o, col]
                 else:
-                    self.data[o].meta[col] = metadata.at[o, col]
+                    self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, eval(o)))[col].values
         print('Finished setting the metadata for {}k objects.'.format(num_obj))
 
     def remap_types(self, metadata):
         user_types = metadata['target'].unique()
-        snmachine_types = np.arange(stop=len(user_types))
+        snmachine_types = np.arange(len(user_types))
         self.dict_2_sn_types = {}
         self.dict_2_user_types = {}
         for i in range(len(user_types)):
