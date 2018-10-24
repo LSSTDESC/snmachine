@@ -1342,10 +1342,10 @@ class plasticc_data(EmptyDataset):
             f = open(folder + '/' + pickle_file, 'rb')
             inst = pickle.load(f)
             f.close()
-            # if not isinstance(inst, cls):
-            #    raise TypeError('Unpickled object is not of type {}'.format(cls))
+            if not isinstance(inst, EmptyDataset) and not isinstance(inst, cls):
+               raise TypeError('Unpickled object is not of type {}'.format(cls))
         else:
-            inst = super(plasticc_data, cls).__new__(cls, *args, **kwargs)
+            inst = super(plasticc_data, cls).__new__(cls)
         return inst
 
     def __init__(self, folder, pickle_file=None, data_file=None,
@@ -1394,17 +1394,18 @@ class plasticc_data(EmptyDataset):
 
         num_obj = len(self.object_names)
         for i, o in enumerate(self.object_names):
+            ind_o = eval(o)
             if int(math.fmod(i, num_obj*0.1)) == 0:
                 print('{}%'.format(int(i/(num_obj*0.01))))
             for col in metadata.columns:
                 if re.search('id', col):
-                    self.data[o].meta['name'] = metadata.at[o, col]
+                    self.data[o].meta['name'] = metadata.at[ind_o, col]
                 elif re.search('target', col):
-                    self.data[o].meta['type'] = self.dict_2_sn_types[str(metadata.at[o, col])]
+                    self.data[o].meta['type'] = self.dict_2_sn_types[str(metadata.at[ind_o, col])]
                 elif re.search('z', col):
-                    self.data[o].meta['z'] = metadata.at[o, col]
+                    self.data[o].meta['z'] = metadata.at[ind_o, col]
                 else:
-                    self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, eval(o)))[col].values
+                    self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, ind_o))[col].values
         print('Finished setting the metadata for {}k objects.'.format(num_obj))
 
     def remap_types(self, metadata):
@@ -1413,7 +1414,7 @@ class plasticc_data(EmptyDataset):
         self.dict_2_sn_types = {}
         self.dict_2_user_types = {}
         for i in range(len(user_types)):
-            self.dict_2_sn_types[str(user_types)] = snmachine_types[i]
+            self.dict_2_sn_types[str(user_types[i])] = snmachine_types[i]
             self.dict_2_user_types[str(snmachine_types[i])] = user_types[i]
 
 
@@ -1454,7 +1455,7 @@ class plasticc_data(EmptyDataset):
             self.object_names.append(str(id))
             lc = self.pandas_2_astro(pandas_lc=data.query('{0} == {1}'.format(self.id_col, id)))
             if len(lc[self.mjd_col] > 0):
-                self.data[id] = lc
+                self.data[str(id)] = lc
             else:
                 invalid += 1
         if invalid > 0:
