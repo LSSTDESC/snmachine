@@ -1563,14 +1563,14 @@ class WaveletFeatures(Features):
             partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo, return_gp=True)
 
             out=p.map(partial_GP, d.object_names)
-            gp=[]
+            gp={}
 
             out=np.reshape(out,(len(d.object_names),2))
             for i in range(len(out)):
                 obj=d.object_names[i]
                 d.models[obj]=out[i,0]
                 gp[obj]=out[i,1]
-            with open('/home/roberts/data_sets/sne/plasticc/int/GP.pickle','wb') as f:
+            with open('/home/roberts/data_sets/sne/plasticc/GP.pickle','wb') as f:
                 pickle.dump(gp,f)
 
 

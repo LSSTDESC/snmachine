@@ -7,16 +7,20 @@ import os,sys
 
 index=int(sys.argv[1])
 print(index)
-[start_index,stop_index]=np.loadtxt('/home/roberts/data_sets/sne/plasticc/plasticc_test/plasticc_aux/objs_%d.txt'%index,dtype='i8')
+[start_index,stop_index]=np.loadtxt('/home/roberts/data_sets/sne/plasticc/plasticc_training/plasticc_aux/objs_%d.txt'%index,dtype='i8')
 
 print('starting readin of monster files')
-raw_data=pandas.read_csv('/share/hypatia/snmachine_resources/data/plasticc/test_set.csv',skiprows=range(1,start_index+1),nrows=stop_index-start_index)
+raw_data=pandas.read_csv('/share/hypatia/snmachine_resources/data/plasticc/training_set.csv',skiprows=range(1,start_index+1),nrows=stop_index-start_index)
 #raw_data=pandas.read_csv('/home/z56693rs/data_sets/sne/LSST_plasticc/training_set.csv',nrows=1e5)
 print('read in data set')
-raw_metadata=pandas.read_csv('/share/hypatia/snmachine_resources/data/plasticc/test_set_metadata.csv')
+raw_metadata=pandas.read_csv('/share/hypatia/snmachine_resources/data/plasticc/training_set_metadata.csv')
 #raw_metadata=pandas.read_csv('/home/z56693rs/data_sets/sne/LSST_plasticc/training_set_metadata.csv')
 print('read in metadata')
 sys.stdout.flush()
+
+if 'target' in raw_metadata.columns:
+	wehavetypes=True
+print('Do we have types?'+str(wehavetypes))
 
 print('chopped out chunk from line %d to line %d'%(start_index,stop_index))
 sys.stdout.flush()
@@ -27,11 +31,13 @@ filters=np.unique(raw_data['passband']).astype('str')
 
 print('nobj: '+str(len(objects)))
 
-out_folder='/home/roberts/data_sets/sne/plasticc/plasticc_test/'
+out_folder='/home/roberts/data_sets/sne/plasticc/plasticc_training/'
 int_folder=os.path.join(out_folder,'int')
 feats_folder=os.path.join(out_folder,'features')
 
-d=sndata.EmptyDataset(filter_set=filters,survey_name='plasticc',folder=out_folder)
+filter_names={0:'lsstu',1:'lsstg',2:'lsstr',3:'lssti',4:'lsstz',5:'lsstY'}
+
+d=sndata.EmptyDataset(filter_set=list(filters),survey_name='plasticc',folder=out_folder)
 
 for o,counter in zip(objects,range(len(objects))):
 	print('obj #%d: %s'%(counter,o))
@@ -49,14 +55,17 @@ for o,counter in zip(objects,range(len(objects))):
 	#assemble lightcurve table pertaining to one object
 	#fr=raw_data[raw_data['object_id']==o]
 
-	tab=Table([fr['mjd'],fr['passband'].astype('str'),fr['flux'],fr['flux_err']],names=['mjd','filter','flux','flux_error'])
+	fnames=[filter_names[f] for f in fr['passband']]
+	tab=Table([fr['mjd'],fnames,fr['flux'],fr['flux_err']],names=['mjd','filter','flux','flux_error'])
 
 	if len(tab)>0:
 		tab['mjd']-=tab['mjd'].min()
 
 	tab.meta['name']=o.astype('str')
 
-	meta_line=raw_metadata[raw_metadata['object_id']==o]
+	meta_line=raw_metadata[raw_metadata['object_id']==o].iloc[0]
+	print(type(meta_line))
+	print(type(meta_line['target']))
 	tab.meta['ra']=meta_line['ra']
 	tab.meta['decl']=meta_line['decl']
 	tab.meta['gal_l']=meta_line['gal_l']
@@ -67,6 +76,9 @@ for o,counter in zip(objects,range(len(objects))):
 	tab.meta['hostgal_photoz_err']=meta_line['hostgal_photoz_err']
 	tab.meta['distmod']=meta_line['distmod']
 	tab.meta['mwebv']=meta_line['mwebv']
+
+	if wehavetypes:
+		tab.meta['type']=int(meta_line['target'])
 
 	#judgment call on what redshift to use in snmachine
 	tab.meta['z']=tab.meta['hostgal_specz']

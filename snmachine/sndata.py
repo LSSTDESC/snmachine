@@ -145,11 +145,11 @@ class EmptyDataset:
         lc : astropy.table.Table
             new light curve
         """
-        name = lc.meta['name']
-        self.object_names = np.append(self.object_names, name)
-        if subtract_min:
-            lc['mjd'] -= lc['mjd'].min()
-        self.data[name] = lc
+        name=lc.meta['name']
+        self.object_names=np.append(self.object_names,name)
+        if subtract_min and len(lc)>0:
+            lc['mjd']-=lc['mjd'].min()
+        self.data[name]=lc
         for flt in np.unique(lc['filter']):
             if not str(flt) in self.filter_set:
                 print('Adding filter '+str(flt)+' ...')

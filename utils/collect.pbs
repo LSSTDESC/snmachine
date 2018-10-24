@@ -5,7 +5,7 @@
  #PBS -S /bin/tcsh
  #PBS -q compute
  #PBS -l walltime=299:00:00
- #PBS -l mem=200GB
+ #PBS -l mem=50GB
  #PBS -N collect
 source .tcshrc
 cd /home/roberts/sne/snmachine/	
