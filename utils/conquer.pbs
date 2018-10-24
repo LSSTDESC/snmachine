@@ -7,7 +7,7 @@
  #PBS -l walltime=299:00:00
  #PBS -l mem=40GB
  #PBS -N conquer
- #PBS -t 0-199
+ #PBS -t 0
 source .tcshrc
 cd /home/roberts/sne/snmachine/	
 #echo ${PBS_ARRAYID}
