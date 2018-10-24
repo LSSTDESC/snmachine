@@ -3,6 +3,7 @@ Module containing Dataset classes. These read in data from various sources and t
 can be read by the rest of the code.
 """
 from __future__ import division
+import re
 from past.builtins import basestring
 import numpy as np
 import os
@@ -12,10 +13,12 @@ if not 'DISPLAY' in os.environ:
 import matplotlib.pyplot as plt
 from astropy.table import Table, Column
 from astropy.io import fits
-import sys, sncosmo
-from random import shuffle,sample
+from pandas as pd
+import sys
+from random import shuffle, sample
 from scipy import interpolate
-import sncosmo, math
+import sncosmo
+import math
 
 #Colours for graphs
 colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00','desz':'k',
@@ -37,10 +40,10 @@ def plot_lc(lc):
     """
         @param fname The filename of the supernova (relative to data_root)
     """
-    
+
     #This selects the filters from the possible set that this object has measurements in and maintains the order
     filts=np.unique(lc['filter'])
-    
+
     #Keep track of the min and max values on the plot for resizing axes
     min_x=np.inf
     max_x=-np.inf
@@ -68,14 +71,15 @@ def plot_lc(lc):
             min_x=tdelt.min()
         if tdelt.max()>max_x:
             max_x=tdelt.max()
-            
-    
+
+
     ext=0.05*(max_x-min_x)
     plt.xlim([min_x-ext, max_x+ext])
     plt.xlabel('Time (days)',  fontsize=16)
     plt.ylabel('Flux',  fontsize=16)
-    
+
     plt.legend(lines, filts, numpoints=1,loc='best')
+
 
 class EmptyDataset:
     """
@@ -97,14 +101,17 @@ class EmptyDataset:
 
         """
         if filter_set is None:
-            self.filter_set=[]
+            self.filter_set = []
         else:
-            self.filter_set=filter_set
-        self.rootdir=folder
-        self.survey_name=survey_name
-        self.data={}
-        self.object_names=[]
-        self.models={}
+            self.filter_set = filter_set
+        self.rootdir = folder
+        self.survey_name = survey_name
+        self.data = {}
+        self.object_names = []
+        self.models = {}
+
+    def mix(self):
+        self.object_names = shuffle(self.object_names)
 
     def set_filters(self, filter_set):
         """
@@ -114,7 +121,7 @@ class EmptyDataset:
         filter_set : array of str
             filters to be added
         """
-        self.filter_set=filter_set
+        self.filter_set = filter_set
 
     def set_rootdir(folder):
         """
@@ -125,7 +132,7 @@ class EmptyDataset:
             name of the folder
         """
         self.rootdir=folder
-        self.survey_name=folder.splot(os.path.sep)[-2]
+        #self.survey_name=folder.splot(os.path.sep)[-2]
 
     def insert_lightcurve(self, lc, subtract_min=True):
         """
@@ -137,11 +144,11 @@ class EmptyDataset:
         lc : astropy.table.Table
             new light curve
         """
-        name=lc.meta['name']
-        self.object_names=np.append(self.object_names,name)
+        name = lc.meta['name']
+        self.object_names = np.append(self.object_names, name)
         if subtract_min:
-            lc['mjd']-=lc['mjd'].min()
-        self.data[name]=lc
+            lc['mjd'] -= lc['mjd'].min()
+        self.data[name] = lc
         for flt in np.unique(lc['filter']):
             if not str(flt) in self.filter_set:
                 print('Adding filter '+str(flt)+' ...')
@@ -165,7 +172,7 @@ class EmptyDataset:
 
         #This selects the filters from the possible set that this object has measurements in and maintains the order
         filts=sorted(set(self.filter_set) & set(np.unique(lc['filter'])), key = self.filter_set.index)
-        
+
         #Keep track of the min and max values on the plot for resizing axes
         min_x=np.inf
         max_x=-np.inf
@@ -179,7 +186,7 @@ class EmptyDataset:
                 mkr=markers[filts[j]]
             else:
                 mkr='o'
-            
+
             #Plot the model, if it has been set
             if self.plot_model:
                 if fname in self.models.keys():
@@ -195,7 +202,7 @@ class EmptyDataset:
                 min_x=tdelt.min()
             if tdelt.max()>max_x:
                 max_x=tdelt.max()
-                
+
 
         ext=0.05*(max_x-min_x)
         plt.xlim([min_x-ext, max_x+ext])
@@ -248,7 +255,7 @@ class EmptyDataset:
             self.__ind-=1
         self.__plot_this(self.object_names[self.__ind])
         event.canvas.draw()
-    
+
     def plot_all(self, plot_model=True):
         """
         Plots all the supernovae in the dataset and allows the user to cycle through them with the left and
@@ -270,11 +277,11 @@ class EmptyDataset:
         plt.plot([0, 0])
         #subplots_adjust(right=0.95, top=0.95)
         plt.show()
-      
+
     def save_to_folder(self, outpath, overwrite=True, listname=None):
         """
         Saves the light curves in one data set to a folder, including one '.LIST' file with all object names
-        (the name can be changed if desired). The light curve format is the sncosmo standard, including a 
+        (the name can be changed if desired). The light curve format is the sncosmo standard, including a
         header for the metadata
 
         Parameters
@@ -285,7 +292,7 @@ class EmptyDataset:
 	    If the files already exist, do we overwrite them?
         listname : str
             Hand this argument to this routine if you want the list to be stored under a different name
-           
+
         """
 
         #in case the path does not end in separator, add one for good measure
@@ -318,7 +325,6 @@ class EmptyDataset:
                 max_obs=dif
         return max_obs
 
-    
     def set_model(self, fit_sn, *args):
         """
         Can use any function to set the model for all objects in the data.
@@ -334,8 +340,8 @@ class EmptyDataset:
         for obj in self.object_names:
             self.models[obj]=fit_sn(self.data[obj], *args)
         print ('Models fitted.')
-    
-  
+
+
     def get_types(self):
         """
         Returns a list of the types of the entire dataset.
@@ -367,7 +373,7 @@ class EmptyDataset:
             else:
                 z.append(-1)
         return np.array(z)
-        
+
     def sim_stats(self, **kwargs):
         """
         Prints information about the survey/simulation.
@@ -392,7 +398,7 @@ class EmptyDataset:
             plot_redshifts=kwargs['plot_redshifts']
         else:
             plot_redshifts=True
-        
+
         N=len(indices)
         redshifts=np.zeros(N)
         types=np.zeros(N)
@@ -401,7 +407,7 @@ class EmptyDataset:
             lc=self.get_lightcurve(self.object_names[ind])
             redshifts[i]=lc.meta['z']
             types[i]=lc.meta['type']
-            
+
         print()
         print ('Total number of SNe: %d' %(N))
         print()
@@ -412,7 +418,7 @@ class EmptyDataset:
             print ('Number of %s: %d (%0.2f%%)' %(sntypes[k],nk ,nk/N*100))
         nk=len(np.where(types==-9)[0])
         print ('Number of unknown: %d (%0.2f%%)' %(nk ,nk/N*100))
-        
+
         if plot_redshifts==True:
             plt.hist(redshifts[redshifts!=-9], 30, facecolor='#0057f6')
             plt.xlabel('Redshift', fontsize=16)
@@ -476,8 +482,8 @@ class Dataset(EmptyDataset):
     All this class really needs is a list of object names and a method, get_lightcurve, which takes an individual object name and returns a light curve.
     Other functions provided here are for plotting and convenience.
     """
-    
-    
+
+
     def __init__(self, folder, subset='none',  filter_set=['desg', 'desr', 'desi', 'desz']):
         """
         Initialisation.
@@ -513,7 +519,7 @@ class Dataset(EmptyDataset):
         print ('%d objects read into memory.' %len(self.data))
         #We create an optional model set which can be set by whatever feature class used
         self.models={}
-        
+
     def get_object_names(self, subset='none'):
         """
         Gets a list of the names of the files within the dataset.
@@ -541,10 +547,10 @@ class Dataset(EmptyDataset):
             except IndexError:
                 print ('Invalid subset provided')
                 sys.exit()
-                
+
         return np.sort(object_names)
 
-    
+
     def get_lightcurve(self, flname):
         """
         Given a filename, returns a light curve astropy table that conforms with sncosmo requirements
@@ -582,12 +588,12 @@ class Dataset(EmptyDataset):
                     for k in sntypes.keys():
                         if sntypes[k] in s:
                             type=(int)(k)
-                    
-        
+
+
         #Zeropoint
         zp=np.array([27.5]*len(mjd))
         zpsys=['ab']*len(mjd)
-        
+
         #Make everything arrays
         mjd=np.array(mjd)
         flt=np.array(flt, dtype='str')
@@ -597,10 +603,10 @@ class Dataset(EmptyDataset):
         mjd=mjd-start_mjd #We shift the times of the observations to all start at zero. If required, the mjd of the initial observation is stored in the metadata.
         #Note: obviously this will only zero the observations in one filter band, the others have to be zeroed if fitting functions.
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'name':flname,'z':z, 'z_err':z_err, 'type':type, 'initial_observation_time':start_mjd})
-        
+
         return tab
 
-    
+
 
 
 class OpsimDataset(EmptyDataset):
@@ -626,11 +632,11 @@ class OpsimDataset(EmptyDataset):
         self.filter_set=filter_set
         self.get_data(folder, subset=subset)
         self.models={}
-        
+
         if mix==True:
             shuffle(self.object_names)
-            
-        
+
+
     def get_data(self, folder, subset='none'):
         """
         Reads in the simulated data
@@ -671,10 +677,10 @@ class OpsimDataset(EmptyDataset):
             all_data=data_Ia+data_nIa
         self.data={}
         self.object_names=[]
-        
+
         invalid=0 #Some objects may have empty data
         print ('Reading data...')
-        
+
         for i in range(len(all_data)):
             snid=all_data[i].meta['SNID'].decode('UTF-8')
             if isinstance(subset,basestring) or ((snid in subset) or (i in subset)):
@@ -688,8 +694,8 @@ class OpsimDataset(EmptyDataset):
             print ('%d objects were invalid and not added to the dataset.' %invalid)
         self.object_names=np.array(self.object_names, dtype='str')
         print ('%d objects read into memory.' %len(self.data))
-        
-        
+
+
     def get_lightcurve(self, tab):
         """
         Converts the sncosmo convention for the astropy tables to snmachine's.
@@ -715,11 +721,11 @@ class OpsimDataset(EmptyDataset):
         zpsys=Column(name='zpsys', data=['ab']*len(tab_new['mjd']))
         tab_new.add_column(zp)
         tab_new.add_column(zpsys)
-        
-        tab_new.meta={'name':tab.meta['SNID'].decode('UTF-8'), 'z':tab.meta['REDSHIFT_FINAL'], 'z_err':tab.meta['REDSHIFT_FINAL_ERR'], 'type':tab.meta['SNTYPE'], 
+
+        tab_new.meta={'name':tab.meta['SNID'].decode('UTF-8'), 'z':tab.meta['REDSHIFT_FINAL'], 'z_err':tab.meta['REDSHIFT_FINAL_ERR'], 'type':tab.meta['SNTYPE'],
         'initial_observation_time':start_mjd}
         return tab_new
-        
+
 
 class LSSTCadenceSimulations(OpsimDataset):
     """
@@ -818,7 +824,7 @@ class LSSTCadenceSimulations(OpsimDataset):
 
 
 
-class SDSS_Data(EmptyDataset):    
+class SDSS_Data(EmptyDataset):
     """
     Class to read in the SDSS supernovae dataset
     """
@@ -826,7 +832,7 @@ class SDSS_Data(EmptyDataset):
     def __init__(self, folder, subset='none', training_only=False, filter_set=['sdssu','sdssg', 'sdssr', 'sdssi', 'sdssz'], subset_length = False, classification = 'none'):
         """
         Initialisation
- 
+
         Parameters
         ----------
         folder : str
@@ -864,7 +870,7 @@ class SDSS_Data(EmptyDataset):
         """
         Function to take all supernovae from Master SDSS data file  and return a random sample of SNe of user-specified length
         if requested
- 
+
         Parameters
         ----------
         subset_length : int
@@ -874,9 +880,9 @@ class SDSS_Data(EmptyDataset):
         -------
         list-like
             List of object names
- 
+
         """
- 
+
         fl = open(self.rootdir+self.survey_name+'.LIST')
         SN = []
         for line in fl:
@@ -898,14 +904,14 @@ class SDSS_Data(EmptyDataset):
         """
         Function to take all spectroscopically confirmed supernovae from Master file and return a random sample of SNe of user-specified length
         if requested
- 
+
         Parameters
         ----------
         subset_length : bool or int
             Number of objects to return (False to return all)
         classification : str
             Can specify a particular type of supernova to return ('none' for all types)
- 
+
         Returns
         -------
         list-like
@@ -1155,7 +1161,7 @@ class SDSS_Data(EmptyDataset):
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys', 'mag', 'mag_error'), meta={'name':flname,'z':z, 'z_err':z_err, 'type':type, 'initial_observation_time':start_mjd, 'peak flux':peak_flux })
 
         return tab
-    
+
 class SDSS_Simulations(EmptyDataset):
     """
     Class to read in the SDSS simulations dataset
@@ -1208,7 +1214,7 @@ class SDSS_Simulations(EmptyDataset):
         if classification == 'none':
             for i in range(len(d_Ia)):
                 SN = self.get_lightcurve(d_Ia[i])
-                if len(SN['mjd']) > 0 :  
+                if len(SN['mjd']) > 0 :
                     data['%s'%SN.meta['snid']] = SN
                 else:
                     invalid+=1
@@ -1221,7 +1227,7 @@ class SDSS_Simulations(EmptyDataset):
         elif classification == 'Ia' or classification == 'SNIa':
             for i in range(len(d_Ia)):
                 SN = self.get_lightcurve(d_Ia[i])
-                if len(SN['mjd']) > 0 :     
+                if len(SN['mjd']) > 0 :
                     data['%s'%SN.meta['snid']] = SN
                 else:
                     invalid+=1
@@ -1235,7 +1241,7 @@ class SDSS_Simulations(EmptyDataset):
         elif classification == 'Ibc' or classification == 'SNIbc':
             for i in range(len(d_nIa)):
                 SN = self.get_lightcurve(d_nIa[i])
-                if len(SN['mjd']) > 0 :  
+                if len(SN['mjd']) > 0 :
                     if SN.meta['type'] == 3:
                         data['%s'%SN.meta['snid']] = SN
                 else:
@@ -1251,13 +1257,13 @@ class SDSS_Simulations(EmptyDataset):
         else:
             print ('Invalid classification requested')
             sys.exit()
-        
+
         # allow user to request entirely spectroscopic data or photometric data
         if subset == 'spectro':
             data = dict((key,value) for (key,value) in data.items() if value.meta['data type'] == 'spec')
         if subset == 'photo':
             data = dict((key,value) for (key,value) in data.items() if value.meta['data type'] == 'phot')
-        
+
         # allow user to request a shortened subset of the dataset
         if subset_length != False:
             data = dict(sample(data.items(), subset_length))
@@ -1265,11 +1271,11 @@ class SDSS_Simulations(EmptyDataset):
         return data, invalid
 
     def get_lightcurve(self, lc):
-        
+
         mjd = np.array([lc['MJD'][i] for i in range(len(lc['MJD'])) if lc['FLUXCAL'][i] > 0])
         flt = np.array(['sdss' + lc['FLT'][i] for i in range(len(lc['FLT'])) if lc['FLUXCAL'][i] > 0])
         flux = np.array( [(lc['FLUXCAL'][i]*math.pow(10,-1.44)) for i in range(len(lc['FLUXCAL'])) if lc['FLUXCAL'][i] > 0]) # ignore negative flux values
-#FLUX: MULTIPLY BY 10^-1.44 (FLUX IN SDSS IS CALCULATED AS 10^(-0.4MAG +9.56) WHEREAS SIMULATED FLUXES ARE CALCULATED AS 10^(-0.4MAG + 11)- WE USE THE SDSS CONVENTION). 
+#FLUX: MULTIPLY BY 10^-1.44 (FLUX IN SDSS IS CALCULATED AS 10^(-0.4MAG +9.56) WHEREAS SIMULATED FLUXES ARE CALCULATED AS 10^(-0.4MAG + 11)- WE USE THE SDSS CONVENTION).
         fluxerr = np.array([(lc['FLUXCALERR'][i]*math.pow(10,-1.44)) for i in range(len(lc['FLUXCALERR'])) if lc['FLUXCAL'][i] > 0])
         mag = np.array([lc['MAG'][i] for i in range(len(lc['MAGERR'])) if lc['FLUXCAL'][i] > 0])
         magerr = np.array([lc['MAGERR'][i] for i in range(len(lc['MAGERR'])) if lc['FLUXCAL'][i] > 0])
@@ -1281,7 +1287,7 @@ class SDSS_Simulations(EmptyDataset):
             peak_flux = -9
         mjd=mjd-start_mjd #We shift the times of the observations to all start at zero. If required, the mjd of the initial observation is stored in the metadata.
         #Note: obviously this will only zero the observations in one filter band, the others have to be zeroed if fitting functions.
-        # find supernova classification and whether it is spectroscopically classified or photometrically       
+        # find supernova classification and whether it is spectroscopically classified or photometrically
         sntype = -9
         dtype = -9
         if lc.meta['SNTYPE'] == 120  :
@@ -1318,8 +1324,106 @@ class SDSS_Simulations(EmptyDataset):
         #Zeropoint
         zp=np.array([27.5]*len(mjd))
         zpsys=['ab']*len(mjd)
-        
+
         # form astropy table
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys', 'mag', 'mag_error'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux , 'data type':dtype })
 
         return tab
+
+
+class plasticc_data(EmptyDataset):
+    """
+    Class to read in the SNANA cadence simulations, which are divided into
+    chunks.
+    """
+
+    def __init__(self, folder, data_file, mix=False, filter_set=['lsstu',
+                 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'], survey_name='lsst'):
+        """
+        Initialisation.
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located
+        subset : str or list-like, optional
+            List of a subset of object names. If not supplied, the full dataset
+            will be used
+        mix : bool, optional
+            The output of the simulations is often highly ordered, this
+            randomly permutes the objects when they're read in
+        filter_set : list-like, optional
+            Set of possible filters
+        indices : list of ints
+            List of indices that index the fits files which each store one
+            chunk of the simulated light curves.
+        """
+        super().__init__(folder, survey_name, filter_set)
+        get_data(folder, data_file)
+        if mix is True:
+            self.mix()
+
+    def get_data(self, folder, data_file):
+        """
+        Reads in the simulated data
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located
+        subset : str or list-like, optional
+            List of a subset of object names. If not supplied, the full
+            dataset will be used
+
+        """
+
+        data = []
+        metadata = []
+        self.data = {}
+        self.object_names = []
+
+        print('Reading data...')
+        data = pd.read_csv(file, sep=',', index_col)
+        invalid = 0  # Some objects may have empty data
+
+        # Abstract column names from dataset
+        for col in data.columns:
+            if re.search('mjd', col):
+                self.mjd_col = col
+            if re.search('id', col):
+                self.id_col = col
+
+        for i, id in enumerate(data[self.id_col].unique()):
+            if math.fmod(i, 1e4) == 0:
+                print('{}k'.format((i//1e3)))
+            self.object_names.append(str(id))
+            lc = pandas_2_astro(pandas_lc=data.query('{0} == {1}'.format(self.id_col, id)))
+            if len(lc[self.mjd_col] > 0):
+                self.data[id] = lc
+            else:
+                invalid += 1
+        if invalid > 0:
+            print('{} objects were invalid and not added to the dataset.'.format(invalid))
+        self.object_names = np.array(self.object_names, dtype='str')
+        print('{} objects read into memory.'.format(len(self.data)))
+
+    def pandas_2_astro(self, pandas_lc, subtract_min=True):
+        """
+        Takes a pandas light curve from the plasticc dataset format
+        and converts it to the astropy table.table format.
+        Parameters
+        ----------
+        pandas_lc: Pandas DataFrame
+            single object multi-band lightcurve
+
+        returns
+        -------
+        lc: astropy.table.table
+            new single object lightcurve
+        """
+
+        lc = Table.from_pandas(pandas_lc)
+        if subtract_min:
+            lc[self.mjd_col] -= lc[self.mjd_col].min()
+
+        return lc
