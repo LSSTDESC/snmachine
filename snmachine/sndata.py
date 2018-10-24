@@ -13,7 +13,7 @@ if not 'DISPLAY' in os.environ:
 import matplotlib.pyplot as plt
 from astropy.table import Table, Column
 from astropy.io import fits
-from pandas as pd
+import pandas as pd
 import sys
 from random import shuffle, sample
 from scipy import interpolate
