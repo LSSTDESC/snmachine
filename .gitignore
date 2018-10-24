@@ -131,3 +131,7 @@ snmachine/example_data/output_*
 
 # Do not track mpi4py backtrace debugging files
 *.btr
+
+# Mac OS files
+.DS_Store
+
