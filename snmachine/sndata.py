@@ -1383,7 +1383,7 @@ class plasticc_data(EmptyDataset):
         self.object_names = []
 
         print('Reading data...')
-        data = pd.read_csv(file, sep=',', index_col)
+        data = pd.read_csv(file, sep=',')
         invalid = 0  # Some objects may have empty data
 
         # Abstract column names from dataset
