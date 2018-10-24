@@ -1359,7 +1359,7 @@ class plasticc_data(EmptyDataset):
             chunk of the simulated light curves.
         """
         super().__init__(folder, survey_name, filter_set)
-        get_data(folder, data_file)
+        self.get_data(folder, data_file)
         if mix is True:
             self.mix()
 
@@ -1397,7 +1397,7 @@ class plasticc_data(EmptyDataset):
             if math.fmod(i, 1e4) == 0:
                 print('{}k'.format((i//1e3)))
             self.object_names.append(str(id))
-            lc = pandas_2_astro(pandas_lc=data.query('{0} == {1}'.format(self.id_col, id)))
+            lc = self.pandas_2_astro(pandas_lc=data.query('{0} == {1}'.format(self.id_col, id)))
             if len(lc[self.mjd_col] > 0):
                 self.data[id] = lc
             else:
