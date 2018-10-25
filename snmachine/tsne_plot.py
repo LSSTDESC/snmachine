@@ -70,7 +70,7 @@ def plot_tsne(Xfit, types, loc='best', type_dict = None):
     plt.gcf().tight_layout()
     plt.plot()
 
-def plot(feats, types,objs=[], seed=-1):
+def plot(feats, types,objs=[], seed=-1, type_dict=None):
     """
     Convenience function to run t-SNE and plot
 
@@ -86,4 +86,4 @@ def plot(feats, types,objs=[], seed=-1):
     if len(objs)==0:
         objs=feats['Object']
     Xfit=get_tsne(feats,objs, seed=seed)
-    plot_tsne(Xfit,types)
+    plot_tsne(Xfit,types, type_dict)
