@@ -113,7 +113,7 @@ class EmptyDataset:
         self.models = {}
 
     def mix(self):
-        self.object_names = shuffle(self.object_names)
+        shuffle(self.object_names)
 
     def set_filters(self, filter_set):
         """

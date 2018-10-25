@@ -174,7 +174,7 @@ def compute_confusion_matrix(Yfit,Ytrue):
     '''
     return sklearn_cm(y_true=Ytrue,y_pred=Yfit)
 
-def plot_confusion_matrix(cm,normalise=False,labels=np.arange(len(cm[:,0])).tolist(),title='Confusion matrix', type_dict):
+def plot_confusion_matrix(cm, normalise=False, labels=None, title='Confusion matrix'):
     '''
     Make a plot from a pre-computed confusion matrix.
 
@@ -190,7 +190,8 @@ def plot_confusion_matrix(cm,normalise=False,labels=np.arange(len(cm[:,0])).toli
     title : str
        Surprisingly, this is the title for the plot.
     '''
-
+    if labels is None:
+        labels = np.arange(len(cm[:,0])).tolist()
     plt.figure()
     if normalise:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -792,8 +793,8 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
             print('%s not in our choice of classifiers!'%cls)
             continue
         y_fit=(1+probabilities[cls].argmax(axis=1)).tolist()
-        cm=compute_confusion_matrix(y_fit,y_test)
-        plot_confusion_matrix(cm,labels=labels,title='Confusion matrix for %s'%cls)
+        cm = compute_confusion_matrix(y_fit,y_test)
+        plot_confusion_matrix(cm, labels=labels, title='Confusion matrix for %s'%cls)
         plt.show()
 
     if return_classifier:
