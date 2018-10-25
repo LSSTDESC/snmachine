@@ -23,7 +23,7 @@ n24=len(good_nodes) #How many cores24 nodes requesting
 proc12=n12*12 #Total number of cores12 processors
 proc24=n24*24
 
-dataset='des'
+dataset='cadence_rolling'
 subset='none'
 train_choice='repr'
 
@@ -111,6 +111,15 @@ elif 'lsst' in dataset:
     rootdir='/home/mlochner/sn/'+survey_name+'/'
     objects=np.genfromtxt(rootdir+'high_SNR_snids.txt', dtype='str')
     #objects=np.loadtxt('missing_objects.txt',dtype='str')
+
+elif 'cadence' in dataset:
+    if dataset=='cadence_rolling':
+        survey_name='Rolling_3_80_reshuffled_WFD'
+    elif dataset=='cadence_minion':
+        survey_name='minion_1016_WFD'
+    rootdir='/share/hypatia/snmachine_resources/data/LSST_cadence_sims/'+survey_name+'/FullLightCurveFitsFiles/RH_LSST_SNMIX_WFD/'
+    objects=np.genfromtxt(rootdir+'.LIST',dtype='str')
+
     
 nobj=len(objects) #Total number of objects
 
