@@ -1440,7 +1440,8 @@ class plasticc_data(EmptyDataset):
         print('Reading data...')
         data = pd.read_csv(folder + '/' + data_file, sep=',')
         invalid = 0  # Some objects may have empty data
-
+        data = self.remap_filters(df=data)
+        data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)
         # Abstract column names from dataset
         for col in data.columns:
             if re.search('mjd', col):
@@ -1463,6 +1464,20 @@ class plasticc_data(EmptyDataset):
             print('{} objects were invalid and not added to the dataset.'.format(invalid))
         self.object_names = np.array(self.object_names, dtype='str')
         print('{} objects read into memory.'.format(len(self.data)))
+
+    def remap_filters(self, df):
+        """
+        Function to remap integer filters to the corresponding lsst filters and
+        also to set filter name syntax to what snmachine already recognizes
+
+        df: pandas.dataframe
+            Dataframe of lightcurve observations
+        """
+        df.rename({'passband':'filter'}, axis='columns', inplace=True)
+        filter_replace = {0:'lsstu',1:'lsstg',2:'lsstr',3:'lssti',4:'lsstz',5:'lssty'}
+        df['filter'].replace(to_replace=filter_replace, inplace=True)
+        return df
+
 
     def pandas_2_astro(self, pandas_lc, subtract_min=True):
         """
