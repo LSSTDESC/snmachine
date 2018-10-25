@@ -23,7 +23,8 @@ import math
 
 #Colours for graphs
 colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00','desz':'k',
-            'lssty':'#2727c1','lsstu':'#6614de','lsstg':'#007718','lsstr':'#b30100','lssti':'#d35c00','lsstz':'k','lsstY':'#2727c1'}
+'lssty':'#e50000','lsstu':'#9a0eea','lsstg':'#75bbfd','lsstr':'#76ff7b','lssti':'#fdde6c','lsstz':'#f97306','lsstY':'#e50000'}
+
 sntypes={1:'Ia',2:'II',21:'IIn',22:'IIP',23:'IIL',3:'Ibc',32:'Ib',33:'Ic',66:'other'}
 markers={'desg':'^', 'desr':'o', 'desi':'s', 'desz':'*'}
 labels={'desg':'g', 'desr':'r', 'desi':'i', 'desz':'z'}
@@ -274,7 +275,7 @@ class EmptyDataset:
         self.plot_model=plot_model #We use a class variable because this can't be passed directly to __on_press
         fig = plt.figure()
         self.__ind = -1
-        fig.canvas.mpl_connect('key_press_event', self.__on_press)
+        self.cid = fig.canvas.mpl_connect('key_press_event', self.__on_press)
         plt.plot([0, 0])
         #subplots_adjust(right=0.95, top=0.95)
         plt.show()
