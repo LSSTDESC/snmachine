@@ -212,7 +212,7 @@ class EmptyDataset:
         plt.ylabel('Flux')
         #plt.gca().tick_params(labelsize=8)
         if title:
-            plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], lc.meta['type']))
+            plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])]))
         labs=[]
         for f in filts:
             if f in labels.keys():
@@ -258,7 +258,7 @@ class EmptyDataset:
         self.__plot_this(self.object_names[self.__ind])
         event.canvas.draw()
 
-    def plot_all(self, plot_model=True):
+    def plot_all(self, plot_model=True, mix=False):
         """
         Plots all the supernovae in the dataset and allows the user to cycle through them with the left and
         right arrow keys.
@@ -272,6 +272,8 @@ class EmptyDataset:
         if len(self.data)==0:
             print('Data set does not contain any light curves - exiting!')
             return
+        if mix:
+            self.mix()
         self.plot_model=plot_model #We use a class variable because this can't be passed directly to __on_press
         fig = plt.figure()
         self.__ind = -1
@@ -1398,12 +1400,15 @@ class plasticc_data(EmptyDataset):
             ind_o = eval(o)
             if int(math.fmod(i, num_obj*0.1)) == 0:
                 print('{}%'.format(int(i/(num_obj*0.01))))
+
+            # Set meta name as the object id string
+            self.data[o].meta['name'] = o
             for col in metadata.columns:
-                if re.search('id', col):
-                    self.data[o].meta['name'] = metadata.at[ind_o, col]
-                elif re.search('target', col):
+                if re.search('target', col):
                     self.data[o].meta['type'] = self.dict_2_sn_types[str(metadata.at[ind_o, col])]
-                elif re.search('z', col):
+
+                # Default to spectroscopic redshift for z
+                elif re.search('specz', col):
                     self.data[o].meta['z'] = metadata.at[ind_o, col]
                 else:
                     self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, ind_o))[col].values

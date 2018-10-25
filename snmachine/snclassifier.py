@@ -606,7 +606,7 @@ def __call_classifier(classifier, X_train, y_train, X_test, param_dict,return_cl
         return probs
 
 def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn','svm','neural_network','boost_dt'],
-                 training_set=0.7, param_dict={}, nprocesses=1, scale=True,
+                 training_set=0.3, param_dict={}, nprocesses=1, scale=True,
                  plot_roc_curve=True,return_classifier=False,classifiers_for_cm_plots=[]):
     """
     Utility function to classify a dataset with a number of classification methods. This does assume your test

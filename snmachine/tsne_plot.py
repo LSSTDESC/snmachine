@@ -35,7 +35,7 @@ def get_tsne(feats,objs,perplexity=100, seed=-1):
     Xfit=manifold.fit_transform(X)
     return Xfit
 
-def plot_tsne(Xfit,types, loc='best'):
+def plot_tsne(Xfit, types, loc='best', type_dict = None):
     """
     Plot the resulting t-SNE embedded features.
 
@@ -48,15 +48,19 @@ def plot_tsne(Xfit,types, loc='best'):
     loc : str, optional
         Location of the legend in the plot
     """
-    colours=['#1b9e77','#7570b3','#d95f02']
-    legend_names=['Ia','II','Ibc']
     unique_types=np.unique(types)
+    colors = iter(cm.rainbow(np.linspace(0, 1, len(unique_types))))
+    if type_dict:
+        legend_names= type_dict.values
+    else:
+        legend_names = np.arange(len(unique_types))
+
     markers=['o','^','s']
     legs=[]
     for i in range(len(unique_types))[::-1]:
         inds=np.where(types==unique_types[i])[0]
-        l=plt.scatter(Xfit[inds,0],Xfit[inds,1],color=colours[i],alpha=0.5,
-                      marker=markers[i],s=16.0,linewidths=0.3,rasterized=True)
+        l=plt.scatter(Xfit[inds,0],Xfit[inds,1],color=next(colors), alpha=0.5,
+                      marker=markers[0],s=16.0,linewidths=0.3,rasterized=True)
         legs.append(l)
     fntsize=10
     plt.legend(legs[::-1],legend_names,scatterpoints=1,loc=loc)
@@ -83,5 +87,3 @@ def plot(feats, types,objs=[], seed=-1):
         objs=feats['Object']
     Xfit=get_tsne(feats,objs, seed=seed)
     plot_tsne(Xfit,types)
-
-
