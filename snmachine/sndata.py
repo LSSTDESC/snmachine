@@ -1409,7 +1409,7 @@ class plasticc_data(EmptyDataset):
                     self.data[o].meta['type'] = self.dict_2_sn_types[str(metadata.at[ind_o, col])]
 
                 # Default to spectroscopic redshift for z
-                elif re.search('specz', col) and metadata.at[ind_o, col] is not None:
+                elif re.search('specz', col) and not np.isnan(metadata.at[ind_o, col]):
                     self.data[o].meta['z'] = metadata.at[ind_o, col]
                 else:
                     self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, ind_o))[col].values
