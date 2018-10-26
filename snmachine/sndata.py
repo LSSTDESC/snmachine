@@ -1403,15 +1403,24 @@ class plasticc_data(EmptyDataset):
 
             # Set meta name as the object id string
             self.data[o].meta['name'] = o
+            self.data[o].meta['z'] = None
             for col in metadata.columns:
                 if re.search('target', col):
                     self.data[o].meta['type'] = self.dict_2_sn_types[str(metadata.at[ind_o, col])]
 
                 # Default to spectroscopic redshift for z
-                elif re.search('specz', col):
+                elif re.search('specz', col) and metadata.at[ind_o, col] is not None:
                     self.data[o].meta['z'] = metadata.at[ind_o, col]
                 else:
                     self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, ind_o))[col].values
+
+            # If no spec z set z to phot z
+            if self.data[o].meta['z'] is None:
+                for col in metadata.columns:
+                    if re.search('photoz', col) and re.search('err', col) is None:
+                        self.data[o].meta['z'] = metadata.at[ind_o, col]
+                        break
+
         print('Finished setting the metadata for {}k objects.'.format(num_obj))
 
     def remap_types(self, metadata):
