@@ -340,7 +340,7 @@ class EmptyDataset:
         args : list, optional
             Whatever arguments fit_sn requires
         """
-        print ('Fitting supernova models...')
+        print ('Fitting transient models...')
         for obj in self.object_names:
             self.models[obj]=fit_sn(self.data[obj], *args)
         print ('Models fitted.')

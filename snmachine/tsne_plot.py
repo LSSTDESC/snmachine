@@ -4,8 +4,10 @@ Utility script for making nice t-SNE plots (https://lvdmaaten.github.io/tsne/)
 
 from __future__ import division
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from sklearn.manifold import TSNE
 import numpy as np
+
 
 def get_tsne(feats,objs,perplexity=100, seed=-1):
     """
