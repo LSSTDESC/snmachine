@@ -20,6 +20,8 @@ from random import shuffle, sample
 from scipy import interpolate
 import sncosmo
 import math
+from time import time
+import datetime
 
 #Colours for graphs
 colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00','desz':'k',
@@ -1394,11 +1396,13 @@ class plasticc_data(EmptyDataset):
         metadata = pd.read_csv(folder + '/' + meta_file, sep=',', index_col = self.id_col)
 
         self.remap_types(metadata)
-
         num_obj = len(self.object_names)
+
+        percent_to_print = pow(10, -int(np.log10(num_obj)/2))
+
         for i, o in enumerate(self.object_names):
             ind_o = eval(o)
-            if int(math.fmod(i, num_obj*0.1)) == 0:
+            if int(math.fmod(i, num_obj*percent_to_print)) == 0:
                 print('{}%'.format(int(i/(num_obj*0.01))))
 
             # Set meta name as the object id string
@@ -1420,8 +1424,8 @@ class plasticc_data(EmptyDataset):
                     if re.search('photoz', col) and re.search('err', col) is None:
                         self.data[o].meta['z'] = metadata.at[ind_o, col]
                         break
-
         print('Finished setting the metadata for {}k objects.'.format(num_obj))
+        print('\nThis has taken {}'.format(datetime.timedelta(seconds=time()-self.data_start_time)))
 
     def remap_types(self, metadata):
         user_types = metadata['target'].unique()
@@ -1446,7 +1450,7 @@ class plasticc_data(EmptyDataset):
             dataset will be used
 
         """
-
+        self.data_start_time = time()
         data = []
         self.data = {}
         self.object_names = []
@@ -1465,8 +1469,10 @@ class plasticc_data(EmptyDataset):
 
         num_obj = len(data[self.id_col].unique())
 
+        percent_to_print = pow(10, -int(np.log10(num_obj)/2))
+
         for i, id in enumerate(data[self.id_col].unique()):
-            if int(math.fmod(i, num_obj*0.1)) == 0:
+            if int(math.fmod(i, num_obj*percent_to_print)) == 0:
                 print('{}%'.format(int(i/(num_obj*0.01))))
             self.object_names.append(str(id))
             lc = self.pandas_2_astro(pandas_lc=data.query('{0} == {1}'.format(self.id_col, id)))
