@@ -650,7 +650,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     t1= time.time()
 
     if type_dict is None:
-        type_dict = {value: value for value in range(len(unique(types,keys='Type')))}
+        type_dict = {value: value for value in range(len(unique(types, keys='Type')))}
 
 
     if isinstance(features,Table):
@@ -775,8 +775,8 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     print ('Time taken ', (time.time()-t1)/60., 'minutes')
 
     labels=[]
-    for tp in unique(types, keys='Type'):
-        labels.append(type_dict[tp])
+    for tp_row in unique(types, keys='Type'):
+        labels.append(type_dict[tp_row['Type']])
 
     if plot_roc_curve:
         plot_roc(FPR, TPR, AUC, labels=classifiers,label_size=16,tick_size=12,line_width=1.5)
@@ -794,7 +794,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
             continue
         y_fit=(1+probabilities[cls].argmax(axis=1)).tolist()
         cm = compute_confusion_matrix(y_fit,y_test)
-        plot_confusion_matrix(cm, labels=labels, title='Confusion matrix for %s'%cls)
+        plot_confusion_matrix(cm, labels=labels, title='Confusion matrix for %s'%cls, normalise=True)
         plt.show()
 
     if return_classifier:
