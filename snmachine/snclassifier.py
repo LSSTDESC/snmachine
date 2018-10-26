@@ -19,7 +19,7 @@ from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import confusion_matrix as sklearn_cm
 from scipy.integrate import trapz
-from astropy.table import Table,join
+from astropy.table import Table,join,unique
 import sys, collections,time
 from functools import partial
 from multiprocessing import Pool
@@ -650,7 +650,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     t1= time.time()
 
     if type_dict is None:
-        type_dict = {value: value for value in range(len(Table.unique(types,keys='Type')))}
+        type_dict = {value: value for value in range(len(unique(types,keys='Type')))}
 
 
     if isinstance(features,Table):
@@ -775,7 +775,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     print ('Time taken ', (time.time()-t1)/60., 'minutes')
 
     labels=[]
-    for tp in Table.unique(types, keys='Type'):
+    for tp in unique(types, keys='Type'):
         labels.append(type_dict[tp])
 
     if plot_roc_curve:

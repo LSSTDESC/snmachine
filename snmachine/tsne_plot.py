@@ -37,7 +37,7 @@ def get_tsne(feats,objs,perplexity=100, seed=-1):
     Xfit=manifold.fit_transform(X)
     return Xfit
 
-def plot_tsne(Xfit, types, loc='best', type_dict = None):
+def plot_tsne(Xfit, types, loc="upper left", type_dict = None):
     """
     Plot the resulting t-SNE embedded features.
 
@@ -61,15 +61,17 @@ def plot_tsne(Xfit, types, loc='best', type_dict = None):
     legs=[]
     for i in range(len(unique_types))[::-1]:
         inds=np.where(types==unique_types[i])[0]
-        l=plt.scatter(Xfit[inds,0],Xfit[inds,1],color=next(colors), alpha=0.5,
-                      marker=markers[0],s=16.0,linewidths=0.3,rasterized=True)
+        l=plt.scatter(Xfit[inds,0], Xfit[inds,1], color=next(colors), alpha=0.5,
+                      marker=markers[0], s=16.0, linewidths=0.3, rasterized=True)
         legs.append(l)
     fntsize=10
-    plt.legend(legs[::-1],legend_names,scatterpoints=1,loc=loc)
-    plt.gca().get_legend().get_frame().set_lw(0.2)
+    # plt.legend(legs[::-1], legend_names, scatterpoints=1, bbox_to_anchor=(1.04,1), loc=loc)
+    # plt.gca().get_legend().get_frame().set_lw(0.2)
     plt.xlabel('Embedded feature 1')
     plt.ylabel('Embedded feature 2')
     plt.gcf().tight_layout()
+    plt.legend(legs[::-1], legend_names, scatterpoints=1, bbox_to_anchor=(1.04,1), loc=loc)
+    plt.gca().get_legend().get_frame().set_lw(0.2)
     plt.plot()
 
 def plot(feats, types,objs=[], seed=-1, type_dict=None):
