@@ -246,7 +246,7 @@ class EmptyDataset:
         if title:
             plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])]))
 
-        if self.sep_detect:
+        if self.sep_detect and loc == 'outside':
             plt.legend(lines, labs, numpoints=1, bbox_to_anchor=(1.02, 1), loc="upper left")
         else:
             plt.legend(lines, labs, numpoints=1, loc=loc)
