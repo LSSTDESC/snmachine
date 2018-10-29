@@ -181,15 +181,32 @@ class EmptyDataset:
         min_x=np.inf
         max_x=-np.inf
         lines=[]
+        if self.sep_detect:
+            lines_d = []
+
+        labs = []
         for j in range(len(filts)):
-            inds=np.where(lc['filter']==filts[j])[0]
+            f = filts[j]
+            inds = np.where(lc['filter']==filts[j])[0]
             t, F, F_err=lc['mjd'][inds], lc['flux'][inds], lc['flux_error'][inds]
+            if self.sep_detect:
+                inds_d = np.where((lc['filter'] == filts[j]) & (lc['detected'] == 1))[0]
+                t_d, F_d, F_err_d =lc['mjd'][inds_d], lc['flux'][inds_d], lc['flux_error'][inds_d]
+                if len(t_d) > 0:
+                    detect_in_band = True
+                else:
+                    detect_in_band = False
+
             #tdelt=t-t.min()
             tdelt=t
+            if self.sep_detect and detect_in_band:
+                tdelt_d = t_d
+
             if filts[j] in markers.keys():
                 mkr=markers[filts[j]]
             else:
                 mkr='o'
+                mkr_d='x'
 
             #Plot the model, if it has been set
             if self.plot_model:
@@ -202,11 +219,24 @@ class EmptyDataset:
 
             l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr, linestyle='none',  color=colours[filts[j]], markersize=4)
             lines.append(l)
+
+            if self.sep_detect and detect_in_band:
+                l_d=plt.errorbar(tdelt_d, F_d,yerr=F_err_d,  marker=mkr_d, linestyle='none',  color=colours[filts[j]], markersize=6)
+                lines.append(l_d)
+
             if tdelt.min()<min_x:
                 min_x=tdelt.min()
             if tdelt.max()>max_x:
                 max_x=tdelt.max()
 
+            if f in labels.keys():
+                labs.append(labels[f])
+                if self.sep_detect and detect_in_band:
+                    labs.append(labels[f] + ' detected')
+            else:
+                labs.append(f)
+                if self.sep_detect and detect_in_band:
+                    labs.append(f + ' detected')
 
         ext=0.05*(max_x-min_x)
         plt.xlim([min_x-ext, max_x+ext])
@@ -215,12 +245,7 @@ class EmptyDataset:
         #plt.gca().tick_params(labelsize=8)
         if title:
             plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])]))
-        labs=[]
-        for f in filts:
-            if f in labels.keys():
-                labs.append(labels[f])
-            else:
-                labs.append(f)
+
         plt.legend(lines, labs, numpoints=1,loc=loc)
         #plt.subplots_adjust(left=0.3)
 
@@ -260,7 +285,7 @@ class EmptyDataset:
         self.__plot_this(self.object_names[self.__ind])
         event.canvas.draw()
 
-    def plot_all(self, plot_model=True, mix=False):
+    def plot_all(self, plot_model=True, mix=False, sep_detect=False):
         """
         Plots all the supernovae in the dataset and allows the user to cycle through them with the left and
         right arrow keys.
@@ -276,7 +301,9 @@ class EmptyDataset:
             return
         if mix:
             self.mix()
-        self.plot_model=plot_model #We use a class variable because this can't be passed directly to __on_press
+
+        self.sep_detect = sep_detect
+        self.plot_model = plot_model #We use a class variable because this can't be passed directly to __on_press
         fig = plt.figure()
         self.__ind = -1
         self.cid = fig.canvas.mpl_connect('key_press_event', self.__on_press)
@@ -1424,8 +1451,8 @@ class plasticc_data(EmptyDataset):
                     if re.search('photoz', col) and re.search('err', col) is None:
                         self.data[o].meta['z'] = metadata.at[ind_o, col]
                         break
-        print('Finished setting the metadata for {}k objects.'.format(num_obj))
-        print('\nThis has taken {}'.format(datetime.timedelta(seconds=time()-self.data_start_time)))
+        print('Finished getting the metadata for {}k objects.'.format(num_obj))
+        print('\nThis has taken {}'.format(datetime.timedelta(seconds=int(time()-self.data_start_time))))
 
     def remap_types(self, metadata):
         user_types = metadata['target'].unique()
@@ -1445,9 +1472,8 @@ class plasticc_data(EmptyDataset):
         ----------
         folder : str
             Folder where simulations are located
-        subset : str or list-like, optional
-            List of a subset of object names. If not supplied, the full
-            dataset will be used
+        data_file : str or list-like, optional
+            .csv file of object lightcurves
 
         """
         self.data_start_time = time()
