@@ -221,7 +221,7 @@ class EmptyDataset:
             lines.append(l)
 
             if self.sep_detect and detect_in_band:
-                l_d=plt.errorbar(tdelt_d, F_d,yerr=F_err_d,  marker=mkr_d, linestyle='none',  color=colours[filts[j]], markersize=6)
+                l_d=plt.errorbar(tdelt_d, F_d,yerr=F_err_d,  marker=mkr_d, linestyle='none',  color=colours[filts[j]], markersize=7)
                 lines.append(l_d)
 
             if tdelt.min()<min_x:
@@ -246,7 +246,10 @@ class EmptyDataset:
         if title:
             plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])]))
 
-        plt.legend(lines, labs, numpoints=1,loc=loc)
+        if self.sep_detect:
+            plt.legend(lines, labs, numpoints=1, bbox_to_anchor=(1.02, 1), loc="upper left")
+        else:
+            plt.legend(lines, labs, numpoints=1, loc=loc)
         #plt.subplots_adjust(left=0.3)
 
     def plot_lc(self, fname, plot_model=True, title=True, loc='best'):
