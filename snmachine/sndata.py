@@ -20,6 +20,8 @@ from random import shuffle, sample
 from scipy import interpolate
 import sncosmo
 import math
+from time import time
+import datetime
 
 #Colours for graphs
 colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00','desz':'k',
@@ -113,7 +115,7 @@ class EmptyDataset:
         self.models = {}
 
     def mix(self):
-        self.object_names = shuffle(self.object_names)
+        shuffle(self.object_names)
 
     def set_filters(self, filter_set):
         """
@@ -212,7 +214,7 @@ class EmptyDataset:
         plt.ylabel('Flux')
         #plt.gca().tick_params(labelsize=8)
         if title:
-            plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], lc.meta['type']))
+            plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])]))
         labs=[]
         for f in filts:
             if f in labels.keys():
@@ -258,7 +260,7 @@ class EmptyDataset:
         self.__plot_this(self.object_names[self.__ind])
         event.canvas.draw()
 
-    def plot_all(self, plot_model=True):
+    def plot_all(self, plot_model=True, mix=False):
         """
         Plots all the supernovae in the dataset and allows the user to cycle through them with the left and
         right arrow keys.
@@ -272,6 +274,8 @@ class EmptyDataset:
         if len(self.data)==0:
             print('Data set does not contain any light curves - exiting!')
             return
+        if mix:
+            self.mix()
         self.plot_model=plot_model #We use a class variable because this can't be passed directly to __on_press
         fig = plt.figure()
         self.__ind = -1
@@ -338,7 +342,7 @@ class EmptyDataset:
         args : list, optional
             Whatever arguments fit_sn requires
         """
-        print ('Fitting supernova models...')
+        print ('Fitting transient models...')
         for obj in self.object_names:
             self.models[obj]=fit_sn(self.data[obj], *args)
         print ('Models fitted.')
@@ -1392,22 +1396,36 @@ class plasticc_data(EmptyDataset):
         metadata = pd.read_csv(folder + '/' + meta_file, sep=',', index_col = self.id_col)
 
         self.remap_types(metadata)
-
         num_obj = len(self.object_names)
+
+        percent_to_print = pow(10, -int(np.log10(num_obj)/2))
+
         for i, o in enumerate(self.object_names):
             ind_o = eval(o)
-            if int(math.fmod(i, num_obj*0.1)) == 0:
+            if int(math.fmod(i, num_obj*percent_to_print)) == 0:
                 print('{}%'.format(int(i/(num_obj*0.01))))
+
+            # Set meta name as the object id string
+            self.data[o].meta['name'] = o
+            self.data[o].meta['z'] = None
             for col in metadata.columns:
-                if re.search('id', col):
-                    self.data[o].meta['name'] = metadata.at[ind_o, col]
-                elif re.search('target', col):
+                if re.search('target', col):
                     self.data[o].meta['type'] = self.dict_2_sn_types[str(metadata.at[ind_o, col])]
-                elif re.search('z', col):
+
+                # Default to spectroscopic redshift for z
+                elif re.search('specz', col) and not np.isnan(metadata.at[ind_o, col]):
                     self.data[o].meta['z'] = metadata.at[ind_o, col]
                 else:
                     self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, ind_o))[col].values
+
+            # If no spec z set z to phot z
+            if self.data[o].meta['z'] is None:
+                for col in metadata.columns:
+                    if re.search('photoz', col) and re.search('err', col) is None:
+                        self.data[o].meta['z'] = metadata.at[ind_o, col]
+                        break
         print('Finished setting the metadata for {}k objects.'.format(num_obj))
+        print('\nThis has taken {}'.format(datetime.timedelta(seconds=time()-self.data_start_time)))
 
     def remap_types(self, metadata):
         user_types = metadata['target'].unique()
@@ -1432,7 +1450,7 @@ class plasticc_data(EmptyDataset):
             dataset will be used
 
         """
-
+        self.data_start_time = time()
         data = []
         self.data = {}
         self.object_names = []
@@ -1451,8 +1469,10 @@ class plasticc_data(EmptyDataset):
 
         num_obj = len(data[self.id_col].unique())
 
+        percent_to_print = pow(10, -int(np.log10(num_obj)/2))
+
         for i, id in enumerate(data[self.id_col].unique()):
-            if int(math.fmod(i, num_obj*0.1)) == 0:
+            if int(math.fmod(i, num_obj*percent_to_print)) == 0:
                 print('{}%'.format(int(i/(num_obj*0.01))))
             self.object_names.append(str(id))
             lc = self.pandas_2_astro(pandas_lc=data.query('{0} == {1}'.format(self.id_col, id)))
