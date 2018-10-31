@@ -1367,7 +1367,7 @@ class SDSS_Simulations(EmptyDataset):
         return tab
 
 
-class plasticc_data(EmptyDataset):
+class PlasticcData(EmptyDataset):
     """
     Class to read in the SNANA cadence simulations, which are divided into
     chunks.
