@@ -13,7 +13,7 @@ if not 'DISPLAY' in os.environ:
 import matplotlib.pyplot as plt
 from sklearn import svm
 from sklearn import neighbors
-from sklearn import grid_search
+from sklearn import model_selection
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
@@ -559,7 +559,7 @@ class OptimisedClassifier():
         else:
             self.true_class=1
 
-        self.clf=grid_search.GridSearchCV(self.clf, params, scoring=self.__custom_auc_score, cv=5)
+        self.clf=model_selection.GridSearchCV(self.clf, params, scoring=self.__custom_auc_score, cv=5)
 
         self.clf.fit(X_train, y_train) #This actually does the grid search
         best_params=self.clf.best_params_
