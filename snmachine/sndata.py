@@ -1380,7 +1380,7 @@ class PlasticcData(EmptyDataset):
             if not isinstance(inst, EmptyDataset) and not isinstance(inst, cls):
                raise TypeError('Unpickled object is not of type {}'.format(cls))
         else:
-            inst = super(plasticc_data, cls).__new__(cls)
+            inst = super(PlasticcData, cls).__new__(cls)
         return inst
 
     def __init__(self, folder, pickle_file=None, data_file=None,
