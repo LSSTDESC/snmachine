@@ -1,3 +1,7 @@
+# Do not track output from tests but do track test files
+test/*
+!test/*.py
+
 example_data/
 ## Python.gitignore from Github.
 ##
