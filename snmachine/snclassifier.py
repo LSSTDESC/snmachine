@@ -776,7 +776,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
 
     labels=[]
     for tp_row in unique(types, keys='Type'):
-        labels.append(type_dict[tp_row['Type']])
+        labels.append(tp_row['Type'])
 
     if plot_roc_curve:
         plot_roc(FPR, TPR, AUC, labels=classifiers,label_size=16,tick_size=12,line_width=1.5)
