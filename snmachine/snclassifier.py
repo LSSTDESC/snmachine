@@ -788,14 +788,16 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     if classifiers_for_cm_plots is 'all':
         classifiers_for_cm_plots=classifiers
 
+    cms=[]
     for cls in classifiers_for_cm_plots:
         if cls not in classifiers:
             print('%s not in our choice of classifiers!'%cls)
             continue
         y_fit=(1+probabilities[cls].argmax(axis=1)).tolist()
         cm = compute_confusion_matrix(y_fit,y_test)
+        cms.append(cm)
         plot_confusion_matrix(cm, labels=labels, title='Confusion matrix for %s'%cls, normalise=True)
         plt.show()
 
     if return_classifier:
-        return classifier_objects
+        return classifier_objects, cms
