@@ -796,8 +796,8 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
         y_fit=(1+probabilities[cls].argmax(axis=1)).tolist()
         cm = compute_confusion_matrix(y_fit,y_test)
         cms.append(cm)
-        plot_confusion_matrix(cm, labels=labels, title='Confusion matrix for %s'%cls, normalise=True)
-        plt.show()
+        # plot_confusion_matrix(cm, labels=labels, title='Confusion matrix for %s'%cls, normalise=True)
+        # plt.show()
 
     if return_classifier:
         return classifier_objects, cms
