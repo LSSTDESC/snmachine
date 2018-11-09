@@ -1570,8 +1570,8 @@ class WaveletFeatures(Features):
                 obj=d.object_names[i]
                 d.models[obj]=out[i,0]
                 gp[obj]=out[i,1]
-            with open('/home/roberts/data_sets/sne/plasticc/GP.pickle','wb') as f:
-                pickle.dump(gp,f)
+            # with open('/home/roberts/data_sets/sne/plasticc/GP.pickle','wb') as f:
+            #     pickle.dump(gp,f)
 
 
         print ('Time taken for Gaussian process regression', time.time()-t1)
