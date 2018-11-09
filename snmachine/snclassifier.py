@@ -33,7 +33,7 @@ try:
 except ImportError:
     print ('Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.')
 
-def roc(pr, Yt, true_class=0, num_classes=8):
+def roc(pr, Yt, num_classes, true_class=0):
     """
     Produce the false positive rate and true positive rate required to plot
     a ROC curve, and the area under that curve.
@@ -45,10 +45,10 @@ def roc(pr, Yt, true_class=0, num_classes=8):
 	in which case the column corresponding to the true class will be used.
     Yt : array
         An array of class labels, of size (N_samples,)
-    true_class : int
-        which class is taken to be the "true class" (e.g. Ia vs everything else)
     num_classes : int
         How many classes are we considering to compare against
+    true_class : int
+        which class is taken to be the "true class" (e.g. Ia vs everything else)
 
     Returns
     -------
@@ -224,7 +224,7 @@ def F1(pr,  Yt, true_class, full_output=False):
 
         return best_F1, best_threshold
 
-def FoM(pr,  Yt, true_class=1, num_classes=8, full_output=False):
+def FoM(pr,  Yt, num_classes, true_class=1, full_output=False):
     """
     Calculate a Kessler FoM for many probability threshold increments
     and select the best one.
@@ -239,10 +239,10 @@ def FoM(pr,  Yt, true_class=1, num_classes=8, full_output=False):
         in which case the column corresponding to the true class will be used.
     Yt : array
         An array of class labels, of size (N_samples,)
-    true_class : int
-        which class is taken to be the "true class" (e.g. Ia vs everything else)
     num_classes : int
         How many classes are we considering to compare against
+    true_class : int
+        which class is taken to be the "true class" (e.g. Ia vs everything else)
     full_output : bool, optional
         If true returns two vectors corresponding to F1 as a function of threshold, instead of the best value.
 
@@ -322,7 +322,7 @@ class OptimisedClassifier():
     params={'svm':SVM_param_dict, 'knn':KNN_param_dict, 'decision_tree':DT_param_dict,'random_forest':RF_param_dict,
             'boost_dt':Boost_param_dict, 'boost_rf':Boost_RF_param_dict, 'nb':NB_param_dict, 'neural_network':NN_param_dict}
 
-    def __init__(self, classifier, optimise=True,  **kwargs):
+    def __init__(self, classifier, num_classes, optimise=True,  **kwargs):
         """
         Wrapper around sklearn classifiers
 
@@ -336,6 +336,7 @@ class OptimisedClassifier():
             Keyword arguments passed directly to the classifier
         """
 
+        self.num_classes=num_classes
 
         self.classifier_name=classifier
         if isinstance(classifier, basestring):
@@ -470,7 +471,9 @@ class OptimisedClassifier():
         """
         probs=estimator.predict_proba(X)
         # Consider 120 as Type Ia, positive class
-        fpr, tpr, auc=roc(probs, Y, true_class=120)
+        # fpr, tpr, auc=roc(probs, Y, self.num_classes, true_class=120)
+        print("NUM OF UNIQUE CLASSES (self):\n{}".format(self.num_classes))
+        fpr, tpr, auc=roc(probs, Y, self.num_classes, true_class=1)
         return auc
 
     def optimised_classify(self, X_train, y_train, X_test, **kwargs):
@@ -547,10 +550,10 @@ class OptimisedClassifier():
             Yfit=self.clf.predict(X_test)
             return Yfit
 
-def __call_classifier(classifier, X_train, y_train, X_test, param_dict,return_classifier):
+def __call_classifier(classifier, num_classes, X_train, y_train, X_test, param_dict,return_classifier):
     """Specifically designed to run with multiprocessing"""
 
-    c=OptimisedClassifier(classifier)
+    c=OptimisedClassifier(classifier, num_classes)
     if classifier in param_dict.keys():
         y_fit, probs=c.optimised_classify(X_train, y_train, X_test,params=param_dict[classifier])
     else:
@@ -611,8 +614,6 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     else:
         training_ratio = training_set*100
         training_ratio = str(training_ratio)
-
-    num_classes = len(unique(types, keys="Type"))
 
     if isinstance(features,Table):
         #The features are in astropy table format and must be converted to a numpy array before passing to sklearn
@@ -687,7 +688,11 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
 
     else:
         for cls in classifiers:
-            retval = __call_classifier(cls, X_train, y_train, X_test, param_dict,return_classifier)
+
+            num_classes = len(unique(types, keys="Type"))
+            print("NUM OF UNIQUE CLASSES:\n{}".format(num_classes))
+
+            retval = __call_classifier(cls, num_classes, X_train, y_train, X_test, param_dict,return_classifier)
 
             if return_classifier:
                 probabilities[cls] = retval[0]
@@ -698,10 +703,14 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     for i in range(len(classifiers)):
         cls=classifiers[i]
         probs=probabilities[cls]
+
+
         # Consider 120 as Type Ia, positive class
-        fpr, tpr, auc=roc(probs, y_test, true_class=120, num_classes=num_classes)
+        # fpr, tpr, auc=roc(probs, y_test, num_classes, true_class=120)
+        fpr, tpr, auc=roc(probs, y_test, num_classes, true_class=1)
         # Consider 120 as Type Ia, positive class
-        fom, thresh_fom=FoM(probs, y_test, true_class=120, num_classes=num_classes, full_output=False)
+        # fom, thresh_fom=FoM(probs, y_test, num_classes, true_class=120, full_output=False)
+        fom, thresh_fom=FoM(probs, y_test, num_classes, true_class=1, full_output=False)
 
         print ('Classifier', cls+':', 'AUC =', auc, 'FoM =', fom)
 
