@@ -1,3 +1,8 @@
+# Do not track output from tests but do track test files
+test/*
+!test/*.py
+
+example_data/
 ## Python.gitignore from Github.
 ##
 # Byte-compiled / optimized / DLL files
@@ -129,3 +134,6 @@ snmachine/example_data/output_*
 
 # Do not track mpi4py backtrace debugging files
 *.btr
+
+# Mac OS files
+.DS_Store

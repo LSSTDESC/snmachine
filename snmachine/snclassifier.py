@@ -6,16 +6,18 @@ from __future__ import division
 from past.builtins import basestring
 import numpy as np
 import os
+import itertools
 if not 'DISPLAY' in os.environ:
     import matplotlib
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn import svm
 from sklearn import neighbors
-from sklearn import grid_search
+from sklearn import model_selection
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import confusion_matrix as sklearn_cm
 from scipy.integrate import trapz
 from astropy.table import Table,join,unique
 import sys, collections,time
@@ -33,7 +35,7 @@ try:
 except ImportError:
     print ('Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.')
 
-def roc(pr, Yt, num_classes, true_class=0):
+def roc(pr, Yt, true_class=0):
     """
     Produce the false positive rate and true positive rate required to plot
     a ROC curve, and the area under that curve.
@@ -45,8 +47,6 @@ def roc(pr, Yt, num_classes, true_class=0):
 	in which case the column corresponding to the true class will be used.
     Yt : array
         An array of class labels, of size (N_samples,)
-    num_classes : int
-        How many classes are we considering to compare against
     true_class : int
         which class is taken to be the "true class" (e.g. Ia vs everything else)
 
@@ -66,9 +66,7 @@ def roc(pr, Yt, num_classes, true_class=0):
     Y_test = Y_test.squeeze()
 
     if len(pr.shape)>1:
-        # probs_1 = probs[:, true_class-min_class]
-        # probs_1 = probs[:, 7]
-        probs_1 = probs[:, num_classes-1] # -1 since 0 based indexing of numpy
+        probs_1 = probs[:, true_class-min_class]
     else:
         probs_1 = probs
 
@@ -159,6 +157,60 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, li
     plt.tight_layout()
     #plt.show()
 
+def compute_confusion_matrix(Yfit,Ytrue):
+    '''
+    Wraps the scikit-learn routine to compute the confusion matrix.
+
+    Parameters
+    ----------
+    Yfit : list
+         predicted classes for the test set
+    Ytrue : list
+         true classes for the test set
+
+    Returns
+    -------
+    confusion_matrix: numpy.array
+    '''
+    return sklearn_cm(y_true=Ytrue,y_pred=Yfit)
+
+def plot_confusion_matrix(cm, normalise=False, labels=None, title='Confusion matrix'):
+    '''
+    Make a plot from a pre-computed confusion matrix.
+
+    Parameters
+    ----------
+    cm : np.array
+       The confusion matrix, as computed by the snclassifier.compute_confusion_matrix
+    normalise : boolean, optional
+       If False, we use the absolute numbers in each matrix entry. If True, we use the
+       fractions within each true class
+    labels : list of str
+       Labels for each class that appear in the plot
+    title : str
+       Surprisingly, this is the title for the plot.
+    '''
+    if labels is None:
+        labels = np.arange(len(cm[:,0])).tolist()
+    plt.figure()
+    if normalise:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(labels))
+    plt.xticks(tick_marks, labels, rotation=45)
+    plt.yticks(tick_marks, labels)
+    fmt = '.2f' if normalise else 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),horizontalalignment="center",
+            color="white" if cm[i, j] > thresh else "black")
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    #plt.show()
+
 def F1(pr,  Yt, true_class, full_output=False):
     """
     Calculate an F1 score for many probability threshold increments
@@ -195,8 +247,7 @@ def F1(pr,  Yt, true_class, full_output=False):
     Y_test = Y_test.squeeze()
 
     if len(pr.shape)>1:
-        # probs_1=probs[:, true_class-min_class]
-        probs_1 = probs[:, 7]
+        probs_1=probs[:, true_class-min_class]
     else:
         probs_1=probs
 
@@ -224,7 +275,7 @@ def F1(pr,  Yt, true_class, full_output=False):
 
         return best_F1, best_threshold
 
-def FoM(pr,  Yt, num_classes, true_class=1, full_output=False):
+def FoM(pr,  Yt, true_class=1, full_output=False):
     """
     Calculate a Kessler FoM for many probability threshold increments
     and select the best one.
@@ -239,8 +290,6 @@ def FoM(pr,  Yt, num_classes, true_class=1, full_output=False):
         in which case the column corresponding to the true class will be used.
     Yt : array
         An array of class labels, of size (N_samples,)
-    num_classes : int
-        How many classes are we considering to compare against
     true_class : int
         which class is taken to be the "true class" (e.g. Ia vs everything else)
     full_output : bool, optional
@@ -266,9 +315,7 @@ def FoM(pr,  Yt, num_classes, true_class=1, full_output=False):
     Y_test = Y_test.squeeze()
 
     if len(pr.shape)>1:
-        # probs_1=probs[:, true_class-min_class]
-        # probs_1 = probs[:, 7]
-        probs_1 = probs[:, num_classes-1] # -1 since 0 based indexing of numpy
+        probs_1=probs[:, true_class-min_class]
     else:
         probs_1=probs
 
@@ -322,7 +369,7 @@ class OptimisedClassifier():
     params={'svm':SVM_param_dict, 'knn':KNN_param_dict, 'decision_tree':DT_param_dict,'random_forest':RF_param_dict,
             'boost_dt':Boost_param_dict, 'boost_rf':Boost_RF_param_dict, 'nb':NB_param_dict, 'neural_network':NN_param_dict}
 
-    def __init__(self, classifier, num_classes, optimise=True,  **kwargs):
+    def __init__(self, classifier, optimise=True,  **kwargs):
         """
         Wrapper around sklearn classifiers
 
@@ -336,7 +383,6 @@ class OptimisedClassifier():
             Keyword arguments passed directly to the classifier
         """
 
-        self.num_classes=num_classes
 
         self.classifier_name=classifier
         if isinstance(classifier, basestring):
@@ -470,10 +516,7 @@ class OptimisedClassifier():
 
         """
         probs=estimator.predict_proba(X)
-        # Consider 120 as Type Ia, positive class
-        # fpr, tpr, auc=roc(probs, Y, self.num_classes, true_class=120)
-        print("NUM OF UNIQUE CLASSES (self):\n{}".format(self.num_classes))
-        fpr, tpr, auc=roc(probs, Y, self.num_classes, true_class=1)
+        fpr, tpr, auc=roc(probs, Y, true_class=1)
         return auc
 
     def optimised_classify(self, X_train, y_train, X_test, **kwargs):
@@ -516,7 +559,7 @@ class OptimisedClassifier():
         else:
             self.true_class=1
 
-        self.clf=grid_search.GridSearchCV(self.clf, params, scoring=self.__custom_auc_score, cv=5)
+        self.clf=model_selection.GridSearchCV(self.clf, params, scoring=self.__custom_auc_score, cv=5)
 
         self.clf.fit(X_train, y_train) #This actually does the grid search
         best_params=self.clf.best_params_
@@ -550,10 +593,10 @@ class OptimisedClassifier():
             Yfit=self.clf.predict(X_test)
             return Yfit
 
-def __call_classifier(classifier, num_classes, X_train, y_train, X_test, param_dict,return_classifier):
+def __call_classifier(classifier, X_train, y_train, X_test, param_dict,return_classifier):
     """Specifically designed to run with multiprocessing"""
 
-    c=OptimisedClassifier(classifier, num_classes)
+    c=OptimisedClassifier(classifier)
     if classifier in param_dict.keys():
         y_fit, probs=c.optimised_classify(X_train, y_train, X_test,params=param_dict[classifier])
     else:
@@ -565,8 +608,8 @@ def __call_classifier(classifier, num_classes, X_train, y_train, X_test, param_d
         return probs
 
 def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn','svm','neural_network','boost_dt'],
-                 training_set=0.7, param_dict={}, nprocesses=1, scale=True,
-                 plot_roc_curve=True,return_classifier=False):
+                 training_set=0.3, param_dict={}, nprocesses=1, scale=True,
+                 plot_roc_curve=True,return_classifier=False,classifiers_for_cm_plots=[], type_dict = None):
     """
     Utility function to classify a dataset with a number of classification methods. This does assume your test
     set has known values to compare against. Returns, if requested, the classifier objects to run on future test sets.
@@ -606,14 +649,9 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     """
     t1= time.time()
 
-    # Do check whether a list of objects is provided for training or we are
-    # considering a training ratio
-    if isinstance(training_set, list):
-        training_ratio = len(training_set)
-        training_ratio = str(training_ratio)
-    else:
-        training_ratio = training_set*100
-        training_ratio = str(training_ratio)
+    if type_dict is None:
+        type_dict = {value: value for value in range(len(unique(types, keys='Type')))}
+
 
     if isinstance(features,Table):
         #The features are in astropy table format and must be converted to a numpy array before passing to sklearn
@@ -688,11 +726,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
 
     else:
         for cls in classifiers:
-
-            num_classes = len(unique(types, keys="Type"))
-            print("NUM OF UNIQUE CLASSES:\n{}".format(num_classes))
-
-            retval = __call_classifier(cls, num_classes, X_train, y_train, X_test, param_dict,return_classifier)
+            retval = __call_classifier(cls, X_train, y_train, X_test, param_dict,return_classifier)
 
             if return_classifier:
                 probabilities[cls] = retval[0]
@@ -703,14 +737,8 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     for i in range(len(classifiers)):
         cls=classifiers[i]
         probs=probabilities[cls]
-
-
-        # Consider 120 as Type Ia, positive class
-        # fpr, tpr, auc=roc(probs, y_test, num_classes, true_class=120)
-        fpr, tpr, auc=roc(probs, y_test, num_classes, true_class=1)
-        # Consider 120 as Type Ia, positive class
-        # fom, thresh_fom=FoM(probs, y_test, num_classes, true_class=120, full_output=False)
-        fom, thresh_fom=FoM(probs, y_test, num_classes, true_class=1, full_output=False)
+        fpr, tpr, auc=roc(probs, y_test, true_class=1)
+        fom, thresh_fom=FoM(probs, y_test, true_class=1, full_output=False)
 
         print ('Classifier', cls+':', 'AUC =', auc, 'FoM =', fom)
 
@@ -735,20 +763,41 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
             dat=np.column_stack((index_column,probs))
             nms=['Object']+typs
             tab=Table(dat,dtype=['S64']+['f']*probs.shape[1],names=nms)
-            flname=output_name+cls+training_ratio+'.probs'
+            flname=output_name+cls+'.probs'
             tab.write(flname,format='ascii')
 
             tab=Table(np.column_stack((fpr, tpr)),names=['FPR','TPR'])
-            tab.write(output_name+cls+training_ratio+'.roc',format='ascii')
+            tab.write(output_name+cls+'.roc',format='ascii')
 
-            np.savetxt(output_name+cls+training_ratio+'.auc',[auc])
+            np.savetxt(output_name+cls+'.auc',[auc])
 
     print()
     print ('Time taken ', (time.time()-t1)/60., 'minutes')
 
+    labels=[]
+    for tp_row in unique(types, keys='Type'):
+        labels.append(tp_row['Type'])
+
     if plot_roc_curve:
         plot_roc(FPR, TPR, AUC, labels=classifiers,label_size=16,tick_size=12,line_width=1.5)
-        plt.show(block=False)
+        plt.show()
+
+    if classifiers_for_cm_plots is None:
+        classifiers_for_cm_plots=[]
+
+    if classifiers_for_cm_plots is 'all':
+        classifiers_for_cm_plots=classifiers
+
+    cms=[]
+    for cls in classifiers_for_cm_plots:
+        if cls not in classifiers:
+            print('%s not in our choice of classifiers!'%cls)
+            continue
+        y_fit=(1+probabilities[cls].argmax(axis=1)).tolist()
+        cm = compute_confusion_matrix(y_fit,y_test)
+        cms.append(cm)
+        # plot_confusion_matrix(cm, labels=labels, title='Confusion matrix for %s'%cls, normalise=True)
+        # plt.show()
 
     if return_classifier:
-        return classifier_objects
+        return classifier_objects, cms

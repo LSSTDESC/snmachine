@@ -4,8 +4,10 @@ Utility script for making nice t-SNE plots (https://lvdmaaten.github.io/tsne/)
 
 from __future__ import division
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from sklearn.manifold import TSNE
 import numpy as np
+
 
 def get_tsne(feats,objs,perplexity=100, seed=-1):
     """
@@ -35,7 +37,7 @@ def get_tsne(feats,objs,perplexity=100, seed=-1):
     Xfit=manifold.fit_transform(X)
     return Xfit
 
-def plot_tsne(Xfit,types, loc='best'):
+def plot_tsne(Xfit, types, loc="upper left", type_dict = None):
     """
     Plot the resulting t-SNE embedded features.
 
@@ -48,25 +50,31 @@ def plot_tsne(Xfit,types, loc='best'):
     loc : str, optional
         Location of the legend in the plot
     """
-    colours=['#1b9e77','#7570b3','#d95f02']
-    legend_names=['Ia','II','Ibc']
     unique_types=np.unique(types)
+    colors = iter(cm.rainbow(np.linspace(0, 1, len(unique_types))))
+    if type_dict:
+        legend_names= type_dict.values
+    else:
+        legend_names = np.arange(len(unique_types))
+
     markers=['o','^','s']
     legs=[]
     for i in range(len(unique_types))[::-1]:
         inds=np.where(types==unique_types[i])[0]
-        l=plt.scatter(Xfit[inds,0],Xfit[inds,1],color=colours[i],alpha=0.5,
-                      marker=markers[i],s=16.0,linewidths=0.3,rasterized=True)
+        l=plt.scatter(Xfit[inds,0], Xfit[inds,1], color=next(colors), alpha=0.5,
+                      marker=markers[0], s=16.0, linewidths=0.3, rasterized=True)
         legs.append(l)
     fntsize=10
-    plt.legend(legs[::-1],legend_names,scatterpoints=1,loc=loc)
-    plt.gca().get_legend().get_frame().set_lw(0.2)
+    # plt.legend(legs[::-1], legend_names, scatterpoints=1, bbox_to_anchor=(1.04,1), loc=loc)
+    # plt.gca().get_legend().get_frame().set_lw(0.2)
     plt.xlabel('Embedded feature 1')
     plt.ylabel('Embedded feature 2')
     plt.gcf().tight_layout()
+    plt.legend(legs[::-1], legend_names, scatterpoints=1, bbox_to_anchor=(1.04,1), loc=loc)
+    plt.gca().get_legend().get_frame().set_lw(0.2)
     plt.plot()
 
-def plot(feats, types,objs=[], seed=-1):
+def plot(feats, types,objs=[], seed=-1, type_dict=None):
     """
     Convenience function to run t-SNE and plot
 
@@ -82,6 +90,4 @@ def plot(feats, types,objs=[], seed=-1):
     if len(objs)==0:
         objs=feats['Object']
     Xfit=get_tsne(feats,objs, seed=seed)
-    plot_tsne(Xfit,types)
-
-
+    plot_tsne(Xfit,types, type_dict)
