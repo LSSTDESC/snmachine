@@ -15,13 +15,14 @@ from scipy import stats
 import scipy.optimize as op
 from iminuit import Minuit, describe
 import traceback
+import pickle
 
-# try:
-#     import pymultinest
-#     from pymultinest.analyse import Analyzer
-#     has_multinest=True
-# except ImportError:
-#     has_multinest=False
+try:
+    import pymultinest
+    from pymultinest.analyse import Analyzer
+    has_multinest=True
+except ImportError:
+    has_multinest=False
 
 try:
     import emcee
@@ -41,11 +42,11 @@ try:
 except ImportError:
     has_gapp=False
 
-def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george'):
+def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george',return_gp=False):
     """
     Fit a Gaussian process curve at specific evenly spaced points along a light curve.
 
-    iarameters
+    Parameters
     ----------
     obj : str
         Name of the object
@@ -65,6 +66,8 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
         Output directory
     gpalgo : str
         which gp package is used for the Gaussian Process Regression, GaPP or george
+    return_gp : bool, optional
+        do we return the mean, or the mean and a dict of the fitted GPs
 
     Returns
     -------
@@ -82,6 +85,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
     filters=np.unique(lc['filter'])
     #Store the output in another astropy table
     output=[]
+    gpdict={}
     for fil in d.filter_set:
         if fil in filters:
             x=lc['mjd'][lc['filter']==fil]
@@ -116,6 +120,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
                 mu,cov=g.predict(y,xstar)
                 std=np.sqrt(np.diag(cov))
                 rec=np.column_stack((xstar,mu,std))
+            gpdict[fil]=g
         else:
             rec=np.zeros([ngp, 3])
         newtable=Table([rec[:, 0], rec[:, 1], rec[:, 2], [fil]*ngp], names=['mjd', 'flux', 'flux_error', 'filter'])
@@ -125,8 +130,10 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
             output=vstack((output, newtable))
     if save_output=='gp' or save_output=='all':
         output.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
-    return output
-
+    if return_gp:
+        return output,gpdict
+    else:
+        return output
 
 
 def _run_leastsq(obj, d, model, n_attempts, seed=-1):
@@ -767,7 +774,7 @@ class TemplateFeatures(Features):
         model : list-like, optional
             List of models. In theory you can fit Ia and non-Ia models and use all those as features. So far only tested with SALT2.
         sampler : str, optional
-            A choice of 'mcmc', which uses the emcee sampler, or 'multinest' or 'leastsq' (default).
+            A choice of 'mcmc', which uses the emcee sampler, or 'nested' or 'leastsq' (default).
         lsst_bands : bool, optional
             Whether or not the LSST bands are required. Only need for LSST simulations to register bands with sncosmo.
         lsst_dir : str, optional
@@ -1553,12 +1560,19 @@ class WaveletFeatures(Features):
             p=Pool(nprocesses, maxtasksperchild=1)
 
             #Pool and map can only really work with single-valued functions
-            partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
+            partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo, return_gp=True)
 
             out=p.map(partial_GP, d.object_names)
+            gp={}
+
+            out=np.reshape(out,(len(d.object_names),2))
             for i in range(len(out)):
                 obj=d.object_names[i]
-                d.models[obj]=out[i]
+                d.models[obj]=out[i,0]
+                gp[obj]=out[i,1]
+            # with open('/home/roberts/data_sets/sne/plasticc/GP.pickle','wb') as f:
+            #     pickle.dump(gp,f)
+
 
         print ('Time taken for Gaussian process regression', time.time()-t1)
 

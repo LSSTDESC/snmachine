@@ -1,0 +1,12 @@
+#!/bin/tcsh -f
+ #PBS -V
+ #PBS -l nodes=1:ppn=80
+ #PBS -r n
+ #PBS -S /bin/tcsh
+ #PBS -q smp
+ #PBS -l walltime=299:00:00
+ #PBS -l mem=200GB
+ #PBS -N plasticc
+source .tcshrc
+cd /home/roberts/sne/snmachine/	
+time python /home/roberts/sne/snmachine/utils/plasticc_extract_gp.py

@@ -3,6 +3,7 @@ Module containing Dataset classes. These read in data from various sources and t
 can be read by the rest of the code.
 """
 from __future__ import division
+import re
 from past.builtins import basestring
 import numpy as np
 import os
@@ -12,14 +13,20 @@ if not 'DISPLAY' in os.environ:
 import matplotlib.pyplot as plt
 from astropy.table import Table, Column
 from astropy.io import fits
-import sys, sncosmo
-from random import shuffle,sample
+import pandas as pd
+import sys
+import pickle
+from random import shuffle, sample
 from scipy import interpolate
-import sncosmo, math
+import sncosmo
+import math
+from time import time
+import datetime
 
 #Colours for graphs
 colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00','desz':'k',
-            'lssty':'#2727c1','lsstu':'#6614de','lsstg':'#007718','lsstr':'#b30100','lssti':'#d35c00','lsstz':'k','lsstY':'#2727c1'}
+'lssty':'#e50000','lsstu':'#9a0eea','lsstg':'#75bbfd','lsstr':'#76ff7b','lssti':'#fdde6c','lsstz':'#f97306','lsstY':'#e50000'}
+
 sntypes={1:'Ia',2:'II',21:'IIn',22:'IIP',23:'IIL',3:'Ibc',32:'Ib',33:'Ic',66:'other'}
 markers={'desg':'^', 'desr':'o', 'desi':'s', 'desz':'*'}
 labels={'desg':'g', 'desr':'r', 'desi':'i', 'desz':'z'}
@@ -77,6 +84,7 @@ def plot_lc(lc):
 
     plt.legend(lines, filts, numpoints=1,loc='best')
 
+
 class EmptyDataset:
     """
     Empty data set, to fill up with light curves (of format astropy.table.Table) in your memory.
@@ -97,14 +105,17 @@ class EmptyDataset:
 
         """
         if filter_set is None:
-            self.filter_set=[]
+            self.filter_set = []
         else:
-            self.filter_set=filter_set
-        self.rootdir=folder
-        self.survey_name=survey_name
-        self.data={}
-        self.object_names=[]
-        self.models={}
+            self.filter_set = filter_set
+        self.rootdir = folder
+        self.survey_name = survey_name
+        self.data = {}
+        self.object_names = []
+        self.models = {}
+
+    def mix(self):
+        shuffle(self.object_names)
 
     def set_filters(self, filter_set):
         """
@@ -114,7 +125,7 @@ class EmptyDataset:
         filter_set : array of str
             filters to be added
         """
-        self.filter_set=filter_set
+        self.filter_set = filter_set
 
     def set_rootdir(folder):
         """
@@ -125,9 +136,9 @@ class EmptyDataset:
             name of the folder
         """
         self.rootdir=folder
-        self.survey_name=folder.splot(os.path.sep)[-2]
+        #self.survey_name=folder.splot(os.path.sep)[-2]
 
-    def insert_lightcurve(self, lc):
+    def insert_lightcurve(self, lc, subtract_min=True):
         """
         Wraps the insertion of a new light curve into a data set. Also includes
         the new object names and possibly new filters into the data set metadata.
@@ -139,6 +150,8 @@ class EmptyDataset:
         """
         name=lc.meta['name']
         self.object_names=np.append(self.object_names,name)
+        if subtract_min and len(lc)>0:
+            lc['mjd']-=lc['mjd'].min()
         self.data[name]=lc
         for flt in np.unique(lc['filter']):
             if not str(flt) in self.filter_set:
@@ -168,15 +181,32 @@ class EmptyDataset:
         min_x=np.inf
         max_x=-np.inf
         lines=[]
+        if self.sep_detect:
+            lines_d = []
+
+        labs = []
         for j in range(len(filts)):
-            inds=np.where(lc['filter']==filts[j])[0]
+            f = filts[j]
+            inds = np.where(lc['filter']==filts[j])[0]
             t, F, F_err=lc['mjd'][inds], lc['flux'][inds], lc['flux_error'][inds]
+            if self.sep_detect:
+                inds_d = np.where((lc['filter'] == filts[j]) & (lc['detected'] == 1))[0]
+                t_d, F_d, F_err_d =lc['mjd'][inds_d], lc['flux'][inds_d], lc['flux_error'][inds_d]
+                if len(t_d) > 0:
+                    detect_in_band = True
+                else:
+                    detect_in_band = False
+
             #tdelt=t-t.min()
             tdelt=t
+            if self.sep_detect and detect_in_band:
+                tdelt_d = t_d
+
             if filts[j] in markers.keys():
                 mkr=markers[filts[j]]
             else:
                 mkr='o'
+                mkr_d='x'
 
             #Plot the model, if it has been set
             if self.plot_model:
@@ -189,11 +219,24 @@ class EmptyDataset:
 
             l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr, linestyle='none',  color=colours[filts[j]], markersize=4)
             lines.append(l)
+
+            if self.sep_detect and detect_in_band:
+                l_d=plt.errorbar(tdelt_d, F_d,yerr=F_err_d,  marker=mkr_d, linestyle='none',  color=colours[filts[j]], markersize=7)
+                lines.append(l_d)
+
             if tdelt.min()<min_x:
                 min_x=tdelt.min()
             if tdelt.max()>max_x:
                 max_x=tdelt.max()
 
+            if f in labels.keys():
+                labs.append(labels[f])
+                if self.sep_detect and detect_in_band:
+                    labs.append(labels[f] + ' detected')
+            else:
+                labs.append(f)
+                if self.sep_detect and detect_in_band:
+                    labs.append(f + ' detected')
 
         ext=0.05*(max_x-min_x)
         plt.xlim([min_x-ext, max_x+ext])
@@ -201,14 +244,12 @@ class EmptyDataset:
         plt.ylabel('Flux')
         #plt.gca().tick_params(labelsize=8)
         if title:
-            plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], lc.meta['type']))
-        labs=[]
-        for f in filts:
-            if f in labels.keys():
-                labs.append(labels[f])
-            else:
-                labs.append(f)
-        plt.legend(lines, labs, numpoints=1,loc=loc)
+            plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])]))
+
+        if self.sep_detect and loc == 'outside':
+            plt.legend(lines, labs, numpoints=1, bbox_to_anchor=(1.02, 1), loc="upper left")
+        else:
+            plt.legend(lines, labs, numpoints=1, loc=loc)
         #plt.subplots_adjust(left=0.3)
 
     def plot_lc(self, fname, plot_model=True, title=True, loc='best'):
@@ -247,7 +288,7 @@ class EmptyDataset:
         self.__plot_this(self.object_names[self.__ind])
         event.canvas.draw()
 
-    def plot_all(self, plot_model=True):
+    def plot_all(self, plot_model=True, mix=False, sep_detect=False):
         """
         Plots all the supernovae in the dataset and allows the user to cycle through them with the left and
         right arrow keys.
@@ -261,10 +302,14 @@ class EmptyDataset:
         if len(self.data)==0:
             print('Data set does not contain any light curves - exiting!')
             return
-        self.plot_model=plot_model #We use a class variable because this can't be passed directly to __on_press
+        if mix:
+            self.mix()
+
+        self.sep_detect = sep_detect
+        self.plot_model = plot_model #We use a class variable because this can't be passed directly to __on_press
         fig = plt.figure()
-        self.__ind=-1
-        fig.canvas.mpl_connect('key_press_event', self.__on_press)
+        self.__ind = -1
+        self.cid = fig.canvas.mpl_connect('key_press_event', self.__on_press)
         plt.plot([0, 0])
         #subplots_adjust(right=0.95, top=0.95)
         plt.show()
@@ -316,7 +361,6 @@ class EmptyDataset:
                 max_obs=dif
         return max_obs
 
-
     def set_model(self, fit_sn, *args):
         """
         Can use any function to set the model for all objects in the data.
@@ -328,7 +372,7 @@ class EmptyDataset:
         args : list, optional
             Whatever arguments fit_sn requires
         """
-        print ('Fitting supernova models...')
+        print ('Fitting transient models...')
         for obj in self.object_names:
             self.models[obj]=fit_sn(self.data[obj], *args)
         print ('Models fitted.')
@@ -340,7 +384,7 @@ class EmptyDataset:
 
         Returns
         -------
-        `~numpy.ndarray`
+        `astropy.table.Table`
             Array of types
         """
         typs=[]
@@ -1094,6 +1138,7 @@ class SDSS_Data(EmptyDataset):
         astropy.table.Table
             Light curve
         """
+        print(flname)
         fl=open(self.rootdir+flname,'r')
         mjd=[]
         flt=[] # band
@@ -1327,3 +1372,186 @@ class SDSS_Simulations(EmptyDataset):
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys', 'mag', 'mag_error'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux , 'data type':dtype })
 
         return tab
+
+
+class PlasticcData(EmptyDataset):
+    """
+    Class to read in the SNANA cadence simulations, which are divided into
+    chunks.
+    """
+    def __new__(cls, folder, pickle_file=None, from_pickle=True, *args, **kwargs):
+        if from_pickle is True:
+            f = open(folder + '/' + pickle_file, 'rb')
+            inst = pickle.load(f)
+            f.close()
+            if not isinstance(inst, EmptyDataset) and not isinstance(inst, cls):
+               raise TypeError('Unpickled object is not of type {}'.format(cls))
+        else:
+            inst = super(PlasticcData, cls).__new__(cls)
+        return inst
+
+    def __init__(self, folder, pickle_file=None, data_file=None,
+                 meta_file=None, mix=False, filter_set=['lsstu',
+                 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'], survey_name='lsst', from_pickle=True):
+        """
+        Initialisation.
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located
+        pickle_file: str
+            Filename of the pickled instance of sndata class
+        data_file: str
+            Filename of the pandas dataframe which is has the lc data
+        meta_file: str
+            Filename of the pandas dataframe containing the metadata for the light curves
+        mix : bool, optional
+            The output of the simulations is often highly ordered, this
+            randomly permutes the objects when they're read in
+        filter_set : list-like, optional
+            Set of possible filters
+        from_pickle: boolean
+            Whether or not to create the instance from a pickled instance of the class
+        """
+
+        super().__init__(folder, survey_name, filter_set)
+        self.get_data(folder, data_file)
+        self.get_set_meta(folder, meta_file)
+        if mix is True:
+            self.mix()
+
+    def get_set_meta(self, folder, meta_file):
+        """
+        Reads in the meta file for the plasticc data
+
+        Currrently this doesn't handle what to do if we have different zs
+
+        """
+        metadata = []
+        print('Reading metadata...')
+        metadata = pd.read_csv(folder + '/' + meta_file, sep=',', index_col = self.id_col)
+
+        self.remap_types(metadata)
+        num_obj = len(self.object_names)
+
+        percent_to_print = pow(10, -int(np.log10(num_obj)/2))
+
+        for i, o in enumerate(self.object_names):
+            ind_o = eval(o)
+            if int(math.fmod(i, num_obj*percent_to_print)) == 0:
+                print('{}%'.format(int(i/(num_obj*0.01))))
+
+            # Set meta name as the object id string
+            self.data[o].meta['name'] = o
+            self.data[o].meta['z'] = None
+            for col in metadata.columns:
+                if re.search('target', col):
+                    self.data[o].meta['type'] = self.dict_2_sn_types[str(metadata.at[ind_o, col])]
+
+                # Default to spectroscopic redshift for z
+                elif re.search('specz', col) and not np.isnan(metadata.at[ind_o, col]):
+                    self.data[o].meta['z'] = metadata.at[ind_o, col]
+                else:
+                    self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, ind_o))[col].values
+
+            # If no spec z set z to phot z
+            if self.data[o].meta['z'] is None:
+                for col in metadata.columns:
+                    if re.search('photoz', col) and re.search('err', col) is None:
+                        self.data[o].meta['z'] = metadata.at[ind_o, col]
+                        break
+        print('Finished getting the metadata for {}k objects.'.format(num_obj))
+        print('\nThis has taken {}'.format(datetime.timedelta(seconds=int(time()-self.data_start_time))))
+
+    def remap_types(self, metadata):
+        user_types = metadata['target'].unique()
+        snmachine_types = np.arange(len(user_types))
+        self.dict_2_sn_types = {}
+        self.dict_2_user_types = {}
+        for i in range(len(user_types)):
+            self.dict_2_sn_types[str(user_types[i])] = snmachine_types[i]
+            self.dict_2_user_types[str(snmachine_types[i])] = user_types[i]
+
+
+    def get_data(self, folder, data_file):
+        """
+        Reads in the simulated data
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located
+        data_file : str or list-like, optional
+            .csv file of object lightcurves
+
+        """
+        self.data_start_time = time()
+        data = []
+        self.data = {}
+        self.object_names = []
+
+        print('Reading data...')
+        data = pd.read_csv(folder + '/' + data_file, sep=',')
+        invalid = 0  # Some objects may have empty data
+        data = self.remap_filters(df=data)
+        data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)
+        # Abstract column names from dataset
+        for col in data.columns:
+            if re.search('mjd', col):
+                self.mjd_col = col
+            if re.search('id', col):
+                self.id_col = col
+
+        num_obj = len(data[self.id_col].unique())
+
+        percent_to_print = pow(10, -int(np.log10(num_obj)/2))
+
+        for i, id in enumerate(data[self.id_col].unique()):
+            if int(math.fmod(i, num_obj*percent_to_print)) == 0:
+                print('{}%'.format(int(i/(num_obj*0.01))))
+            self.object_names.append(str(id))
+            lc = self.pandas_2_astro(pandas_lc=data.query('{0} == {1}'.format(self.id_col, id)))
+            if len(lc[self.mjd_col] > 0):
+                self.data[str(id)] = lc
+            else:
+                invalid += 1
+        if invalid > 0:
+            print('{} objects were invalid and not added to the dataset.'.format(invalid))
+        self.object_names = np.array(self.object_names, dtype='str')
+        print('{} objects read into memory.'.format(len(self.data)))
+
+    def remap_filters(self, df):
+        """
+        Function to remap integer filters to the corresponding lsst filters and
+        also to set filter name syntax to what snmachine already recognizes
+
+        df: pandas.dataframe
+            Dataframe of lightcurve observations
+        """
+        df.rename({'passband':'filter'}, axis='columns', inplace=True)
+        filter_replace = {0:'lsstu',1:'lsstg',2:'lsstr',3:'lssti',4:'lsstz',5:'lssty'}
+        df['filter'].replace(to_replace=filter_replace, inplace=True)
+        return df
+
+
+    def pandas_2_astro(self, pandas_lc, subtract_min=True):
+        """
+        Takes a pandas light curve from the plasticc dataset format
+        and converts it to the astropy table.table format.
+        Parameters
+        ----------
+        pandas_lc: Pandas DataFrame
+            single object multi-band lightcurve
+
+        returns
+        -------
+        lc: astropy.table.table
+            new single object lightcurve
+        """
+
+        lc = Table.from_pandas(pandas_lc)
+        if subtract_min:
+            lc[self.mjd_col] -= lc[self.mjd_col].min()
+
+        return lc

@@ -69,13 +69,16 @@ if __name__ == "__main__":
 
     # Like for SPCC example notebook where we restrict ourselves to three supernova types:
     # Ia (1), II (2) and Ibc (3) by carrying out the following pre-proccessing steps
-    # types['Type'] = types['Type']-100
+    types['Type'] = types['Type']-100
 
-    # types['Type'][np.floor(types['Type']/10)==2]=2
-    # types['Type'][np.floor(types['Type']/10)==3]=3
-    # types['Type'][np.floor(types['Type']/10)==4]=4
+    types['Type'][np.floor(types['Type']/10)==2]=2
+    types['Type'][np.floor(types['Type']/10)==3]=3
+    types['Type'][np.floor(types['Type']/10)==4]=3
 
-    # print(types)
+    print(types)
+    # ascii.write(types, '{}{}_types_normalised_quad.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
+    ascii.write(types, '{}{}_types_normalised_tri.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
+    # ascii.write(types, '{}{}_types_normalised_binary.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
     # ascii.write(types, '{}{}_types_normalised.csv'.format(final_outdir, dataset), format='csv', fast_writer=True)
 
     # Get object names from data
@@ -84,8 +87,10 @@ if __name__ == "__main__":
     training_set = list(training_objects)
     print(type(training_set)) # Should be a list
 
-    # Randomly select 2000 objects from this Python list of objects
-    training_set = random.sample(training_set, 10000)
+    # Randomly select 2000 objects from this Python list of objects, OR chose a
+    # float between 0 and 1 of the percentage of the training set to use.
+    training_set = random.sample(training_set, 5000)
+    # training_set = 0.7
 
     # RESTART FROM WAVELETS
     # Copy int to finaldir and read in raw wavelets
@@ -127,19 +132,21 @@ if __name__ == "__main__":
 
     # plt.figure(2)
     # plt.figure(figsize=(12,6))
-    print("Using {} SNe for training".format(len(training_set)))
-    print(training_set)
-
-    pc = 0.7
 
     # print("Working on :\n {}".format(training_set))
     clss=snclassifier.run_pipeline(wavelet_features,types,output_name=os.path.join(out_class,'wavelets'),
-                              classifiers=classifiers, nprocesses=nproc,
+                              training_set=training_set, classifiers=classifiers, nprocesses=nproc,
                               plot_roc_curve=False, return_classifier=True)
 
     # training_ratio = int(training_set*1000)
     # training_ratio = str(training_ratio)
-    # joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, len(training_set)))
-    joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, pc))
+
+    if isinstance(training_set, list):
+        joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, len(training_set)))
+        print("{} SNe used for training:".format(len(training_set)))
+        print(training_set)
+    else:
+        joblib.dump(clss, '{}{}_{}_model.pkl'.format(out_class, dataset, training_set))
+        print("{}% of dataset used for training, and {}% used as a test set".format(int(training_set*100), int((1-training_set)*100)))
 
     exit()
