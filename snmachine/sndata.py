@@ -414,7 +414,9 @@ class EmptyDataset:
                 z.append(self.data[o].meta['z'])
             else:
                 z.append(-1)
-        return np.array(z)
+                tab = []
+        tab=Table(data=[self.object_names,z],names=['Object','Redshift'])
+        return np.array(z), tab
 
     def sim_stats(self, **kwargs):
         """
