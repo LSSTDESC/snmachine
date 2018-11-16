@@ -1557,12 +1557,13 @@ class WaveletFeatures(Features):
                 if save_output!='none':
                     out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
         else:
-            p=Pool(nprocesses, maxtasksperchild=1)
+            p=Pool(nprocesses, maxtasksperchild=10)
 
             #Pool and map can only really work with single-valued functions
             partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo, return_gp=True)
 
-            out=p.map(partial_GP, d.object_names)
+            out=p.map(partial_GP, d.object_names, chunksize=10)
+            p.close()
             gp={}
 
             out=np.reshape(out,(len(d.object_names),2))
