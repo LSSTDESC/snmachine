@@ -825,8 +825,9 @@ class LSSTCadenceSimulations(OpsimDataset):
                 # prefix_NONIa = 'RBTEST_WFD_1aCC_Y10_G10_NONIa-'
 
                 #We have to deal with separate Ia and nIa fits files
-                Ia_head=os.path.join(folder,self.prefix_Ia+'%02d_HEAD.FITS'%i)
-                nIa_head=os.path.join(folder,self.prefix_NONIa+'%02d_HEAD.FITS'%i)
+                subset = np.array(subset, dtype="S") # Let's get very specific about string types
+                Ia_head=os.path.join(folder,self.prefix_Ia+'%04d_HEAD.FITS'%i)
+                nIa_head=os.path.join(folder,self.prefix_NONIa+'%04d_HEAD.FITS'%i)
 
                 df = fits.open(Ia_head)[1].data
                 subset=np.char.strip(subset) #If these are read from the header they have to be stripped of white space
@@ -835,8 +836,10 @@ class LSSTCadenceSimulations(OpsimDataset):
                 df = fits.open(nIa_head)[1].data
                 nIa_ids=subset[np.in1d(subset,np.char.strip(df['SNID']))]
 
-                thischunk_Ia =  sncosmo.read_snana_fits(Ia_head, os.path.join(folder,self.prefix_Ia+'%02d_PHOT.FITS'%i),snids=Ia_ids)
-                thischunk_nIa =  sncosmo.read_snana_fits(nIa_head, os.path.join(folder,self.prefix_NONIa+'%02d_PHOT.FITS'%i),snids=nIa_ids)
+                thischunk_Ia =  sncosmo.read_snana_fits(Ia_head, os.path.join(folder,self.prefix_Ia+'%04d_PHOT.FITS'%i),snids=Ia_ids)
+
+
+                thischunk_nIa =  sncosmo.read_snana_fits(nIa_head, os.path.join(folder,self.prefix_NONIa+'%04d_PHOT.FITS'%i),snids=nIa_ids)
             else:
                 thischunk_Ia = sncosmo.read_snana_fits(os.path.join(folder,self.prefix_Ia+'%04d_HEAD.FITS'%i), os.path.join(folder,self.prefix_Ia+'%04d_PHOT.FITS'%i))
                 thischunk_nIa = sncosmo.read_snana_fits(os.path.join(folder,self.prefix_NONIa+'%04d_HEAD.FITS'%i), os.path.join(folder,self.prefix_NONIa+'%04d_PHOT.FITS'%i))
@@ -851,6 +854,7 @@ class LSSTCadenceSimulations(OpsimDataset):
             all_data=data_nIa
         else:
             all_data=data_Ia+data_nIa
+
         self.data={}
         self.object_names=[]
 
@@ -859,7 +863,7 @@ class LSSTCadenceSimulations(OpsimDataset):
         for i in range(len(all_data)):
             if i%1e4==0:
                 print('%dk'%(i//1e3))
-            snid=all_data[i].meta['SNID'].decode('UTF-8')
+            snid=all_data[i].meta['SNID']
             if isinstance(subset,basestring) or ((snid in subset) or (i in subset)):
                 self.object_names.append((str)(snid))
                 lc=self.get_lightcurve(all_data[i])
@@ -871,6 +875,7 @@ class LSSTCadenceSimulations(OpsimDataset):
             print ('%d objects were invalid and not added to the dataset.' %invalid)
         self.object_names=np.array(self.object_names, dtype='str')
         print ('%d objects read into memory.' %len(self.data))
+
 
 
 
