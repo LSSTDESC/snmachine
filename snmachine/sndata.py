@@ -825,16 +825,16 @@ class LSSTCadenceSimulations(OpsimDataset):
                 # prefix_NONIa = 'RBTEST_WFD_1aCC_Y10_G10_NONIa-'
 
                 #We have to deal with separate Ia and nIa fits files
-                subset = np.array(subset, dtype="S") # Let's get very specific about string types
                 Ia_head=os.path.join(folder,self.prefix_Ia+'%04d_HEAD.FITS'%i)
                 nIa_head=os.path.join(folder,self.prefix_NONIa+'%04d_HEAD.FITS'%i)
 
                 df = fits.open(Ia_head)[1].data
                 subset=np.char.strip(subset) #If these are read from the header they have to be stripped of white space
-                Ia_ids=subset[np.in1d(subset,np.char.strip(df['SNID']))]
+                # sncosmo needs to compare bytes to bytes
+                Ia_ids=np.array(subset[np.in1d(subset,np.char.strip(df['SNID']))],dtype='S')
 
                 df = fits.open(nIa_head)[1].data
-                nIa_ids=subset[np.in1d(subset,np.char.strip(df['SNID']))]
+                nIa_ids=np.array(subset[np.in1d(subset,np.char.strip(df['SNID']))], dtype='S')
 
                 thischunk_Ia =  sncosmo.read_snana_fits(Ia_head, os.path.join(folder,self.prefix_Ia+'%04d_PHOT.FITS'%i),snids=Ia_ids)
 
@@ -862,7 +862,7 @@ class LSSTCadenceSimulations(OpsimDataset):
         for i in range(len(all_data)):
             if i%1e4==0:
                 print('%dk'%(i//1e3))
-            snid=all_data[i].meta['SNID']
+            snid=all_data[i].meta['SNID'].decode('utf8')
             if isinstance(subset,basestring) or ((snid in subset) or (i in subset)):
                 self.object_names.append(snid)
                 lc=self.get_lightcurve(all_data[i])
@@ -872,7 +872,7 @@ class LSSTCadenceSimulations(OpsimDataset):
                     invalid+=1
         if invalid>0:
             print ('%d objects were invalid and not added to the dataset.' %invalid)
-        self.object_names=np.array(self.object_names, dtype='S')
+        self.object_names=np.array(self.object_names, dtype='U')
         print ('%d objects read into memory.' %len(self.data))
 
 
