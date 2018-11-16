@@ -838,7 +838,6 @@ class LSSTCadenceSimulations(OpsimDataset):
 
                 thischunk_Ia =  sncosmo.read_snana_fits(Ia_head, os.path.join(folder,self.prefix_Ia+'%04d_PHOT.FITS'%i),snids=Ia_ids)
 
-
                 thischunk_nIa =  sncosmo.read_snana_fits(nIa_head, os.path.join(folder,self.prefix_NONIa+'%04d_PHOT.FITS'%i),snids=nIa_ids)
             else:
                 thischunk_Ia = sncosmo.read_snana_fits(os.path.join(folder,self.prefix_Ia+'%04d_HEAD.FITS'%i), os.path.join(folder,self.prefix_Ia+'%04d_PHOT.FITS'%i))
@@ -865,7 +864,7 @@ class LSSTCadenceSimulations(OpsimDataset):
                 print('%dk'%(i//1e3))
             snid=all_data[i].meta['SNID']
             if isinstance(subset,basestring) or ((snid in subset) or (i in subset)):
-                self.object_names.append((str)(snid))
+                self.object_names.append(snid)
                 lc=self.get_lightcurve(all_data[i])
                 if len(lc['mjd']>0):
                     self.data[snid]=lc
@@ -873,7 +872,7 @@ class LSSTCadenceSimulations(OpsimDataset):
                     invalid+=1
         if invalid>0:
             print ('%d objects were invalid and not added to the dataset.' %invalid)
-        self.object_names=np.array(self.object_names, dtype='str')
+        self.object_names=np.array(self.object_names, dtype='S')
         print ('%d objects read into memory.' %len(self.data))
 
 
