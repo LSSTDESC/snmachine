@@ -1486,6 +1486,7 @@ class PlasticcData(EmptyDataset):
 
         print('Reading data...')
         data = pd.read_csv(folder + '/' + data_file, sep=',')
+        data = data.loc[data.detected == 1] #Update dataframe with only detected points
         invalid = 0  # Some objects may have empty data
         data = self.remap_filters(df=data)
         data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)
