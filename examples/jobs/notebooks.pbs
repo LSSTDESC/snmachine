@@ -1,0 +1,34 @@
+#!/bin/bash --norc
+#PBS -S /bin/bash
+#PBS -N cadence_noteboks
+#PBS -k oe
+#PBS -o jobs/logs/
+#PBS -e jobs/logs/stderr/
+#PBS -V
+#PBS -l nodes=1:ppn=24,walltime=99:00:00
+#PBS -r n
+#PBS -q compute
+echo $PBS_O_WORKDIR
+echo $PBS_ENVIRONMENT
+echo $PBS_JOBID
+JOBID=`echo $PBS_JOBID | awk -F '.' '{print $1}'`
+echo $JOBID
+echo $PBS_NODEFILE
+echo $CONDA_DEFAULT_ENV
+source activate snmplasticc
+echo $CONDA_DEFAULT_ENV
+cd $HOME/plasticc/snmachine/examples/
+echo $LD_LIBRARY_PATH
+echo Running on host `hostname`
+echo Time is `date`
+echo Directory is `pwd`
+echo PBS job ID is $PBS_JOBID
+echo "-------------"
+echo PBS_NODEFILE: $PBS_NODEFILE
+echo "-------------"
+echo This jobs runs on the following machines:
+#!Create a machine file
+cat $PBS_NODEFILE | uniq > ./jobs/logs/machinefiles/machine.file.$JOBID
+echo PBS_NODEFILE=$PBS_NODEFILE
+
+time jupyter nbconvert --to html --ExecutePreprocessor.timeout=-1 --execute $NOTEBOOK --output-dir ./html/
