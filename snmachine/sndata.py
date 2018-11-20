@@ -1372,16 +1372,16 @@ class PlasticcData(EmptyDataset):
     Class to read in the SNANA cadence simulations, which are divided into
     chunks.
     """
-    def __new__(cls, folder, pickle_file=None, from_pickle=True, *args, **kwargs):
-        if from_pickle is True:
-            f = open(folder + '/' + pickle_file, 'rb')
-            inst = pickle.load(f)
-            f.close()
-            if not isinstance(inst, EmptyDataset) and not isinstance(inst, cls):
-               raise TypeError('Unpickled object is not of type {}'.format(cls))
-        else:
-            inst = super(PlasticcData, cls).__new__(cls)
-        return inst
+    # def __new__(cls, folder, pickle_file=None, from_pickle=True, *args, **kwargs):
+    #     if from_pickle is True:
+    #         f = open(folder + '/' + pickle_file, 'rb')
+    #         inst = pickle.load(f)
+    #         f.close()
+    #         if not isinstance(inst, EmptyDataset) and not isinstance(inst, cls):
+    #            raise TypeError('Unpickled object is not of type {}'.format(cls))
+    #     else:
+    #         inst = super(PlasticcData, cls).__new__(cls)
+    #     return inst
 
     def __init__(self, folder, pickle_file=None, data_file=None,
                  meta_file=None, mix=False, filter_set=['lsstu',
