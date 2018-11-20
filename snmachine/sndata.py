@@ -245,12 +245,12 @@ class EmptyDataset:
         plt.ylabel('Flux')
         #plt.gca().tick_params(labelsize=8)
         if title:
-            # plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])]))
-            print("TITLE:")
-            typs = types.to_pandas()
-            typs = typs.set_index('Object')
-            typ = typs.loc[fname].at['Type']
-            plt.title('Object: %s, Type:%s' %(fname,typ))
+            plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])]))
+            # print("TITLE:")
+            # typs = types.to_pandas()
+            # typs = typs.set_index('Object')
+            # typ = typs.loc[fname].at['Type']
+            # plt.title('Object: %s, Type:%s' %(fname,typ))
 
         if self.sep_detect and loc == 'outside':
             plt.legend(lines, labs, numpoints=1, bbox_to_anchor=(1.02, 1), loc="upper left")
