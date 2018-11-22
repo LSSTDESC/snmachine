@@ -362,7 +362,7 @@ class OptimisedClassifier():
     #This is a strange boosted random forest classifier that Max came up that works quite well, but is likely biased
     #in general
     Boost_RF_param_dict = {'base_estimator':[RandomForestClassifier(400, 'entropy'),
-                                             RandomForestClassifier(600, 'entropy')],'n_estimators':list([2, 3, 5, 10])}
+                                             RandomForestClassifier(600, 'entropy')],'n_jobs':-1, 'n_estimators':list([2, 3, 5, 10])}
 
 
     #Dictionary to hold good default ranges for parameters for each classifier.
@@ -793,7 +793,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
         if cls not in classifiers:
             print('%s not in our choice of classifiers!'%cls)
             continue
-        y_fit=(1+probabilities[cls].argmax(axis=1)).tolist()
+        y_fit=(probabilities[cls].argmax(axis=1)).tolist()
         cm = compute_confusion_matrix(y_fit,y_test)
         cms.append(cm)
         # plot_confusion_matrix(cm, labels=labels, title='Confusion matrix for %s'%cls, normalise=True)
