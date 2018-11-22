@@ -136,7 +136,6 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
         return output
 
 
-
 def _run_leastsq(obj, d, model, n_attempts, seed=-1):
     """
     Minimises the chi2 on all the filter bands of a given light curve, fitting the model to each one and extracting
@@ -1343,7 +1342,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output='none',output_root='features', nprocesses=1, restart='none', gpalgo='george', xmin=None, xmax=None):
+    def extract_features(self, d, initheta=[500, 20], save_output=None, output_root='features', nprocesses=24, restart='none', gpalgo='george', xmin=None, xmax=None):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1371,7 +1370,8 @@ class WaveletFeatures(Features):
             Table of features (first column object names, the rest are the PCA coefficient values)
         """
 
-        if save_output is not 'none':
+        if save_output is not None and not os.path.exists(output_root):
+            print("No output directory found; creating output root directory :\n{}".format(output_root))
             subprocess.call(['mkdir', output_root])
         if xmin is None:
             xmin=0
@@ -1557,12 +1557,13 @@ class WaveletFeatures(Features):
                 if save_output!='none':
                     out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
         else:
-            p=Pool(nprocesses, maxtasksperchild=1)
+            p=Pool(nprocesses, maxtasksperchild=10)
 
             #Pool and map can only really work with single-valued functions
             partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo, return_gp=True)
 
-            out=p.map(partial_GP, d.object_names)
+            out=p.map(partial_GP, d.object_names, chunksize=10)
+            p.close()
             gp={}
 
             out=np.reshape(out,(len(d.object_names),2))
@@ -1570,8 +1571,8 @@ class WaveletFeatures(Features):
                 obj=d.object_names[i]
                 d.models[obj]=out[i,0]
                 gp[obj]=out[i,1]
-            with open('/home/roberts/data_sets/sne/plasticc/GP.pickle','wb') as f:
-                pickle.dump(gp,f)
+            # with open('/home/roberts/data_sets/sne/plasticc/GP.pickle','wb') as f:
+            #     pickle.dump(gp,f)
 
 
         print ('Time taken for Gaussian process regression', time.time()-t1)
