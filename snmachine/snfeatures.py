@@ -129,7 +129,8 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
         else:
             output=vstack((output, newtable))
     if save_output=='gp' or save_output=='all':
-        output.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
+        # output.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
+        output.write(os.path.join(output_root, 'gp_'+obj), format='fits')
     if return_gp:
         return output,gpdict
     else:
@@ -1474,8 +1475,13 @@ class WaveletFeatures(Features):
             try:
                 tab=Table.read(fname, format='ascii')
                 d.models[obj]=tab
-            except IOError:
-                print ('IOError, file ',fname, 'does not exist.')
+            except:
+                try:
+                    tab=Table.read(fname, format='fits')
+                    # tab=Table.read(fname+'.fits')
+                    d.models[obj]=tab
+                except IOError:
+                    print ('IOError, file ',fname, 'does not exist.')
 
     def restart_from_wavelets(self, d, output_root):
         """
@@ -1506,7 +1512,8 @@ class WaveletFeatures(Features):
             obj=d.object_names[i]
             fname=os.path.join(output_root, 'wavelet_'+obj)
             try:
-                out=Table.read(fname, format='ascii')
+                # out=Table.read(fname, format='ascii')
+                out=Table.read(fname, format='fits')
                 cols=out.colnames[:-1]
                 n=self.ngp*2*self.mlev
                 for j in range(nfilts):
@@ -1555,7 +1562,8 @@ class WaveletFeatures(Features):
                 out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
                 d.models[obj]=out
                 if save_output!='none':
-                    out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
+                    # out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
+                    out.write(os.path.join(output_root, 'gp_'+obj), format='fits')
         else:
             p=Pool(nprocesses, maxtasksperchild=10)
 
@@ -1702,7 +1710,8 @@ class WaveletFeatures(Features):
             lc=d.models[obj]
             out= self.wavelet_decomp(lc, wav, mlev)
             if save_output=='wavelet' or save_output=='all':
-                out.write(os.path.join(output_root, 'wavelet_'+obj), format='ascii')
+                # out.write(os.path.join(output_root, 'wavelet_'+obj), format='ascii')
+                out.write(os.path.join(output_root, 'wavelet_'+obj), format='fits')
             #We go by filter, then by set of coefficients
             cols=out.colnames[:-1]
             n=self.ngp*2*mlev
