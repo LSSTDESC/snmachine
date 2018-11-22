@@ -243,8 +243,19 @@ class EmptyDataset:
         plt.xlabel('Time (days)')
         plt.ylabel('Flux')
         #plt.gca().tick_params(labelsize=8)
+        try:
+            chi_obj = [fname]
+            chi_2_single_object = self.reduced_chi_squared(chi_obj)[chi_obj[0]]
+        except:
+            chi_2_single_object = 0
+
         if title:
-            plt.title('Object: %s, z:%0.2f,  Type:%s' %(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])]))
+            plt.title('Object: {}, z:{:.2f},  Type:{}, R-ChiSquare:{:.3f}'.format(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])], chi_2_single_object))
+            # print("TITLE:")
+            # typs = types.to_pandas()
+            # typs = typs.set_index('Object')
+            # typ = typs.loc[fname].at['Type']
+            # plt.title('Object: %s, Type:%s' %(fname,typ))
 
         if self.sep_detect and loc == 'outside':
             plt.legend(lines, labs, numpoints=1, bbox_to_anchor=(1.02, 1), loc="upper left")
