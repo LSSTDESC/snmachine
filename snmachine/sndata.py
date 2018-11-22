@@ -1383,16 +1383,16 @@ class PlasticcData(EmptyDataset):
     Class to read in the SNANA cadence simulations, which are divided into
     chunks.
     """
-    def __new__(cls, folder, pickle_file=None, from_pickle=True, *args, **kwargs):
-        if from_pickle is True:
-            f = open(folder + '/' + pickle_file, 'rb')
-            inst = pickle.load(f)
-            f.close()
-            if not isinstance(inst, EmptyDataset) and not isinstance(inst, cls):
-               raise TypeError('Unpickled object is not of type {}'.format(cls))
-        else:
-            inst = super(PlasticcData, cls).__new__(cls)
-        return inst
+    # def __new__(cls, folder, pickle_file=None, from_pickle=True, *args, **kwargs):
+    #     if from_pickle is True:
+    #         f = open(folder + '/' + pickle_file, 'rb')
+    #         inst = pickle.load(f)
+    #         f.close()
+    #         if not isinstance(inst, EmptyDataset) and not isinstance(inst, cls):
+    #            raise TypeError('Unpickled object is not of type {}'.format(cls))
+    #     else:
+    #         inst = super(PlasticcData, cls).__new__(cls)
+    #     return inst
 
     def __init__(self, folder, pickle_file=None, data_file=None,
                  meta_file=None, mix=False, filter_set=['lsstu',
@@ -1497,6 +1497,7 @@ class PlasticcData(EmptyDataset):
 
         print('Reading data...')
         data = pd.read_csv(folder + '/' + data_file, sep=',')
+        data = data.loc[data.detected == 1] #Update dataframe with only detected points
         invalid = 0  # Some objects may have empty data
         data = self.remap_filters(df=data)
         data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)
