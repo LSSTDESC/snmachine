@@ -80,7 +80,6 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
     if gpalgo=='gapp' and not has_gapp:
         print('No GP module gapp. Defaulting to george instead.')
         gpalgo='george'
-    sys.stdout.flush()
     lc=d.data[obj]
     filters=np.unique(lc['filter'])
     #Store the output in another astropy table
@@ -91,11 +90,8 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
             x=lc['mjd'][lc['filter']==fil]
             y=lc['flux'][lc['filter']==fil]
             err=lc['flux_error'][lc['filter']==fil]
-            sys.stdout = open(os.devnull, "w")
             if gpalgo=='gapp':
-                sys.stdout = open(os.devnull, "w")
                 g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
-                sys.stdout=sys.__stdout__
                 rec, theta=g.gp(theta=initheta)
             elif gpalgo=='george':
                 # Define the objective function (negative log-likelihood in this case).
@@ -109,13 +105,12 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
                     g.set_parameter_vector(p)
                     return -g.grad_log_likelihood(y, quiet=True)
 
-      #          sys.stdout = open(os.devnull, "w")
                 g=george.GP(initheta[0]**2*george.kernels.ExpSquaredKernel(metric=initheta[1]**2))
                 g.compute(x,err)
                 p0 = g.get_parameter_vector()
                 results = op.minimize(nll, p0, jac=grad_nll, method="L-BFGS-B")
                 g.set_parameter_vector(results.x)
-       #         sys.stdout=sys.__stdout__
+                
                 xstar=np.linspace(xmin,xmax,ngp)
                 mu,cov=g.predict(y,xstar)
                 std=np.sqrt(np.diag(cov))
