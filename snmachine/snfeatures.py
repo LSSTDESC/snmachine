@@ -56,7 +56,7 @@ def reducedChi2(x,y,err, gpObs):
     redChi2         = chi2 / len(x)
     return redChi2    
 
-def getGPChi2(iniTheta, kernel, y,x,err, gpTimes):
+def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
     def negLoglike(p): # Def objective function (negative log-likelihood in this case)
         gp.set_parameter_vector(p)
         loglike = gp.log_likelihood(y, quiet=True)
@@ -83,15 +83,53 @@ def getGPChi2(iniTheta, kernel, y,x,err, gpTimes):
     gpObs['flux']     = gpMean
     if np.sum(np.diag(gpCov)<0) == 0:
         gpObs['flux_err'] = np.sqrt(np.diag(gpCov))
+        redChi2 = reducedChi2(x,y,err, gpObs)
     else:
         print('There are '+str(np.sum(np.diag(gpCov)<0))+' negative values')
         gpObs['flux_err'] = np.zeros_like(gpCov) + 6666
-        #print('GP cov error')
-        #print(gpMean)
-        #print(gpCov)
-        #print('')
-    redChi2 = reducedChi2(x,y,err, gpObs)
+        redChi2 = 666666 # do not choose this kernel
     return gpObs, redChi2, gp
+
+def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
+    gpObs_1, redChi2_1, gp_1 = getGPChi2(iniTheta=np.array([400, 200, 2, 4, 4, 6, 6]), kernel='ExpSquared',
+                                         x=x,y=y,err=err, gpTimes=gpTimes)
+    if redChi2_1 < 2: # good gp
+        #print(str(obj)+' ; pb = '+str(fil)+' - second kernel')
+        return gpObs_1, gp_1
+    else: # bad gp
+        gpObsAll   = [gpObs, gpObs_1]
+        redChi2All = [redChi2, redChi2_1]
+        gpAll      = [gp, gp_1]
+        gpObs_2, redChi2_2, gp_2 = getGPChi2(iniTheta=np.array([400, 20, 2, 4, 4, 6, 6]), kernel='ExpSquared',
+                                         x=x,y=y,err=err, gpTimes=gpTimes)
+        if redChi2_2 < 2: # good gp
+            #print(str(obj)+' ; pb = '+str(fil)+' - third kernel')
+            gpObs, redChi2, gp =  gpObs_2, redChi2_2, gp_2
+        else: # bad gp
+            gpObsAll.append(gpObs_2)
+            redChi2All.append(redChi2_2)
+            gpAll.append(gp_2)
+            gpObs_3, redChi2_3, gp_3 = getGPChi2(iniTheta=np.array([10, 200, 2, 4, 340, 6, 6]),
+                                             kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
+            if redChi2_3 < 2: # good gp
+                #print(str(obj)+' ; pb = '+str(fil)+' - 4th kernel')
+                gpObs, redChi2, gp =  gpObs_3, redChi2_3, gp_3
+            else: # bad gp
+                gpObsAll.append(gpObs_3)
+                redChi2All.append(redChi2_3)
+                gpAll.append(gp_3)
+                gpObs_4, redChi2_4, gp_4 = getGPChi2(iniTheta=np.array([19, 9, 2, 4, 4, 6, 6]),
+                                          kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
+                if redChi2_4 < 2: # good gp
+                    #print(str(obj)+' ; pb = '+str(fil)+' - 5th kernel')
+                    gpObs, redChi2, gp =  gpObs_4, redChi2_4, gp_4
+                else: # bad gp
+                    gpObsAll.append(gpObs_4)
+                    redChi2All.append(redChi2_4)
+                    gpAll.append(gp_4)
+                    indMinRedChi2 = np.argmin(redChi2All)
+                    gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
+    return gpObs, gp
 
 def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george',return_gp=False):
     """
@@ -150,12 +188,13 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
                 fluxObs= y
                 metric = initheta[1]**2
                 gpObs, redChi2, g = getGPChi2(iniTheta=np.array([initheta[0]**2, metric, 2, 4, 4, 6, 6]), kernel='ExpSquared',
-                                               y=y,x=x,err=err, gpTimes=gpTimes)
+                                               x=x,y=y,err=err, gpTimes=gpTimes)
+                if redChi2 > 2: # bad gp
+                    gpObs, g = getHierGP(gpObs, redChi2, g, x,y,err, gpTimes)
                 
                 mu,cov = gpObs.flux.values, gpObs.flux_err.values
                 std    = np.sqrt(np.diag(cov))
                 rec    = np.column_stack((xstar,mu,std))
-                #print(str(obj)+' ; pb '+str(fil)[-1]+' ; ini param '+str(initheta[0]**2)+' '+str(initheta[1]**2)+' ; final param {:6.0f} {:8.5f}'.format(np.exp(results.x)[0], np.exp(results.x)[1]))
             gpdict[fil] = g
         else:
             rec=np.zeros([ngp, 3])
