@@ -16,6 +16,9 @@ import scipy.optimize as op
 from iminuit import Minuit, describe
 import traceback
 import pickle
+import pandas as pd
+from scipy import interpolate
+import scipy
 
 try:
     import pymultinest
@@ -41,6 +44,54 @@ try:
     has_gapp=True
 except ImportError:
     has_gapp=False
+
+def reducedChi2(x,y,err, gpObs):
+    obsTimes            = x
+    obsFlux, obsFluxErr = y, err
+    gpTimes, gpFlux     = gpObs.mjd, gpObs.flux
+
+    interpolateFlux = interpolate.interp1d(gpTimes, gpFlux, kind='cubic')
+    gpFluxObsTimes  = np.array(interpolateFlux(obsTimes))
+    chi2            = np.sum( ((obsFlux-gpFluxObsTimes)/obsFluxErr)**2 )
+    redChi2         = chi2 / len(x)
+    return redChi2    
+
+def getGPChi2(iniTheta, kernel, y,x,err, gpTimes):
+    def negLoglike(p): # Def objective function (negative log-likelihood in this case)
+        gp.set_parameter_vector(p)
+        loglike = gp.log_likelihood(y, quiet=True)
+        return -loglike if np.isfinite(loglike) else 1e25
+
+    def gradNegLoglike(p): # Gradient of the objective function.
+        gp.set_parameter_vector(p)
+        return -gp.grad_log_likelihood(y, quiet=True)
+    
+    kExpSquared = iniTheta[0]*george.kernels.ExpSquaredKernel(metric=iniTheta[1])
+    kExpSine2   = iniTheta[4]*george.kernels.ExpSine2Kernel(gamma=iniTheta[5],log_period=iniTheta[6])
+    if kernel == 'ExpSquared':
+        kernel = kExpSquared
+    elif kernel == 'ExpSquared+ExpSine2':
+        kernel = kExpSquared + kExpSine2
+        
+    gp      = george.GP(kernel)
+    gp.compute(x, err)
+    results = op.minimize(negLoglike, gp.get_parameter_vector(), jac=gradNegLoglike,
+                          method="L-BFGS-B", tol=1e-6)
+    gp.set_parameter_vector(results.x)
+    gpMean, gpCov     = gp.predict(y, gpTimes)
+    gpObs             = pd.DataFrame(columns=['mjd'], data=gpTimes)
+    gpObs['flux']     = gpMean
+    if np.sum(np.diag(gpCov)<0) == 0:
+        gpObs['flux_err'] = np.sqrt(np.diag(gpCov))
+    else:
+        print('There are '+str(np.sum(np.diag(gpCov)<0))+' negative values')
+        gpObs['flux_err'] = np.zeros_like(gpCov) + 6666
+        #print('GP cov error')
+        #print(gpMean)
+        #print(gpCov)
+        #print('')
+    redChi2 = reducedChi2(x,y,err, gpObs)
+    return gpObs, redChi2, gp
 
 def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george',return_gp=False):
     """
@@ -76,46 +127,36 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
 
     """
 
-    print(obj)
     if gpalgo=='gapp' and not has_gapp:
         print('No GP module gapp. Defaulting to george instead.')
         gpalgo='george'
-    lc=d.data[obj]
-    filters=np.unique(lc['filter'])
+    lc      = d.data[obj]
+    filters = np.unique(lc['filter'])
+    xstar=np.linspace(xmin,xmax,ngp) # times to plot the GP
+    gpTimes = xstar # times to plot the GP
     #Store the output in another astropy table
-    output=[]
-    gpdict={}
+    output = []
+    gpdict = {}
     for fil in d.filter_set:
         if fil in filters:
-            x=lc['mjd'][lc['filter']==fil]
-            y=lc['flux'][lc['filter']==fil]
-            err=lc['flux_error'][lc['filter']==fil]
+            x   = lc['mjd'][lc['filter']==fil]
+            y   = lc['flux'][lc['filter']==fil]
+            err = lc['flux_error'][lc['filter']==fil]
+            obsTimes, obsFlux, obsFluxErr = x, y, err
             if gpalgo=='gapp':
                 g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
                 rec, theta=g.gp(theta=initheta)
             elif gpalgo=='george':
-                # Define the objective function (negative log-likelihood in this case).
-                def nll(p):
-                    g.set_parameter_vector(p)
-                    ll = g.log_likelihood(y, quiet=True)
-                    return -ll if np.isfinite(ll) else 1e25
-
-                # And the gradient of the objective function.
-                def grad_nll(p):
-                    g.set_parameter_vector(p)
-                    return -g.grad_log_likelihood(y, quiet=True)
-
-                g=george.GP(initheta[0]**2*george.kernels.ExpSquaredKernel(metric=initheta[1]**2))
-                g.compute(x,err)
-                p0 = g.get_parameter_vector()
-                results = op.minimize(nll, p0, jac=grad_nll, method="L-BFGS-B")
-                g.set_parameter_vector(results.x)
+                fluxObs= y
+                metric = initheta[1]**2
+                gpObs, redChi2, g = getGPChi2(iniTheta=np.array([initheta[0]**2, metric, 2, 4, 4, 6, 6]), kernel='ExpSquared',
+                                               y=y,x=x,err=err, gpTimes=gpTimes)
                 
-                xstar=np.linspace(xmin,xmax,ngp)
-                mu,cov=g.predict(y,xstar)
-                std=np.sqrt(np.diag(cov))
-                rec=np.column_stack((xstar,mu,std))
-            gpdict[fil]=g
+                mu,cov = gpObs.flux.values, gpObs.flux_err.values
+                std    = np.sqrt(np.diag(cov))
+                rec    = np.column_stack((xstar,mu,std))
+                #print(str(obj)+' ; pb '+str(fil)[-1]+' ; ini param '+str(initheta[0]**2)+' '+str(initheta[1]**2)+' ; final param {:6.0f} {:8.5f}'.format(np.exp(results.x)[0], np.exp(results.x)[1]))
+            gpdict[fil] = g
         else:
             rec=np.zeros([ngp, 3])
         newtable=Table([rec[:, 0], rec[:, 1], rec[:, 2], [fil]*ngp], names=['mjd', 'flux', 'flux_error', 'filter'])
