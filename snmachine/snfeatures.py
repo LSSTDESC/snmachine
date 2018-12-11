@@ -86,15 +86,23 @@ def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
         redChi2 = reducedChi2(x,y,err, gpObs)
     else:
         print('There are '+str(np.sum(np.diag(gpCov)<0))+' negative values')
-        gpObs['flux_err'] = np.zeros_like(gpCov) + 6666
-        redChi2 = 666666 # do not choose this kernel
+        #print(np.shape(gpCov))
+        #print(np.shape(np.zeros_like(gpCov) + 6666))
+        try:
+            gpObs['flux_err'] = np.zeros_like(gpCov) + 6666
+            redChi2 = 666666666 # do not choose this kernel
+        except:
+            print('something really wrong happened')
+            gpObs['flux_err'] = gpCov
+            redChi2 = 666666666 # do not choose this kernel
     return gpObs, redChi2, gp
 
-def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
+def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes, obj, fil):
     gpObs_1, redChi2_1, gp_1 = getGPChi2(iniTheta=np.array([400, 200, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                          x=x,y=y,err=err, gpTimes=gpTimes)
     if redChi2_1 < 2: # good gp
-        #print(str(obj)+' ; pb = '+str(fil)+' - second kernel')
+        if eval(obj) >= 130684460:
+            print(str(obj)+' ; pb = '+str(fil)+' - second kernel')
         return gpObs_1, gp_1
     else: # bad gp
         gpObsAll   = [gpObs, gpObs_1]
@@ -103,7 +111,8 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
         gpObs_2, redChi2_2, gp_2 = getGPChi2(iniTheta=np.array([400, 20, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                          x=x,y=y,err=err, gpTimes=gpTimes)
         if redChi2_2 < 2: # good gp
-            #print(str(obj)+' ; pb = '+str(fil)+' - third kernel')
+            if eval(obj) >= 130684460:
+                print(str(obj)+' ; pb = '+str(fil)+' - third kernel')
             gpObs, redChi2, gp =  gpObs_2, redChi2_2, gp_2
         else: # bad gp
             gpObsAll.append(gpObs_2)
@@ -112,7 +121,8 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
             gpObs_3, redChi2_3, gp_3 = getGPChi2(iniTheta=np.array([10, 200, 2, 4, 340, 6, 6]),
                                              kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
             if redChi2_3 < 2: # good gp
-                #print(str(obj)+' ; pb = '+str(fil)+' - 4th kernel')
+                if eval(obj) >= 130684460:
+                    print(str(obj)+' ; pb = '+str(fil)+' - 4th kernel')
                 gpObs, redChi2, gp =  gpObs_3, redChi2_3, gp_3
             else: # bad gp
                 gpObsAll.append(gpObs_3)
@@ -121,7 +131,8 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
                 gpObs_4, redChi2_4, gp_4 = getGPChi2(iniTheta=np.array([19, 9, 2, 4, 4, 6, 6]),
                                           kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
                 if redChi2_4 < 2: # good gp
-                    #print(str(obj)+' ; pb = '+str(fil)+' - 5th kernel')
+                    if eval(obj) >= 130684460:
+                        print(str(obj)+' ; pb = '+str(fil)+' - 5th kernel')
                     gpObs, redChi2, gp =  gpObs_4, redChi2_4, gp_4
                 else: # bad gp
                     gpObsAll.append(gpObs_4)
@@ -129,6 +140,8 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
                     gpAll.append(gp_4)
                     indMinRedChi2 = np.argmin(redChi2All)
                     gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
+                    if eval(obj) >= 130684460:
+                        print(str(obj)+' ; pb = '+str(fil)+' - '+str(indMinRedChi2+1)+'th kernel; bad one')
     return gpObs, gp
 
 def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george',return_gp=False):
@@ -190,7 +203,9 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
                 gpObs, redChi2, g = getGPChi2(iniTheta=np.array([initheta[0]**2, metric, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                                x=x,y=y,err=err, gpTimes=gpTimes)
                 if redChi2 > 2: # bad gp
-                    gpObs, g = getHierGP(gpObs, redChi2, g, x,y,err, gpTimes)
+                    if eval(obj) >= 130684460:
+                        print(obj)
+                    gpObs, g = getHierGP(gpObs, redChi2, g, x,y,err, gpTimes, obj, fil)
                 
                 mu,cov = gpObs.flux.values, gpObs.flux_err.values
                 std    = np.sqrt(np.diag(cov))
@@ -1866,12 +1881,17 @@ class WaveletFeatures(Features):
             The required number of coefficients to retain the requested amount of "information".
 
         """
+        print('best_coeffs stuff')
         tot=np.sum(vals)
+        print(tot)
+        print('individual values')
+        print(vals)
         tot2=0
         for i in range(len(vals)):
             tot2+=vals[i]
+            print(tot2)
             if tot2>=tol*tot:
-                return i
+                return i+1 # Cat added 1 to see if it works
                 break
 
         print ("No dimensionality reduction achieved. All components of the PCA are required.")
@@ -1894,7 +1914,8 @@ class WaveletFeatures(Features):
             Coefficients of eigen vectors
 
         """
-
+        print(np.mat(eig_vec))
+        print(np.mat(X))
         A=np.linalg.lstsq(np.mat(eig_vec), np.mat(X).T)[0].flatten()
         return np.array(A)
 
@@ -1922,6 +1943,10 @@ class WaveletFeatures(Features):
         t1=time.time()
         #We now run PCA on this big matrix
         vals, vec, mn=self.pca(wavout)
+        print('first vecs')
+        print(vec)
+        print('first vals')
+        print(vals)
         mn=mn.flatten()
 
         #
@@ -1932,6 +1957,8 @@ class WaveletFeatures(Features):
         #Actually fit the components
         ncomp=self.best_coeffs(vals)
         eigs=vec[:, :ncomp]
+        print('choose some')
+        print(ncomp, eigs)
         comps=np.zeros([len(wavout), ncomp])
 
         for i in range(len(wavout)):
