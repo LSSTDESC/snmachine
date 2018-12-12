@@ -121,8 +121,10 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes, obj, fil):
             gpObsAll.append(gpObs_2)
             redChi2All.append(redChi2_2)
             gpAll.append(gp_2)
-            gpObs_3, redChi2_3, gp_3 = getGPChi2(iniTheta=np.array([10, 200, 2, 4, 340, 6, 6]),
-                                             kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
+            #gpObs_3, redChi2_3, gp_3 = getGPChi2(iniTheta=np.array([10, 200, 2, 4, 340, 6, 6]),
+            #                                 kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
+            gpObs_3, redChi2_3, gp_3 = getGPChi2(iniTheta=np.array([19, 9, 2, 4, 4, 6, 6]),
+                                                 kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
             if redChi2_3 < 2: # good gp
                 if eval(obj) >= 130684460:
                     print(str(obj)+' ; pb = '+str(fil)+' - 4th kernel')
@@ -131,7 +133,13 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes, obj, fil):
                 gpObsAll.append(gpObs_3)
                 redChi2All.append(redChi2_3)
                 gpAll.append(gp_3)
-                gpObs_4, redChi2_4, gp_4 = getGPChi2(iniTheta=np.array([19, 9, 2, 4, 4, 6, 6]),
+                
+                indMinRedChi2 = np.argmin(redChi2All)
+                gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
+                if eval(obj) >= 130684460:
+                    print(str(obj)+' ; pb = '+str(fil)+' - '+str(indMinRedChi2+1)+'th kernel; bad one '+str(redChi2))
+                
+                '''gpObs_4, redChi2_4, gp_4 = getGPChi2(iniTheta=np.array([19, 9, 2, 4, 4, 6, 6]),
                                           kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
                 if redChi2_4 < 2: # good gp
                     if eval(obj) >= 130684460:
@@ -145,6 +153,7 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes, obj, fil):
                     gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
                     if eval(obj) >= 130684460:
                         print(str(obj)+' ; pb = '+str(fil)+' - '+str(indMinRedChi2+1)+'th kernel; bad one '+str(redChi2))
+                        '''
     return gpObs, gp
 
 def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george',return_gp=False):
