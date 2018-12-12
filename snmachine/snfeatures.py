@@ -89,11 +89,14 @@ def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
         #print(np.shape(gpCov))
         #print(np.shape(np.zeros_like(gpCov) + 6666))
         try:
-            gpObs['flux_err'] = np.zeros_like(gpCov) + 6666
+            gpObs['flux_err'] = 66666
             redChi2 = 666666666 # do not choose this kernel
-        except:
+        except Exception as e: 
             print('something really wrong happened')
+            print(e)
             gpObs['flux_err'] = gpCov
+            print(np.shape(gpCov))
+            print('end')
             redChi2 = 666666666 # do not choose this kernel
     return gpObs, redChi2, gp
 
@@ -141,7 +144,7 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes, obj, fil):
                     indMinRedChi2 = np.argmin(redChi2All)
                     gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
                     if eval(obj) >= 130684460:
-                        print(str(obj)+' ; pb = '+str(fil)+' - '+str(indMinRedChi2+1)+'th kernel; bad one')
+                        print(str(obj)+' ; pb = '+str(fil)+' - '+str(indMinRedChi2+1)+'th kernel; bad one '+str(redChi2))
     return gpObs, gp
 
 def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george',return_gp=False):
@@ -1881,15 +1884,10 @@ class WaveletFeatures(Features):
             The required number of coefficients to retain the requested amount of "information".
 
         """
-        print('best_coeffs stuff')
         tot=np.sum(vals)
-        print(tot)
-        print('individual values')
-        print(vals)
         tot2=0
         for i in range(len(vals)):
             tot2+=vals[i]
-            print(tot2)
             if tot2>=tol*tot:
                 return i+1 # Cat added 1 to see if it works
                 break
@@ -1914,8 +1912,6 @@ class WaveletFeatures(Features):
             Coefficients of eigen vectors
 
         """
-        print(np.mat(eig_vec))
-        print(np.mat(X))
         A=np.linalg.lstsq(np.mat(eig_vec), np.mat(X).T)[0].flatten()
         return np.array(A)
 
@@ -1943,9 +1939,7 @@ class WaveletFeatures(Features):
         t1=time.time()
         #We now run PCA on this big matrix
         vals, vec, mn=self.pca(wavout)
-        print('first vecs')
-        print(vec)
-        print('first vals')
+        print('Eigenvals')
         print(vals)
         mn=mn.flatten()
 
@@ -1957,8 +1951,7 @@ class WaveletFeatures(Features):
         #Actually fit the components
         ncomp=self.best_coeffs(vals)
         eigs=vec[:, :ncomp]
-        print('choose some')
-        print(ncomp, eigs)
+        print('Number of components used is '+str(ncomp))
         comps=np.zeros([len(wavout), ncomp])
 
         for i in range(len(wavout)):
