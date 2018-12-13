@@ -53,11 +53,11 @@ def reducedChi2(x,y,err, gpObs):
     interpolateFlux = interpolate.interp1d(gpTimes, gpFlux, kind='cubic')
     gpFluxObsTimes  = np.array(interpolateFlux(obsTimes))
     chi2            = np.sum( ((obsFlux-gpFluxObsTimes)/obsFluxErr)**2 )
-    redChi2         = chi2 / len(x)
+    redChi2         = chi2 / len(x) # reduced X^2
     return redChi2    
 
 def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
-    def negLoglike(p): # Def objective function (negative log-likelihood in this case)
+    def negLoglike(p): # Objective function: negative log-likelihood
         gp.set_parameter_vector(p)
         loglike = gp.log_likelihood(y, quiet=True)
         return -loglike if np.isfinite(loglike) else 1e25
@@ -85,75 +85,38 @@ def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
         gpObs['flux_err'] = np.sqrt(np.diag(gpCov))
         redChi2 = reducedChi2(x,y,err, gpObs)
     else:
-        print('There are '+str(np.sum(np.diag(gpCov)<0))+' negative values')
-        #print(np.shape(gpCov))
-        #print(np.shape(np.zeros_like(gpCov) + 6666))
-        try:
-            gpObs['flux_err'] = 66666
-            redChi2 = 666666666 # do not choose this kernel
-        except Exception as e: 
-            print('something really wrong happened')
-            print(e)
-            gpObs['flux_err'] = gpCov
-            print(np.shape(gpCov))
-            print('end')
-            redChi2 = 666666666 # do not choose this kernel
+        gpObs['flux_err'] = 66666
+        redChi2           = 666666666 # do not choose this kernel
     return gpObs, redChi2, gp
 
-def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes, obj, fil):
+def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
     gpObs_1, redChi2_1, gp_1 = getGPChi2(iniTheta=np.array([400, 200, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                          x=x,y=y,err=err, gpTimes=gpTimes)
     if redChi2_1 < 2: # good gp
-        if eval(obj) >= 130684460:
-            print(str(obj)+' ; pb = '+str(fil)+' - second kernel')
         return gpObs_1, gp_1
-    else: # bad gp
+    else:             # bad gp
         gpObsAll   = [gpObs, gpObs_1]
         redChi2All = [redChi2, redChi2_1]
         gpAll      = [gp, gp_1]
         gpObs_2, redChi2_2, gp_2 = getGPChi2(iniTheta=np.array([400, 20, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                          x=x,y=y,err=err, gpTimes=gpTimes)
         if redChi2_2 < 2: # good gp
-            if eval(obj) >= 130684460:
-                print(str(obj)+' ; pb = '+str(fil)+' - third kernel')
             gpObs, redChi2, gp =  gpObs_2, redChi2_2, gp_2
-        else: # bad gp
+        else:             # bad gp
             gpObsAll.append(gpObs_2)
             redChi2All.append(redChi2_2)
             gpAll.append(gp_2)
-            #gpObs_3, redChi2_3, gp_3 = getGPChi2(iniTheta=np.array([10, 200, 2, 4, 340, 6, 6]),
-            #                                 kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
             gpObs_3, redChi2_3, gp_3 = getGPChi2(iniTheta=np.array([19, 9, 2, 4, 4, 6, 6]),
                                                  kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
             if redChi2_3 < 2: # good gp
-                if eval(obj) >= 130684460:
-                    print(str(obj)+' ; pb = '+str(fil)+' - 4th kernel')
                 gpObs, redChi2, gp =  gpObs_3, redChi2_3, gp_3
-            else: # bad gp
+            else:             # bad gp
                 gpObsAll.append(gpObs_3)
                 redChi2All.append(redChi2_3)
                 gpAll.append(gp_3)
                 
                 indMinRedChi2 = np.argmin(redChi2All)
                 gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
-                if eval(obj) >= 130684460:
-                    print(str(obj)+' ; pb = '+str(fil)+' - '+str(indMinRedChi2+1)+'th kernel; bad one '+str(redChi2))
-                
-                '''gpObs_4, redChi2_4, gp_4 = getGPChi2(iniTheta=np.array([19, 9, 2, 4, 4, 6, 6]),
-                                          kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
-                if redChi2_4 < 2: # good gp
-                    if eval(obj) >= 130684460:
-                        print(str(obj)+' ; pb = '+str(fil)+' - 5th kernel')
-                    gpObs, redChi2, gp =  gpObs_4, redChi2_4, gp_4
-                else: # bad gp
-                    gpObsAll.append(gpObs_4)
-                    redChi2All.append(redChi2_4)
-                    gpAll.append(gp_4)
-                    indMinRedChi2 = np.argmin(redChi2All)
-                    gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
-                    if eval(obj) >= 130684460:
-                        print(str(obj)+' ; pb = '+str(fil)+' - '+str(indMinRedChi2+1)+'th kernel; bad one '+str(redChi2))
-                        '''
     return gpObs, gp
 
 def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george',return_gp=False):
@@ -195,8 +158,8 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
         gpalgo='george'
     lc      = d.data[obj]
     filters = np.unique(lc['filter'])
-    xstar=np.linspace(xmin,xmax,ngp) # times to plot the GP
-    gpTimes = xstar # times to plot the GP
+    xstar   = np.linspace(xmin,xmax,ngp) # times to plot the GP
+    gpTimes = xstar # more descriptive name
     #Store the output in another astropy table
     output = []
     gpdict = {}
@@ -205,19 +168,16 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
             x   = lc['mjd'][lc['filter']==fil]
             y   = lc['flux'][lc['filter']==fil]
             err = lc['flux_error'][lc['filter']==fil]
-            obsTimes, obsFlux, obsFluxErr = x, y, err
+            obsTimes, obsFlux, obsFluxErr = x, y, err # more descriptive names
             if gpalgo=='gapp':
-                g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
-                rec, theta=g.gp(theta=initheta)
+                g          = dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
+                rec, theta = g.gp(theta=initheta)
             elif gpalgo=='george':
-                fluxObs= y
-                metric = initheta[1]**2
+                metric  = initheta[1]**2
                 gpObs, redChi2, g = getGPChi2(iniTheta=np.array([initheta[0]**2, metric, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                                x=x,y=y,err=err, gpTimes=gpTimes)
                 if redChi2 > 2: # bad gp
-                    if eval(obj) >= 130684460:
-                        print(obj)
-                    gpObs, g = getHierGP(gpObs, redChi2, g, x,y,err, gpTimes, obj, fil)
+                    gpObs, g = getHierGP(gpObs, redChi2, g, x,y,err, gpTimes)
                 
                 mu,cov = gpObs.flux.values, gpObs.flux_err.values
                 std    = np.sqrt(np.diag(cov))
