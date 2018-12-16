@@ -1,17 +1,18 @@
 import pickle
 from snmachine import sndata
-import sys
+import sys,os
 
-nproc=1
+nproc=200
 
-d=sndata.EmptyDataset()
+outfile='/share/hypatia/snmachine_resources/data/plasticc/data_products/plasticc_test/with_nondetection_cutting/fullset/data/'
+d=sndata.PlasticcData(folder=outfile)
 objs=[]
 
 
 for chunk in range(nproc):
 	print('reading in chunk %d'%chunk)
 	sys.stdout.flush()
-	with open('/home/roberts/data_sets/sne/plasticc/plasticc_training/plasticc_aux/dataset_%d.pickle'%chunk,'rb') as f:
+	with open(os.path.join(outfile,'dataset_%d.pickle'%chunk),'rb') as f:
 		newdata=pickle.load(f)
 	d.data.update(newdata.data)
 	objs+=list(newdata.object_names)
@@ -21,5 +22,5 @@ d.object_names=list(objs)
 
 print('writing data set')
 sys.stdout.flush()
-with open('/home/roberts/data_sets/sne/plasticc/plasticc_training/dataset_full.pickle','wb') as f:
+with open(os.path.join(outfile,'dataset_full.pickle'),'wb') as f:
 	pickle.dump(d,f)
