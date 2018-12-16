@@ -153,6 +153,8 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
 
     """
 
+    print(obj)
+    sys.stdout.flush()
     if gpalgo=='gapp' and not has_gapp:
         print('No GP module gapp. Defaulting to george instead.')
         gpalgo='george'
@@ -192,7 +194,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
             output=vstack((output, newtable))
     if save_output=='gp' or save_output=='all':
         # output.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
-        output.write(os.path.join(output_root, 'gp_'+obj), format='fits')
+        output.write(os.path.join(output_root, 'gp_'+obj), format='fits',overwrite=True)
     if return_gp:
         return output,gpdict
     else:
@@ -1405,7 +1407,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output=None, output_root='features', nprocesses=24, restart='none', gpalgo='george', xmin=None, xmax=None):
+    def extract_features(self, d, initheta=[500, 20], save_output=None, output_root='features', nprocesses=24, restart='none', gpalgo='george', xmin=None, xmax=None, recompute_pca=False, pca_path=None):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1450,7 +1452,7 @@ class WaveletFeatures(Features):
                 self.extract_GP(d, self.ngp, xmin, xmax, initheta, save_output, output_root, nprocesses, gpalgo=gpalgo)
 
             wavout, waveout_err=self.extract_wavelets(d, self.wav, self.mlev,  nprocesses, save_output, output_root)
-        self.features,vals,vec,mn=self.extract_pca(d.object_names.copy(), wavout)
+        self.features,vals,vec,mn=self.extract_pca(d.object_names.copy(), wavout, recompute_pca=recompute_pca, pca_path=pca_path, output_root=output_root)
 
         #Save the PCA information
         self.PCA_eigenvals = vals
@@ -1625,7 +1627,7 @@ class WaveletFeatures(Features):
                 d.models[obj]=out
                 if save_output!='none':
                     # out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
-                    out.write(os.path.join(output_root, 'gp_'+obj), format='fits')
+                    out.write(os.path.join(output_root, 'gp_'+obj), format='fits', overwrite=True)
         else:
             p=Pool(nprocesses, maxtasksperchild=10)
 
@@ -1773,7 +1775,7 @@ class WaveletFeatures(Features):
             out= self.wavelet_decomp(lc, wav, mlev)
             if save_output=='wavelet' or save_output=='all':
                 # out.write(os.path.join(output_root, 'wavelet_'+obj), format='ascii')
-                out.write(os.path.join(output_root, 'wavelet_'+obj), format='fits')
+                out.write(os.path.join(output_root, 'wavelet_'+obj), format='fits',overwrite=True)
             #We go by filter, then by set of coefficients
             cols=out.colnames[:-1]
             n=self.ngp*2*mlev
@@ -1884,8 +1886,21 @@ class WaveletFeatures(Features):
         A=np.linalg.lstsq(np.mat(eig_vec), np.mat(X).T)[0].flatten()
         return np.array(A)
 
+    def read_pca(self, pca_path):
+        if pca_path is None:
+            print('If you want me to use a precomputed PCA, you need to provide a path from where I can read it in.')
+            #TODO: throw an error
+        if not os.path.exists(pca_path):
+            print('Invalid path!')
+            #TODO: throw an error
+        print('Reading in PCA frame from %s ...'%pca_path)
+        vals=np.load(os.path.join(pca_path,'PCA_vals.npy'))
+        vec=np.load(os.path.join(pca_path,'PCA_vec.npy'))
+        mn=np.load(os.path.join(pca_path,'PCA_mean.npy'))
+        return vals, vec, mn
 
-    def extract_pca(self, object_names,  wavout):
+
+    def extract_pca(self, object_names,  wavout, recompute_pca=False, pca_path=None, save_output=False, output_root=None):
         """
         Dimensionality reduction of wavelet coefficients using PCA.
 
@@ -1903,14 +1918,18 @@ class WaveletFeatures(Features):
             Astropy table containing PCA features.
 
         """
-
-        print ('Running PCA...')
+        
         t1=time.time()
-        #We now run PCA on this big matrix
-        vals, vec, mn=self.pca(wavout)
-        print('Eigenvals')
-        print(vals)
-        mn=mn.flatten()
+
+        if recompute_pca:
+            print ('Running PCA...')
+            #We now run PCA on this big matrix
+            vals, vec, mn=self.pca(wavout)
+            print('Eigenvals')
+            print(vals)
+            mn=mn.flatten()
+        else:
+            vals,vec,mn=self.read_pca(pca_path)
 
         #
         # np.savetxt('PCA_vals.txt', vals)
@@ -1925,6 +1944,7 @@ class WaveletFeatures(Features):
 
         for i in range(len(wavout)):
             coeffs=wavout[i]
+            sys.stdout.flush()
             A=self.project_pca(coeffs-mn, eigs)
             comps[i]=A
         labels=['C%d' %i for i in range(ncomp)]
@@ -1934,6 +1954,12 @@ class WaveletFeatures(Features):
         wavs=hstack((objnames, wavs))
         #wavs.write('wavelet_features.dat', format='ascii')
         print ('Time for PCA', time.time()-t1)
+
+        if save_output:
+            np.save(os.path.join(output_root,'PCA_vals.npy'),vals)
+            np.save(os.path.join(output_root,'PCA_vec.npy'),vec)
+            np.save(os.path.join(output_root,'PCA_mean.npy'),mn)
+
         return wavs,vals,vec,mn
 
     def iswt(self, coefficients, wavelet):
