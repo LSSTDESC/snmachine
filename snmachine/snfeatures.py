@@ -1623,7 +1623,10 @@ class WaveletFeatures(Features):
         if nprocesses==1:
             for i in range(len(d.object_names)):
                 obj=d.object_names[i]
-                out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
+                try:
+                    out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
+                except ValueError:
+                    print('Object %s has fallen over!'%obj)
                 d.models[obj]=out
                 if save_output!='none':
                     # out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
