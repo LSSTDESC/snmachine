@@ -92,6 +92,8 @@ def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
 def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
     gpObs_1, redChi2_1, gp_1 = getGPChi2(iniTheta=np.array([400, 200, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                          x=x,y=y,err=err, gpTimes=gpTimes)
+    print(redChi2_1) # force first kernel
+    return gpObs_1, gp_1 # force first kernel
     if redChi2_1 < 2: # good gp
         return gpObs_1, gp_1
     else:             # bad gp
