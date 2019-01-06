@@ -672,7 +672,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
                 probabilities[cls] = retval[0]
                 classifier_objects[cls] = retval[1]
             else:
-                probabilities[cls] = retval[0]
+                probabilities[cls] = retval
 
     for i in range(len(classifiers)):
         cls=classifiers[i]
