@@ -557,7 +557,7 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
             model.set(**dic)
             chi2 = 0
             for filt in filts:
-                yfit = model.bandflux(filt, X[filt], zp=27.5, zpsys='ab')
+                yfit = model.bandflux(filt, X[filt], zp=zp, zpsys='ab')
                 chi2 += np.sum(((Y[filt] - yfit) / E[filt]) ** 2)
             return -chi2 / 2.
 
@@ -596,7 +596,7 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
         else:
             ndim=len(model.param_names)
 
-
+        zp = lc['zp'][0]
         if not restart or not os.path.exists(chain_name+'stats.dat'):
             pymultinest.run(loglike_multinest, prior_multinest, ndim, importance_nested_sampling = False, init_MPI=False,
             resume = False, verbose = False, sampling_efficiency = 'parameter', n_live_points = nlp, outputfiles_basename=chain_name,
@@ -988,6 +988,7 @@ class TemplateFeatures(Features):
         model.set(**param_dict)
 
         filts=np.unique(lc['filter'])
+        zp = lc['zp'][0]
         labels=['mjd', 'flux', 'filter']
         output=Table(names=labels, dtype=['f', 'f', 'U32'],  meta={'name':obj})
         for filt in filts:
@@ -995,7 +996,7 @@ class TemplateFeatures(Features):
             xnew=np.linspace(0, x.max()-x.min(), 100)
             P=params
 
-            ynew=model.bandflux(filt, xnew, zp=27.5, zpsys='ab')
+            ynew=model.bandflux(filt, xnew, zp=zp, zpsys='ab')
 
             newtable=Table([xnew+x.min(), ynew, [filt]*len(xnew)], names=labels)
             #newtable=Table([x, ynew, [filt]*len(x)], names=labels)
