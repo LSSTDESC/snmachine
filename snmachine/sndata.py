@@ -1109,3 +1109,102 @@ class SDSS_Simulations(Dataset):
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys', 'mag', 'mag_error'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux , 'data type':dtype })
 
         return tab
+
+class ZTF_Dataset(Dataset):
+    """
+    Class to read in the ZTF RCF dataset
+    """
+
+    def __init__(self, folder, subset='none', training_only=False, filter_set=['sdssg', 'sdssr'], subset_length = False, classification = 'none'):
+        """
+        Initialisation
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located
+        subset : str or list-like, optional
+            List of a subset of object names. If not supplied, the full dataset will be used
+        filter_set : list-like, optional
+            Set of possible filters
+        subset_length : bool or int, optional
+
+            If supplied, will return this many random objects (can be used in conjunction with subset="spectro")
+        classification : str, optional
+            Can return one specific type of supernova.
+        """
+        self.filter_set=filter_set
+        self.rootdir=folder
+        self.survey_name='ZTF'
+        self.object_names=self.get_object_names(subset=subset)
+
+        self.data={}
+        invalid=0 #Some objects may have empty data
+        print ('Reading data...')
+        for i in range(len(self.object_names)):
+            lc=self.get_lightcurve(self.object_names[i])
+            if len(lc['mjd']>0):
+                self.data[self.object_names[i]]=lc
+            else:
+                invalid+=1
+        if invalid>0:
+            print ('%d objects were invalid and not added to the dataset.' %invalid)
+        print ('%d objects read into memory.' %len(self.data))
+        #We create an optional model set which can be set by whatever feature class used
+        self.models={}
+
+    def get_lightcurve(self, flname):
+        """
+        Given a filename, returns a light curve astropy table that conforms with sncosmo requirements
+
+        Parameters
+        ----------
+        flname : str
+            The filename of the supernova (relative to data_root)
+
+        Returns
+        -------
+        astropy.table.Table
+            Light curve
+        """
+        fl=open(self.rootdir+flname,'r')
+        mjd=[]
+        flt=[]
+        flux=[]
+        fluxerr=[]
+        z=-9
+        z_err=-9
+        type=-9
+
+        for line in fl:
+            s=line.split()
+            if len(s)>0:
+                if s[0]=='HOST_GALAXY_PHOTO-Z:':
+                    z=(float)(s[1])
+                    z_err=(float)(s[3])
+                elif s[0]=='OBS:':
+                    if s[2] not in ["u","g","r","i","z"]: continue
+                    mjd.append((float)(s[1]))
+                    flt.append('sdss'+s[2])
+                    flux.append((float)(s[4]))
+                    fluxerr.append((float)(s[5]))
+                elif s[0]=='SIM_COMMENT:':
+                    for k in sntypes.keys():
+                        if sntypes[k] in s:
+                            type=(int)(k)
+
+
+        #Zeropoint
+        zp=np.array([21.5]*len(mjd))
+        zpsys=['ab']*len(mjd)
+
+        #Make everything arrays
+        mjd=np.array(mjd)
+        flt=np.array(flt, dtype='str')
+        flux=np.array(flux)
+        fluxerr=np.array(fluxerr)
+        start_mjd=mjd.min()
+        mjd=mjd-start_mjd #We shift the times of the observations to all start at zero. If required, the mjd of the initial observation is stored in the metadata.
+        #Note: obviously this will only zero the observations in one filter band, the others have to be zeroed if fitting functions.
+        tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'name':flname,'z':z, 'z_err':z_err, 'type':type, 'initial_observation_time':start_mjd})
+
+        return tab

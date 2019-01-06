@@ -4,6 +4,7 @@ Module for feature extraction on supernova light curves.
 
 from __future__ import division, print_function
 import numpy as np
+np.random.seed(1)
 from . import parametric_models
 import sys, pywt, time, subprocess, os, sncosmo
 from scipy.interpolate import interp1d
@@ -41,6 +42,13 @@ try:
 except ImportError:
     has_gapp=False
 
+try:
+    from sklearn.gaussian_process import GaussianProcessRegressor
+    from sklearn.gaussian_process.kernels import RBF, Matern, DotProduct, ConstantKernel, RationalQuadratic
+    has_sklearn=True
+except ImportError:
+    has_sklearn=False
+
 def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george'):
     """
     Fit a Gaussian process curve at specific evenly spaced points along a light curve.
@@ -72,10 +80,11 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
         Table with evaluated Gaussian process curve and errors
 
     """
-
-    print(obj)
     if gpalgo=='gapp' and not has_gapp:
         print('No GP module gapp. Defaulting to george instead.')
+        gpalgo='george'
+    if gpalgo=='sklearn' and not has_sklearn:
+        print('No GP module sklearn. Defaulting to george instead.')
         gpalgo='george'
     sys.stdout.flush()
     lc=d.data[obj]
@@ -93,6 +102,25 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
                 g=dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
                 sys.stdout=sys.__stdout__
                 rec, theta=g.gp(theta=initheta)
+            elif gpalgo=="sklearn":
+                xstar=np.linspace(xmin,xmax,ngp)
+                norm = np.max(y)
+                y = np.squeeze(np.array(y)) / norm
+                err = np.squeeze(np.array(err)) / norm
+                if len(x) == 1:
+                    x = np.array([x-0.1, x, x+0.1]).T
+                    y = np.array([y, y, y]).T
+                    err = np.array([err, err, err]).T
+
+                kernel = ConstantKernel(1.0, (1e-3, 1e3)) * RBF(10, (1e-2, 1e2)) * RationalQuadratic(length_scale=1.0, alpha=0.1)
+                gp = GaussianProcessRegressor(kernel=kernel,n_restarts_optimizer=9,alpha=err**2)
+                gp.fit(np.atleast_2d(np.array(x)).T,y)
+                y_pred, sigma = gp.predict(np.atleast_2d(xstar).T, return_std=True)
+                y_pred = y_pred * norm
+                sigma = sigma * norm
+
+                rec=np.column_stack((xstar,y_pred,sigma))
+
             elif gpalgo=='george':
                 # Define the objective function (negative log-likelihood in this case).
                 def nll(p):
@@ -214,7 +242,7 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
                     parm.append(m.values[p])
 
                 rchi2=m.fval/len(x)
-                if rchi2<2:
+                if (rchi2<2) or (i == n_attempts-1):
                     fmin=m.fval
                     min_params=parm
                     break
@@ -1700,6 +1728,7 @@ class WaveletFeatures(Features):
                     newcoeffs_err=np.array([coeffs_err[c] for c in coeffs_err.columns]).T
                     wavout[i, j*n:(j+1)*n]=newcoeffs.flatten('F')
                     wavout_err[i, j*n:(j+1)*n]=newcoeffs_err.flatten('F')
+
         print ('Time for wavelet decomposition', time.time()-t1)
 
         return wavout, wavout_err
