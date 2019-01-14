@@ -1532,6 +1532,7 @@ class WaveletFeatures(Features):
         """
 
         print ('Restarting from stored Gaussian Processes...')
+        print('I am here GP')
         for obj in d.object_names:
             fname=os.path.join(output_root, 'gp_'+obj)
             try:
@@ -1542,6 +1543,8 @@ class WaveletFeatures(Features):
                     tab=Table.read(fname, format='fits')
                     # tab=Table.read(fname+'.fits')
                     d.models[obj]=tab
+                    if obj=='615':
+                        print(tab)
                 except IOError:
                     print ('IOError, file ',fname, 'does not exist.')
 
@@ -1566,6 +1569,7 @@ class WaveletFeatures(Features):
         """
 
         print ('Restarting from stored wavelets...')
+        print('I am here wave')
         nfilts=len(d.filter_set)
         wavout=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts]) #This is just a very big array holding coefficients in memory
         wavout_err=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts])
@@ -1824,14 +1828,15 @@ class WaveletFeatures(Features):
 
         nor=np.sqrt(np.sum(X**2, axis=0))
         x_norm=X/nor
-#
-#        #Construct the covariance matrix
+        
+        #Construct the covariance matrix
         C=np.dot(x_norm, x_norm.T)
         #C=np.cov(X.T)
         #print C.shape
 
         C=np.mat(C)
         vals, vec = np.linalg.eigh(C)
+        print('finish vals, vec')
 
         inds=np.argsort(vals)[::-1]
         return vals[inds], vec[:, inds], mn
@@ -1858,7 +1863,8 @@ class WaveletFeatures(Features):
         for i in range(len(vals)):
             tot2+=vals[i]
             if tot2>=tol*tot:
-                return i+1 # Cat added 1 to see if it works
+                print('The tolerance is '+str(tol))
+                return i+1 # the 1st component has index 0
                 break
 
         print ("No dimensionality reduction achieved. All components of the PCA are required.")
