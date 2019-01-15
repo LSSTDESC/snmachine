@@ -92,8 +92,6 @@ def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
 def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
     gpObs_1, redChi2_1, gp_1 = getGPChi2(iniTheta=np.array([400, 200, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                          x=x,y=y,err=err, gpTimes=gpTimes)
-    print(redChi2_1) # force first kernel
-    return gpObs_1, gp_1 # force first kernel
     if redChi2_1 < 2: # good gp
         return gpObs_1, gp_1
     else:             # bad gp
@@ -155,8 +153,6 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
 
     """
 
-    print(obj)
-    sys.stdout.flush()
     if gpalgo=='gapp' and not has_gapp:
         print('No GP module gapp. Defaulting to george instead.')
         gpalgo='george'
@@ -1536,7 +1532,6 @@ class WaveletFeatures(Features):
         """
 
         print ('Restarting from stored Gaussian Processes...')
-        print('I am here GP')
         for obj in d.object_names:
             fname=os.path.join(output_root, 'gp_'+obj)
             try:
@@ -1545,10 +1540,7 @@ class WaveletFeatures(Features):
             except:
                 try:
                     tab=Table.read(fname, format='fits')
-                    # tab=Table.read(fname+'.fits')
                     d.models[obj]=tab
-                    if obj=='615':
-                        print(tab)
                 except IOError:
                     print ('IOError, file ',fname, 'does not exist.')
 
@@ -1573,7 +1565,6 @@ class WaveletFeatures(Features):
         """
 
         print ('Restarting from stored wavelets...')
-        print('I am here wave')
         nfilts=len(d.filter_set)
         wavout=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts]) #This is just a very big array holding coefficients in memory
         wavout_err=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts])
@@ -1848,7 +1839,7 @@ class WaveletFeatures(Features):
         inds=np.argsort(vals)[::-1]
         return vals[inds], vec[:, inds], mn
 
-    def best_coeffs(self, vals, tol=0.98):
+    def best_coeffs(self, vals, tol=1.-10**(-8)):
         """
         Determine the minimum number of PCA components required to adequately describe the dataset.
 
@@ -1870,7 +1861,7 @@ class WaveletFeatures(Features):
         for i in range(len(vals)):
             tot2+=vals[i]
             if tot2>=tol*tot:
-                print('The tolerance is '+str(tol))
+                print('The tolerance is '+str(tol)+' and currintly it has '+str(tot2/tot))
                 return i+1 # the 1st component has index 0
                 break
 
@@ -1955,7 +1946,6 @@ class WaveletFeatures(Features):
 
         for i in range(len(wavout)):
             coeffs=wavout[i]
-            sys.stdout.flush()
             A=self.project_pca(coeffs-mn, eigs)
             comps[i]=A
         labels=['C%d' %i for i in range(ncomp)]
