@@ -7,19 +7,22 @@ import os,sys
 
 index=int(sys.argv[1])
 print(index)
-[start_index,stop_index]=np.loadtxt('/home/roberts/data_sets/sne/plasticc/plasticc_training/plasticc_aux/objs_%d.txt'%index,dtype='i8')
+[start_index,stop_index]=np.loadtxt('/share/hypatia/snmachine_resources/data/plasticc/data_products/plasticc_test/with_nondetection_cutting/fullset/data/objs_%d.txt'%index,dtype='i8')
 
 print('starting readin of monster files')
-raw_data=pandas.read_csv('/share/hypatia/snmachine_resources/data/plasticc/training_set.csv',skiprows=range(1,start_index+1),nrows=stop_index-start_index)
+raw_data=pandas.read_csv('/share/hypatia/snmachine_resources/data/plasticc/test_set.csv',skiprows=range(1,start_index+1),nrows=stop_index-start_index)
 #raw_data=pandas.read_csv('/home/z56693rs/data_sets/sne/LSST_plasticc/training_set.csv',nrows=1e5)
 print('read in data set')
-raw_metadata=pandas.read_csv('/share/hypatia/snmachine_resources/data/plasticc/training_set_metadata.csv')
+raw_metadata=pandas.read_csv('/share/hypatia/snmachine_resources/data/plasticc/test_set_metadata.csv')
 #raw_metadata=pandas.read_csv('/home/z56693rs/data_sets/sne/LSST_plasticc/training_set_metadata.csv')
 print('read in metadata')
+raw_data=raw_data[raw_data.detected==1]
 sys.stdout.flush()
 
 if 'target' in raw_metadata.columns:
 	wehavetypes=True
+else:
+	wehavetypes=False
 print('Do we have types?'+str(wehavetypes))
 
 print('chopped out chunk from line %d to line %d'%(start_index,stop_index))
@@ -31,13 +34,13 @@ filters=np.unique(raw_data['passband']).astype('str')
 
 print('nobj: '+str(len(objects)))
 
-out_folder='/home/roberts/data_sets/sne/plasticc/plasticc_training/'
+out_folder='/share/hypatia/snmachine_resources/data/plasticc/data_products/plasticc_test/with_nondetection_cutting/fullset/data/'
 int_folder=os.path.join(out_folder,'int')
 feats_folder=os.path.join(out_folder,'features')
 
 filter_names={0:'lsstu',1:'lsstg',2:'lsstr',3:'lssti',4:'lsstz',5:'lsstY'}
 
-d=sndata.EmptyDataset(filter_set=list(filters),survey_name='plasticc',folder=out_folder)
+d=sndata.PlasticcData(filter_set=list(filter_names.values()),survey_name='plasticc',folder=out_folder)
 
 for o,counter in zip(objects,range(len(objects))):
 	print('obj #%d: %s'%(counter,o))
@@ -56,6 +59,7 @@ for o,counter in zip(objects,range(len(objects))):
 	#fr=raw_data[raw_data['object_id']==o]
 
 	fnames=[filter_names[f] for f in fr['passband']]
+	print('fnames: '+str(fnames))
 	tab=Table([fr['mjd'],fnames,fr['flux'],fr['flux_err']],names=['mjd','filter','flux','flux_error'])
 
 	if len(tab)>0:
@@ -64,8 +68,8 @@ for o,counter in zip(objects,range(len(objects))):
 	tab.meta['name']=o.astype('str')
 
 	meta_line=raw_metadata[raw_metadata['object_id']==o].iloc[0]
-	print(type(meta_line))
-	print(type(meta_line['target']))
+#	print(type(meta_line))
+#	print(type(meta_line['target']))
 	tab.meta['ra']=meta_line['ra']
 	tab.meta['decl']=meta_line['decl']
 	tab.meta['gal_l']=meta_line['gal_l']
@@ -86,7 +90,7 @@ for o,counter in zip(objects,range(len(objects))):
 	#insert into data set
 	d.insert_lightcurve(tab)
 
-with open(os.path.join(out_folder,'plasticc_aux/dataset_%d.pickle'%index),'wb') as f:
+with open(os.path.join(out_folder,'dataset_%d.pickle'%index),'wb') as f:
         pickle.dump(d,f)
 
 '''

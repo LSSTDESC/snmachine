@@ -3,9 +3,9 @@
  #PBS -l nodes=1:ppn=1
  #PBS -r n
  #PBS -S /bin/tcsh
- #PBS -q compute
+ #PBS -q smp
  #PBS -l walltime=299:00:00
- #PBS -l mem=50GB
+ #PBS -l mem=500GB
  #PBS -N collect
 source .tcshrc
 cd /home/roberts/sne/snmachine/	

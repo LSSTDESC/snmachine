@@ -1,12 +1,13 @@
 #!/bin/tcsh -f
  #PBS -V
- #PBS -l nodes=1:ppn=80
+ #PBS -l nodes=1:ppn=1
  #PBS -r n
  #PBS -S /bin/tcsh
- #PBS -q smp
+ #PBS -q compute
  #PBS -l walltime=299:00:00
- #PBS -l mem=200GB
- #PBS -N plasticc
+ #PBS -l mem=20GB
+ #PBS -N plasticc_batch
+ #PBS -t 0
 source .tcshrc
 cd /home/roberts/sne/snmachine/	
-time python /home/roberts/sne/snmachine/utils/plasticc_extract_gp.py
+time python /home/roberts/sne/snmachine/utils/plasticc_extract_gp.py ${PBS_ARRAYID}
