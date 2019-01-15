@@ -1839,7 +1839,7 @@ class WaveletFeatures(Features):
         inds=np.argsort(vals)[::-1]
         return vals[inds], vec[:, inds], mn
 
-    def best_coeffs(self, vals, tol=1.-10**(-8)):
+    def best_coeffs(self, vals, tol=.99999):
         """
         Determine the minimum number of PCA components required to adequately describe the dataset.
 
@@ -1861,7 +1861,7 @@ class WaveletFeatures(Features):
         for i in range(len(vals)):
             tot2+=vals[i]
             if tot2>=tol*tot:
-                print('The tolerance is '+str(tol)+' and currintly it has '+str(tot2/tot))
+                print('The tolerance is '+str(tol)+' and currently it has '+str(tot2/tot))
                 return i+1 # the 1st component has index 0
                 break
 
@@ -1945,9 +1945,12 @@ class WaveletFeatures(Features):
         comps=np.zeros([len(wavout), ncomp])
 
         for i in range(len(wavout)):
+            if i%50 == 0:
+                print('I am still here!! i ='+str(i))
             coeffs=wavout[i]
             A=self.project_pca(coeffs-mn, eigs)
             comps[i]=A
+        print('finish projecting PCA')
         labels=['C%d' %i for i in range(ncomp)]
         wavs=Table(comps, names=labels)
         object_names.shape=(len(object_names), 1)
