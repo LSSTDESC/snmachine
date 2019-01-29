@@ -1460,7 +1460,7 @@ class WaveletFeatures(Features):
         return self.features
 
 
-    def fit_sn(self, lc, comps, vec,  mn, xmin, xmax, filter_set):
+    def fit_sn(self, lc, comps, vec,  mn, xmin, xmax, filter_set, waveUni=0):
         """
         Fits a single object using previously run PCA components. Performs the full inverse wavelet transform.
 
@@ -1486,29 +1486,35 @@ class WaveletFeatures(Features):
         astropy.table.Table
             Fitted light curve
         """
-
+        
         obj=lc.meta['name']
         filts=np.unique(lc['filter'])
         #The PCA will have been done over the full coefficient set, across all filters
-        try:
-            pca_comps=comps[comps['Object']==obj]
-        except KeyError:
-            print ('No feature set found for', obj)
-            return None
+        if waveUni==0: # tweak
+            try:
+                pca_comps=comps[comps['Object']==obj]
+            except KeyError:
+                print ('No feature set found for', obj)
+                return None
 
-        new_comps=np.array([pca_comps[c] for c in pca_comps.columns[1:]]).flatten()
-        ncomp=len(new_comps)
-        eigs=vec[:, :ncomp]
+            new_comps=np.array([pca_comps[c] for c in pca_comps.columns[1:]]).flatten()
+            ncomp=len(new_comps)
+            eigs=vec[:, :ncomp]
 
-        coeffs=np.array(np.dot(new_comps, eigs.T)+mn).flatten()
+            coeffs=np.array(np.dot(new_comps, eigs.T)+mn).flatten()
 
         n=self.mlev*2*self.ngp
         xnew=np.linspace(xmin, xmax, self.ngp)
         output=[]
         for i in range(len(filter_set)):
             if filter_set[i] in filts:
-                filt_coeffs=coeffs[i*n:(i+1)*n]
-                filt_coeffs=filt_coeffs.reshape(self.mlev, 2, self.ngp, order='C')
+                if waveUni==0: 
+                    filt_coeffs=coeffs[i*n:(i+1)*n]
+                    filt_coeffs=filt_coeffs.reshape(self.mlev, 2, self.ngp, order='C')
+                else: # tweak things
+                    ifFil = comps['filter'] == filter_set[i]
+                    filt_coeffs = [[np.array(comps[ifFil]['cA2']), np.array(comps[ifFil]['cD2'])], 
+                                   [np.array(comps[ifFil]['cA1']), np.array(comps[ifFil]['cD1'])]]
                 ynew=self.iswt(filt_coeffs, self.wav)
 
                 newtable=Table([xnew, ynew, [filter_set[i]]*self.ngp], names=['mjd', 'flux', 'filter'], dtype=['f', 'f', 'U32'])
@@ -1839,7 +1845,7 @@ class WaveletFeatures(Features):
         inds=np.argsort(vals)[::-1]
         return vals[inds], vec[:, inds], mn
 
-    def best_coeffs(self, vals, tol=.99999):
+    def best_coeffs(self, vals, tol=.99):
         """
         Determine the minimum number of PCA components required to adequately describe the dataset.
 
@@ -1945,7 +1951,7 @@ class WaveletFeatures(Features):
         comps=np.zeros([len(wavout), ncomp])
 
         for i in range(len(wavout)):
-            if i%50 == 0:
+            if i%100 == 0:
                 print('I am still here!! i ='+str(i))
             coeffs=wavout[i]
             A=self.project_pca(coeffs-mn, eigs)
