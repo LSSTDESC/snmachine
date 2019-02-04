@@ -1513,9 +1513,10 @@ class WaveletFeatures(Features):
                     filt_coeffs=filt_coeffs.reshape(self.mlev, 2, self.ngp, order='C')
                 else: # tweak things
                     ifFil = comps['filter'] == filter_set[i]
-                    filt_coeffs = [[np.array(comps[ifFil]['cA2']), np.array(comps[ifFil]['cD2'])], 
-                                   [np.array(comps[ifFil]['cA1']), np.array(comps[ifFil]['cD1'])]]
-                ynew=pywt.iswt(filt_coeffs, self.wav)
+                    filt_coeffs = (( np.array(comps[ifFil]['cA2']), np.array(comps[ifFil]['cD2']) ), 
+                                   ( np.array(comps[ifFil]['cA1']), np.array(comps[ifFil]['cD1']) ))
+                
+                ynew=self.iswt(filt_coeffs, self.wav)
 
                 newtable=Table([xnew, ynew, [filter_set[i]]*self.ngp], names=['mjd', 'flux', 'filter'], dtype=['f', 'f', 'U32'])
                 if len(output)==0:
@@ -1835,6 +1836,8 @@ class WaveletFeatures(Features):
         
         #Construct the covariance matrix
         C=np.dot(x_norm, x_norm.T)
+        condNumber = np.linalg.cond(C)
+        print('The condition number is '+str(condNumber))
         #C=np.cov(X.T)
         #print C.shape
 
@@ -1971,3 +1974,53 @@ class WaveletFeatures(Features):
             np.save(os.path.join(output_root,'PCA_mean.npy'),mn)
 
         return wavs,vals,vec,mn
+
+    def iswt(self, coefficients, wavelet):
+        """
+        Performs inverse wavelet transform.
+        M. G. Marino to complement pyWavelets' swt.
+
+        Parameters
+        ----------
+        coefficients : array
+            approx and detail coefficients, arranged in level value
+            exactly as output from swt:
+            e.g. [(cA1, cD1), (cA2, cD2), ..., (cAn, cDn)]
+        wavelet : str or swt.Wavelet
+            Either the name of a wavelet or a Wavelet object
+
+        Returns
+        -------
+        array
+            The inverse transformed array
+        """
+        output = coefficients[0][0].copy() # Avoid modification of input data
+
+        #num_levels, equivalent to the decomposition level, n
+        num_levels = len(coefficients)
+        for j in range(num_levels,0,-1):
+            step_size = int(2**(j-1))
+            last_index = step_size
+            _, cD = coefficients[num_levels - j]
+            for first in range(last_index): # 0 to last_index - 1
+
+                # Getting the indices that we will transform
+                indices = np.arange(first, len(cD), step_size)
+
+                # select the even indices
+                even_indices = indices[0::2]
+                # select the odd indices
+                odd_indices = indices[1::2]
+
+                # perform the inverse dwt on the selected indices,
+                # making sure to use periodic boundary conditions
+                x1 = pywt.idwt(output[even_indices], cD[even_indices], wavelet, 'per')
+                x2 = pywt.idwt(output[odd_indices], cD[odd_indices], wavelet, 'per')
+
+                # perform a circular shift right
+                x2 = np.roll(x2, 1)
+
+                # average and insert into the correct indices
+                output[indices] = (x1 + x2)/2.
+
+        return output
