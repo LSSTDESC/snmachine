@@ -1540,7 +1540,7 @@ class WaveletFeatures(Features):
 
         print ('Restarting from stored Gaussian Processes...')
         for obj in d.object_names:
-            fname=os.path.join(output_root, 'gp_'+obj)
+            fname=os.path.join(output_root, 'gp_train_'+obj) # currently it is only working for the train GPs
             try:
                 tab=Table.read(fname, format='ascii')
                 d.models[obj]=tab
