@@ -1578,7 +1578,7 @@ class WaveletFeatures(Features):
 
         for i in range(len(d.object_names)):
             obj=d.object_names[i]
-            fname=os.path.join(output_root, 'wavelet_'+obj)
+            fname=os.path.join(output_root, 'wavelet_train_'+obj)
             try:
                 # out=Table.read(fname, format='ascii')
                 out=Table.read(fname, format='fits')
