@@ -54,7 +54,7 @@ def reducedChi2(x,y,err, gpObs):
     gpFluxObsTimes  = np.array(interpolateFlux(obsTimes))
     chi2            = np.sum( ((obsFlux-gpFluxObsTimes)/obsFluxErr)**2 )
     redChi2         = chi2 / len(x) # reduced X^2
-    return redChi2    
+    return redChi2
 
 def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
     def negLoglike(p): # Objective function: negative log-likelihood
@@ -65,14 +65,14 @@ def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
     def gradNegLoglike(p): # Gradient of the objective function.
         gp.set_parameter_vector(p)
         return -gp.grad_log_likelihood(y, quiet=True)
-    
+
     kExpSquared = iniTheta[0]*george.kernels.ExpSquaredKernel(metric=iniTheta[1])
     kExpSine2   = iniTheta[4]*george.kernels.ExpSine2Kernel(gamma=iniTheta[5],log_period=iniTheta[6])
     if kernel == 'ExpSquared':
         kernel = kExpSquared
     elif kernel == 'ExpSquared+ExpSine2':
         kernel = kExpSquared + kExpSine2
-        
+
     gp      = george.GP(kernel)
     gp.compute(x, err)
     results = op.minimize(negLoglike, gp.get_parameter_vector(), jac=gradNegLoglike,
@@ -114,7 +114,7 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
                 gpObsAll.append(gpObs_3)
                 redChi2All.append(redChi2_3)
                 gpAll.append(gp_3)
-                
+
                 indMinRedChi2 = np.argmin(redChi2All)
                 gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
     return gpObs, gp
@@ -178,7 +178,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
                                                x=x,y=y,err=err, gpTimes=gpTimes)
                 if redChi2 > 2: # bad gp
                     gpObs, g = getHierGP(gpObs, redChi2, g, x,y,err, gpTimes)
-                
+
                 mu,cov = gpObs.flux.values, gpObs.flux_err.values
                 std    = np.sqrt(np.diag(cov))
                 rec    = np.column_stack((xstar,mu,std))
@@ -1405,7 +1405,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output=None, output_root='features', nprocesses=24, restart='none', gpalgo='george', xmin=None, xmax=None, recompute_pca=False, pca_path=None):
+    def extract_features(self, d, initheta=[500, 20], save_output=None, output_root='features', nprocesses=24, restart='none', gpalgo='george', xmin=None, xmax=None, recompute_pca=True, pca_path=None):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1486,7 +1486,7 @@ class WaveletFeatures(Features):
         astropy.table.Table
             Fitted light curve
         """
-        
+
         obj=lc.meta['name']
         filts=np.unique(lc['filter'])
         #The PCA will have been done over the full coefficient set, across all filters
@@ -1508,14 +1508,14 @@ class WaveletFeatures(Features):
         output=[]
         for i in range(len(filter_set)):
             if filter_set[i] in filts:
-                if waveUni==0: 
+                if waveUni==0:
                     filt_coeffs=coeffs[i*n:(i+1)*n]
                     filt_coeffs=filt_coeffs.reshape(self.mlev, 2, self.ngp, order='C')
                 else: # tweak things
                     ifFil = comps['filter'] == filter_set[i]
-                    filt_coeffs = (( np.array(comps[ifFil]['cA2']), np.array(comps[ifFil]['cD2']) ), 
+                    filt_coeffs = (( np.array(comps[ifFil]['cA2']), np.array(comps[ifFil]['cD2']) ),
                                    ( np.array(comps[ifFil]['cA1']), np.array(comps[ifFil]['cD1']) ))
-                
+
                 ynew=self.iswt(filt_coeffs, self.wav)
 
                 newtable=Table([xnew, ynew, [filter_set[i]]*self.ngp], names=['mjd', 'flux', 'filter'], dtype=['f', 'f', 'U32'])
@@ -1833,7 +1833,7 @@ class WaveletFeatures(Features):
 
         nor=np.sqrt(np.sum(X**2, axis=0))
         x_norm=X/nor
-        
+
         #Construct the covariance matrix
         C=np.dot(x_norm, x_norm.T)
         condNumber = np.linalg.cond(C)
@@ -1911,7 +1911,7 @@ class WaveletFeatures(Features):
         return vals, vec, mn
 
 
-    def extract_pca(self, object_names,  wavout, recompute_pca=False, pca_path=None, save_output=False, output_root=None):
+    def extract_pca(self, object_names,  wavout, recompute_pca=True, pca_path=None, save_output=False, output_root=None):
         """
         Dimensionality reduction of wavelet coefficients using PCA.
 
@@ -1929,7 +1929,7 @@ class WaveletFeatures(Features):
             Astropy table containing PCA features.
 
         """
-        
+
         t1=time.time()
 
         if recompute_pca:
