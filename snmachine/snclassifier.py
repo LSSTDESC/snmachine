@@ -362,7 +362,7 @@ class OptimisedClassifier():
     #This is a strange boosted random forest classifier that Max came up that works quite well, but is likely biased
     #in general
     Boost_RF_param_dict = {'base_estimator':[RandomForestClassifier(400, 'entropy'),
-                                             RandomForestClassifier(600, 'entropy')],'n_jobs':-1, 'n_estimators':list([2, 3, 5, 10])}
+                                             RandomForestClassifier(600, 'entropy')], 'n_estimators':list([2, 3, 5, 10])}
 
 
     #Dictionary to hold good default ranges for parameters for each classifier.
