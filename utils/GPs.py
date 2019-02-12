@@ -41,7 +41,7 @@ def reducedChi2(x,y,err, gpObs):
     gpFluxObsTimes  = np.array(interpolateFlux(obsTimes))
     chi2            = np.sum( ((obsFlux-gpFluxObsTimes)/obsFluxErr)**2 )
     redChi2         = chi2 / len(x) # reduced X^2
-    return redChi2    
+    return redChi2
 
 def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
     def negLoglike(p): # Objective function: negative log-likelihood
@@ -52,14 +52,14 @@ def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
     def gradNegLoglike(p): # Gradient of the objective function.
         gp.set_parameter_vector(p)
         return -gp.grad_log_likelihood(y, quiet=True)
-    
+
     kExpSquared = iniTheta[0]*george.kernels.ExpSquaredKernel(metric=iniTheta[1])
     kExpSine2   = iniTheta[4]*george.kernels.ExpSine2Kernel(gamma=iniTheta[5],log_period=iniTheta[6])
     if kernel == 'ExpSquared':
         kernel = kExpSquared
     elif kernel == 'ExpSquared+ExpSine2':
         kernel = kExpSquared + kExpSine2
-        
+
     gp      = george.GP(kernel)
     gp.compute(x, err)
     results = op.minimize(negLoglike, gp.get_parameter_vector(), jac=gradNegLoglike,
@@ -101,7 +101,7 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
                 gpObsAll.append(gpObs_3)
                 redChi2All.append(redChi2_3)
                 gpAll.append(gp_3)
-                
+
                 indMinRedChi2 = np.argmin(redChi2All)
                 gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
     return gpObs, gp
@@ -165,7 +165,7 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
                                                x=x,y=y,err=err, gpTimes=gpTimes)
                 if redChi2 > 2: # bad gp
                     gpObs, g = getHierGP(gpObs, redChi2, g, x,y,err, gpTimes)
-                
+
                 mu,cov = gpObs.flux.values, gpObs.flux_err.values
                 std    = np.sqrt(np.diag(cov))
                 rec    = np.column_stack((xstar,mu,std))
