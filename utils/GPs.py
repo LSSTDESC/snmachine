@@ -4,7 +4,6 @@ Module for extracting and saving GPs
 
 from __future__ import division, print_function
 import numpy as np
-from . import parametric_models
 import sys, pywt, time, subprocess, os, sncosmo
 from scipy.interpolate import interp1d
 import george
