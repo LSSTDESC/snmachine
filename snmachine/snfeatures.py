@@ -93,7 +93,7 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
     gpObs_1, redChi2_1, gp_1 = getGPChi2(iniTheta=np.array([400, 200, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                          x=x,y=y,err=err, gpTimes=gpTimes)
     if redChi2_1 < 2: # good gp
-        return gpObs_1, gp_1
+        return gpObs_1, gp_1, redChi2_1, 'ExpSquared 1'
     else:             # bad gp
         gpObsAll   = [gpObs, gpObs_1]
         redChi2All = [redChi2, redChi2_1]
@@ -101,7 +101,7 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
         gpObs_2, redChi2_2, gp_2 = getGPChi2(iniTheta=np.array([400, 20, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                          x=x,y=y,err=err, gpTimes=gpTimes)
         if redChi2_2 < 2: # good gp
-            gpObs, redChi2, gp =  gpObs_2, redChi2_2, gp_2
+            gpObs, redChi2, gp, chosenKernel =  gpObs_2, redChi2_2, gp_2, 'ExpSquared 2'
         else:             # bad gp
             gpObsAll.append(gpObs_2)
             redChi2All.append(redChi2_2)
@@ -109,15 +109,19 @@ def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
             gpObs_3, redChi2_3, gp_3 = getGPChi2(iniTheta=np.array([19, 9, 2, 4, 4, 6, 6]),
                                                  kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
             if redChi2_3 < 2: # good gp
-                gpObs, redChi2, gp =  gpObs_3, redChi2_3, gp_3
+                gpObs, redChi2, gp, chosenKernel =  gpObs_3, redChi2_3, gp_3, 'ExpSquared+ExpSine2'
             else:             # bad gp
                 gpObsAll.append(gpObs_3)
                 redChi2All.append(redChi2_3)
                 gpAll.append(gp_3)
-
+                kernels = ['bad ExpSquared 0', 'bad ExpSquared 1', 'bad ExpSquared 2', 'bad ExpSquared+ExpSine2']
                 indMinRedChi2 = np.argmin(redChi2All)
                 gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
-    return gpObs, gp
+                try:
+                    chosenKernel = kernels[indMinRedChi2]
+                except:
+                    print('(-_-) ... '+str(indMinRedChi2)+' '+str(kernels))
+    return gpObs, gp, redChi2, chosenKernel
 
 def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george',return_gp=False):
     """
@@ -177,8 +181,11 @@ def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='geo
                 gpObs, redChi2, g = getGPChi2(iniTheta=np.array([initheta[0]**2, metric, 2, 4, 4, 6, 6]), kernel='ExpSquared',
                                                x=x,y=y,err=err, gpTimes=gpTimes)
                 if redChi2 > 2: # bad gp
-                    gpObs, g = getHierGP(gpObs, redChi2, g, x,y,err, gpTimes)
+                    gpObs, g, redChi2, chosenKernel = getHierGP(gpObs, redChi2, g, x,y,err, gpTimes)
+                else:
+                    chosenKernel = 'ExpSquared 0'
 
+                print(obj, fil, chosenKernel+' \t\t redX2 = {:09.2f}'.format(redChi2))
                 mu,cov = gpObs.flux.values, gpObs.flux_err.values
                 std    = np.sqrt(np.diag(cov))
                 rec    = np.column_stack((xstar,mu,std))
