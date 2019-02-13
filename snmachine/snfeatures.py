@@ -1940,6 +1940,7 @@ class WaveletFeatures(Features):
         t1=time.time()
 
         if recompute_pca:
+            print("OUTPUT ROOT: {}\n".format(output_root))
             print ('Running PCA...')
             #We now run PCA on this big matrix
             vals, vec, mn=self.pca(wavout)
@@ -1955,7 +1956,8 @@ class WaveletFeatures(Features):
         # np.savetxt('PCA_mean.txt', mn)
 
         #Actually fit the components
-        ncomp=self.best_coeffs(vals)
+        tolerance = .99
+        ncomp=self.best_coeffs(vals, tol=tolerance)
         eigs=vec[:, :ncomp]
         print('Number of components used is '+str(ncomp))
         comps=np.zeros([len(wavout), ncomp])
@@ -1976,9 +1978,9 @@ class WaveletFeatures(Features):
         print ('Time for PCA', time.time()-t1)
 
         if save_output:
-            np.save(os.path.join(output_root,'PCA_vals.npy'),vals)
-            np.save(os.path.join(output_root,'PCA_vec.npy'),vec)
-            np.save(os.path.join(output_root,'PCA_mean.npy'),mn)
+            np.save(os.path.join(output_root,'eigenvalues_{}.npy'.format(tolerance*100)),vals)
+            np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(tolerance*100)),vec)
+            np.save(os.path.join(output_root,'means_{}.npy'.format(tolerance*100)),mn)
 
         return wavs,vals,vec,mn
 
