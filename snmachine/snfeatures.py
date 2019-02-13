@@ -24,7 +24,9 @@ try:
     import pymultinest
     from pymultinest.analyse import Analyzer
     has_multinest=True
-except ImportError:
+except:
+    print("PyMultinest not found. If you would like to use, please install
+            Mulitnest with 'sh install/multinest_install.sh'")
     has_multinest=False
 
 try:
