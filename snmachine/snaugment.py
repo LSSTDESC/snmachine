@@ -511,7 +511,7 @@ class GPAugment(SNAugment):
             The new object names that have been created by augmentation.
         """
         dataset_types=self.dataset.get_types()
-        dataset_types['Type'][dataset_types['Type']>10]=dataset_types['Type'][dataset_types['Type']>10]//10#NB: this is specific to a particular remapping of indices!!
+#        dataset_types['Type'][dataset_types['Type']>10]=dataset_types['Type'][dataset_types['Type']>10]//10#NB: this is specific to a particular remapping of indices!!
 
         types=np.unique(dataset_types['Type'])
 
