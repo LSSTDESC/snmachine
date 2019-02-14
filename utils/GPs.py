@@ -2,19 +2,14 @@
 Module for extracting and saving GPs
 """
 
-from __future__ import division, print_function
 import numpy as np
-import sys, pywt, time, subprocess, os, sncosmo
+import sys, time, subprocess, os, sncosmo
 from scipy.interpolate import interp1d
 import george
 from astropy.table import Table, vstack, hstack, join
 from multiprocessing import Pool
 from functools import partial
-from scipy import stats
 import scipy.optimize as op
-from iminuit import Minuit, describe
-import traceback
-import pickle
 import pandas as pd
 from scipy import interpolate
 import scipy
