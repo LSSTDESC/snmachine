@@ -1,5 +1,5 @@
 """
-Module for feature extraction on supernova light curves.
+for feature extraction on supernova light curves.
 """
 
 from __future__ import division, print_function
@@ -1856,7 +1856,143 @@ class WaveletFeatures(Features):
         inds=np.argsort(vals)[::-1]
         return vals[inds], vec[:, inds], mn
 
-    def best_coeffs(self, vals, tol=.99):
+    @staticmethod
+    def get_svd(X):
+        """
+        Return a tuple of U, SDiag, and VT which are the usual
+        matrices in the SVD decomposition of X, such that 
+
+        X =  U DiagonalMatrix(SDiag) VT
+
+        Parameters
+        ----------
+        X : `np.ndarray`
+            Reduced Data Matrix that is centered and normalized of
+            shape (Nsamps, Nfeats)
+
+        Returns
+        -------
+        tuple of U, SDiag, VT of shapes (Nsamps, Nsamps),  (, Nsamps) and 
+        (Nfeats, Nfeats) respectively.
+        """
+        return np.linalg.svd(X, full_matrices=False)
+
+    def pca_eigendecomposition(self, dataMatrix, ncomp=None, tol=0.999):
+        """
+        """
+        # perform eigendecomposition on covariance
+        
+        X, M = self.normalize_datamatrix(dataMatrix)
+
+        # This is the same as np.dot(D.T, D) / (N-1) if D is centered
+        cov = np.dot(X.T, X)
+
+        # Symmetric, numpy method gives these in ascending order of eigenvalues 
+        # Change to descending order 
+        vals, vecs = np.linalg.eigh(cov)
+        vals = vals[::-1]
+        vecs = vecs[:, ::-1]
+
+        # Components in the principal component basis.
+        Z = np.dot(X, vecs[:, :ncomp])
+
+        return  vecs[:, :ncomp], Z, M, vals[:ncomp]
+
+    def pca_SVD(self, dataMatrix, ncomp=None, tol=0.999):
+        """
+        Perform PCA using SVD
+
+        Parameters
+        ----------
+        dataMatrix : `np.ndarray`
+            Data Matrix
+
+        ncomp : int, defaults to `None`
+            Number of components of PCA to keep. If `None`
+            gets determined from a tolerance level.
+        tol: `np.float`
+            tolerance level above which the explained variance must be
+            to determine the number of principal components ncomp to keep.
+            Only used if `ncomp` is `None` 
+
+        Returns
+        -------
+        Principal Components V (which has normalized eigenvectors as columns),
+        PCA scores (ie. the components of the reduced Data Matrix in the basis
+        of PCA), M the Mean of the features over samples and Vals, the eigenvalues 
+        corresponding to the retained components in descending order
+        """
+        # perform SVD on normalized Data Matrix
+        X, M = self.normalize_datamatrix(dataMatrix)
+        U, sDiag, VT =  self.get_svd(X)
+            
+        # eigenvals in descending order
+        vals = sDiag * sDiag
+
+
+        # Find number of components to keep
+        if ncomp is None:
+            assert isinstance(tol, np.float)
+            ncomp = self.ncompsForTolerance(vals, tol=tol)
+        else:
+            assert isinstance(ncomp, np.int)
+
+        # Coefficients of Data in basis of Principal Components
+        Z = np.dot(U[:, :ncomp], np.diag(sDiag[:ncomp]))
+
+        return VT.T[:, :ncomp], Z, M, vals[:ncomp]
+
+    @staticmethod
+    def normalize_datamatrix(D):
+        """
+        Normalize data matrix for doing SVD or computing covariance. This
+        does X = (D - mean(D))/sqrt(N - 1), where N is len(D). D is assumed
+        to have shape (Nsamps, Nfeats) while M has shape (1, Nfeats) and
+        X has shape (Nsamps, Nfeats)
+
+        Parameters
+        -----------
+        D : `np.ndarray`
+            Data Matrix of shape (Nsamps, Nfeats)
+
+        Returns
+        -------
+        X, M : normalized and centered data matrix X, and Means of the features 
+        """
+        M =  D.mean(axis=0)
+        N = len(D)
+        return (D - M) / np.sqrt(N - 1), M
+
+    @staticmethod
+    def ncompsForTolerance(vals, tol=.99):
+        """
+        Determine the minimum number of PCA components required to adequately describe the dataset.
+
+        Parameters
+        ----------
+        vals : `np.ndarray`
+            eigenvalues (ordered largest to smallest)
+        tol : np.float, defaults to 0.99
+            The fraction of total eigenvalues or variance that must be
+            explained
+
+        Returns
+        -------
+        int
+            The required number of coefficients to retain the requested amount of "information".
+
+        Notes
+        -----
+        This method should exactly reproduce the method `best_coeffs`
+
+        """
+        tot = np.sum(vals)
+        c = np.cumsum(vals) / tot
+        # To match prev code that invoked break on >= rather than < 
+        return c[c<tol].size + 1
+
+    @staticmethod
+    def best_coeffs(vals, tol=.99):
         """
         Determine the minimum number of PCA components required to adequately describe the dataset.
 
@@ -1918,8 +2054,16 @@ class WaveletFeatures(Features):
         mn=np.load(os.path.join(pca_path,'PCA_mean.npy'))
         return vals, vec, mn
 
+    def _pca(self, dataMatrix, ncomp, tol, method):
+        """
+        """
+        if method == 'svd':
+            return self.pca_SVD(dataMatrix, ncomp, tol)
+        elif method == 'eigendecomposition':
+            return self.pca_eigendecomposition(dataMatrix, ncomp, tol)
 
-    def extract_pca(self, object_names,  wavout, recompute_pca=True, pca_path=None, save_output=False, output_root=None):
+    def extract_pca(self, object_names, wavout, recompute_pca=True, method='svd',
+                    ncomp=None, tol=0.999, pca_path=None, save_output=False, output_root=None):
         """
         Dimensionality reduction of wavelet coefficients using PCA.
 
@@ -1929,7 +2073,20 @@ class WaveletFeatures(Features):
             Object names corresponding to each row of the wavelet coefficient array.
         wavout : array
             Wavelet coefficient array, each row corresponds to an object, each column is a coefficient.
-        log
+        recompute_pca : Bool, default to `True`
+            If `True`, calculate the PCA, `False` should require a valid `pca_path` to read
+            pca information from
+        method: {'svd'|'eigendecomposition'|None}
+            strings to pick the SVD or eigenDecompostition method. Ignored if 
+            `recompute_PCA` is `True`, and may be `None` in that case. `svd`
+            invokes the `pca_SVD` method, while `eigenDecomposition` invokes
+            the `pca_eigendecomposition` method.
+        ncomp: int, defaults to `None`
+            Number of components of PCA kept for analysis. If `None`, determined
+            internally from `tol` instead.
+        tol: float, defaults to 0.99 
+            fraction of variance that must be explained by retained PCA components. 
+            To override this and use `ncomp` directly, tol should be set to `None`.
 
         Returns
         -------
@@ -1941,37 +2098,46 @@ class WaveletFeatures(Features):
         t1=time.time()
 
         if recompute_pca:
+            try:
+                method = method.lower()
+                assert method in ('svd', 'eigendecomposition'), 'PCA method not valid'
+            except AssertionError as e:
+                e.args += ('attempted method ', method)
+                raise
+
             print("OUTPUT ROOT: {}\n".format(output_root))
             print ('Running PCA...')
-            #We now run PCA on this big matrix
-            vals, vec, mn=self.pca(wavout)
-            print('Eigenvals')
-            print(vals)
-            mn=mn.flatten()
+
+            # PCA on the data matrix wavout after centering
+            vec, comps, M, vals = self._pca(wavout, ncomp=ncomp, tol=tol, 
+                                            method=method)
+
+            # Get ncomp if run determined by tol, ie. ncomp is `None`
+            if ncomp is None:
+                ncomp = vals.size
         else:
             vals,vec,mn=self.read_pca(pca_path)
+            M = mn
 
-        #
-        # np.savetxt('PCA_vals.txt', vals)
-        # np.savetxt('PCA_vec.txt', vec)
-        # np.savetxt('PCA_mean.txt', mn)
 
-        #Actually fit the components
-        tolerance = .99
-        ncomp=self.best_coeffs(vals, tol=tolerance)
-        eigs=vec[:, :ncomp]
-        print('Number of components used is '+str(ncomp))
-        comps=np.zeros([len(wavout), ncomp])
+            #Actually fit the components
+            tolerance = tol
+            ncomp=self.best_coeffs(vals, tol=tolerance)
+            eigs=vec[:, :ncomp]
+            print('Number of components used is '+str(ncomp))
+            comps=np.zeros([len(wavout), ncomp])
+    
+            for i in range(len(wavout)):
+               if i%100 == 0:
+                   print('I am still here!! i ='+str(i))
+               coeffs=wavout[i]
+               A=self.project_pca(coeffs-mn, eigs)
+               comps[i]=A
+            print('finish projecting PCA')
 
-        for i in range(len(wavout)):
-            if i%100 == 0:
-                print('I am still here!! i ='+str(i))
-            coeffs=wavout[i]
-            A=self.project_pca(coeffs-mn, eigs)
-            comps[i]=A
-        print('finish projecting PCA')
-        labels=['C%d' %i for i in range(ncomp)]
-        wavs=Table(comps, names=labels)
+        # Now reformat the components as a table 
+        labels = ['C%d' %i for i in range(ncomp)]
+        wavs = Table(comps, names=labels)
         object_names.shape=(len(object_names), 1)
         objnames=Table(object_names, names=['Object'])
         wavs=hstack((objnames, wavs))
@@ -1979,11 +2145,12 @@ class WaveletFeatures(Features):
         print ('Time for PCA', time.time()-t1)
 
         if save_output:
-            np.save(os.path.join(output_root,'eigenvalues_{}.npy'.format(tolerance*100)),vals)
-            np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(tolerance*100)),vec)
-            np.save(os.path.join(output_root,'means_{}.npy'.format(tolerance*100)),mn)
+            np.save(os.path.join(output_root,'eigenvalues_{}.npy'.format(tol*100)),vals)
+            np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(tol*100)),vec)
+            np.save(os.path.join(output_root,'comps_{}.npy'.format(tol*100)),comps)
+            np.save(os.path.join(output_root,'means_{}.npy'.format(tol*100)),M)
 
-        return wavs,vals,vec,mn
+        return wavs, vals, vec, M
 
     def iswt(self, coefficients, wavelet):
         """
