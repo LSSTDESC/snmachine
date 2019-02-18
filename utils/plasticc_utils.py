@@ -4,8 +4,27 @@ Utility script for calculating the log loss
 
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import auc, roc_curve, confusion_matrix
 
-def plasticc_log_loss(y_true, y_pred, relative_class_weights=None):
+def plotConfusionMatrix(yTrue, yPredict, dataName, targetNames):
+    cm = confusion_matrix(yTrue, yPredict, labels=targetNames)
+    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    annot = np.around(cm, 2)
+
+    fig, ax = plt.subplots(figsize=(9,7))
+    sns.heatmap(cm, xticklabels=targetNames,
+    yticklabels=targetNames, cmap='Blues',
+    annot=annot, lw=0.5)
+    ax.set_xlabel('Predicted Label')
+    ax.set_ylabel('True Label')
+    ax.set_aspect('equal')
+    plt.title(dataName)
+
+    return cm
+
+def plasticcLogLoss(y_true, y_pred, relative_class_weights=None):
     """
     Implementation of weighted log loss used for the Kaggle challenge
     """
