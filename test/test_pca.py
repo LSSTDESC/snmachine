@@ -10,9 +10,11 @@ from snmachine.snfeatures import WaveletFeatures
 import pytest
 
 
-testopts = [(5, 'svd', None),
-            (5, 'eigendecomposition', None),
-            (None, 'svd', 0.999)]
+testopts = [(5, 'svd', None, True),
+            (5, 'eigendecomposition', None, False),
+            (None, 'svd', 0.999, False),
+            (5, 'eigendecomposition', None, True)]
+    
 
 
 # Test 1
@@ -34,8 +36,8 @@ def test_best_coeffs(tol=0.999):
 
 
 # Test 2
-@pytest.mark.parametrize("ncomp,method,tol", testopts)
-def test_pca(ncomp, method, tol, Nsamps=10000, Nfeats=10):
+@pytest.mark.parametrize("ncomp,method,tol,normalize_variance", testopts)
+def test_pca(ncomp, method, tol, normalize_variance, Nsamps=10000, Nfeats=10):
     """
     Directly test the pca on matrices, and check that the results look OK
     in terms of shapes and limiting cases. Tries out both the svd and eigendecomposition
@@ -49,7 +51,8 @@ def test_pca(ncomp, method, tol, Nsamps=10000, Nfeats=10):
     X = np.dot(X, R)
     assert X.shape == (Nsamps, Nfeats) 
     wf = WaveletFeatures()
-    vec, comps, M, vals = wf._pca(X, ncomp=ncomp, method=method, tol=tol)
+    vec, comps, M, s, vals = wf._pca(X, ncomp=ncomp, method=method, tol=tol,
+                                     normalize_variance=normalize_variance)
     assert M.size == Nfeats
 
     if ncomp is None:
@@ -63,8 +66,10 @@ def test_pca(ncomp, method, tol, Nsamps=10000, Nfeats=10):
         # eigenvalues by construction
         assert np.allclose(vals[-2:], 0.)
 
-@pytest.mark.parametrize("ncomp,method,tol", testopts)
-def test_extract_wavelets(ncomp, method, tol, Nsamps=10000, Nfeats=10):
+
+@pytest.mark.parametrize("ncomp,method,tol,normalize_variance", testopts)
+def test_extract_wavelets(ncomp, method, tol, normalize_variance, Nsamps=10000,
+                          Nfeats=10):
     X = np.random.normal(size=(Nsamps, 3))
     R = np.random.random((3, Nfeats))
     X = np.dot(X, R)
@@ -72,8 +77,9 @@ def test_extract_wavelets(ncomp, method, tol, Nsamps=10000, Nfeats=10):
 
     wf = WaveletFeatures()
     object_names = np.array(list('sn_{}'.format(i) for i in range(Nsamps)))
-    wavs, vals, vec, M = wf.extract_pca(object_names, X, ncomp=ncomp,
-                                        method=method, tol=tol)
+    wavs, vals, vec, M, s = wf.extract_pca(object_names, X, ncomp=ncomp,
+                                           method=method, tol=tol,
+                                           normalize_variance=normalize_variance)
     assert M.size == Nfeats
     # Can't run this test, as this is a structured array with object names
     # assert np.asarray(wavs.to_pandas()).shape == Nsamps, ncomp
@@ -88,3 +94,31 @@ def test_extract_wavelets(ncomp, method, tol, Nsamps=10000, Nfeats=10):
         # eigenvalues by construction
         assert np.allclose(vals[-2:], 0.)
 
+
+# Test 4.
+@pytest.mark.parametrize("ncomp,method,tol,normalize_variance", testopts)
+def test_lossy_reconstruct(ncomp, method, tol, normalize_variance,
+                           Nsamps=10000, Nfeats=10):
+    X = np.random.normal(size=(Nsamps, 3))
+    R = np.random.random((3, Nfeats))
+    X = np.dot(X, R)
+    assert X.shape == (Nsamps, Nfeats) 
+
+    wf = WaveletFeatures()
+    vec, comps, M, s, vals = wf._pca(X, ncomp=ncomp, method=method, tol=tol,
+                                     normalize_variance=normalize_variance)
+    # object_names = np.array(list('sn_{}'.format(i) for i in range(Nsamps)))
+    # wavs, vals, vec, M = wf.extract_pca(object_names, X, ncomp=ncomp,
+    #                                    method=method, tol=tol)
+    assert M.size == Nfeats
+    # Can't run this test, as this is a structured array with object names
+    # assert np.asarray(wavs.to_pandas()).shape == Nsamps, ncomp
+    # When we set ncomp from tols 
+    D = WaveletFeatures.reconstruct_datamatrix_lossy(comps, vec, M, s)
+    assert D.shape == (Nsamps, Nfeats)
+    Delta = D - X
+    var = np.sum(Delta**2, axis=0)
+    if normalize_variance:
+        assert np.allclose(var, 0.)
+
+    assert 2 > 1

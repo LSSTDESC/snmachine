@@ -1877,12 +1877,39 @@ class WaveletFeatures(Features):
         """
         return np.linalg.svd(X, full_matrices=False)
 
-    def pca_eigendecomposition(self, dataMatrix, ncomp=None, tol=0.999):
+    def pca_eigendecomposition(self, dataMatrix, ncomp=None, tol=0.999,
+                               normalize_variance=False):
         """
+        Perform PCA using an eigendecomposition
+
+        Parameters
+        ----------
+        dataMatrix : `np.ndarray`
+            Data Matrix
+
+        ncomp : int, defaults to `None`
+            Number of components of PCA to keep. If `None`
+            gets determined from a tolerance level.
+        tol: `np.float`
+            tolerance level above which the explained variance must be
+            to determine the number of principal components ncomp to keep.
+            Only used if `ncomp` is `None` 
+        normalize_variance : Bool, defaults to `False`
+            If `True` pass to `normalize_variance` method so that the features
+            are scaled to have unit variance.
+
+        Returns
+        -------
+
         """
+        # We are dealing with data matrix of shape (Nsamps, Nfeats) 
+        err_msg = 'dataMatrix input to svd function has wrong shape'
+        assert len(dataMatrix.shape) == 2, err_msg
+
         # perform eigendecomposition on covariance
         
-        X, M = self.normalize_datamatrix(dataMatrix)
+        X, M, s = self.normalize_datamatrix(dataMatrix,
+                                            normalize_variance=normalize_variance)
 
         # This is the same as np.dot(D.T, D) / (N-1) if D is centered
         cov = np.dot(X.T, X)
@@ -1896,9 +1923,10 @@ class WaveletFeatures(Features):
         # Components in the principal component basis.
         Z = np.dot(X, vecs[:, :ncomp])
 
-        return  vecs[:, :ncomp], Z, M, vals[:ncomp]
+        return  vecs[:, :ncomp], Z, M, s, vals[:ncomp]
 
-    def pca_SVD(self, dataMatrix, ncomp=None, tol=0.999):
+    def pca_SVD(self, dataMatrix, ncomp=None, tol=0.999,
+                normalize_variance=False):
         """
         Perform PCA using SVD
 
@@ -1913,19 +1941,36 @@ class WaveletFeatures(Features):
         tol: `np.float`
             tolerance level above which the explained variance must be
             to determine the number of principal components ncomp to keep.
-            Only used if `ncomp` is `None` 
-
+            Only used if `ncomp` is `None`
+        normalize_variance : Bool, defaults to `False`
+            If `True` pass to `normalize_variance` method so that the features
+            are scaled to have unit variance.
         Returns
         -------
         Principal Components V (which has normalized eigenvectors as columns),
         PCA scores (ie. the components of the reduced Data Matrix in the basis
-        of PCA), M the Mean of the features over samples and Vals, the eigenvalues 
+        of PCA), M the Mean of the features over samples and Vals, s the scaling
+        used the eigenvalues 
         corresponding to the retained components in descending order
         """
+
+        # We are dealing with data matrix of shape (Nsamps, Nfeats) 
+        err_msg = 'dataMatrix input to svd function has wrong shape'
+        assert len(dataMatrix.shape) == 2, err_msg
+
         # perform SVD on normalized Data Matrix
-        X, M = self.normalize_datamatrix(dataMatrix)
+        ts = time.time()
+        X, M, s = self.normalize_datamatrix(dataMatrix,
+                                            normalize_variance=normalize_variance)
+        te = time.time()
+        print('Took {} secs for normalization'.format(te - ts))
+        print('Shape of reduced data matrix X', X.shape)
         U, sDiag, VT =  self.get_svd(X)
-            
+        ts = time.time()
+        print('Took {} secs for svd'.format(- te + ts))
+        print('U shape is ', U.shape)
+        assert len(U.shape) == 2
+
         # eigenvals in descending order
         vals = sDiag * sDiag
 
@@ -1936,14 +1981,16 @@ class WaveletFeatures(Features):
             ncomp = self.ncompsForTolerance(vals, tol=tol)
         else:
             assert isinstance(ncomp, np.int)
+        print('Using number of components = ', ncomp)
+        print(' shape of U is ', U.shape)
 
         # Coefficients of Data in basis of Principal Components
         Z = np.dot(U[:, :ncomp], np.diag(sDiag[:ncomp]))
 
-        return VT.T[:, :ncomp], Z, M, vals[:ncomp]
+        return VT.T[:, :ncomp], Z, M, s, vals[:ncomp]
 
     @staticmethod
-    def normalize_datamatrix(D):
+    def normalize_datamatrix(D, normalize_variance=True):
         """
         Normalize data matrix for doing SVD or computing covariance. This
         does X = (D - mean(D))/sqrt(N - 1), where N is len(D). D is assumed
@@ -1954,14 +2001,29 @@ class WaveletFeatures(Features):
         -----------
         D : `np.ndarray`
             Data Matrix of shape (Nsamps, Nfeats)
+        normalize_variance: Bool, defaults to True
+            If True, transform features so that each feature has variance
+            of 1.
 
         Returns
         -------
-        X, M : normalized and centered data matrix X, and Means of the features 
+        X, M, s : normalized and centered data matrix X, and Means of the features , 
+         scalings to recover original data matrix
         """
+        # We are dealing with data matrix of shape (Nsamps, Nfeats) 
+        err_msg = 'dataMatrix for normalizaton has wrong shape'
+        assert len(D.shape) == 2, err_msg
+
         M =  D.mean(axis=0)
         N = len(D)
-        return (D - M) / np.sqrt(N - 1), M
+        X = (D - M) / np.sqrt(N - 1)
+
+        s  = None
+        if normalize_variance:
+            s = np.sqrt(np.sum(X**2, axis=0))
+            X /= s
+
+        return X, M, s
 
     @staticmethod
     def ncompsForTolerance(vals, tol=.99):
@@ -2054,16 +2116,101 @@ class WaveletFeatures(Features):
         mn=np.load(os.path.join(pca_path,'PCA_mean.npy'))
         return vals, vec, mn
 
-    def _pca(self, dataMatrix, ncomp, tol, method):
+    def _pca(self, dataMatrix, ncomp, tol, normalize_variance, method):
         """
+        Parameters
+        ----------
+        dataMatrix : `np.ndarray`
+            Data Matrix
+
+        ncomp : int, defaults to `None`
+            Number of components of PCA to keep. If `None`
+            gets determined from a tolerance level.
+        tol: `np.float`
+            tolerance level above which the explained variance must be
+            to determine the number of principal components ncomp to keep.
+            Only used if `ncomp` is `None`
+        normalize_variance : Bool
+            If `True` pass to `normalize_variance` method so that the features
+            are scaled to have unit variance.
+        method : {'svd'| 'eigendecomposition'}
         """
         if method == 'svd':
-            return self.pca_SVD(dataMatrix, ncomp, tol)
+            return self.pca_SVD(dataMatrix, ncomp, tol, normalize_variance)
         elif method == 'eigendecomposition':
-            return self.pca_eigendecomposition(dataMatrix, ncomp, tol)
+            return self.pca_eigendecomposition(dataMatrix, ncomp, tol,
+                                               normalize_variance)
 
-    def extract_pca(self, object_names, wavout, recompute_pca=True, method='svd',
-                    ncomp=None, tol=0.999, pca_path=None, save_output=False, output_root=None):
+    @staticmethod
+    def reconstruct_datamatrix_lossy(Z, vec, M=None, s=None):
+        """
+        Reconstruct (lossily) the original Data Matrix from the compressed data
+        ie. the coefficients of the eigenvectors to represent the data.
+
+        Parameters
+        ----------
+        Z : `np.ndarray`
+            Array of coefficients of the Principal Component Vectors of the
+            Normalized Data Matrix. Must have shape (Nsamps, Ncomp)
+        vec : `np.ndarray`
+            Array with normalized retained eigenvectors as columns. Has shape
+            (Nfeats, ncomp)
+        M : `np.ndarray`, defaults to `None`
+            Mean subtracted from original Data Matrix to center it. Must have
+            shape (Nsamps, Nfeats). If `None`, M is assumed to be 0
+        s : `np.ndarry` of shape (Nfeats, ) or `None`
+            scale factor applied to normalize data matrix so that each feature
+            vector has variance 1.
+        Returns
+        -------
+        The original un-normalized data matrix that was compressed via PCA.
+        Must have shape (Nsamps, Nfeats)
+        """
+        # Go to the space of normalized data
+
+        # assert Z.shape == (Nsamps, ncomps)
+        # assert vec.shape == (Nfeats, ncomps) 
+        Nsamps, ncomps_ = Z.shape
+        Nfeats, ncomps = vec.shape
+
+
+
+        # While we have enough information to create a zero matrix of the right
+        # shape, we will avoid using the memory.
+
+        if M is not None:
+            Nfeats_ = M.size
+            assert Nfeats == Nfeats_
+
+        if s is not None:
+            assert s.shape == (Nfeats,)
+
+        # Sometimes Z may be made an array from an `astropy.table.Table`,
+        # with different data types. In this case, the array will be an
+        # `np.recarray` which will show ncomps_ = 1, even though the shape
+        # is different. This could also happen if the `object_names` are
+        # not removed. However, to do the matrix multiplication below, this
+        # has to be fixed.
+
+        assert ncomps_ == ncomps
+
+        X = np.dot(Z, vec.T)
+
+        if s is not None:
+            X *= s
+
+        # De-normalize the datamatrix
+        D = X * np.sqrt(len(X) - 1)
+ 
+        if M is not None:
+            D += M
+
+        return D 
+
+    def extract_pca(self, object_names, wavout, recompute_pca=True,
+                    method='svd', ncomp=None, tol=0.999, pca_path=None,
+                    save_output=False, output_root=None,
+                    normalize_variance=False):
         """
         Dimensionality reduction of wavelet coefficients using PCA.
 
@@ -2087,13 +2234,23 @@ class WaveletFeatures(Features):
         tol: float, defaults to 0.99 
             fraction of variance that must be explained by retained PCA components. 
             To override this and use `ncomp` directly, tol should be set to `None`.
+        normalize_variance : Bool, defaults to `False`
+            If `True` pass to `normalize_variance` method so that the features
+            are scaled to have unit variance.
 
         Returns
         -------
-        astropy.table.Table
-            Astropy table containing PCA features.
-
+        tuple : (wavs, vals, vec, M, s)
+            where wavs is an `astropy.table.Table` containing PCA features.
+            vals is an array of eigenvalues in the descending orders of the
+            retained components
+            vec is an array of shape (Nfeat, Ncomp) whose columns are the
+            eigenvectors of the covariance matrix.
+            M is an additive matrix used in normalization
+            while s is a vector of size Nfeats used in normalization
         """
+        object_names = np.asarray(object_names)
+        assert object_names.shape == (wavout.shape[0],) 
 
         t1=time.time()
 
@@ -2109,13 +2266,15 @@ class WaveletFeatures(Features):
             print ('Running PCA...')
 
             # PCA on the data matrix wavout after centering
-            vec, comps, M, vals = self._pca(wavout, ncomp=ncomp, tol=tol, 
-                                            method=method)
+            vec, comps, M, s, vals = self._pca(wavout, ncomp=ncomp, tol=tol, 
+                                               method=method,
+                                               normalize_variance=normalize_variance)
 
             # Get ncomp if run determined by tol, ie. ncomp is `None`
             if ncomp is None:
                 ncomp = vals.size
         else:
+            # We need to add some reading to make it consistent with new code
             vals,vec,mn=self.read_pca(pca_path)
             M = mn
 
@@ -2138,19 +2297,19 @@ class WaveletFeatures(Features):
         # Now reformat the components as a table 
         labels = ['C%d' %i for i in range(ncomp)]
         wavs = Table(comps, names=labels)
-        object_names.shape=(len(object_names), 1)
-        objnames=Table(object_names, names=['Object'])
-        wavs=hstack((objnames, wavs))
-        #wavs.write('wavelet_features.dat', format='ascii')
-        print ('Time for PCA', time.time()-t1)
+        objnames = Table(object_names.reshape(len(object_names), 1),
+                         names=['Object'])
+        wavs = hstack((objnames, wavs))
+        print('Time for PCA', time.time() - t1)
 
         if save_output:
+            # We need to change the output to make it consistent with new code
             np.save(os.path.join(output_root,'eigenvalues_{}.npy'.format(tol*100)),vals)
             np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(tol*100)),vec)
             np.save(os.path.join(output_root,'comps_{}.npy'.format(tol*100)),comps)
             np.save(os.path.join(output_root,'means_{}.npy'.format(tol*100)),M)
 
-        return wavs, vals, vec, M
+        return wavs, vals, vec, M, s
 
     def iswt(self, coefficients, wavelet):
         """
