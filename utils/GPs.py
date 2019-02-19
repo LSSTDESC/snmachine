@@ -133,8 +133,7 @@ def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gp_algo='george', retu
                 rec, theta = g.gp(theta=initheta)
             elif gp_algo=='george':
                 metric  = initheta[1]**2
-                gp_obs, redChi2, g = get_GP_redChi2(iniTheta=np.array([initheta[0]**2, metric, 2., 4., 4., 6., 6.]), kernel_name='ExpSquared',
-                                                    obs_times=obs_times,obs_flux=obs_flux,obs_flux_err=obs_flux_err, gp_times=gp_times)
+                gp_obs, redChi2, g = get_GP_redChi2(iniTheta=np.array([initheta[0]**2, metric, 2., 4., 4., 6., 6.]), kernel_name='ExpSquared', obs_times=obs_times,obs_flux=obs_flux,obs_flux_err=obs_flux_err, gp_times=gp_times)
                 if redChi2 > 2: # bad gp
                     gp_obs, g, redChi2, chosen_kernel = get_hier_GP(gp_obs, redChi2, g, obs_times,obs_flux,obs_flux_err, gp_times)
                 else:
@@ -175,17 +174,14 @@ def get_GP_redChi2(iniTheta, kernel_name, obs_times,obs_flux,obs_flux_err, gp_ti
     gp.compute(obs_times, obs_flux_err)
     results = op.minimize(neg_log_like, gp.get_parameter_vector(), jac=grad_neg_log_like,
                           method="L-BFGS-B", tol=1e-6)
-    print(results.x)
-    if np.sum(np.isnan(results.x)) != 0 :
-        print('iniTheta before = '+str(iniTheta))
-        print(iniTheta[4])
-        iniTheta[4] = iniTheta[4]+.1 # change a bit initial conditions so we don't go to a minima
-        print('iniTheta = '+str(iniTheta))
+    
+    if np.sum(np.isnan(results.x)) != 0 : # the minimiser reaches a local minimum
+        iniTheta[4] = iniTheta[4]+.1 # change a bit initial conditions so we don't go to that minima
         kernel = get_kernel(kernel_name, iniTheta)
+        gp = george.GP(kernel)
+        gp.compute(obs_times, obs_flux_err)
         results = op.minimize(neg_log_like, gp.get_parameter_vector(), jac=grad_neg_log_like,
                           method="L-BFGS-B", tol=1e-6)
-        print('Changing')
-        print(results.x)
 
     gp.set_parameter_vector(results.x)
     gp_mean, gp_cov = gp.predict(obs_flux, gp_times)
