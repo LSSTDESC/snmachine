@@ -127,7 +127,7 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, li
     #fig=plt.figure(figsize=figsize)
     fig=plt.gcf()
     ax=fig.add_subplot(111)
-    ax.set_color_cycle(cols)
+    ax.set_prop_cycle('color', cols)
     ax.plot(fpr, tpr, lw=line_width)
     # ax.plot(fpr, tpr)
 
