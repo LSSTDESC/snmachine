@@ -1523,7 +1523,8 @@ class WaveletFeatures(Features):
 
         return wavout, wavout_err
 
-    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses, gpalgo='george'):
+    @staticmethod
+    def extract_GP(d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses, gpalgo='george'):
         """
         Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
 
