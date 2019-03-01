@@ -66,7 +66,11 @@ class SNAugment:
 
     def extract_proxy_features(self,peak_filter='desr',nproc=1,fit_salt2=False,salt2feats=None,return_features=False,fix_redshift=False,which_redshifts='header',sampler='leastsq'):
         """
-        Extracts the 2D proxy features from raw light curves, e.g., redshift and peak logflux in a certain band. There are plenty of options for how to get these values, if you should be so inclined. For the peak flux, we take either the maximum flux amongst the observations in the specified band (quick and dirty), or we perform SALT2 fits to the data and extract the peak flux from there (proper and slow). For the redshift, we take either the redshift specified in the header or the fitted SALT2 parameter.
+        Extracts the 2D proxy features from raw light curves, e.g., redshift and peak logflux in a certain band. 
+        There are plenty of options for how to get these values, if you should be so inclined. 
+        For the peak flux, we take either the maximum flux amongst the observations in the specified band (quick and dirty), 
+        or we perform SALT2 fits to the data and extract the peak flux from there (proper and slow). 
+        For the redshift, we take either the redshift specified in the header or the fitted SALT2 parameter.
 
         Parameters:
         ----------
@@ -83,9 +87,11 @@ class SNAugment:
         fix_redshift : bool, optional (default: False)
             if True, we fix the redshift in the SALT2 fits to the value found in the table headers; if False, we leave the parameter free for sampling
         which_redshifts : str, optional (default: 'header')
-            if 'salt2', the first column of proxy features will be the SALT2-fitted redshift; if 'header', we take the redshift from the header, if 'headerfill', we take the header redshift where available and fill with fitted values for the objects without valid redshift.
+            if 'salt2', the first column of proxy features will be the SALT2-fitted redshift; if 'header', we take the redshift from the header, 
+            if 'headerfill', we take the header redshift where available and fill with fitted values for the objects without valid redshift.
         sampler : str, optional (default: 'leastsq')
-            Which sampler do we use to perform the SALT2 fit? 'leastsq' is a simple least squares fit, 'nested' uses nested sampling and requires MultiNest and PyMultiNest to be installed.
+            Which sampler do we use to perform the SALT2 fit? 'leastsq' is a simple least squares fit, 
+            'nested' uses nested sampling and requires MultiNest and PyMultiNest to be installed.
         Returns:
         -------
         proxy_features : np.array
@@ -249,10 +255,10 @@ class GPAugment(SNAugment):
             the supernova data set we want to augment
         stencils : list of strings
             If the stencils argument is given (as a list of object names
-             that are in the data set), then the augmentation step will take 
+            that are in the data set), then the augmentation step will take 
             these light curves to train the GPs on. If not, then every object 
             in the data set is considered fair game.
-	cadence_stencils : list of strings
+	    cadence_stencils : list of strings
             If given, the augmentation will sample the cadence for the new light
             curves from these objects. If not, every object is fair game.
         stencil_weights : np.array or list of float
@@ -451,7 +457,11 @@ class GPAugment(SNAugment):
             newz=obj_table.meta['z']+obj_table.meta['z_err']*self.rng.randn()
         else:
             newz=obj_table.meta['z']
-        new_lc_meta={'name':name,'z':newz,'type':obj_table.meta['type'], 'stencil': obj_name, 'augment_algo': self.algorithm}
+        print(obj_table, obj_table.meta)
+        new_lc_meta={'name':name, 'z':newz, 'ra':obj_table.meta['ra'], 'decl':obj_table.meta['decl'], 'gal_l':obj_table.meta['gal_l'], 
+            'gal_b':obj_table.meta['gal_b'], 'ddf':obj_table.meta['ddf'], 'hostgal_photoz':obj_table.meta['hostgal_photoz'], 
+            'hostgal_photoz_err':obj_table.meta['hostgal_photoz_err'], 'distmod':obj_table.meta['distmod'], 'mwebv':obj_table.meta['mwebv'],
+            'type':obj_table.meta['type'], 'stencil': obj_name, 'augment_algo': self.algorithm} # Cat: Add here the rest of the meta
         new_lc=Table(names=['mjd','filter','flux','flux_error'],dtype=['f','U','f','f'],meta=new_lc_meta)
         for f in self.dataset.filter_set:
             obj_f=obj_table[obj_table['filter']==f]
@@ -548,14 +558,3 @@ class GPAugment(SNAugment):
 #                    print('types: '+str(new_lightcurve.meta['type'])+' '+str(self.dataset.data[thisstencil].meta['type']))
                     newobjects=np.append(newobjects,new_name)
         return newobjects
-
-
-
-
-
-
-
-
-
-
-
