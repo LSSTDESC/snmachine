@@ -2,7 +2,6 @@
 test/*
 !test/*.py
 
-example_data/
 ## Python.gitignore from Github.
 ##
 # Byte-compiled / optimized / DLL files
