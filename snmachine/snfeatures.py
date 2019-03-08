@@ -46,7 +46,7 @@ try:
 except ImportError:
     has_gapp=False
 
-util_module_path = os.path.abspath(os.path.join('snmachine', 'utils'))
+util_module_path = os.path.abspath(os.path.join('..', 'utils'))
 if util_module_path not in sys.path:
     sys.path.append(util_module_path)
 from GPs import extract_GP # The GP extraction methods are in a util
@@ -67,6 +67,8 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
         Parametric model
     n_attempts : int
         We run this multiple times to try to avoid local minima and take the best fitting values.
+    seed : int, optional
+        Here you can set the random seed for the minimisation to a specific value. If -1, the default value will be used instead.
 
     Returns
     -------
@@ -177,8 +179,11 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
         Whether or not to convert the ascii output files to binary
     n_iter : int
         Maximum number of iterations
-    restart : bool
+    restart : bool, optional
         Whether to restart from existing chain files.
+    seed : int, optional
+        Here you can set the random seed for the minimisation to a specific value. If -1, the default value will be used instead.
+
 
     Returns
     -------
@@ -316,6 +321,9 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds, seed=-1):
         Whether or not to use provided redshift information
     bounds : dict
         Bounds on parameters
+    seed : int, optional
+        Here you can set the random seed for the minimisation to a specific value. If -1, the default value will be used instead.
+
 
     Returns
     -------
@@ -365,24 +373,6 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
     """
 
     Fit template-based supernova models using multinest.
-
-    Parameters
-    ----------
-    obj : str
-        Object name
-    d : Dataset
-        Dataset object
-    model_name : str
-        Name of model to use (to be passed to sncosmo)
-    use_redshift : bool
-        Whether or not to use provided redshift information
-    bounds : dict
-        Bounds on parameters
-
-    Returns
-    -------
-    astropy.table.Table
-        Table of best fitting parameters
 
     Parameters
     ----------
@@ -721,7 +711,7 @@ class TemplateFeatures(Features):
                     'nugent-sn2l':{'z':(0.01, 1.5)},
                     'nugent-sn1bc':{'z':(0.01, 1.5)}}
 
-    def extract_features(self, d, save_chains=False, chain_directory='chains', use_redshift=False, nprocesses=1, restart=False, seed=-1):
+    def extract_features(self, d, save_output=False, chain_directory='chains', use_redshift=False, nprocesses=1, restart=False, seed=-1):
         """
         Extract template features for a dataset.
 
@@ -729,7 +719,7 @@ class TemplateFeatures(Features):
         ----------
         d : Dataset object
             Dataset
-        save_chains : bool
+        save_output : bool
             Whether or not to save the intermediate output (if Bayesian inference is used instead of least squares)
         chain_directory : str
             Where to save the chains
@@ -782,7 +772,7 @@ class TemplateFeatures(Features):
                             np.random.seed(seed)
                         res, fitted_model = sncosmo.mcmc_lc(lc, self.model,  self.model.param_names, bounds=self.bounds[self.templates[mod_name]], nwalkers=20, nsamples=1500, nburn=300)
                         chain=res.samples
-                        if save_chains:
+                        if save_output:
                             tab=Table(chain, names=self.model.param_names)
                             tab.write(os.path.join(chain_directory, obj.split('.')[0]+'_emcee_'+mod_name), format='ascii')
                         best=res['parameters'].flatten('F').tolist()
@@ -1253,7 +1243,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output=None, output_root='features', nprocesses=24, restart='none', gpalgo='george', xmin=None, xmax=None, recompute_pca=True, pca_path=None):
+    def extract_features(self, d, initheta=[500, 20], save_output=False, output_root='features', nprocesses=24, restart='none', gpalgo='george', xmin=None, xmax=None, recompute_pca=True, pca_path=None):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1266,7 +1256,7 @@ class WaveletFeatures(Features):
         save_output : bool, optional
             Whether or not to save the output
         output_root : str, optional
-         Output directory
+            Output directory
         nprocesses : int, optional
             Number of processors to use for parallelisation (shared memory only)
         restart : str, optional
@@ -1281,7 +1271,7 @@ class WaveletFeatures(Features):
             Table of features (first column object names, the rest are the PCA coefficient values)
         """
 
-        if save_output is not None and not os.path.exists(output_root):
+        if save_output and not os.path.exists(output_root):
             print("No output directory found; creating output root directory :\n{}".format(output_root))
             subprocess.call(['mkdir', output_root])
         if xmin is None:
@@ -1295,10 +1285,10 @@ class WaveletFeatures(Features):
             if restart=='gp':
                 self.restart_from_gp(d, output_root)
             else:
-                self.extract_GP(d, self.ngp, xmin, xmax, initheta, save_output, output_root, nprocesses, gpalgo=gpalgo)
+                extract_GP(d, self.ngp, xmin, xmax, initheta, output_root, nprocesses, gpalgo=gpalgo, save_output=save_output)
 
             wavout, waveout_err=self.extract_wavelets(d, self.wav, self.mlev,  nprocesses, save_output, output_root)
-        self.features,vals,vec,mn=self.extract_pca(d.object_names.copy(), wavout, recompute_pca=recompute_pca, pca_path=pca_path, output_root=output_root)
+        self.features,vals,vec,mn,s=self.extract_pca(d.object_names.copy(), wavout, recompute_pca=recompute_pca, pca_path=pca_path, output_root=output_root)
 
         #Save the PCA information
         self.PCA_eigenvals = vals
@@ -1446,95 +1436,6 @@ class WaveletFeatures(Features):
 
         return wavout, wavout_err
 
-    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses, gpalgo='george'):
-        """
-        Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
-
-        Parameters
-        ----------
-        d : Dataset object
-            Dataset
-        ngp : int
-            Number of points to evaluate Gaussian Process at
-        xmin : float
-            Minimim time to evaluate at
-        xmax : float
-            Maximum time to evaluate at
-        initheta : list-like
-            Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
-        save_output : bool
-            Whether or not to save the output
-        output_root : str
-            Output directory
-        nprocesses : int, optional
-            Number of processors to use for parallelisation (shared memory only)
-        """
-        print ('Performing Gaussian process regression')
-        t1=time.time()
-        #Check for parallelisation
-        if nprocesses==1:
-            for i in range(len(d.object_names)):
-                obj=d.object_names[i]
-                try:
-                    out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
-                except ValueError:
-                    print('Object %s has fallen over!'%obj)
-                d.models[obj]=out
-                if save_output!='none':
-                    # out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
-                    out.write(os.path.join(output_root, 'gp_'+obj), format='fits', overwrite=True)
-        else:
-            p=Pool(nprocesses, maxtasksperchild=10)
-
-            #Pool and map can only really work with single-valued functions
-            partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo, return_gp=True)
-
-            out=p.map(partial_GP, d.object_names, chunksize=10)
-            p.close()
-            gp={}
-
-            out=np.reshape(out,(len(d.object_names),2))
-            for i in range(len(out)):
-                obj=d.object_names[i]
-                d.models[obj]=out[i,0]
-                gp[obj]=out[i,1]
-            # with open('/home/roberts/data_sets/sne/plasticc/GP.pickle','wb') as f:
-            #     pickle.dump(gp,f)
-
-
-        print ('Time taken for Gaussian process regression', time.time()-t1)
-
-    def GP(self, obj, d, ngp=200, xmin=0, xmax=170, initheta=[500, 20], gpalgo='george'):
-        """
-        Fit a Gaussian process curve at specific evenly spaced points along a light curve.
-
-        Parameters
-        ----------
-        obj : str
-            Object name
-        d : Dataset object
-            Dataset
-        ngp / int, optional
-            Number of points to evaluate Gaussian Process at
-        xmin : float, optional
-            Minimim time to evaluate at
-        xmax : float, optional
-            Maximum time to evaluate at
-        initheta : list-like, optional
-            Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
-
-        Returns
-        -------
-        astropy.table.Table
-            Table with evaluated Gaussian process curve and errors
-
-        Notes
-        -----
-        Wraps internal module-level function in order to circumvent multiprocessing module limitations in dealing with
-        objects when parallelising.
-        """
-        return _GP(obj, d, ngp, xmin, xmax, initheta, gpalgo)
-
 
     def wavelet_decomp(self, lc, wav, mlev):
         """
@@ -1628,7 +1529,7 @@ class WaveletFeatures(Features):
             obj=d.object_names[i]
             lc=d.models[obj]
             out= self.wavelet_decomp(lc, wav, mlev)
-            if save_output=='wavelet' or save_output=='all':
+            if save_output:
                 # out.write(os.path.join(output_root, 'wavelet_'+obj), format='ascii')
                 out.write(os.path.join(output_root, 'wavelet_'+obj), format='fits',overwrite=True)
             #We go by filter, then by set of coefficients
