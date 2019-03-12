@@ -140,3 +140,7 @@ snmachine/example_data/output_*
 # Mac OS files
 .DS_Store
 
+classifications/
+out
+tsne_plot_test.png
+raw_lc_test.png

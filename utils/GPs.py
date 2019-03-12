@@ -71,6 +71,7 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo=
         #Pool and map can only really work with single-valued functions
         partial_GP = partial(_GP, d=d, ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta, output_root=output_root, gp_algo=gp_algo, save_output=save_output)
 
+
         out = p.map(partial_GP, d.object_names, chunksize=10)
         p.close()
         gp = {}
@@ -308,4 +309,5 @@ def reducedChi2(obj_obs, gp_obs):
     gp_flux_obj_times  = np.array(interpolate_flux(obj_times))
     chi2            = np.sum( ((obj_flux-gp_flux_obj_times)/obj_obs.flux_err)**2 )
     redChi2         = chi2 / len(obj_times)
+
     return redChi2
