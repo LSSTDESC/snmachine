@@ -46,10 +46,10 @@ try:
 except ImportError:
     has_gapp=False
 
-util_module_path = os.path.abspath(os.path.join('..', 'utils'))
+util_module_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','utils')
 if util_module_path not in sys.path:
     sys.path.append(util_module_path)
-from GPs import extract_GP # The GP extraction methods are in a util
+from gps import extract_GP # The GP extraction methods are in a util
 
 
 def _run_leastsq(obj, d, model, n_attempts, seed=-1):
