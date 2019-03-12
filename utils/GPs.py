@@ -27,7 +27,7 @@ except ImportError:
     has_gapp=False
 
 
-def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gpalgo='george', save_output=False):
+def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo='george', save_output=False):
     """
     Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
 
@@ -47,7 +47,7 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gpalgo='
         Output directory.
     nprocesses : int, optional
         Number of processors to use for parallelisation (shared memory only)
-    gpalgo : str, optional
+    gp_algo : str, optional
         which gp package is used for the Gaussian Process Regression, GaPP or george
     save_output : bool, optional
         whether or not to save the fitted GP means and errors
@@ -61,7 +61,7 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gpalgo='
             obj = d.object_names[i]
             try:
                 output, gpdict, used_kernels_obj = _GP(obj, d=d,ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta, 
-                                                        output_root=output_root, gpalgo=gpalgo)
+                                                        output_root=output_root, gp_algo=gp_algo)
                 d.models[obj] = output
             except ValueError:
                 print('Object {} has fallen over!'.format(obj))
@@ -69,7 +69,7 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gpalgo='
         p = Pool(nprocesses, maxtasksperchild=10)
 
         #Pool and map can only really work with single-valued functions
-        partial_GP = partial(_GP, d=d, ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta, output_root=output_root, gpalgo=gpalgo, save_output=save_output)
+        partial_GP = partial(_GP, d=d, ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta, output_root=output_root, gp_algo=gp_algo, save_output=save_output)
 
         out = p.map(partial_GP, d.object_names, chunksize=10)
         p.close()
@@ -89,7 +89,7 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gpalgo='
     print ('Time taken for Gaussian process regression', time.time()-initial_time)
 
 
-def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gpalgo='george', save_output=False):
+def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gp_algo='george', save_output=False):
     """
     Fit a Gaussian process curve in every filter of an object.
 
@@ -109,7 +109,7 @@ def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gpalgo='george', save_
         Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
     output_root : str
         Output directory.
-    gpalgo : str
+    gp_algo : str
         which gp package is used for the Gaussian Process Regression, GaPP or george
     save_output : bool, optional
         whether or not to save the fitted GP means and errors
@@ -120,9 +120,9 @@ def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gpalgo='george', save_
         Table with evaluated Gaussian process curve and errors
     """
 
-    if gpalgo=='gapp' and not has_gapp:
+    if gp_algo=='gapp' and not has_gapp:
         print('No GP module gapp. Defaulting to george instead.')
-        gpalgo='george'
+        gp_algo='george'
     lc      = d.data[obj]
     filters = np.unique(lc['filter'])
     gp_times = np.linspace(t_min, t_max, ngp)
@@ -141,10 +141,10 @@ def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gpalgo='george', save_
             obj_obs['flux']  = obj_flux
             obj_obs['flux_err'] = obj_flux_err
 
-            if gpalgo=='gapp':
+            if gp_algo=='gapp':
                 gp         = dgp.DGaussianProcess(obj_times, obj_flux, obj_flux_err, cXstar=(t_min, t_max, ngp))
                 rec, theta = gp.gp(theta=initheta)
-            elif gpalgo=='george':
+            elif gp_algo=='george':
                 metric  = initheta[1]**2
                 gp_obs_0, redChi2_0, gp_0 = get_GP_redChi2(np.array([initheta[0]**2, metric, 2., 4., 4., 6., 6.]), 'ExpSquared', obj_obs, gp_times)
                 if redChi2_0 < 2: # good gp
