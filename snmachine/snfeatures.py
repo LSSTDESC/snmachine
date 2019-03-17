@@ -1978,7 +1978,7 @@ class WaveletFeatures(Features):
         recompute_pca : Bool, default to `True`
             If `True`, calculate the PCA, `False` should require a valid `pca_path` to read
             pca information from
-        method: {'svd'|'eigendecomposition'|None}
+        method: {'svd'|'eigendecomposition'|None} , defaults to `svd`
             strings to pick the SVD or eigenDecompostition method. Ignored if 
             `recompute_PCA` is `True`, and may be `None` in that case. `svd`
             invokes the `pca_SVD` method, while `eigenDecomposition` invokes
@@ -2030,23 +2030,23 @@ class WaveletFeatures(Features):
                 ncomp = vals.size
         else:
             # We need to add some reading to make it consistent with new code
-            vals,vec,mn=self.read_pca(pca_path)
+            vals, vec, mn = self.read_pca(pca_path)
             M = mn
 
 
             #Actually fit the components
             tolerance = tol
-            ncomp=self.best_coeffs(vals, tol=tolerance)
-            eigs=vec[:, :ncomp]
+            ncomp = self.best_coeffs(vals, tol=tolerance)
+            eigs = vec[:, :ncomp]
             print('Number of components used is '+str(ncomp))
-            comps=np.zeros([len(wavout), ncomp])
+            comps = np.zeros([len(wavout), ncomp])
     
             for i in range(len(wavout)):
                if i%100 == 0:
                    print('I am still here!! i ='+str(i))
-               coeffs=wavout[i]
-               A=self.project_pca(coeffs-mn, eigs)
-               comps[i]=A
+               coeffs = wavout[i]
+               A = self.project_pca(coeffs-mn, eigs)
+               comps[i] = A
             print('finish projecting PCA')
 
         # Now reformat the components as a table 
