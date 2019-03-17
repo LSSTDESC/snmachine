@@ -1700,26 +1700,26 @@ class WaveletFeatures(Features):
         assert len(dataMatrix.shape) == 2, err_msg
 
         # perform SVD on normalized Data Matrix
-        ts = time.time()
+        ## ts = time.time()
         X, M, s = self.normalize_datamatrix(dataMatrix,
                                             normalize_variance=normalize_variance)
-        te = time.time()
+        ## te = time.time()
         print('Took {} secs for normalization'.format(te - ts))
         
         #Construct the covariance matrix # Cat Temp
         print(dataMatrix)
-        C1=np.dot(dataMatrix, dataMatrix.T)
+        C1 = np.dot(dataMatrix, dataMatrix.T)
         condNumber1 = np.linalg.cond(C1)
-        C2=np.dot(X, X.T)
+        C2 = np.dot(X, X.T)
         condNumber2 = np.linalg.cond(C2)
         print('The condition number in the SVD is '+str(condNumber1)+' and the normalized one is '+str(condNumber2))
         ##
         
-        print('Shape of reduced data matrix X', X.shape)
+        ## print('Shape of reduced data matrix X', X.shape)
         U, sDiag, VT =  self.get_svd(X)
-        ts = time.time()
-        print('Took {} secs for svd'.format(- te + ts))
-        print('U shape is ', U.shape)
+        ## ts = time.time()
+        ## print('Took {} secs for svd'.format(- te + ts))
+        ## print('U shape is ', U.shape)
         assert len(U.shape) == 2
 
         # eigenvals in descending order
@@ -1732,8 +1732,8 @@ class WaveletFeatures(Features):
             ncomp = self.ncompsForTolerance(vals, tol=tol)
         else:
             assert isinstance(ncomp, np.int)
-        print('Using number of components = ', ncomp)
-        print(' shape of U is ', U.shape)
+        ## print('Using number of components = ', ncomp)
+        ## print(' shape of U is ', U.shape)
 
         # Coefficients of Data in basis of Principal Components
         Z = np.dot(U[:, :ncomp], np.diag(sDiag[:ncomp]))
