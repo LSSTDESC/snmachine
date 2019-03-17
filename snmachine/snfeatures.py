@@ -1641,6 +1641,10 @@ class WaveletFeatures(Features):
 
         Returns
         -------
+            returns a tuple of (ncomponents of pca basis vectors with highest eigenvalues,
+            pca coefficients of the vectors,
+            Mean values, scaling , eigenvalues of the covariance matrix with respect to the
+            pca basis vectors) 
 
         """
         # We are dealing with data matrix of shape (Nsamps, Nfeats) 
