@@ -457,11 +457,9 @@ class GPAugment(SNAugment):
             newz=obj_table.meta['z']+obj_table.meta['z_err']*self.rng.randn()
         else:
             newz=obj_table.meta['z']
-        print(obj_table, obj_table.meta)
-        new_lc_meta={'name':name, 'z':newz, 'ra':obj_table.meta['ra'], 'decl':obj_table.meta['decl'], 'gal_l':obj_table.meta['gal_l'], 
-            'gal_b':obj_table.meta['gal_b'], 'ddf':obj_table.meta['ddf'], 'hostgal_photoz':obj_table.meta['hostgal_photoz'], 
-            'hostgal_photoz_err':obj_table.meta['hostgal_photoz_err'], 'distmod':obj_table.meta['distmod'], 'mwebv':obj_table.meta['mwebv'],
-            'type':obj_table.meta['type'], 'stencil': obj_name, 'augment_algo': self.algorithm} # Cat: Add here the rest of the meta
+        new_lc_meta = obj_table.meta.copy()
+        modified_meta = {'name':name, 'z':newz, 'stencil': obj_name, 'augment_algo': self.algorithm}
+        new_lc_meta.update(modified_meta)
         new_lc=Table(names=['mjd','filter','flux','flux_error'],dtype=['f','U','f','f'],meta=new_lc_meta)
         for f in self.dataset.filter_set:
             obj_f=obj_table[obj_table['filter']==f]
