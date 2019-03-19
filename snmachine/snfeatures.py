@@ -1625,9 +1625,8 @@ class WaveletFeatures(Features):
 
         Parameters
         ----------
-        dataMatrix : `np.ndarray`
+        dataMatrix : `np.ndarray` of shape (Nsamps, Nfeats)
             Data Matrix
-
         ncomp : int, defaults to `None`
             Number of components of PCA to keep. If `None`
             gets determined from a tolerance level.
@@ -1641,11 +1640,17 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-            returns a tuple of (ncomponents of pca basis vectors with highest eigenvalues,
-            pca coefficients of the vectors,
-            Mean values, scaling , eigenvalues of the covariance matrix with respect to the
-            pca basis vectors) 
-
+        vecs : `np.ndarray` of shape (Nsamps, ncomp)
+            `ncomp` PCA basis vectors
+        Z : `np.ndarray` of shape (Nsamps, ncomps)
+            Components of the vectors forming the data matrix in the PCA bases
+        M : `np.ndarray` of shape (Nsamps, Nfeats)
+            Mean of the data matrix
+        s : `np.ndarray` of size Nfeats 
+            Scaling of the data matrix
+        vals : `np.ndarray` of size ncomp
+            The highest `ncomp` eigenvalues of the covariance matrix in
+            descending order
         """
         # We are dealing with data matrix of shape (Nsamps, Nfeats) 
         err_msg = 'dataMatrix input to svd function has wrong shape'
@@ -1668,7 +1673,7 @@ class WaveletFeatures(Features):
         # Components in the principal component basis.
         Z = np.dot(X, vecs[:, :ncomp])
 
-        return  vecs[:, :ncomp], Z, M, s, vals[:ncomp]
+        return vecs[:, :ncomp], Z, M, s, vals[:ncomp]
 
     def pca_SVD(self, dataMatrix, ncomp=None, tol=0.999,
                 normalize_variance=False):
@@ -1918,8 +1923,8 @@ class WaveletFeatures(Features):
             vector has variance 1.
         Returns
         -------
-        The original un-normalized data matrix that was compressed via PCA.
-        Must have shape (Nsamps, Nfeats)
+        D : `np.ndarray` of shape (Nsamps, Nfeats)
+            Reconstructed un-normalized data matrix that was compressed via PCA
         """
         # Go to the space of normalized data
 
