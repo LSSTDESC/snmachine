@@ -1708,10 +1708,10 @@ class WaveletFeatures(Features):
         X, M, s = self.normalize_datamatrix(dataMatrix,
                                             normalize_variance=normalize_variance)
         ## te = time.time()
-        print('Took {} secs for normalization'.format(te - ts))
+        # print('Took {} secs for normalization'.format(te - ts))
         
         #Construct the covariance matrix # Cat Temp
-        print(dataMatrix)
+        # print(dataMatrix)
         C1 = np.dot(dataMatrix, dataMatrix.T)
         condNumber1 = np.linalg.cond(C1)
         C2 = np.dot(X, X.T)
