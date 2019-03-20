@@ -46,165 +46,10 @@ try:
 except ImportError:
     has_gapp=False
 
-def reducedChi2(x,y,err, gpObs):
-    obsTimes            = x
-    obsFlux, obsFluxErr = y, err
-    gpTimes, gpFlux     = gpObs.mjd, gpObs.flux
-
-    interpolateFlux = interpolate.interp1d(gpTimes, gpFlux, kind='cubic')
-    gpFluxObsTimes  = np.array(interpolateFlux(obsTimes))
-    chi2            = np.sum( ((obsFlux-gpFluxObsTimes)/obsFluxErr)**2 )
-    redChi2         = chi2 / len(x) # reduced X^2
-    return redChi2
-
-def getGPChi2(iniTheta, kernel, x,y,err, gpTimes):
-    def negLoglike(p): # Objective function: negative log-likelihood
-        gp.set_parameter_vector(p)
-        loglike = gp.log_likelihood(y, quiet=True)
-        return -loglike if np.isfinite(loglike) else 1e25
-
-    def gradNegLoglike(p): # Gradient of the objective function.
-        gp.set_parameter_vector(p)
-        return -gp.grad_log_likelihood(y, quiet=True)
-
-    kExpSquared = iniTheta[0]*george.kernels.ExpSquaredKernel(metric=iniTheta[1])
-    kExpSine2   = iniTheta[4]*george.kernels.ExpSine2Kernel(gamma=iniTheta[5],log_period=iniTheta[6])
-    if kernel == 'ExpSquared':
-        kernel = kExpSquared
-    elif kernel == 'ExpSquared+ExpSine2':
-        kernel = kExpSquared + kExpSine2
-
-    gp      = george.GP(kernel)
-    gp.compute(x, err)
-    results = op.minimize(negLoglike, gp.get_parameter_vector(), jac=gradNegLoglike,
-                          method="L-BFGS-B", tol=1e-6)
-    gp.set_parameter_vector(results.x)
-    gpMean, gpCov     = gp.predict(y, gpTimes)
-    gpObs             = pd.DataFrame(columns=['mjd'], data=gpTimes)
-    gpObs['flux']     = gpMean
-    if np.sum(np.diag(gpCov)<0) == 0:
-        gpObs['flux_err'] = np.sqrt(np.diag(gpCov))
-        redChi2 = reducedChi2(x,y,err, gpObs)
-    else:
-        gpObs['flux_err'] = 66666
-        redChi2           = 666666666 # do not choose this kernel
-    return gpObs, redChi2, gp
-
-def getHierGP(gpObs, redChi2, gp, x,y,err, gpTimes):
-    gpObs_1, redChi2_1, gp_1 = getGPChi2(iniTheta=np.array([400, 200, 2, 4, 4, 6, 6]), kernel='ExpSquared',
-                                         x=x,y=y,err=err, gpTimes=gpTimes)
-    if redChi2_1 < 2: # good gp
-        return gpObs_1, gp_1, redChi2_1, 'ExpSquared 1'
-    else:             # bad gp
-        gpObsAll   = [gpObs, gpObs_1]
-        redChi2All = [redChi2, redChi2_1]
-        gpAll      = [gp, gp_1]
-        gpObs_2, redChi2_2, gp_2 = getGPChi2(iniTheta=np.array([400, 20, 2, 4, 4, 6, 6]), kernel='ExpSquared',
-                                         x=x,y=y,err=err, gpTimes=gpTimes)
-        if redChi2_2 < 2: # good gp
-            gpObs, redChi2, gp, chosenKernel =  gpObs_2, redChi2_2, gp_2, 'ExpSquared 2'
-        else:             # bad gp
-            gpObsAll.append(gpObs_2)
-            redChi2All.append(redChi2_2)
-            gpAll.append(gp_2)
-            gpObs_3, redChi2_3, gp_3 = getGPChi2(iniTheta=np.array([19, 9, 2, 4, 4, 6, 6]),
-                                                 kernel='ExpSquared+ExpSine2', x=x,y=y,err=err, gpTimes=gpTimes)
-            if redChi2_3 < 2: # good gp
-                gpObs, redChi2, gp, chosenKernel =  gpObs_3, redChi2_3, gp_3, 'ExpSquared+ExpSine2'
-            else:             # bad gp
-                gpObsAll.append(gpObs_3)
-                redChi2All.append(redChi2_3)
-                gpAll.append(gp_3)
-                kernels = ['bad ExpSquared 0', 'bad ExpSquared 1', 'bad ExpSquared 2', 'bad ExpSquared+ExpSine2']
-                indMinRedChi2 = np.argmin(redChi2All)
-                gpObs, redChi2, gp = gpObsAll[indMinRedChi2], redChi2All[indMinRedChi2], gpAll[indMinRedChi2]
-                try:
-                    chosenKernel = kernels[indMinRedChi2]
-                except:
-                    print('(-_-) ... '+str(indMinRedChi2)+' '+str(kernels))
-    return gpObs, gp, redChi2, chosenKernel
-
-def _GP(obj, d, ngp, xmin, xmax, initheta, save_output, output_root, gpalgo='george',return_gp=False):
-    """
-    Fit a Gaussian process curve at specific evenly spaced points along a light curve.
-
-    Parameters
-    ----------
-    obj : str
-        Name of the object
-    d : Dataset-like object
-        Dataset
-    ngp : int
-        Number of points to evaluate Gaussian Process at
-    xmin : float
-        Minimim time to evaluate at
-    xmax : float
-        Maximum time to evaluate at
-    initheta : list-like
-        Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
-    save_output : bool
-        Whether or not to save the output
-    output_root : str
-        Output directory
-    gpalgo : str
-        which gp package is used for the Gaussian Process Regression, GaPP or george
-    return_gp : bool, optional
-        do we return the mean, or the mean and a dict of the fitted GPs
-
-    Returns
-    -------
-    astropy.table.Table
-        Table with evaluated Gaussian process curve and errors
-
-    """
-
-    if gpalgo=='gapp' and not has_gapp:
-        print('No GP module gapp. Defaulting to george instead.')
-        gpalgo='george'
-    lc      = d.data[obj]
-    filters = np.unique(lc['filter'])
-    xstar   = np.linspace(xmin,xmax,ngp) # times to plot the GP
-    gpTimes = xstar # more descriptive name
-    #Store the output in another astropy table
-    output = []
-    gpdict = {}
-    for fil in d.filter_set:
-        if fil in filters:
-            x   = lc['mjd'][lc['filter']==fil]
-            y   = lc['flux'][lc['filter']==fil]
-            err = lc['flux_error'][lc['filter']==fil]
-            obsTimes, obsFlux, obsFluxErr = x, y, err # more descriptive names
-            if gpalgo=='gapp':
-                g          = dgp.DGaussianProcess(x, y, err, cXstar=(xmin, xmax, ngp))
-                rec, theta = g.gp(theta=initheta)
-            elif gpalgo=='george':
-                metric  = initheta[1]**2
-                gpObs, redChi2, g = getGPChi2(iniTheta=np.array([initheta[0]**2, metric, 2, 4, 4, 6, 6]), kernel='ExpSquared',
-                                               x=x,y=y,err=err, gpTimes=gpTimes)
-                if redChi2 > 2: # bad gp
-                    gpObs, g, redChi2, chosenKernel = getHierGP(gpObs, redChi2, g, x,y,err, gpTimes)
-                else:
-                    chosenKernel = 'ExpSquared 0'
-
-                print(obj, fil, chosenKernel+' \t\t redX2 = {:09.2f}'.format(redChi2))
-                mu,cov = gpObs.flux.values, gpObs.flux_err.values
-                std    = np.sqrt(np.diag(cov))
-                rec    = np.column_stack((xstar,mu,std))
-            gpdict[fil] = g
-        else:
-            rec=np.zeros([ngp, 3])
-        newtable=Table([rec[:, 0], rec[:, 1], rec[:, 2], [fil]*ngp], names=['mjd', 'flux', 'flux_error', 'filter'])
-        if len(output)==0:
-            output=newtable
-        else:
-            output=vstack((output, newtable))
-    if save_output=='gp' or save_output=='all':
-        # output.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
-        output.write(os.path.join(output_root, 'gp_'+obj), format='fits',overwrite=True)
-    if return_gp:
-        return output,gpdict
-    else:
-        return output
+util_module_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','utils')
+if util_module_path not in sys.path:
+    sys.path.append(util_module_path)
+from gps import extract_GP # The GP extraction methods are in a util
 
 
 def _run_leastsq(obj, d, model, n_attempts, seed=-1):
@@ -222,6 +67,8 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
         Parametric model
     n_attempts : int
         We run this multiple times to try to avoid local minima and take the best fitting values.
+    seed : int, optional
+        Here you can set the random seed for the minimisation to a specific value. If -1, the default value will be used instead.
 
     Returns
     -------
@@ -311,9 +158,6 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
     return output
 
 
-
-
-
 def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_iter, restart=False, seed=-1):
     """
     Runs multinest on all the filter bands of a given light curve, fitting the model to each one and
@@ -335,8 +179,11 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary, n_it
         Whether or not to convert the ascii output files to binary
     n_iter : int
         Maximum number of iterations
-    restart : bool
+    restart : bool, optional
         Whether to restart from existing chain files.
+    seed : int, optional
+        Here you can set the random seed for the minimisation to a specific value. If -1, the default value will be used instead.
+
 
     Returns
     -------
@@ -474,6 +321,9 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds, seed=-1):
         Whether or not to use provided redshift information
     bounds : dict
         Bounds on parameters
+    seed : int, optional
+        Here you can set the random seed for the minimisation to a specific value. If -1, the default value will be used instead.
+
 
     Returns
     -------
@@ -523,24 +373,6 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',  
     """
 
     Fit template-based supernova models using multinest.
-
-    Parameters
-    ----------
-    obj : str
-        Object name
-    d : Dataset
-        Dataset object
-    model_name : str
-        Name of model to use (to be passed to sncosmo)
-    use_redshift : bool
-        Whether or not to use provided redshift information
-    bounds : dict
-        Bounds on parameters
-
-    Returns
-    -------
-    astropy.table.Table
-        Table of best fitting parameters
 
     Parameters
     ----------
@@ -691,7 +523,6 @@ def output_time(tm):
     ----------
     tm : Input time in seconds.
     """
-
     hrs = tm / (60 * 60)
     mins = tm / 60
     secs = tm
@@ -880,7 +711,7 @@ class TemplateFeatures(Features):
                     'nugent-sn2l':{'z':(0.01, 1.5)},
                     'nugent-sn1bc':{'z':(0.01, 1.5)}}
 
-    def extract_features(self, d, save_chains=False, chain_directory='chains', use_redshift=False, nprocesses=1, restart=False, seed=-1):
+    def extract_features(self, d, save_output=False, chain_directory='chains', use_redshift=False, nprocesses=1, restart=False, seed=-1):
         """
         Extract template features for a dataset.
 
@@ -888,7 +719,7 @@ class TemplateFeatures(Features):
         ----------
         d : Dataset object
             Dataset
-        save_chains : bool
+        save_output : bool
             Whether or not to save the intermediate output (if Bayesian inference is used instead of least squares)
         chain_directory : str
             Where to save the chains
@@ -941,7 +772,7 @@ class TemplateFeatures(Features):
                             np.random.seed(seed)
                         res, fitted_model = sncosmo.mcmc_lc(lc, self.model,  self.model.param_names, bounds=self.bounds[self.templates[mod_name]], nwalkers=20, nsamples=1500, nburn=300)
                         chain=res.samples
-                        if save_chains:
+                        if save_output:
                             tab=Table(chain, names=self.model.param_names)
                             tab.write(os.path.join(chain_directory, obj.split('.')[0]+'_emcee_'+mod_name), format='ascii')
                         best=res['parameters'].flatten('F').tolist()
@@ -1381,7 +1212,7 @@ class WaveletFeatures(Features):
     Uses wavelets to decompose the data and then reduces dimensionality of the feature space using PCA.
     """
 
-    def __init__(self, wavelet='sym2', ngp=100,**kwargs):
+    def __init__(self, wavelet='sym2', ngp=100, **kwargs):
         """
         Initialises the pywt wavelet object and sets the maximum depth for deconstruction.
 
@@ -1396,7 +1227,6 @@ class WaveletFeatures(Features):
             given the number of points in the Gaussian process curve.
         """
         Features.__init__(self)
-
 
         self.wav=pywt.Wavelet(wavelet)
         self.ngp=ngp #Number of points to use on the Gaussian process curve
@@ -1413,7 +1243,7 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.ngp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output=None, output_root='features', nprocesses=24, restart='none', gpalgo='george', xmin=None, xmax=None, recompute_pca=True, pca_path=None):
+    def extract_features(self, d, initheta=[500, 20], save_output=False, output_root='features', nprocesses=24, restart='none', gp_algo='george', xmin=None, xmax=None, recompute_pca=True, pca_path=None):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1426,7 +1256,7 @@ class WaveletFeatures(Features):
         save_output : bool, optional
             Whether or not to save the output
         output_root : str, optional
-         Output directory
+            Output directory
         nprocesses : int, optional
             Number of processors to use for parallelisation (shared memory only)
         restart : str, optional
@@ -1441,7 +1271,7 @@ class WaveletFeatures(Features):
             Table of features (first column object names, the rest are the PCA coefficient values)
         """
 
-        if save_output is not None and not os.path.exists(output_root):
+        if save_output and not os.path.exists(output_root):
             print("No output directory found; creating output root directory :\n{}".format(output_root))
             subprocess.call(['mkdir', output_root])
         if xmin is None:
@@ -1455,10 +1285,10 @@ class WaveletFeatures(Features):
             if restart=='gp':
                 self.restart_from_gp(d, output_root)
             else:
-                self.extract_GP(d, self.ngp, xmin, xmax, initheta, save_output, output_root, nprocesses, gpalgo=gpalgo)
+                extract_GP(d, self.ngp, xmin, xmax, initheta, output_root, nprocesses, gp_algo=gp_algo, save_output=save_output)
 
             wavout, waveout_err=self.extract_wavelets(d, self.wav, self.mlev,  nprocesses, save_output, output_root)
-        self.features,vals,vec,mn=self.extract_pca(d.object_names.copy(), wavout, recompute_pca=recompute_pca, pca_path=pca_path, output_root=output_root)
+        self.features,vals,vec,mn,s=self.extract_pca(d.object_names.copy(), wavout, recompute_pca=recompute_pca, pca_path=pca_path, output_root=output_root)
 
         #Save the PCA information
         self.PCA_eigenvals = vals
@@ -1606,95 +1436,6 @@ class WaveletFeatures(Features):
 
         return wavout, wavout_err
 
-    def extract_GP(self, d, ngp, xmin, xmax, initheta, save_output,  output_root, nprocesses, gpalgo='george'):
-        """
-        Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
-
-        Parameters
-        ----------
-        d : Dataset object
-            Dataset
-        ngp : int
-            Number of points to evaluate Gaussian Process at
-        xmin : float
-            Minimim time to evaluate at
-        xmax : float
-            Maximum time to evaluate at
-        initheta : list-like
-            Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
-        save_output : bool
-            Whether or not to save the output
-        output_root : str
-            Output directory
-        nprocesses : int, optional
-            Number of processors to use for parallelisation (shared memory only)
-        """
-        print ('Performing Gaussian process regression')
-        t1=time.time()
-        #Check for parallelisation
-        if nprocesses==1:
-            for i in range(len(d.object_names)):
-                obj=d.object_names[i]
-                try:
-                    out=_GP(obj, d=d,ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo)
-                except ValueError:
-                    print('Object %s has fallen over!'%obj)
-                d.models[obj]=out
-                if save_output!='none':
-                    # out.write(os.path.join(output_root, 'gp_'+obj), format='ascii')
-                    out.write(os.path.join(output_root, 'gp_'+obj), format='fits', overwrite=True)
-        else:
-            p=Pool(nprocesses, maxtasksperchild=10)
-
-            #Pool and map can only really work with single-valued functions
-            partial_GP=partial(_GP, d=d, ngp=ngp, xmin=xmin, xmax=xmax, initheta=initheta, save_output=save_output, output_root=output_root, gpalgo=gpalgo, return_gp=True)
-
-            out=p.map(partial_GP, d.object_names, chunksize=10)
-            p.close()
-            gp={}
-
-            out=np.reshape(out,(len(d.object_names),2))
-            for i in range(len(out)):
-                obj=d.object_names[i]
-                d.models[obj]=out[i,0]
-                gp[obj]=out[i,1]
-            # with open('/home/roberts/data_sets/sne/plasticc/GP.pickle','wb') as f:
-            #     pickle.dump(gp,f)
-
-
-        print ('Time taken for Gaussian process regression', time.time()-t1)
-
-    def GP(self, obj, d, ngp=200, xmin=0, xmax=170, initheta=[500, 20], gpalgo='george'):
-        """
-        Fit a Gaussian process curve at specific evenly spaced points along a light curve.
-
-        Parameters
-        ----------
-        obj : str
-            Object name
-        d : Dataset object
-            Dataset
-        ngp / int, optional
-            Number of points to evaluate Gaussian Process at
-        xmin : float, optional
-            Minimim time to evaluate at
-        xmax : float, optional
-            Maximum time to evaluate at
-        initheta : list-like, optional
-            Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
-
-        Returns
-        -------
-        astropy.table.Table
-            Table with evaluated Gaussian process curve and errors
-
-        Notes
-        -----
-        Wraps internal module-level function in order to circumvent multiprocessing module limitations in dealing with
-        objects when parallelising.
-        """
-        return _GP(obj, d, ngp, xmin, xmax, initheta, gpalgo)
-
 
     def wavelet_decomp(self, lc, wav, mlev):
         """
@@ -1788,7 +1529,7 @@ class WaveletFeatures(Features):
             obj=d.object_names[i]
             lc=d.models[obj]
             out= self.wavelet_decomp(lc, wav, mlev)
-            if save_output=='wavelet' or save_output=='all':
+            if save_output:
                 # out.write(os.path.join(output_root, 'wavelet_'+obj), format='ascii')
                 out.write(os.path.join(output_root, 'wavelet_'+obj), format='fits',overwrite=True)
             #We go by filter, then by set of coefficients
@@ -1856,7 +1597,224 @@ class WaveletFeatures(Features):
         inds=np.argsort(vals)[::-1]
         return vals[inds], vec[:, inds], mn
 
-    def best_coeffs(self, vals, tol=.99):
+    @staticmethod
+    def get_svd(X):
+        """
+        Return a tuple of U, SDiag, and VT which are the usual
+        matrices in the SVD decomposition of X, such that 
+
+        X =  U DiagonalMatrix(SDiag) VT
+
+        Parameters
+        ----------
+        X : `np.ndarray`
+            Reduced Data Matrix that is centered and normalized of
+            shape (Nsamps, Nfeats)
+
+        Returns
+        -------
+        tuple of U, SDiag, VT of shapes (Nsamps, Nsamps),  (, Nsamps) and 
+        (Nfeats, Nfeats) respectively.
+        """
+        return np.linalg.svd(X, full_matrices=False)
+
+    def pca_eigendecomposition(self, dataMatrix, ncomp=None, tol=0.999,
+                               normalize_variance=False):
+        """
+        Perform PCA using an eigendecomposition
+
+        Parameters
+        ----------
+        dataMatrix : `np.ndarray` of shape (Nsamps, Nfeats)
+            Data Matrix
+        ncomp : int, defaults to `None`
+            Number of components of PCA to keep. If `None`
+            gets determined from a tolerance level.
+        tol: `np.float`
+            tolerance level above which the explained variance must be
+            to determine the number of principal components ncomp to keep.
+            Only used if `ncomp` is `None` 
+        normalize_variance : Bool, defaults to `False`
+            If `True` pass to `normalize_variance` method so that the features
+            are scaled to have unit variance.
+
+        Returns
+        -------
+        vecs : `np.ndarray` of shape (Nsamps, ncomp)
+            `ncomp` PCA basis vectors
+        Z : `np.ndarray` of shape (Nsamps, ncomps)
+            Components of the vectors forming the data matrix in the PCA bases
+        M : `np.ndarray` of shape (Nsamps, Nfeats)
+            Mean of the data matrix
+        s : `np.ndarray` of size Nfeats 
+            Scaling of the data matrix
+        vals : `np.ndarray` of size ncomp
+            The highest `ncomp` eigenvalues of the covariance matrix in
+            descending order
+        """
+        # We are dealing with data matrix of shape (Nsamps, Nfeats) 
+        err_msg = 'dataMatrix input to svd function has wrong shape'
+        assert len(dataMatrix.shape) == 2, err_msg
+
+        # perform eigendecomposition on covariance
+        
+        X, M, s = self.normalize_datamatrix(dataMatrix,
+                                            normalize_variance=normalize_variance)
+
+        # This is the same as np.dot(D.T, D) / (N-1) if D is centered
+        cov = np.dot(X.T, X)
+
+        # Symmetric, numpy method gives these in ascending order of eigenvalues 
+        # Change to descending order 
+        vals, vecs = np.linalg.eigh(cov)
+        vals = vals[::-1]
+        vecs = vecs[:, ::-1]
+
+        # Components in the principal component basis.
+        Z = np.dot(X, vecs[:, :ncomp])
+
+        return vecs[:, :ncomp], Z, M, s, vals[:ncomp]
+
+    def pca_SVD(self, dataMatrix, ncomp=None, tol=0.999,
+                normalize_variance=False):
+        """
+        Perform PCA using SVD
+
+        Parameters
+        ----------
+        dataMatrix : `np.ndarray`
+            Data Matrix
+
+        ncomp : int, defaults to `None`
+            Number of components of PCA to keep. If `None`
+            gets determined from a tolerance level.
+        tol: `np.float`
+            tolerance level above which the explained variance must be
+            to determine the number of principal components ncomp to keep.
+            Only used if `ncomp` is `None`
+        normalize_variance : Bool, defaults to `False`
+            If `True` pass to `normalize_variance` method so that the features
+            are scaled to have unit variance.
+        Returns
+        -------
+        Principal Components V (which has normalized eigenvectors as columns),
+        PCA scores (ie. the components of the reduced Data Matrix in the basis
+        of PCA), M the Mean of the features over samples and Vals, s the scaling
+        used the eigenvalues 
+        corresponding to the retained components in descending order
+        """
+
+        # We are dealing with data matrix of shape (Nsamps, Nfeats) 
+        err_msg = 'dataMatrix input to svd function has wrong shape'
+        assert len(dataMatrix.shape) == 2, err_msg
+
+        # perform SVD on normalized Data Matrix
+        ## ts = time.time()
+        X, M, s = self.normalize_datamatrix(dataMatrix,
+                                            normalize_variance=normalize_variance)
+        ## te = time.time()
+        # print('Took {} secs for normalization'.format(te - ts))
+        
+        #Construct the covariance matrix # Cat Temp
+        # print(dataMatrix)
+        C1 = np.dot(dataMatrix, dataMatrix.T)
+        condNumber1 = np.linalg.cond(C1)
+        C2 = np.dot(X, X.T)
+        condNumber2 = np.linalg.cond(C2)
+        print('The condition number in the SVD is '+str(condNumber1)+' and the normalized one is '+str(condNumber2))
+        ##
+        
+        ## print('Shape of reduced data matrix X', X.shape)
+        U, sDiag, VT =  self.get_svd(X)
+        ## ts = time.time()
+        ## print('Took {} secs for svd'.format(- te + ts))
+        ## print('U shape is ', U.shape)
+        assert len(U.shape) == 2
+
+        # eigenvals in descending order
+        vals = sDiag * sDiag
+
+
+        # Find number of components to keep
+        if ncomp is None:
+            assert isinstance(tol, np.float)
+            ncomp = self.ncompsForTolerance(vals, tol=tol)
+        else:
+            assert isinstance(ncomp, np.int)
+        ## print('Using number of components = ', ncomp)
+        ## print(' shape of U is ', U.shape)
+
+        # Coefficients of Data in basis of Principal Components
+        Z = np.dot(U[:, :ncomp], np.diag(sDiag[:ncomp]))
+
+        return VT.T[:, :ncomp], Z, M, s, vals[:ncomp]
+
+    @staticmethod
+    def normalize_datamatrix(D, normalize_variance=True):
+        """
+        Normalize data matrix for doing SVD or computing covariance. This
+        does X = (D - mean(D))/sqrt(N - 1), where N is len(D). D is assumed
+        to have shape (Nsamps, Nfeats) while M has shape (1, Nfeats) and
+        X has shape (Nsamps, Nfeats)
+
+        Parameters
+        -----------
+        D : `np.ndarray`
+            Data Matrix of shape (Nsamps, Nfeats)
+        normalize_variance: Bool, defaults to True
+            If True, transform features so that each feature has variance
+            of 1.
+
+        Returns
+        -------
+        X, M, s : normalized and centered data matrix X, and Means of the features , 
+         scalings to recover original data matrix
+        """
+        # We are dealing with data matrix of shape (Nsamps, Nfeats) 
+        err_msg = 'dataMatrix for normalizaton has wrong shape'
+        assert len(D.shape) == 2, err_msg
+
+        M =  D.mean(axis=0)
+        N = len(D)
+        X = (D - M) / np.sqrt(N - 1)
+
+        s  = None
+        if normalize_variance:
+            s = np.sqrt(np.sum(X**2, axis=0))
+            X /= s
+
+        return X, M, s
+
+    @staticmethod
+    def ncompsForTolerance(vals, tol=.99):
+        """
+        Determine the minimum number of PCA components required to adequately describe the dataset.
+
+        Parameters
+        ----------
+        vals : `np.ndarray`
+            eigenvalues (ordered largest to smallest)
+        tol : np.float, defaults to 0.99
+            The fraction of total eigenvalues or variance that must be
+            explained
+
+        Returns
+        -------
+        int
+            The required number of coefficients to retain the requested amount of "information".
+
+        Notes
+        -----
+        This method should exactly reproduce the method `best_coeffs`
+
+        """
+        tot = np.sum(vals)
+        c = np.cumsum(vals) / tot
+        # To match prev code that invoked break on >= rather than < 
+        return c[c<tol].size + 1
+
+    @staticmethod
+    def best_coeffs(vals, tol=.99):
         """
         Determine the minimum number of PCA components required to adequately describe the dataset.
 
@@ -1918,8 +1876,101 @@ class WaveletFeatures(Features):
         mn=np.load(os.path.join(pca_path,'PCA_mean.npy'))
         return vals, vec, mn
 
+    def _pca(self, dataMatrix, ncomp, tol, normalize_variance, method):
+        """
+        Parameters
+        ----------
+        dataMatrix : `np.ndarray`
+            Data Matrix
 
-    def extract_pca(self, object_names,  wavout, recompute_pca=True, pca_path=None, save_output=False, output_root=None):
+        ncomp : int, defaults to `None`
+            Number of components of PCA to keep. If `None`
+            gets determined from a tolerance level.
+        tol: `np.float`
+            tolerance level above which the explained variance must be
+            to determine the number of principal components ncomp to keep.
+            Only used if `ncomp` is `None`
+        normalize_variance : Bool
+            If `True` pass to `normalize_variance` method so that the features
+            are scaled to have unit variance.
+        method : {'svd'| 'eigendecomposition'}
+        """
+        if method == 'svd':
+            return self.pca_SVD(dataMatrix, ncomp, tol, normalize_variance)
+        elif method == 'eigendecomposition':
+            return self.pca_eigendecomposition(dataMatrix, ncomp, tol,
+                                               normalize_variance)
+
+    @staticmethod
+    def reconstruct_datamatrix_lossy(Z, vec, M=None, s=None):
+        """
+        Reconstruct (lossily) the original Data Matrix from the compressed data
+        ie. the coefficients of the eigenvectors to represent the data.
+
+        Parameters
+        ----------
+        Z : `np.ndarray`
+            Array of coefficients of the Principal Component Vectors of the
+            Normalized Data Matrix. Must have shape (Nsamps, Ncomp)
+        vec : `np.ndarray`
+            Array with normalized retained eigenvectors as columns. Has shape
+            (Nfeats, ncomp)
+        M : `np.ndarray`, defaults to `None`
+            Mean subtracted from original Data Matrix to center it. Must have
+            shape (Nsamps, Nfeats). If `None`, M is assumed to be 0
+        s : `np.ndarry` of shape (Nfeats, ) or `None`
+            scale factor applied to normalize data matrix so that each feature
+            vector has variance 1.
+        Returns
+        -------
+        D : `np.ndarray` of shape (Nsamps, Nfeats)
+            Reconstructed un-normalized data matrix that was compressed via PCA
+        """
+        # Go to the space of normalized data
+
+        # assert Z.shape == (Nsamps, ncomps)
+        # assert vec.shape == (Nfeats, ncomps) 
+        Nsamps, ncomps_ = Z.shape
+        Nfeats, ncomps = vec.shape
+
+
+
+        # While we have enough information to create a zero matrix of the right
+        # shape, we will avoid using the memory.
+
+        if M is not None:
+            Nfeats_ = M.size
+            assert Nfeats == Nfeats_
+
+        if s is not None:
+            assert s.shape == (Nfeats,)
+
+        # Sometimes Z may be made an array from an `astropy.table.Table`,
+        # with different data types. In this case, the array will be an
+        # `np.recarray` which will show ncomps_ = 1, even though the shape
+        # is different. This could also happen if the `object_names` are
+        # not removed. However, to do the matrix multiplication below, this
+        # has to be fixed.
+
+        assert ncomps_ == ncomps
+
+        X = np.dot(Z, vec.T)
+
+        if s is not None:
+            X *= s
+
+        # De-normalize the datamatrix
+        D = X * np.sqrt(len(X) - 1)
+ 
+        if M is not None:
+            D += M
+
+        return D 
+
+    def extract_pca(self, object_names, wavout, recompute_pca=True,
+                    method='svd', ncomp=None, tol=0.999, pca_path=None,
+                    save_output=False, output_root=None,
+                    normalize_variance=False):
         """
         Dimensionality reduction of wavelet coefficients using PCA.
 
@@ -1929,61 +1980,96 @@ class WaveletFeatures(Features):
             Object names corresponding to each row of the wavelet coefficient array.
         wavout : array
             Wavelet coefficient array, each row corresponds to an object, each column is a coefficient.
-        log
+        recompute_pca : Bool, default to `True`
+            If `True`, calculate the PCA, `False` should require a valid `pca_path` to read
+            pca information from
+        method: {'svd'|'eigendecomposition'|None} , defaults to `svd`
+            strings to pick the SVD or eigenDecompostition method. Ignored if 
+            `recompute_PCA` is `True`, and may be `None` in that case. `svd`
+            invokes the `pca_SVD` method, while `eigenDecomposition` invokes
+            the `pca_eigendecomposition` method.
+        ncomp: int, defaults to `None`
+            Number of components of PCA kept for analysis. If `None`, determined
+            internally from `tol` instead.
+        tol: float, defaults to 0.99 
+            fraction of variance that must be explained by retained PCA components. 
+            To override this and use `ncomp` directly, tol should be set to `None`.
+        normalize_variance : Bool, defaults to `False`
+            If `True` pass to `normalize_variance` method so that the features
+            are scaled to have unit variance.
 
         Returns
         -------
-        astropy.table.Table
-            Astropy table containing PCA features.
-
+        tuple : (wavs, vals, vec, M, s)
+            where wavs is an `astropy.table.Table` containing PCA features.
+            vals is an array of eigenvalues in the descending orders of the
+            retained components
+            vec is an array of shape (Nfeat, Ncomp) whose columns are the
+            eigenvectors of the covariance matrix.
+            M is an additive matrix used in normalization
+            while s is a vector of size Nfeats used in normalization
         """
+        object_names = np.asarray(object_names)
+        assert object_names.shape == (wavout.shape[0],) 
 
         t1=time.time()
 
         if recompute_pca:
+            try:
+                method = method.lower()
+                assert method in ('svd', 'eigendecomposition'), 'PCA method not valid'
+            except AssertionError as e:
+                e.args += ('attempted method ', method)
+                raise
+
             print("OUTPUT ROOT: {}\n".format(output_root))
             print ('Running PCA...')
-            #We now run PCA on this big matrix
-            vals, vec, mn=self.pca(wavout)
-            print('Eigenvals')
-            print(vals)
-            mn=mn.flatten()
+
+            # PCA on the data matrix wavout after centering
+            vec, comps, M, s, vals = self._pca(wavout, ncomp=ncomp, tol=tol, 
+                                               method=method,
+                                               normalize_variance=normalize_variance)
+
+            # Get ncomp if run determined by tol, ie. ncomp is `None`
+            if ncomp is None:
+                ncomp = vals.size
         else:
-            vals,vec,mn=self.read_pca(pca_path)
+            # We need to add some reading to make it consistent with new code
+            vals, vec, mn = self.read_pca(pca_path)
+            M = mn
 
-        #
-        # np.savetxt('PCA_vals.txt', vals)
-        # np.savetxt('PCA_vec.txt', vec)
-        # np.savetxt('PCA_mean.txt', mn)
 
-        #Actually fit the components
-        tolerance = .99
-        ncomp=self.best_coeffs(vals, tol=tolerance)
-        eigs=vec[:, :ncomp]
-        print('Number of components used is '+str(ncomp))
-        comps=np.zeros([len(wavout), ncomp])
+            #Actually fit the components
+            tolerance = tol
+            ncomp = self.best_coeffs(vals, tol=tolerance)
+            eigs = vec[:, :ncomp]
+            print('Number of components used is '+str(ncomp))
+            comps = np.zeros([len(wavout), ncomp])
+    
+            for i in range(len(wavout)):
+               if i%100 == 0:
+                   print('I am still here!! i ='+str(i))
+               coeffs = wavout[i]
+               A = self.project_pca(coeffs-mn, eigs)
+               comps[i] = A
+            print('finish projecting PCA')
 
-        for i in range(len(wavout)):
-            if i%100 == 0:
-                print('I am still here!! i ='+str(i))
-            coeffs=wavout[i]
-            A=self.project_pca(coeffs-mn, eigs)
-            comps[i]=A
-        print('finish projecting PCA')
-        labels=['C%d' %i for i in range(ncomp)]
-        wavs=Table(comps, names=labels)
-        object_names.shape=(len(object_names), 1)
-        objnames=Table(object_names, names=['Object'])
-        wavs=hstack((objnames, wavs))
-        #wavs.write('wavelet_features.dat', format='ascii')
-        print ('Time for PCA', time.time()-t1)
+        # Now reformat the components as a table 
+        labels = ['C%d' %i for i in range(ncomp)]
+        wavs = Table(comps, names=labels)
+        objnames = Table(object_names.reshape(len(object_names), 1),
+                         names=['Object'])
+        wavs = hstack((objnames, wavs))
+        print('Time for PCA', time.time() - t1)
 
         if save_output:
-            np.save(os.path.join(output_root,'eigenvalues_{}.npy'.format(tolerance*100)),vals)
-            np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(tolerance*100)),vec)
-            np.save(os.path.join(output_root,'means_{}.npy'.format(tolerance*100)),mn)
+            # We need to change the output to make it consistent with new code
+            np.save(os.path.join(output_root,'eigenvalues_{}.npy'.format(tol*100)),vals)
+            np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(tol*100)),vec)
+            np.save(os.path.join(output_root,'comps_{}.npy'.format(tol*100)),comps)
+            np.save(os.path.join(output_root,'means_{}.npy'.format(tol*100)),M)
 
-        return wavs,vals,vec,mn
+        return wavs, vals, vec, M, s
 
     def iswt(self, coefficients, wavelet):
         """

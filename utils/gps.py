@@ -27,7 +27,7 @@ except ImportError:
     has_gapp=False
 
 
-def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo='george'):
+def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo='george', save_output=False):
     """
     Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
 
@@ -44,11 +44,13 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo=
     initheta : list-like
         Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
     output_root : str
-        Output directory. If None the GPs are not saved.
+        Output directory.
     nprocesses : int, optional
         Number of processors to use for parallelisation (shared memory only)
-    gp_algo : str
+    gp_algo : str, optional
         which gp package is used for the Gaussian Process Regression, GaPP or george
+    save_output : bool, optional
+        whether or not to save the fitted GP means and errors
     """
     print ('Performing Gaussian process regression')
     initial_time = time.time()
@@ -67,7 +69,8 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo=
         p = Pool(nprocesses, maxtasksperchild=10)
 
         #Pool and map can only really work with single-valued functions
-        partial_GP = partial(_GP, d=d, ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta, output_root=output_root, gp_algo=gp_algo)
+        partial_GP = partial(_GP, d=d, ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta, output_root=output_root, gp_algo=gp_algo, save_output=save_output)
+
 
         out = p.map(partial_GP, d.object_names, chunksize=10)
         p.close()
@@ -87,7 +90,7 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo=
     print ('Time taken for Gaussian process regression', time.time()-initial_time)
 
 
-def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gp_algo='george'):
+def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gp_algo='george', save_output=False):
     """
     Fit a Gaussian process curve in every filter of an object.
 
@@ -106,9 +109,11 @@ def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gp_algo='george'):
     initheta : list-like
         Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
     output_root : str
-        Output directory. If None the GPs are not saved.
+        Output directory.
     gp_algo : str
         which gp package is used for the Gaussian Process Regression, GaPP or george
+    save_output : bool, optional
+        whether or not to save the fitted GP means and errors
 
     Returns
     -------
@@ -185,7 +190,7 @@ def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gp_algo='george'):
         else:
             output=vstack((output, newtable))
 
-    if output_root != None:
+    if save_output:
         output.write(os.path.join(output_root, 'gp_'+obj), format='fits',overwrite=True)
 
     return output, gpdict, used_kernels_obj
@@ -304,4 +309,5 @@ def reducedChi2(obj_obs, gp_obs):
     gp_flux_obj_times  = np.array(interpolate_flux(obj_times))
     chi2            = np.sum( ((obj_flux-gp_flux_obj_times)/obj_obs.flux_err)**2 )
     redChi2         = chi2 / len(obj_times)
+
     return redChi2

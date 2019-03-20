@@ -1396,7 +1396,8 @@ class PlasticcData(EmptyDataset):
 
     def __init__(self, folder, pickle_file=None, data_file=None,
                  meta_file=None, mix=False, filter_set=['lsstu',
-                 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'], survey_name='lsst', from_pickle=True):
+                 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'], survey_name='lsst', 
+                 from_pickle=True, cut_nondetections=True):
         """
         Initialisation.
 
@@ -1415,12 +1416,14 @@ class PlasticcData(EmptyDataset):
             randomly permutes the objects when they're read in
         filter_set : list-like, optional
             Set of possible filters
-        from_pickle: boolean
+        from_pickle: boolean, optional
             Whether or not to create the instance from a pickled instance of the class
+        cut_nondetections : boolean, optional
+            Whether or not to cut out nondetections, retaining only detections.
         """
 
         super().__init__(folder, survey_name, filter_set)
-        self.get_data(folder, data_file)
+        self.get_data(folder, data_file, cut_nondetections=cut_nondetections)
         self.get_set_meta(folder, meta_file)
         if mix is True:
             self.mix()
@@ -1478,7 +1481,7 @@ class PlasticcData(EmptyDataset):
             self.dict_2_user_types[str(snmachine_types[i])] = user_types[i]
 
 
-    def get_data(self, folder, data_file):
+    def get_data(self, folder, data_file, cut_nondetections=True):
         """
         Reads in the simulated data
 
@@ -1488,6 +1491,8 @@ class PlasticcData(EmptyDataset):
             Folder where simulations are located
         data_file : str or list-like, optional
             .csv file of object lightcurves
+        cut_nondetections : bool, optional
+            If True, then we discard all nondetections and retain only detections. If False, we retain all.
 
         """
         self.data_start_time = time()
@@ -1497,7 +1502,8 @@ class PlasticcData(EmptyDataset):
 
         print('Reading data...')
         data = pd.read_csv(folder + '/' + data_file, sep=',')
-        data = data.loc[data.detected == 1] #Update dataframe with only detected points
+        if cut_nondetections:
+            data = data.loc[data.detected == 1] #Update dataframe with only detected points
         invalid = 0  # Some objects may have empty data
         data = self.remap_filters(df=data)
         data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)
