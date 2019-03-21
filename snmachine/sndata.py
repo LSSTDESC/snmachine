@@ -359,7 +359,7 @@ class EmptyDataset:
             sncosmo.write_lc(self.data[obj],os.path.join(outpath,obj),format='ascii',overwrite=overwrite)
 
     def get_object_names(self):
-        return d.object_names
+        return self.object_names
 
     def get_max_length(self):
         """Gets the length (in days) of the longest observation in the dataset.
