@@ -57,8 +57,9 @@ def load_example_data(request):
     return d
 
 def fit_templates(d, sampler='leastsq', use_redshift=False, nprocesses=1):
-    temp_featz=snfeatures.TemplateFeatures(sampler=sampler)
-    extr_features=temp_featz.extract_features(d, save_chains=False, use_redshift=use_redshift, nprocesses=nprocesses, seed=42)
+    temp_featz = snfeatures.TemplateFeatures(sampler=sampler)
+    extr_features = temp_featz.extract_features(d, use_redshift=use_redshift,
+                                              nprocesses=nprocesses, seed=42)
     d.set_model(temp_featz.fit_sn, extr_features)
     gof=temp_featz.goodness_of_fit(d)
     gof=np.array([gof[f] for f in d.filter_set]).T
