@@ -74,14 +74,6 @@ def fit_parametric(model_choice, d, sampler='leastsq', nprocesses=1):
     gof=np.array([gof[f] for f in d.filter_set]).T
     return gof[0]
 
-def fit_gp(d, gpalgo='george', nprocesses=1):
-    ###NB: THIS TESTS ONLY THE GP EXTRACTION, NOT WAVELET TRAFO OR PCA###
-    gp_featz=snfeatures.WaveletFeatures()
-    gp_featz.extract_GP(d, ngp=gp_featz.ngp, xmin=0, xmax=d.get_max_length(), initheta=[500,20], save_output='none', output_root='features', nprocesses=nprocesses, gpalgo=gpalgo)
-    gof=gp_featz.goodness_of_fit(d)
-    gof=np.array([gof[f] for f in d.filter_set]).T
-    return gof[0]
-
 def test_module_loading():
     """test-loading snmachine modules"""
     #this is probably paranoid, but why not.
@@ -215,15 +207,6 @@ def test_karpenka_nested(load_example_data):
     for nproc in parallel_cores:
         gof=fit_parametric('karpenka', d, sampler='nested', nprocesses=nproc)
         np.testing.assert_allclose(gof, [  5.10496956,  29.83861575,   6.50170389,   0.89942577], rtol=rtol)
-
-@pytest.mark.gp
-def test_gp_extraction(load_example_data):
-    d=load_example_data
-    gof_truth={'gapp':[ 0.25365988,  0.60076588,  0.84202516,  0.47759046], 'george':[ 0.25366109,  0.60076532,  0.84202518,  0.47759085]}#TODO george truth
-    for gpalgo in gpalgos:
-        for nproc in parallel_cores:
-            gof=fit_gp(d, gpalgo=gpalgo, nprocesses=nproc)
-            np.testing.assert_allclose(gof, gof_truth[gpalgo], rtol=rtol)
 
 @pytest.fixture(scope='module')
 def load_full_testdata(request):
