@@ -9,7 +9,7 @@ from astropy.table import join, Table
 import sncosmo
 
 # test_data_path=os.path.join('..', 'examples', 'SPCC_SUBSET', '')
-test_data_path=os.path.join(example_data, 'SPCC_SUBSET', '') 
+test_data_path=os.path.join(example_data, 'SPCC_SUBSET', '')
 precomp_features_path=os.path.join(example_data, 'output_spcc_no_z', 'features', 'spcc_all_templates.dat')
 #example_name='DES_SN001695.DAT'
 #example_name='DES_SN084250.DAT'
@@ -22,7 +22,7 @@ try:
     from pymultinest.analyse import Analyzer
     has_multinest=True
     print ('module pymultinest found')
-except ImportError:
+except:
     has_multinest=False
     print ('module pymultinest not found, skipping tests with pymultinest')
 try:
@@ -103,7 +103,7 @@ def test_templates_leastsq(load_example_data):
     d=load_example_data
     for nproc in parallel_cores:
         gof=fit_templates(d, sampler='leastsq', use_redshift=False, nprocesses=nproc)
-	#This case distinction is necessary, since from sncosmo-1.4 to sncosmo-1.5 there have been 
+	#This case distinction is necessary, since from sncosmo-1.4 to sncosmo-1.5 there have been
 	#significant changes in the salt2 templates that result in different fits.
         if sncosmo.__version__ < '1.5.0':
             gof_truth=[  6.19486141,  18.22896966,   6.11967201,   1.06182221]
