@@ -1,3 +1,7 @@
+"""
+Tests related to GPs.
+"""
+
 import os
 import pickle
 import sys
@@ -21,7 +25,7 @@ def test_gps_reduced_chi2():
     """
     reduced_chi2_true_values = {
         '615': 5695.3046266894344, '713': 1.067914355545299, '730': 0.83081248341774283, '745': 1.0721592615480273, '1124': 0.77149815252112608
-        }
+        } # These are the objects in example_data. They are the first 5 PLAsTiCC's objects.
     gps.extract_GP(example_data, ngp=100, t_min=0, t_max=1100, initheta=[100., 400.], output_root=None, nprocesses=1)
     reduced_chi2_example_data = example_data.reduced_chi_squared()
     for obj in reduced_chi2_example_data.keys():
