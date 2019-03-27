@@ -18,6 +18,7 @@ testopts = [(5, 'svd', None, True),
 
 
 # Test 1
+@pytest.mark.skip(reason='will eventually replace')
 def test_best_coeffs(tol=0.999):
     """
     Check the new code for calculating the best number of coefficients for
@@ -37,9 +38,9 @@ def test_best_coeffs(tol=0.999):
 
 # Test 2
 @pytest.mark.parametrize("ncomp,method,tol,normalize_variance", testopts)
-def test_pca(ncomp, method, tol, normalize_variance, Nsamps=10000, Nfeats=10):
+def test_pca(ncomp, method, tol, normalize_variance, Nsamps=1000, Nfeats=10):
     """
-    Directly test the pca on matrices, and check that the results look OK
+    Directly test the `_pca` method on matrices, and check that the results look OK
     in terms of shapes and limiting cases. Tries out both the svd and eigendecomposition
     methods, and tolerance vs ncomps methods.
 
@@ -63,13 +64,18 @@ def test_pca(ncomp, method, tol, normalize_variance, Nsamps=10000, Nfeats=10):
     assert vec.shape == (Nfeats, ncomp)
     if ncomp == 5:
         # Here we know the number of principal components with non=trivial
-        # eigenvalues by construction
+        # eigenvalues by construction is 3 as expected. So the last two
+        # eigenvalues should be close to 0.
         assert np.allclose(vals[-2:], 0.)
 
 
 @pytest.mark.parametrize("ncomp,method,tol,normalize_variance", testopts)
-def test_extract_wavelets(ncomp, method, tol, normalize_variance, Nsamps=10000,
+def test_extract_wavelets(ncomp, method, tol, normalize_variance, Nsamps=1000,
                           Nfeats=10):
+    """
+    Test PCA in terms of shapes and limiting cases using the `extract_pca`
+    methods.
+    """
     X = np.random.normal(size=(Nsamps, 3))
     R = np.random.random((3, Nfeats))
     X = np.dot(X, R)
@@ -98,7 +104,14 @@ def test_extract_wavelets(ncomp, method, tol, normalize_variance, Nsamps=10000,
 # Test 4.
 @pytest.mark.parametrize("ncomp,method,tol,normalize_variance", testopts)
 def test_lossy_reconstruct(ncomp, method, tol, normalize_variance,
-                           Nsamps=10000, Nfeats=10):
+                           Nsamps=1000, Nfeats=10):
+    """
+    Test the reconstruction of the data matrix from lower dimensinonal features
+    obtained using PCA using the `_pca` method and the
+    `reconstruct_datamatrix_lossy` method. The testing is at the level of
+    expected shapes and ensuring that that the reconstructed data matrix is
+    close to the original data matrix.
+    """
     X = np.random.normal(size=(Nsamps, 3))
     R = np.random.random((3, Nfeats))
     X = np.dot(X, R)
