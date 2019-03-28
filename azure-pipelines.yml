@@ -32,8 +32,11 @@ jobs:
     displayName: Take ownership of conda installation
 
   - bash: |
+      sudo apt-get update
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+      bash miniconda.sh -b -p $HOME/miniconda
+      export PATH=\"$HOME/miniconda/bin:$PATH\"
       hash -r
-      conda init bash
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
@@ -41,7 +44,6 @@ jobs:
       conda env create -f environment.yml
       PATH=/usr/share/miniconda:$PATH
       echo $PATH
-      exec -l $SHELL
       conda activate snmachine
     displayName: 'Conda setup and dependencies'
 
