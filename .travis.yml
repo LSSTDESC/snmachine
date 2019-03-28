@@ -46,4 +46,4 @@ language: python
 python:
   - "3.6"
 script:
-  - "jupyter nbconvert --ExecutePreprocessor.kernel_name=python --ExecutePreprocessor.timeout=600 --to html --execute notebooks/prelim_EDA.ipynb"
+  - "cd test && pytest -vs *.py"
