@@ -41,13 +41,14 @@ jobs:
       conda update -q conda
       conda info -a
       which conda
+      conda --version
       conda env create -f environment.yml
       # PATH=/usr/share/miniconda:$PATH
       echo $PATH
-      conda activate snmachine
     displayName: 'Conda setup and dependencies'
 
   - script: |
+      conda activate snmachine
       python setup.py install
     displayName: 'Install snmachine'
 
