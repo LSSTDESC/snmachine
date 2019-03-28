@@ -46,11 +46,11 @@ jobs:
       echo $PATH
     displayName: 'Conda setup and dependencies'
 
-  - bash: echo ". /usr/share/miniconda/etc/profile.d/conda.sh" >> ~/.bashrc
+  - bash: echo ". $HOME/miniconda/etc/profile.d/conda.sh" >> ~/.bashrc
     displayName: "Link conda"
 
   - bash: conda activate snmachine
-    displayName: "Link conda"
+    displayName: "Conda activate environment"
 
   - script: python setup.py install
     displayName: 'Install snmachine'
