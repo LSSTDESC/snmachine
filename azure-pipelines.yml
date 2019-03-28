@@ -44,23 +44,31 @@ jobs:
       conda --version
       conda env create -f environment.yml
       echo $PATH
-    displayName: 'Conda setup and dependencies'
-
-  - bash: |
       source $HOME/miniconda/etc/profile.d/conda.sh
       conda activate snmachine
-    displayName: "Conda activate environment"
-
-  - script: python setup.py install
-    displayName: 'Install snmachine'
-
-  - script: |
+      python setup.py install
       which pip
       pip install pytest
       which python
       which pytest
       pytest -vs test/
-    displayName: 'pytest'
+    displayName: 'Conda setup and dependencies'
+
+  # - bash: |
+  #     source $HOME/miniconda/etc/profile.d/conda.sh
+  #     conda activate snmachine
+  #   displayName: "Conda activate environment"
+
+  # - script: python setup.py install
+  #   displayName: 'Install snmachine'
+
+  # - script: |
+  #     which pip
+  #     pip install pytest
+  #     which python
+  #     which pytest
+  #     pytest -vs test/
+  #   displayName: 'pytest'
 
   - task: PublishTestResults@2
     inputs:
