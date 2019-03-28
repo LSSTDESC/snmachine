@@ -2,17 +2,24 @@
 Module for extracting and saving GPs
 """
 
-import numpy as np
-import sys, time, subprocess, os, sncosmo
-from scipy.interpolate import interp1d
+import os
+import pickle
+import subprocess
+import sys
+import time
+
 import george
-from astropy.table import Table, vstack, hstack, join
-from multiprocessing import Pool
-from functools import partial
-import scipy.optimize as op
+import numpy as np
 import pandas as pd
-from scipy import interpolate
 import scipy
+import sncosmo
+
+from astropy.table import Table, vstack, hstack, join
+from functools import partial
+from multiprocessing import Pool
+from scipy import interpolate
+from scipy.interpolate import interp1d
+import scipy.optimize as op
 
 try:
     import george
@@ -61,7 +68,7 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo=
             obj = d.object_names[i]
             try:
                 output, gpdict, used_kernels_obj = _GP(obj, d=d,ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta, 
-                                                        output_root=output_root, gp_algo=gp_algo)
+                                                        output_root=output_root, gp_algo=gp_algo, save_output=save_output)
                 d.models[obj] = output
             except ValueError:
                 print('Object {} has fallen over!'.format(obj))
