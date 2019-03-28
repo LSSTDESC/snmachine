@@ -43,6 +43,7 @@ jobs:
       which conda
       conda --version
       conda env create -f environment.yml
+      sudo ln -s $HOME/miniconda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
       # PATH=/usr/share/miniconda:$PATH
       echo $PATH
     displayName: 'Conda setup and dependencies'
