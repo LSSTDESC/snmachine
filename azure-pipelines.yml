@@ -37,7 +37,7 @@ jobs:
       conda update -q conda
       conda info -a
       conda env create -f environment.yml
-      source activate snmachine
+      conda activate snmachine
       python setup.py install
     displayName: 'Install dependencies'
 
