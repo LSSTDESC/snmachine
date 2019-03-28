@@ -61,7 +61,7 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo=
             obj = d.object_names[i]
             try:
                 output, gpdict, used_kernels_obj = _GP(obj, d=d,ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta, 
-                                                        output_root=output_root, gp_algo=gp_algo)
+                                                        output_root=output_root, gp_algo=gp_algo, save_output=save_output)
                 d.models[obj] = output
             except ValueError:
                 print('Object {} has fallen over!'.format(obj))
