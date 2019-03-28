@@ -39,6 +39,8 @@ jobs:
       conda info -a
       which conda
       conda env create -f environment.yml
+      PATH=/usr/share/miniconda:$PATH
+      echo $PATH
       conda activate snmachine
     displayName: 'Conda setup and dependencies'
 
