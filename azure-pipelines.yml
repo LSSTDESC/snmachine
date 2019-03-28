@@ -25,24 +25,24 @@ jobs:
       versionSpec: '$(python.version)'
       architecture: 'x64'
 
-  - bash: echo "##vso[task.prependpath]$CONDA/bin"
-    displayName: Add conda to PATH
+  # - bash: echo "##vso[task.prependpath]$CONDA/bin"
+  #   displayName: Add conda to PATH
 
-  - bash: sudo chown -R $USER /usr/share/miniconda
-    displayName: Take ownership of conda installation
+  # - bash: sudo chown -R $USER /usr/share/miniconda
+  #   displayName: Take ownership of conda installation
 
   - bash: |
       sudo apt-get update
       wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
       bash miniconda.sh -b -p $HOME/miniconda
-      export PATH=\"$HOME/miniconda/bin:$PATH\"
+      export PATH="$HOME/miniconda/bin:$PATH"
       hash -r
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
       which conda
       conda env create -f environment.yml
-      PATH=/usr/share/miniconda:$PATH
+      # PATH=/usr/share/miniconda:$PATH
       echo $PATH
       conda activate snmachine
     displayName: 'Conda setup and dependencies'
