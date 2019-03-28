@@ -43,19 +43,20 @@ jobs:
       which conda
       conda --version
       conda env create -f environment.yml
-      # PATH=/usr/share/miniconda:$PATH
       echo $PATH
     displayName: 'Conda setup and dependencies'
 
-  - bash: sudo ln -s $HOME/miniconda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+  - bash: echo ". /usr/share/miniconda/etc/profile.d/conda.sh" >> ~/.bashrc
     displayName: "Link conda"
 
-  - script: |
-      conda activate snmachine
-      python setup.py install
+  - bash: conda activate snmachine
+    displayName: "Link conda"
+
+  - script: python setup.py install
     displayName: 'Install snmachine'
 
   - script: |
+      which pip
       pip install pytest
       which python
       which pytest
