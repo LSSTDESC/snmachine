@@ -31,19 +31,25 @@ jobs:
   - bash: sudo chown -R $USER /usr/share/miniconda
     displayName: Take ownership of conda installation
 
-  - script: |
+  - bash: |
       hash -r
+      conda init bash
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
+      which conda
       conda env create -f environment.yml
-      conda init bash
       conda activate snmachine
+    displayName: 'Conda setup and dependencies'
+
+  - script: |
       python setup.py install
-    displayName: 'Install dependencies'
+    displayName: 'Install snmachine'
 
   - script: |
       pip install pytest
+      which python
+      which pytest
       pytest -vs test/
     displayName: 'pytest'
 
