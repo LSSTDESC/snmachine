@@ -2,17 +2,24 @@
 Module for extracting and saving GPs
 """
 
-import numpy as np
-import sys, time, subprocess, os, sncosmo
-from scipy.interpolate import interp1d
+import os
+import pickle
+import subprocess
+import sys
+import time
+
 import george
-from astropy.table import Table, vstack, hstack, join
-from multiprocessing import Pool
-from functools import partial
-import scipy.optimize as op
+import numpy as np
 import pandas as pd
-from scipy import interpolate
 import scipy
+import sncosmo
+
+from astropy.table import Table, vstack, hstack, join
+from functools import partial
+from multiprocessing import Pool
+from scipy import interpolate
+from scipy.interpolate import interp1d
+import scipy.optimize as op
 
 try:
     import george
