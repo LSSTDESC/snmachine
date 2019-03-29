@@ -27,8 +27,8 @@ from scipy import interpolate
 from time import time
 
 #Colours for graphs
-colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00','desz':'k',
-'lssty':'#e50000','lsstu':'#9a0eea','lsstg':'#75bbfd','lsstr':'#76ff7b','lssti':'#fdde6c','lsstz':'#f97306','lsstY':'#e50000'}
+colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00',
+'desz':'k', 'lssty':'#e50000','lsstu':'#9a0eea','lsstg':'#75bbfd','lsstr':'#76ff7b','lssti':'#fdde6c','lsstz':'#f97306','lsstY':'#e50000'}
 
 sntypes={1:'Ia',2:'II',21:'IIn',22:'IIP',23:'IIL',3:'Ibc',32:'Ib',33:'Ic',66:'other'}
 markers={'desg':'^', 'desr':'o', 'desi':'s', 'desz':'*'}
@@ -1386,16 +1386,6 @@ class PlasticcData(EmptyDataset):
     Class to read in the SNANA cadence simulations, which are divided into
     chunks.
     """
-    # def __new__(cls, folder, pickle_file=None, from_pickle=True, *args, **kwargs):
-    #     if from_pickle is True:
-    #         f = open(folder + '/' + pickle_file, 'rb')
-    #         inst = pickle.load(f)
-    #         f.close()
-    #         if not isinstance(inst, EmptyDataset) and not isinstance(inst, cls):
-    #            raise TypeError('Unpickled object is not of type {}'.format(cls))
-    #     else:
-    #         inst = super(PlasticcData, cls).__new__(cls)
-    #     return inst
 
     def __init__(self, folder, pickle_file=None, data_file=None,
                  meta_file=None, mix=False, filter_set=['lsstu',
