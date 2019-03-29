@@ -2,26 +2,29 @@
 Module containing Dataset classes. These read in data from various sources and turns the light curves into astropy tables that
 can be read by the rest of the code.
 """
-from __future__ import division
-import re
-from past.builtins import basestring
-import numpy as np
+from __future__ import division # Do we still need this?
+
+import datetime
+import math
 import os
+import pickle
+import re
+import sys
+
+import numpy as np
+import pandas as pd
 if not 'DISPLAY' in os.environ:
     import matplotlib
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from astropy.table import Table, Column
+import sncosmo
+
 from astropy.io import fits
-import pandas as pd
-import sys
-import pickle
+from astropy.table import Table, Column
+from past.builtins import basestring
 from random import shuffle, sample
 from scipy import interpolate
-import sncosmo
-import math
 from time import time
-import datetime
 
 #Colours for graphs
 colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00','desz':'k',
