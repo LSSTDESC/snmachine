@@ -130,7 +130,7 @@ class EmptyDataset:
         """
         self.filter_set = filter_set
 
-    def set_rootdir(folder):
+    def set_rootdir(self, folder):
         """
         Setting the root directory containing light curves
         Parameters
