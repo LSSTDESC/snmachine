@@ -93,7 +93,7 @@ class EmptyDataset:
     Empty data set, to fill up with light curves (of format astropy.table.Table) in your memory.
     """
 
-    def __init__(self, folder=None, survey_name=None, filter_set=None):
+    def __init__(self, folder=None, survey_name=None, filter_set=[]):
 
         """
         Initialisation.
@@ -107,10 +107,7 @@ class EmptyDataset:
             List of possible filters used
 
         """
-        if filter_set is None:
-            self.filter_set = []
-        else:
-            self.filter_set = filter_set
+        self.filter_set = filter_set
         self.rootdir = folder
         self.survey_name = survey_name
         self.data = {}
