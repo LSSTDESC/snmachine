@@ -1445,8 +1445,7 @@ class PlasticcData(EmptyDataset):
             print('{} objects were invalid and not added to the dataset.'.format(number_invalid_objs))
         self.object_names = np.array(self.object_names, dtype='str')
         print('{} objects read into memory.'.format(len(self.data)))
-        time_spent_on_this_task = self.get_well_formated_time_difference(time_start_reading, time.time())
-        print('\nThis has taken {}'.format(time_spent_on_this_task))
+        self.print_time_difference(time_start_reading, time.time())
     
     def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
         """Transform the pandas dataframe into an astropy table starting from mjd=0
@@ -1518,12 +1517,11 @@ class PlasticcData(EmptyDataset):
                         self.data[o].meta['z'] = metadata.at[ind_o, col]
                         break
         print('Finished getting the metadata for {}k objects.'.format(number_objs))
-        time_spent_on_this_task = self.get_well_formated_time_difference(time_start_reading, time.time())
-        print('\nThis has taken {}'.format(time_spent_on_this_task))
+        self.print_time_difference(time_start_reading, time.time())
     
     @staticmethod
-    def get_well_formated_time_difference(initial_time, final_time): # Cat: this could be a decorator
-        """Prepare the time interval to be printed.
+    def print_time_difference(initial_time, final_time): # Cat: this could be a decorator
+        """Print the a time interval.
 
         Parameters
         ----------
@@ -1531,13 +1529,9 @@ class PlasticcData(EmptyDataset):
             Time at which the time interval starts
         final_time : float
             Time at which the time interval ends
-        
-        Returns
-        -------
-        datetime.timedelta
-            The time difference in seconds
         """
-        return datetime.timedelta(seconds=int(final_time-initial_time))
+        time_spent_on_this_task = datetime.timedelta(seconds=int(final_time-initial_time))
+        print('This has taken {}\n'.format(time_spent_on_this_task))
 
     @staticmethod
     def print_progress(obj_ordinal, number_objs): # Cat: this could be a decorator
