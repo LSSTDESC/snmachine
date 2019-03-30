@@ -1382,38 +1382,28 @@ class SDSS_Simulations(EmptyDataset):
 
 
 class PlasticcData(EmptyDataset):
-    """Class to read in the PLAsTiCC dataset.
+    """Class to read in the PLAsTiCC dataset. This is a simulated LSST catalog.
     
     Parameters
     ----------
     folder : str
         Folder where simulations are located
-    pickle_file: str, optional
-        Filename of the pickled instance of sndata class
-    data_file: str, optional
+    data_file: str
         Filename of the pandas dataframe which is has the lc data
-    meta_file: str, optional
+    metadata_file: str
         Filename of the pandas dataframe containing the metadata for the light curves
-    mix : bool, optional
-        The output of the simulations is often highly ordered, this
-        randomly permutes the objects when they're read in
-    filter_set : list-like, optional
-        Set of possible filters
-    from_pickle: boolean, optional
-        Whether or not to create the instance from a pickled instance of the class
+    mix : boolean, optional
+        Default False. If True, randomly permutes the objects when they're read in
     cut_non_detections : boolean, optional
-        Whether or not to cut out nondetections, retaining only detections.
+        Default False. If True, cuts out nondetections, retaining only detections.
     """
 
-    def __init__(self, folder, pickle_file=None, data_file=None, meta_file=None, mix=False, 
-                 filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'], survey_name='lsst', 
-                 from_pickle=True, cut_non_detections=False):
-        super().__init__(folder, survey_name, filter_set)
-        self.set_data(folder, data_file, cut_non_detections=cut_non_detections)
-        #self.get_set_meta(folder, meta_file)
+    def __init__(self, folder, data_file, metadata_file, mix=False, cut_non_detections=False):
+        super().__init__(folder, survey_name='lsst', filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'])
+        self.set_data(folder, data_file, cut_non_detections)
+        self.set_metadata(folder, metadata_file)
         if mix is True:
             self.mix()
-        self._metadata = None
 
     def set_data(self, folder, data_file, cut_non_detections=True):
         """Reads in simulated data and saves it.
@@ -1424,7 +1414,7 @@ class PlasticcData(EmptyDataset):
         ----------
         folder : str
             Folder where simulations are located
-        data_file : str or list-like, optional
+        data_file : str or list-like
             .csv file of object lightcurves
         cut_non_detections : bool, optional
             If True, then we discard all nondetections and retain only detections. If False, we retain all.
@@ -1444,11 +1434,9 @@ class PlasticcData(EmptyDataset):
         
         number_invalid_objs = 0 # Some objects may have empty data
         number_objs = len(data[self.id_col].unique())
-        percent_to_print = pow(10, -int(np.log10(number_objs)/2)) # Cat: Why this convoluted formula?
 
         for i, id in enumerate(data[self.id_col].unique()):
-            if int(math.fmod(i, number_objs*percent_to_print)) == 0:
-                print('{}%'.format(int(i/(number_objs*0.01))))
+            self.print_progress(i+1, number_objs) # +1 because the order starts at 0 in python
             self.object_names.append(str(id))
             obj_lc = data.query('{0} == {1}'.format(self.id_col, id))
             lc = self.get_obj_lc_table_starting_from_mjd_zero(pandas_lc = obj_lc)
@@ -1460,7 +1448,8 @@ class PlasticcData(EmptyDataset):
             print('{} objects were invalid and not added to the dataset.'.format(number_invalid_objs))
         self.object_names = np.array(self.object_names, dtype='str')
         print('{} objects read into memory.'.format(len(self.data)))
-        print('\nThis has taken {}'.format(datetime.timedelta(seconds=int(time.time()-time_start_reading))))
+        time_spent_on_this_task = self.get_well_formated_time_difference(time_start_reading, time.time())
+        print('\nThis has taken {}'.format(time_spent_on_this_task))
     
     def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
         """Transform the pandas dataframe into an astropy table starting from mjd=0
@@ -1473,7 +1462,7 @@ class PlasticcData(EmptyDataset):
         pandas_lc: Pandas DataFrame
             single object multi-band lightcurve
 
-        returns
+        Returns
         -------
         lc: astropy.table.table
             new single object lightcurve
@@ -1482,6 +1471,91 @@ class PlasticcData(EmptyDataset):
         lc[self.mjd_col] -= lc[self.mjd_col].min()
         return lc
     
-    @property
-    def metadata(self):
-        pass
+    def set_metadata(self, folder, meta_file):
+        """Reads in simulated metadata and saves it.
+        
+        The data is saved into the `metadata` method from EmptyDataset and
+        into a dictonary associated with each `data` method (`.data[obj].meta`).
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located
+        data_file : str or list-like
+            .csv file of object lightcurves
+        cut_non_detections : bool, optional
+            If True, then we discard all nondetections and retain only detections. If False, we retain all.
+        """
+        print('Reading metadata...')
+        time_start_reading = time.time()
+        metadata = pd.read_csv(folder + '/' + meta_file, sep=',', index_col = self.id_col)
+        self.metadata = metadata
+        try:
+            self.labels = self.metadata.target
+        except AttributeError: # We don't know the objects' labels
+            self.labels = None
+
+        # Everything bellow is to conform with `snmachine`
+        number_objs = len(self.object_names)
+        for i, o in enumerate(self.object_names):
+            self.print_progress(i+1, number_objs) # +1 because the order starts at 0 in python
+            ind_o = eval(o)
+
+            # Set meta name as the object id string
+            self.data[o].meta['name'] = o
+            self.data[o].meta['z'] = None
+            for col in metadata.columns:
+                if re.search('target', col):
+                    self.data[o].meta['type'] = str(metadata.at[ind_o, col])
+
+                # Default to spectroscopic redshift for z
+                elif re.search('specz', col) and not np.isnan(metadata.at[ind_o, col]):
+                    self.data[o].meta['z'] = metadata.at[ind_o, col]
+                else:
+                    self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, ind_o))[col].values
+
+            # If no spec z set z to phot z
+            if self.data[o].meta['z'] is None:
+                for col in metadata.columns:
+                    if re.search('photoz', col) and re.search('err', col) is None:
+                        self.data[o].meta['z'] = metadata.at[ind_o, col]
+                        break
+        print('Finished getting the metadata for {}k objects.'.format(number_objs))
+        time_spent_on_this_task = self.get_well_formated_time_difference(time_start_reading, time.time())
+        print('\nThis has taken {}'.format(time_spent_on_this_task))
+    
+    @staticmethod
+    def get_well_formated_time_difference(initial_time, final_time): # Cat: this could be a decorator
+        """Prepare the time interval to be printed.
+
+        Parameters
+        ----------
+        initial_time : float
+            Time at which the time interval starts
+        final_time : float
+            Time at which the time interval ends
+        
+        Returns
+        -------
+        datetime.timedelta
+            The time difference in seconds
+        """
+        return datetime.timedelta(seconds=int(final_time-initial_time))
+
+    @staticmethod
+    def print_progress(obj_ordinal, number_objs): # Cat: this could be a decorator
+        """Print the percentage of objects already saved.
+
+        This funtion uses a weird formula to know at which 
+        percentages to print.
+
+        Parameters
+        ----------
+        obj_ordinal : int
+            Ordinal number of the object we are currently on
+        number_objs : int
+            Total number of objects to perform the action on
+        """
+        percent_to_print = pow(10, -int(np.log10(number_objs)/2)) # Cat: Why this convoluted formula?
+        if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
+            print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
