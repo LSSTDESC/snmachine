@@ -1484,11 +1484,12 @@ class PlasticcData(EmptyDataset):
         """
         print('Reading metadata...')
         time_start_reading = time.time()
-        metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',')
+        metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',', index_col=self.id_col)
+        metadata_pd['object_id'] = metadata_pd.index
         self.metadata = metadata_pd
 
         # Everything bellow is to conform with `snmachine`
-        metadata = metadata_pd.set_index('object_id')
+        metadata = metadata_pd.drop(columns=['object_id']) # I don't want this duplicated
         number_objs = len(self.object_names)
         for i, o in enumerate(self.object_names):
             self.print_progress(i+1, number_objs) # +1 because the order starts at 0 in python
@@ -1518,6 +1519,7 @@ class PlasticcData(EmptyDataset):
     
     @property
     def labels(self):
+        """Returns the labels of the objects, if they are known."""
         try:
             labels = self.metadata.target
         except AttributeError: # We don't know the objects' labels
@@ -1555,3 +1557,26 @@ class PlasticcData(EmptyDataset):
         percent_to_print = pow(10, -int(np.log10(number_objs)/2)) # Cat: Why this convoluted formula?
         if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
             print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
+    
+    def update_dataset(self, new_objs):
+        """Update the datset so it only contains a subset of objects.
+
+        Parameters
+        ----------
+        new_objs : list-like
+            The id of the objects we want to have in our dataset.
+
+        Raises
+        ------
+        ValueError
+            All the objects in `new_objs` need to already exist in the dataset.
+        """
+        if np.sum(~np.in1d(new_objs, self.object_names)) != 0:
+            raise ValueError("All the objects in `new_objs` need to exist in the original dataset.")
+        
+        self.object_names = new_objs
+        self.data = {objects:self.data[objects] for objects in self.object_names}
+
+        current_objs = self.metadata.object_id.astype(str)
+        is_new_obj = np.in1d(current_objs, new_objs)
+        self.metadata = self.metadata[is_new_obj]
