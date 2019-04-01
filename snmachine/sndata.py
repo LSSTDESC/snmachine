@@ -4,7 +4,6 @@ can be read by the rest of the code.
 """
 from __future__ import division # Do we still need this?
 
-import datetime
 import math
 import os
 import pickle
@@ -1537,7 +1536,7 @@ class PlasticcData(EmptyDataset):
         final_time : float
             Time at which the time interval ends
         """
-        time_spent_on_this_task = datetime.timedelta(seconds=int(final_time-initial_time))
+        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time), unit='s')
         print('This has taken {}\n'.format(time_spent_on_this_task))
 
     @staticmethod
