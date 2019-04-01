@@ -1484,14 +1484,15 @@ class PlasticcData(EmptyDataset):
         """
         print('Reading metadata...')
         time_start_reading = time.time()
-        metadata = pd.read_csv(folder + '/' + meta_file, sep=',', index_col = self.id_col)
-        self.metadata = metadata
+        metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',')
+        self.metadata = metadata_pd
         try:
             self.labels = self.metadata.target
         except AttributeError: # We don't know the objects' labels
             self.labels = None
 
         # Everything bellow is to conform with `snmachine`
+        metadata = metadata_pd.set_index('object_id')
         number_objs = len(self.object_names)
         for i, o in enumerate(self.object_names):
             self.print_progress(i+1, number_objs) # +1 because the order starts at 0 in python
@@ -1516,7 +1517,7 @@ class PlasticcData(EmptyDataset):
                     if re.search('photoz', col) and re.search('err', col) is None:
                         self.data[o].meta['z'] = metadata.at[ind_o, col]
                         break
-        print('Finished getting the metadata for {}k objects.'.format(number_objs))
+        print('Finished getting the metadata for {} objects.'.format(number_objs))
         self.print_time_difference(time_start_reading, time.time())
     
     @staticmethod
