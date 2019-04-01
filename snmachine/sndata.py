@@ -1486,10 +1486,6 @@ class PlasticcData(EmptyDataset):
         time_start_reading = time.time()
         metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',')
         self.metadata = metadata_pd
-        try:
-            self.labels = self.metadata.target
-        except AttributeError: # We don't know the objects' labels
-            self.labels = None
 
         # Everything bellow is to conform with `snmachine`
         metadata = metadata_pd.set_index('object_id')
@@ -1520,6 +1516,14 @@ class PlasticcData(EmptyDataset):
         print('Finished getting the metadata for {} objects.'.format(number_objs))
         self.print_time_difference(time_start_reading, time.time())
     
+    @property
+    def labels(self):
+        try:
+            labels = self.metadata.target
+        except AttributeError: # We don't know the objects' labels
+            labels = None
+        return labels
+
     @staticmethod
     def print_time_difference(initial_time, final_time): # Cat: this could be a decorator
         """Print the a time interval.
