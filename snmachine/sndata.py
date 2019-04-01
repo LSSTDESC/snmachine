@@ -1420,6 +1420,7 @@ class PlasticcData(EmptyDataset):
         data = pd.read_csv(folder + '/' + data_file, sep=',')
         if cut_non_detections:
             data = data.loc[data.detected == 1] # Update dataframe with only detected points
+        data = self.remap_filters(df=data)
         data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True) # snmachine and PLAsTiCC uses a different denomination
         # Abstract column names from dataset
         for col in data.columns:
@@ -1579,3 +1580,15 @@ class PlasticcData(EmptyDataset):
         current_objs = self.metadata.object_id.astype(str)
         is_new_obj = np.in1d(current_objs, new_objs)
         self.metadata = self.metadata[is_new_obj]
+
+    def remap_filters(self, df): # maybe not in snmachine (raise issue/channel)
+        """Function to remap integer filters to the corresponding lsst filters and
+        also to set filter name syntax to what snmachine already recognizes
+
+        df: pandas.dataframe
+            Dataframe of lightcurve observations
+        """
+        df.rename({'passband':'filter'}, axis='columns', inplace=True)
+        filter_replace = {0:'lsstu',1:'lsstg',2:'lsstr',3:'lssti',4:'lsstz',5:'lssty'}
+        df['filter'].replace(to_replace=filter_replace, inplace=True)
+        return df
