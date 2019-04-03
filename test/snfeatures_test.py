@@ -20,11 +20,26 @@ print('')
 try:
     import pymultinest
     from pymultinest.analyse import Analyzer
-    has_multinest=True
-    print ('module pymultinest found')
-except:
-    has_multinest=False
-    print ('module pymultinest not found, skipping tests with pymultinest')
+    has_multinest = True
+    print('Module pymultinest found')
+except (ImportError, SystemExit) as exception:
+    print(exception)
+    if str(exception) == "No module named 'pymultinest'":
+        errmsg = """
+                PyMultinest not found. If you would like to use, please install
+                Mulitnest with 'sh install/multinest_install.sh; source install/setup.sh'
+                """
+        print(errmsg)
+        has_multinest = False
+    else:
+        errmsg = """
+                Multinest installed but not linked.
+                Please ensure $LD_LIBRARY_PATH set correctly with:
+
+                    source install/setup.sh
+                """
+        raise OSError(errmsg) from exception
+
 try:
     import emcee
     has_emcee=True
