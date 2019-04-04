@@ -36,6 +36,7 @@ def plot_reduced_chi_squared_per_label(dataset, output_root=None, file_name='red
     fig.text(0.08, 0.5, 'Number of objects', va='center', rotation='vertical') # Add common y label
     if output_root != None:
         plt.savefig(os.path.join(output_root, file_name), bbox_inches='tight')
+        print('Plot saved in '+str(os.path.join(output_root, file_name)))
 
 def get_dict_reduced_chi_squared_per_label(dataset):
     """Produce a dictionary that associates each label with the reduced X^2 of its objects.
