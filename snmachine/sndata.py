@@ -1401,7 +1401,7 @@ class PlasticcData(EmptyDataset):
         if mix is True:
             self.mix()
 
-    def set_data(self, folder, data_file, cut_non_detections=True):
+    def set_data(self, folder, data_file, cut_non_detections=False):
         """Reads in simulated data and saves it.
         
         The data is saved into the `data` method from EmptyDataset.
@@ -1412,8 +1412,8 @@ class PlasticcData(EmptyDataset):
             Folder where simulations are located
         data_file : str or list-like
             .csv file of object lightcurves
-        cut_non_detections : bool, optional
-            If True, then we discard all nondetections and retain only detections. If False, we retain all.
+        cut_non_detections : boolean, optional
+            Default False. If True, cuts out nondetections, retaining only detections.
         """
         print('Reading data...')
         time_start_reading = time.time()
@@ -1478,9 +1478,7 @@ class PlasticcData(EmptyDataset):
         folder : str
             Folder where simulations are located
         data_file : str or list-like
-            .csv file of object lightcurves
-        cut_non_detections : bool, optional
-            If True, then we discard all nondetections and retain only detections. If False, we retain all.
+            .csv file of objects metadata
         """
         print('Reading metadata...')
         time_start_reading = time.time()
