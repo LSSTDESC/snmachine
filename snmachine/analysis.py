@@ -88,9 +88,19 @@ def make_reduced_chi_squared_plot_of_label(dict_reduced_chi_squared_per_label, l
         A dictionary whose keys are the labels and whose values are the 
         reduced X^2 values of all the objects with that label.
     label : int, str or float
-        The label needs to be the same type as the one in the keys of `dict_reduced_chi_squared_per_label`
+        The label needs to be the same type as the one in the keys of 
+        `dict_reduced_chi_squared_per_label`.
+
+    Raises
+    ------
+    KeyError
+        `label` needs to be a key in `dict_reduced_chi_squared_per_label`.
     """
-    reduced_chi_squared_this_label = dict_reduced_chi_squared_per_label[label]
+    try:
+        reduced_chi_squared_this_label = dict_reduced_chi_squared_per_label[label]
+    except KeyError:
+        dict_keys = list(dict_reduced_chi_squared_per_label.keys())
+        raise KeyError("`label` needs to be a key of `dict_reduced_chi_squared_per_label`. These are : {}".format(dict_keys))
     min_reduced_chi_squared = np.min(reduced_chi_squared_this_label)
     max_reduced_chi_squared = np.max(reduced_chi_squared_this_label)
     mean_reduced_chi_squared = np.mean(reduced_chi_squared_this_label)
