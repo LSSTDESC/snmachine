@@ -27,7 +27,7 @@ def plot_reduced_chi_squared_per_label(dataset, output_root=None, file_name='red
         print('`output_root` is None so the plot has not been saved. `file_name` ignored.')
     dict_reduced_chi_squared_per_label = get_dict_reduced_chi_squared_per_label(dataset)
     unique_labels = np.unique(dataset.labels)
-    number_rows_plot = (len(unique_labels)-1)//3+1
+    number_rows_plot = (len(unique_labels)-1)//3+1 # Formula to calculate the necessary number of rows
     fig, ax = plt.subplots(nrows=number_rows_plot, ncols=3, figsize=(20, number_rows_plot*3))
     for i in np.arange(len(unique_labels)):
         plt.subplot(number_rows_plot, 3, i+1)
