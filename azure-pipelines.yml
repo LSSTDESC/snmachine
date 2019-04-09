@@ -5,7 +5,8 @@
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda?view=azure-devops&tabs=ubuntu-16-04
 
 trigger:
-- issue/62/CI
+- master
+- dev
 
 jobs:
 
