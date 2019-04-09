@@ -1,10 +1,12 @@
-# Python package
-# Create and test a Python package on multiple Python versions.
+# CI tests for snmachine
 # Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
+# Anaconda installation and notes
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda?view=azure-devops&tabs=ubuntu-16-04
 
 trigger:
-- issue/62/CI
+- master
+- dev
 
 jobs:
 
@@ -13,23 +15,15 @@ jobs:
     vmImage: 'Ubuntu-16.04'
   strategy:
     matrix:
-      Python36:
-        python.version: '3.6'
       Python37:
         python.version: '3.7'
-    maxParallel: 2
+    maxParallel: 1
 
   steps:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '$(python.version)'
       architecture: 'x64'
-
-  # - bash: echo "##vso[task.prependpath]$CONDA/bin"
-  #   displayName: Add conda to PATH
-
-  # - bash: sudo chown -R $USER /usr/share/miniconda
-  #   displayName: Take ownership of conda installation
 
   - bash: |
       sudo apt-get update
@@ -52,23 +46,7 @@ jobs:
       which python
       which pytest
       pytest -vs test/
-    displayName: 'Conda setup and dependencies'
-
-  # - bash: |
-  #     source $HOME/miniconda/etc/profile.d/conda.sh
-  #     conda activate snmachine
-  #   displayName: "Conda activate environment"
-
-  # - script: python setup.py install
-  #   displayName: 'Install snmachine'
-
-  # - script: |
-  #     which pip
-  #     pip install pytest
-  #     which python
-  #     which pytest
-  #     pytest -vs test/
-  #   displayName: 'pytest'
+    displayName: 'Setup conda/install dependencies. Run tests'
 
   - task: PublishTestResults@2
     inputs:
