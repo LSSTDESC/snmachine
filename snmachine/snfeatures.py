@@ -23,10 +23,25 @@ import scipy
 try:
     import pymultinest
     from pymultinest.analyse import Analyzer
-    has_multinest=True
-except:
-    print("PyMultinest not found. If you would like to use, please install Mulitnest with 'sh install/multinest_install.sh'")
-    has_multinest=False
+    has_multinest = True
+    print('Module pymultinest found')
+except (ImportError, SystemExit) as exception:
+    print(exception)
+    if str(exception) == "No module named 'pymultinest'":
+        errmsg = """
+                PyMultinest not found. If you would like to use, please install
+                Mulitnest with 'sh install/multinest_install.sh; source install/setup.sh'
+                """
+        print(errmsg)
+        has_multinest = False
+    else:
+        errmsg = """
+                Multinest installed but not linked.
+                Please ensure $LD_LIBRARY_PATH set correctly with:
+
+                    source install/setup.sh
+                """
+        raise OSError(errmsg) from exception
 
 try:
     import emcee
@@ -49,7 +64,7 @@ except ImportError:
 # util_module_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','utils')
 # if util_module_path not in sys.path:
 #    sys.path.append(util_module_path)
-from .gps import extract_GP 
+from .gps import extract_GP
 
 
 def _run_leastsq(obj, d, model, n_attempts, seed=-1):
@@ -1601,7 +1616,7 @@ class WaveletFeatures(Features):
     def get_svd(X):
         """
         Return a tuple of U, SDiag, and VT which are the usual
-        matrices in the SVD decomposition of X, such that 
+        matrices in the SVD decomposition of X, such that
 
         X =  U DiagonalMatrix(SDiag) VT
 
@@ -1613,7 +1628,7 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        tuple of U, SDiag, VT of shapes (Nsamps, Nsamps),  (, Nsamps) and 
+        tuple of U, SDiag, VT of shapes (Nsamps, Nsamps),  (, Nsamps) and
         (Nfeats, Nfeats) respectively.
         """
         return np.linalg.svd(X, full_matrices=False)
@@ -1633,7 +1648,7 @@ class WaveletFeatures(Features):
         tol: `np.float`
             tolerance level above which the explained variance must be
             to determine the number of principal components ncomp to keep.
-            Only used if `ncomp` is `None` 
+            Only used if `ncomp` is `None`
         normalize_variance : Bool, defaults to `False`
             If `True` pass to `normalize_variance` method so that the features
             are scaled to have unit variance.
@@ -1646,26 +1661,26 @@ class WaveletFeatures(Features):
             Components of the vectors forming the data matrix in the PCA bases
         M : `np.ndarray` of shape (Nsamps, Nfeats)
             Mean of the data matrix
-        s : `np.ndarray` of size Nfeats 
+        s : `np.ndarray` of size Nfeats
             Scaling of the data matrix
         vals : `np.ndarray` of size ncomp
             The highest `ncomp` eigenvalues of the covariance matrix in
             descending order
         """
-        # We are dealing with data matrix of shape (Nsamps, Nfeats) 
+        # We are dealing with data matrix of shape (Nsamps, Nfeats)
         err_msg = 'dataMatrix input to svd function has wrong shape'
         assert len(dataMatrix.shape) == 2, err_msg
 
         # perform eigendecomposition on covariance
-        
+
         X, M, s = self.normalize_datamatrix(dataMatrix,
                                             normalize_variance=normalize_variance)
 
         # This is the same as np.dot(D.T, D) / (N-1) if D is centered
         cov = np.dot(X.T, X)
 
-        # Symmetric, numpy method gives these in ascending order of eigenvalues 
-        # Change to descending order 
+        # Symmetric, numpy method gives these in ascending order of eigenvalues
+        # Change to descending order
         vals, vecs = np.linalg.eigh(cov)
         vals = vals[::-1]
         vecs = vecs[:, ::-1]
@@ -1700,11 +1715,11 @@ class WaveletFeatures(Features):
         Principal Components V (which has normalized eigenvectors as columns),
         PCA scores (ie. the components of the reduced Data Matrix in the basis
         of PCA), M the Mean of the features over samples and Vals, s the scaling
-        used the eigenvalues 
+        used the eigenvalues
         corresponding to the retained components in descending order
         """
 
-        # We are dealing with data matrix of shape (Nsamps, Nfeats) 
+        # We are dealing with data matrix of shape (Nsamps, Nfeats)
         err_msg = 'dataMatrix input to svd function has wrong shape'
         assert len(dataMatrix.shape) == 2, err_msg
 
@@ -1714,7 +1729,7 @@ class WaveletFeatures(Features):
                                             normalize_variance=normalize_variance)
         ## te = time.time()
         # print('Took {} secs for normalization'.format(te - ts))
-        
+
         #Construct the covariance matrix # Cat Temp
         # print(dataMatrix)
         C1 = np.dot(dataMatrix, dataMatrix.T)
@@ -1723,7 +1738,7 @@ class WaveletFeatures(Features):
         condNumber2 = np.linalg.cond(C2)
         print('The condition number in the SVD is '+str(condNumber1)+' and the normalized one is '+str(condNumber2))
         ##
-        
+
         ## print('Shape of reduced data matrix X', X.shape)
         U, sDiag, VT =  self.get_svd(X)
         ## ts = time.time()
@@ -1767,10 +1782,10 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        X, M, s : normalized and centered data matrix X, and Means of the features , 
+        X, M, s : normalized and centered data matrix X, and Means of the features ,
          scalings to recover original data matrix
         """
-        # We are dealing with data matrix of shape (Nsamps, Nfeats) 
+        # We are dealing with data matrix of shape (Nsamps, Nfeats)
         err_msg = 'dataMatrix for normalizaton has wrong shape'
         assert len(D.shape) == 2, err_msg
 
@@ -1810,7 +1825,7 @@ class WaveletFeatures(Features):
         """
         tot = np.sum(vals)
         c = np.cumsum(vals) / tot
-        # To match prev code that invoked break on >= rather than < 
+        # To match prev code that invoked break on >= rather than <
         return c[c<tol].size + 1
 
     @staticmethod
@@ -1929,7 +1944,7 @@ class WaveletFeatures(Features):
         # Go to the space of normalized data
 
         # assert Z.shape == (Nsamps, ncomps)
-        # assert vec.shape == (Nfeats, ncomps) 
+        # assert vec.shape == (Nfeats, ncomps)
         Nsamps, ncomps_ = Z.shape
         Nfeats, ncomps = vec.shape
 
@@ -1961,11 +1976,11 @@ class WaveletFeatures(Features):
 
         # De-normalize the datamatrix
         D = X * np.sqrt(len(X) - 1)
- 
+
         if M is not None:
             D += M
 
-        return D 
+        return D
 
     def extract_pca(self, object_names, wavout, recompute_pca=True,
                     method='svd', ncomp=None, tol=0.999, pca_path=None,
@@ -1984,15 +1999,15 @@ class WaveletFeatures(Features):
             If `True`, calculate the PCA, `False` should require a valid `pca_path` to read
             pca information from
         method: {'svd'|'eigendecomposition'|None} , defaults to `svd`
-            strings to pick the SVD or eigenDecompostition method. Ignored if 
+            strings to pick the SVD or eigenDecompostition method. Ignored if
             `recompute_PCA` is `True`, and may be `None` in that case. `svd`
             invokes the `pca_SVD` method, while `eigenDecomposition` invokes
             the `pca_eigendecomposition` method.
         ncomp: int, defaults to `None`
             Number of components of PCA kept for analysis. If `None`, determined
             internally from `tol` instead.
-        tol: float, defaults to 0.99 
-            fraction of variance that must be explained by retained PCA components. 
+        tol: float, defaults to 0.99
+            fraction of variance that must be explained by retained PCA components.
             To override this and use `ncomp` directly, tol should be set to `None`.
         normalize_variance : Bool, defaults to `False`
             If `True` pass to `normalize_variance` method so that the features
@@ -2010,7 +2025,7 @@ class WaveletFeatures(Features):
             while s is a vector of size Nfeats used in normalization
         """
         object_names = np.asarray(object_names)
-        assert object_names.shape == (wavout.shape[0],) 
+        assert object_names.shape == (wavout.shape[0],)
 
         t1=time.time()
 
@@ -2026,7 +2041,7 @@ class WaveletFeatures(Features):
             print ('Running PCA...')
 
             # PCA on the data matrix wavout after centering
-            vec, comps, M, s, vals = self._pca(wavout, ncomp=ncomp, tol=tol, 
+            vec, comps, M, s, vals = self._pca(wavout, ncomp=ncomp, tol=tol,
                                                method=method,
                                                normalize_variance=normalize_variance)
 
@@ -2045,7 +2060,7 @@ class WaveletFeatures(Features):
             eigs = vec[:, :ncomp]
             print('Number of components used is '+str(ncomp))
             comps = np.zeros([len(wavout), ncomp])
-    
+
             for i in range(len(wavout)):
                if i%100 == 0:
                    print('I am still here!! i ='+str(i))
@@ -2054,7 +2069,7 @@ class WaveletFeatures(Features):
                comps[i] = A
             print('finish projecting PCA')
 
-        # Now reformat the components as a table 
+        # Now reformat the components as a table
         labels = ['C%d' %i for i in range(ncomp)]
         wavs = Table(comps, names=labels)
         objnames = Table(object_names.reshape(len(object_names), 1),
