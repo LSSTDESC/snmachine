@@ -35,6 +35,8 @@ try:
 except ImportError:
     print ('Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.')
 
+SEED = 1234
+
 def roc(pr, Yt, true_class=0):
     """
     Produce the false positive rate and true positive rate required to plot
@@ -669,7 +671,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
         #Split into training and validation sets
         if np.isscalar(training_set):
             objs=feats['Object']
-            objs=np.random.permutation(objs)
+            objs=np.random.RandomState(seed=SEED).permutation(objs)
             training_set=objs[:(int)(training_set*len(objs))]
 
         #Otherwise a training set has already been provided as a list of Object names and we can continue
@@ -684,7 +686,7 @@ def run_pipeline(features,types,output_name='',columns=[],classifiers=['nb','knn
     else:
         #Otherwise the features are already in the form of a numpy array
         if np.isscalar(training_set):
-            inds=np.random.permutation(range(len(features)))
+            inds=np.random.RandomState(seed=SEED).permutation(range(len(features)))
             train_inds=inds[:(int)(len(inds)*training_set)]
             test_inds=inds[(int)(len(inds)*training_set):]
 
