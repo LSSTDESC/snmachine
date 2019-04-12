@@ -12,7 +12,7 @@ dataset='lsst_main'
 root='/home/mlochner/sn_output/output_%s_no_z/features/' %dataset
 features=sys.argv[1]
 nruns=18 #How many files to combine
-subset_name=dataset+'_subset_%d_%s.dat' 
+subset_name=dataset+'_subset_%d_%s.dat'
 subset='all'
 output_name=root+'%s_%s_%s.dat' %(dataset,subset, features)
 
@@ -30,7 +30,7 @@ for i in range(nruns):
             out=vstack((out, tab))
     except IOError:
         print '%s doesn\'t exist' %(subset_name %(i, features))
-        
+
 out.sort('Object')
 #Find non-unique items (might have been repeated)
 n=[k for (k,v) in Counter(out['Object']).iteritems() if v > 1]
@@ -67,4 +67,4 @@ if len(not_done)!=0:
     np.savetxt(flname, not_done, fmt='%s')
 else:
     print 'All objects accounted for'
-    
+

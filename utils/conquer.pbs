@@ -9,7 +9,7 @@
  #PBS -N conquer
  #PBS -t 0-199
 source .tcshrc
-cd /home/roberts/sne/snmachine/	
+cd /home/roberts/sne/snmachine/
 #echo ${PBS_ARRAYID}
 time python /home/roberts/sne/snmachine/utils/conquer.py ${PBS_ARRAYID}
 #time python /home/roberts/sne/snmachine/utils/divide.py

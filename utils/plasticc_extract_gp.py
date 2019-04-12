@@ -39,7 +39,7 @@ sys.stdout.flush()
 
 print('nobj: '+str(len(d.object_names)))
 print('extracting features')
-sys.stdout.flush() 
+sys.stdout.flush()
 wf=snfeatures.WaveletFeatures(wavelet='sym2',ngp=1100)
 
 pca_folder='/share/hypatia/snmachine_resources/data/plasticc/dummy_pca/'

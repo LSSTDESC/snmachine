@@ -16,7 +16,7 @@ job_dir='/home/roberts/data_sets/sne/des/jobs/'
 #job_dir='jobs/'
 if not os.path.exists(job_dir):
     os.makedirs(job_dir)
-    
+
 n12=12 #How many cores12 nodes requesting
 n24=len(good_nodes) #How many cores24 nodes requesting
 
@@ -64,7 +64,7 @@ def make_job_script(ppn, subset_name, extra_flags=''):
     fl.write('python /home/roberts/sne/snmachine/utils/run_pipeline.py %s%s.txt %d %s %s %s\n' %(job_dir, subset_name, ppn, reds, train_choice, extra_flags))
     #fl.write('python /home/michelle/SN_Class/snmachine/run_pipeline.py %s%s.txt\n' %(job_dir, subset_name))
     fl.close()
-    
+
 def make_job_spawner(n12, n24, job_dir, subset_root):
     #Create a simple bash script to qsub all the jobs
     fl=open(os.path.join(job_dir, 'run_all.sh'), 'w')
@@ -72,7 +72,7 @@ def make_job_spawner(n12, n24, job_dir, subset_root):
     joblist=''
     for i in range(n12):
         subs=subset_root %i
-        fl.write('job%d=$(qsub -W depend=afterok:$job_pre %s)\n' %(i, os.path.join(job_dir, subs+'.pbs'))) 
+        fl.write('job%d=$(qsub -W depend=afterok:$job_pre %s)\n' %(i, os.path.join(job_dir, subs+'.pbs')))
         joblist+=':$job%d' %i
     for j in range(n12, n12+n24):
         subs=subset_root %j
@@ -120,7 +120,7 @@ elif 'cadence' in dataset:
     rootdir='/share/hypatia/snmachine_resources/data/LSST_cadence_sims/'+survey_name+'/FullLightCurveFitsFiles/RH_LSST_SNMIX_WFD/'
     objects=np.genfromtxt(rootdir+'.LIST',dtype='str')
 
-    
+
 nobj=len(objects) #Total number of objects
 
 #Figure out how many objects go onto cores24 processors and how many on cores12
@@ -142,7 +142,7 @@ for i in range(n12):
     subs=subset_name %i
     np.savetxt(job_dir+subs+'.txt', obj12[i], fmt='%s')
     make_job_script(12, subs, extra_flags='no-class')
-    
+
 for j in range(n24):
     subs=subset_name %(j+len(obj12))
     np.savetxt(job_dir+subs+'.txt', obj24[j], fmt='%s')

@@ -9,5 +9,5 @@
  #PBS -N plasticc_batch
  #PBS -t 0
 source .tcshrc
-cd /home/roberts/sne/snmachine/	
+cd /home/roberts/sne/snmachine/
 time python /home/roberts/sne/snmachine/utils/plasticc_extract_gp.py ${PBS_ARRAYID}

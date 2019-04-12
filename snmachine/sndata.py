@@ -1379,7 +1379,7 @@ class SDSS_Simulations(EmptyDataset):
 
 class PlasticcData(EmptyDataset):
     """Class to read in the PLAsTiCC dataset. This is a simulated LSST catalog.
-    
+
     Parameters
     ----------
     folder : str
@@ -1403,7 +1403,7 @@ class PlasticcData(EmptyDataset):
 
     def set_data(self, folder, data_file, cut_non_detections=False):
         """Reads in simulated data and saves it.
-        
+
         The data is saved into the `data` method from EmptyDataset.
 
         Parameters
@@ -1428,7 +1428,7 @@ class PlasticcData(EmptyDataset):
                 self.mjd_col = col
             if re.search('id', col): # catches the column that has `id` in its name
                 self.id_col = col
-        
+
         number_invalid_objs = 0 # Some objects may have empty data
         number_objs = len(data[self.id_col].unique())
 
@@ -1446,7 +1446,7 @@ class PlasticcData(EmptyDataset):
         self.object_names = np.array(self.object_names, dtype='str')
         print('{} objects read into memory.'.format(len(self.data)))
         self.print_time_difference(time_start_reading, time.time())
-    
+
     def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
         """Transform the pandas dataframe into an astropy table starting from mjd=0
 
@@ -1466,10 +1466,10 @@ class PlasticcData(EmptyDataset):
         lc = Table.from_pandas(pandas_lc)
         lc[self.mjd_col] -= lc[self.mjd_col].min()
         return lc
-    
+
     def set_metadata(self, folder, meta_file):
         """Reads in simulated metadata and saves it.
-        
+
         The data is saved into the `metadata` method from EmptyDataset and
         into a dictonary associated with each `data` method (`.data[obj].meta`).
 
@@ -1514,7 +1514,7 @@ class PlasticcData(EmptyDataset):
                         break
         print('Finished getting the metadata for {} objects.'.format(number_objs))
         self.print_time_difference(time_start_reading, time.time())
-    
+
     @property
     def labels(self):
         """Returns the labels of the objects, if they are known."""
@@ -1542,7 +1542,7 @@ class PlasticcData(EmptyDataset):
     def print_progress(obj_ordinal, number_objs): # Cat: this could be a decorator
         """Print the percentage of objects already saved.
 
-        This funtion uses a weird formula to know at which 
+        This funtion uses a weird formula to know at which
         percentages to print.
 
         Parameters
@@ -1555,7 +1555,7 @@ class PlasticcData(EmptyDataset):
         percent_to_print = pow(10, -int(np.log10(number_objs)/2)) # Cat: Why this convoluted formula?
         if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
             print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
-    
+
     def update_dataset(self, new_objs):
         """Update the datset so it only contains a subset of objects.
 
@@ -1571,7 +1571,7 @@ class PlasticcData(EmptyDataset):
         """
         if np.sum(~np.in1d(new_objs, self.object_names)) != 0:
             raise ValueError("All the objects in `new_objs` need to exist in the original dataset.")
-        
+
         self.object_names = new_objs
         self.data = {objects:self.data[objects] for objects in self.object_names}
 

@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 ### THESE GLOBAL VARIABLES DEFINE THE LOCATION OF THE TEST DATA SET AND THE SPECIFIC EXAMPLE LC WE USE FOR TESTING ###
 
-test_data_path=os.path.join(example_data, 'SPCC_SUBSET', '') 
+test_data_path=os.path.join(example_data, 'SPCC_SUBSET', '')
 example_name='DES_SN001695.DAT'
 
 @pytest.fixture(scope='module')

@@ -8,5 +8,5 @@
  #PBS -l mem=40GB
  #PBS -N divide
 source .tcshrc
-cd /home/roberts/sne/snmachine/	
+cd /home/roberts/sne/snmachine/
 time python /home/roberts/sne/snmachine/utils/divide.py

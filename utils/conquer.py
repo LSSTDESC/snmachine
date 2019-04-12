@@ -46,14 +46,14 @@ for o,counter in zip(objects,range(len(objects))):
 	print('obj #%d: %s'%(counter,o))
 	sys.stdout.flush()
 	#slice data frame into one object/rest WITHOUT querying the entire frame
-	
+
 	linecounter=0
 	while linecounter < len(raw_data) and raw_data.iloc[linecounter]['object_id']==o:
 		linecounter+=1
 
 	fr=raw_data.iloc[:linecounter]
 	raw_data=raw_data.iloc[linecounter:]
-	
+
 
 	#assemble lightcurve table pertaining to one object
 	#fr=raw_data[raw_data['object_id']==o]
