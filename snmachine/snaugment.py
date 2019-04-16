@@ -12,8 +12,8 @@ Module handling the data augmentation of supernova data sets
 
 class SNAugment:
     """
-    Skeletal base class outlining the structure for the augmentation of a 
-    sndata instance. Classes that encapsulate a specific data augmentation 
+    Skeletal base class outlining the structure for the augmentation of a
+    sndata instance. Classes that encapsulate a specific data augmentation
     procedure should be derived from this class.
     """
 
@@ -28,12 +28,12 @@ class SNAugment:
 
         """
         self.dataset=d
-        self.meta={}#This can contain any metadata that the augmentation 
+        self.meta={}#This can contain any metadata that the augmentation
                     #process produces, and we want to keep track of.
         self.algorithm=None
         self.original=d.object_names.copy()#this is a list of object names that
-                                          #were in the data set prior to 
-                                          #augmenting. 
+                                          #were in the data set prior to
+                                          #augmenting.
                                           #DO NOT TOUCH FOR SELFISH PURPOSES
 
     def augment(self):
@@ -41,8 +41,8 @@ class SNAugment:
 
     def remove(self, obj=None):
         """
-        reverts the augmentation step by fully or partially removing those 
-        light curves that have been added in the augmentation procedure from 
+        reverts the augmentation step by fully or partially removing those
+        light curves that have been added in the augmentation procedure from
         the data set.
 
         Parameters:
@@ -53,8 +53,8 @@ class SNAugment:
             when we created the SNAugment object.
             NB: If obj contains object names that are in the original data set
             then we do not throw an error, but follow through on what you tell
-            us to do. 
-            
+            us to do.
+
         """
         if obj is None:
             obj=list(set(self.dataset.object_names())-set(self.original))
@@ -66,10 +66,10 @@ class SNAugment:
 
     def extract_proxy_features(self,peak_filter='desr',nproc=1,fit_salt2=False,salt2feats=None,return_features=False,fix_redshift=False,which_redshifts='header',sampler='leastsq'):
         """
-        Extracts the 2D proxy features from raw light curves, e.g., redshift and peak logflux in a certain band. 
-        There are plenty of options for how to get these values, if you should be so inclined. 
-        For the peak flux, we take either the maximum flux amongst the observations in the specified band (quick and dirty), 
-        or we perform SALT2 fits to the data and extract the peak flux from there (proper and slow). 
+        Extracts the 2D proxy features from raw light curves, e.g., redshift and peak logflux in a certain band.
+        There are plenty of options for how to get these values, if you should be so inclined.
+        For the peak flux, we take either the maximum flux amongst the observations in the specified band (quick and dirty),
+        or we perform SALT2 fits to the data and extract the peak flux from there (proper and slow).
         For the redshift, we take either the redshift specified in the header or the fitted SALT2 parameter.
 
         Parameters:
@@ -87,10 +87,10 @@ class SNAugment:
         fix_redshift : bool, optional (default: False)
             if True, we fix the redshift in the SALT2 fits to the value found in the table headers; if False, we leave the parameter free for sampling
         which_redshifts : str, optional (default: 'header')
-            if 'salt2', the first column of proxy features will be the SALT2-fitted redshift; if 'header', we take the redshift from the header, 
+            if 'salt2', the first column of proxy features will be the SALT2-fitted redshift; if 'header', we take the redshift from the header,
             if 'headerfill', we take the header redshift where available and fill with fitted values for the objects without valid redshift.
         sampler : str, optional (default: 'leastsq')
-            Which sampler do we use to perform the SALT2 fit? 'leastsq' is a simple least squares fit, 
+            Which sampler do we use to perform the SALT2 fit? 'leastsq' is a simple least squares fit,
             'nested' uses nested sampling and requires MultiNest and PyMultiNest to be installed.
         Returns:
         -------
@@ -176,7 +176,7 @@ class SNAugment:
         train_names : np.array of str
              names of all objects in the training set
         algo : str, optional
-             name of the model to fit. 'logistic' is logistic regression, 'network' is a simple ANN with two nodes 
+             name of the model to fit. 'logistic' is logistic regression, 'network' is a simple ANN with two nodes
              in one hidden layer.
         kwargs : optional
              all of these will be handed to self.extract_proxy_features. See there for more info.
@@ -209,7 +209,7 @@ class SNAugment:
     def divide_into_propensity_percentiles(self,train_names,nclasses,**kwargs):
         """
         Wherein we fit the propensity scores and divide into equal-percentile classes from lowest to hightest
-        
+
         Parameters:
         ----------
         train_names : np.array of str
@@ -247,7 +247,7 @@ class GPAugment(SNAugment):
 
     def __init__(self, d, stencils=None, cadence_stencils=None, stencil_weights=None, cadence_stencil_weights=None):
         """
-        class constructor. 
+        class constructor.
 
         Parameters:
         ----------
@@ -255,8 +255,8 @@ class GPAugment(SNAugment):
             the supernova data set we want to augment
         stencils : list of strings
             If the stencils argument is given (as a list of object names
-            that are in the data set), then the augmentation step will take 
-            these light curves to train the GPs on. If not, then every object 
+            that are in the data set), then the augmentation step will take
+            these light curves to train the GPs on. If not, then every object
             in the data set is considered fair game.
 	    cadence_stencils : list of strings
             If given, the augmentation will sample the cadence for the new light
@@ -387,7 +387,7 @@ class GPAugment(SNAugment):
         obj : str or astropy.table.Table
            the object (or name thereof) that we use as a stencil to train the GP on.
         cadence : str or dict of type {string:numpy.array}, optional.
-           the cadence for the new light curve, defined either by object name or by {filter:mjds}. If none is given, 
+           the cadence for the new light curve, defined either by object name or by {filter:mjds}. If none is given,
            then we pull the cadence of the stencil.
         savegp : bool, optional
            Do we save the trained GP in self.meta? This results in a speedup, but costs memory.
@@ -395,10 +395,10 @@ class GPAugment(SNAugment):
            Do we give the new light curve a random redshift value drawn from a Gaussian of location
            and width defined by the stencil? If not, we just take the value of the stencil.
         name : str, optional
-           object name of the new light curve. 
+           object name of the new light curve.
         add_measurement_noise : bool, optional
-           Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i, where f is a gaussianly-distributed function, and 
-           where eps_i are iid Normal RVs, and sigma_i are the measurement error bars. If this flag is unset, we return a 
+           Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i, where f is a gaussianly-distributed function, and
+           where eps_i are iid Normal RVs, and sigma_i are the measurement error bars. If this flag is unset, we return a
            sample from the GP f and its stddev. If it is set, we return y*_j including the measurement noise (also in the error bar).
            If this is unclear, please consult Rasmussen/Williams chapter 2.2.
 
@@ -430,7 +430,7 @@ class GPAugment(SNAugment):
                 cadence_dict=cadence
             else:
                 print('cadence: type %s not recognised in produce_new_lc()!'%type(cadence))
-                #todo: actually throw an error            
+                #todo: actually throw an error
 
 	#Either train a new set of GP on the stencil obj, or pull from metadata
         if obj_name in self.meta['trained_gp'].keys():
@@ -501,11 +501,11 @@ class GPAugment(SNAugment):
 
     def augment(self, numbers, return_names=False, **kwargs):
         """
-        High-level wrapper of GP augmentation: The dataset will be augmented to the numbers by type. 
+        High-level wrapper of GP augmentation: The dataset will be augmented to the numbers by type.
         Parameters:
         ----------
         numbers : dict of type int:int
-            The numbers to which the data set will be augmented, by type. Keys are the types, 
+            The numbers to which the data set will be augmented, by type. Keys are the types,
             values are the numbers of light curves pertaining to a type after augmentation.
             Types that do not appear in this dict will not be touched.
         return_names : bool

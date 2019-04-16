@@ -8,7 +8,7 @@
  #PBS -l mem=500GB
  #PBS -N collect
 source .tcshrc
-cd /home/roberts/sne/snmachine/	
+cd /home/roberts/sne/snmachine/
 #echo ${PBS_ARRAYID}
 #time python /home/roberts/sne/snmachine/utils/conquer.py ${PBS_ARRAYID}
 time python /home/roberts/sne/snmachine/utils/collect.py

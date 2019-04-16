@@ -30,7 +30,7 @@ class NewlingModel:
             self.initial=kwargs['initial'] #initial parameters for minuit search
         else:
             self.initial={'logA':5, 'phi':30, 'logsigma':1, 'logk':1, 'logpsi':1}
-            
+
         self.lower_limit=[]
         self.upper_limit=[]
         for p in self.param_names:
@@ -38,8 +38,8 @@ class NewlingModel:
             self.upper_limit.append(self.limits[p][1])
         self.lower_limit=np.array(self.lower_limit)
         self.upper_limit=np.array(self.upper_limit)
-            
-    
+
+
     def __fit_spline(self, x, y, d, x_eval):
         """
         Utility function to fit a spline
@@ -49,16 +49,16 @@ class NewlingModel:
         if len(x)>2:
             print ('this is only appropriate for 2 datapoints')
             return 0
-            
+
         x1, x2=x
         y1, y2=y
         k1, k2=d
-        
+
         a=k1*(x2-x1)-(y2-y1)
         b=-k2*(x2-x1)+(y2-y1)
-        
+
         t=(x_eval-x1)/(x2-x1)
-        
+
         return (1-t)*y1+t*y2+t*(1-t)*(a*(1-t)+b*t)
 
     def evaluate(self, t, params):
@@ -85,12 +85,12 @@ class NewlingModel:
         Ft=np.zeros(len(t))
         delta=(t-phi)/s
         delta=delta[t>phi]
-        
+
         tau=k*s+phi #peak
-        
+
         #Calculate big psi
         Psi=np.zeros(len(t))
-        
+
         y_int=self.__fit_spline([phi, tau], [0, psi], [0, 0], t[(t>=phi)&(t<=tau)])
         Psi[t<phi]=0
         Psi[(t>=phi)&(t<=tau)]=y_int
@@ -123,15 +123,15 @@ class KarpenkaModel:
         if 'initial' in kwargs:
             self.initial=kwargs['initial'] #initial parameters for minuit search
         else:
-            self.initial={'logA':np.log(100), 'logB':np.log(10), 't0':20, 
+            self.initial={'logA':np.log(100), 'logB':np.log(10), 't0':20,
             't1':30, 'T_rise':40, 'T_fall':40}
-            
+
         self.lower_limit=[]
         self.upper_limit=[]
         for p in self.param_names:
             self.lower_limit.append(self.limits[p][0])
             self.upper_limit.append(self.limits[p][1])
-            
+
     def evaluate(self, t, params):
         """
         Evaluate the function at given values of t
@@ -154,17 +154,17 @@ class KarpenkaModel:
         return A*(1+B*(t-t1)*(t-t1))*np.exp(-(t-t0)/T_fall)/(1+np.exp(-(t-t0)/T_rise))
 
 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
