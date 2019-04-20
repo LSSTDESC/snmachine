@@ -249,7 +249,7 @@ class EmptyDataset:
             chi_2_single_object = 0
 
         if title:
-            plt.title('Object: {}, z:{:.2f},  Type:{}, R-ChiSquare:{:.3f}'.format(fname, lc.meta['z'], self.dict_2_user_types[str(lc.meta['type'])], chi_2_single_object))
+            plt.title('Object: {}, z:{:.2f},  Type:{}, R-ChiSquare:{:.3f}'.format(fname, lc.meta['z'], str(lc.meta['type']), chi_2_single_object))
             # print("TITLE:")
             # typs = types.to_pandas()
             # typs = typs.set_index('Object')
