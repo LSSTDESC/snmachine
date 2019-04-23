@@ -73,7 +73,7 @@ def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], outp
 
 
 def read_gp_files_into_models(dataset, path_saved_gp_files):
-    """Reads the saved files into the dataset models so we can start from a previously saved point.
+    """Reads the saved files into the dataset models so we can start from a previously saved Gaussian Processes.
 
     The files can have been stored as `.ascii` or `.fits`.
 
@@ -323,7 +323,7 @@ def _choose_less_bad_kernel(all_obj_gp, all_gp_instances, all_reduced_chi_square
     return less_bad_obj_gp, less_bad_gp_instance, less_bad_reduced_chi_squared, less_bad_kernel
 
 
-def fit_gp(kernel_name, kernel_param, obj_data, gp_times): # Old get_GP_redChi2
+def fit_gp(kernel_name, kernel_param, obj_data, gp_times):
     """Fit a Gaussian process curve at specific evenly spaced points along a light curve.
 
     Parameters
