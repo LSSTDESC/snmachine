@@ -20,7 +20,8 @@ from functools import partial
 from multiprocessing import Pool
 from scipy import interpolate
 from scipy.interpolate import interp1d
-from snmachine import sndata, reducedchisquared
+from snmachine import sndata
+from snmachine import reducedchisquared as rcs
 
 try:
     import george
@@ -201,7 +202,7 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_para
         print('No GP module gapp. Defaulting to george instead.')
         gp_algo='george'
     obj_data = dataset.data[obj] # object's lightcurve
-    obj_data = reducedchisquared.rename_passband_column(obj_data.to_pandas())
+    obj_data = rcs.rename_passband_column(obj_data.to_pandas())
     unique_passbands = np.unique(obj_data.passband)
     gp_times = np.linspace(t_min, t_max, number_gp)
 
@@ -280,7 +281,7 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
     all_reduced_chi_squared = np.zeros(number_diff_kernels) + 666 # just a random number > 1 to initialize
     while i < number_diff_kernels and all_reduced_chi_squared[i-1] > 1 :
         obj_gp, gp_instance = fit_gp(kernel_name=possible_kernel_names[i], kernel_param=possible_kernel_params[i], obj_data=obj_data, gp_times=gp_times)
-        reduced_chi_squared = reducedchisquared.compute_reduced_chi_squared(obj_data, obj_gp)
+        reduced_chi_squared = rcs.compute_reduced_chi_squared(obj_data, obj_gp)
         kernel_id = possible_kernel_ids[i]
         all_obj_gp[i] = obj_gp
         all_gp_instances[i] = gp_instance
