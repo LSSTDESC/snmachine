@@ -2079,10 +2079,10 @@ class WaveletFeatures(Features):
 
         if save_output:
             # We need to change the output to make it consistent with new code
-            np.save(os.path.join(output_root,'eigenvalues_{}.npy'.format(tol*100)),vals)
-            np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(tol*100)),vec)
-            np.save(os.path.join(output_root,'comps_{}.npy'.format(tol*100)),comps)
-            np.save(os.path.join(output_root,'means_{}.npy'.format(tol*100)),M)
+            np.save(os.path.join(output_root,'eigenvalues_{}.npy'.format(ncomp)),vals)
+            np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(ncomp)),vec)
+            np.save(os.path.join(output_root,'comps_{}.npy'.format(ncomp)),comps)
+            np.save(os.path.join(output_root,'means_{}.npy'.format(ncomp)),M)
 
         return wavs, vals, vec, M, s
 
