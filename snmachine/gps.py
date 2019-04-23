@@ -67,7 +67,7 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo=
         for i in range(len(d.object_names)):
             obj = d.object_names[i]
             try:
-                output, gpdict, used_kernels_obj = _GP(obj, d=d,ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta, 
+                output, gpdict, used_kernels_obj = _GP(obj, d=d,ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta,
                                                         output_root=output_root, gp_algo=gp_algo, save_output=save_output)
                 d.models[obj] = output
             except ValueError:
@@ -90,7 +90,7 @@ def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo=
             d.models[obj] = out[i,0]
             gp[obj] = out[i,1]
             used_kernels[obj] = out[i,2]
-            
+
         #with open(output_root+'/used_kernels.yaml', 'w') as kernels:
         #    yaml.dump(used_kernels, kernels, default_flow_style=False)
 
@@ -215,7 +215,7 @@ def get_GP_redChi2(iniTheta, kernel_name, obj_obs, gp_times):
         The kernel to fit the data. It can be ExpSquared or ExpSquared+ExpSine2
     obj_obs : pandas.core.frame.DataFrame
         Time, flux and flux error of the data (specific filter of an object)
-    gp_times : 
+    gp_times :
         Times to evaluate the Gaussian Process at
 
     Returns
@@ -246,7 +246,7 @@ def get_GP_redChi2(iniTheta, kernel_name, obj_obs, gp_times):
     gp.compute(obj_times, obj_flux_err)
     results = op.minimize(neg_log_like, gp.get_parameter_vector(), jac=grad_neg_log_like,
                           method="L-BFGS-B", tol=1e-6)
-    
+
     if np.sum(np.isnan(results.x)) != 0 : # the minimiser reaches a local minimum
         iniTheta[4] = iniTheta[4]+.1 # change a bit initial conditions so we don't go to that minima
         kernel = get_kernel(kernel_name, iniTheta)
@@ -295,7 +295,7 @@ def get_kernel(kernel_name, iniTheta):
 
 def reducedChi2(obj_obs, gp_obs):
     """
-    Returns the reduced chi^2 calculated comparing the Gaussian Process and the object 
+    Returns the reduced chi^2 calculated comparing the Gaussian Process and the object
 
     Parameters
     ----------

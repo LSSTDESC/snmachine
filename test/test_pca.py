@@ -1,7 +1,7 @@
 """
 Tests related to pca
 
-1. 
+1.
 """
 import numpy as np
 import os
@@ -14,7 +14,7 @@ testopts = [(5, 'svd', None, True),
             (5, 'eigendecomposition', None, False),
             (None, 'svd', 0.999, False),
             (5, 'eigendecomposition', None, True)]
-    
+
 
 
 # Test 1
@@ -50,7 +50,7 @@ def test_pca(ncomp, method, tol, normalize_variance, Nsamps=1000, Nfeats=10):
     X = np.random.normal(size=(Nsamps, 3))
     R = np.random.random((3, Nfeats))
     X = np.dot(X, R)
-    assert X.shape == (Nsamps, Nfeats) 
+    assert X.shape == (Nsamps, Nfeats)
     wf = WaveletFeatures()
     vec, comps, M, s, vals = wf._pca(X, ncomp=ncomp, method=method, tol=tol,
                                      normalize_variance=normalize_variance)
@@ -79,7 +79,7 @@ def test_extract_wavelets(ncomp, method, tol, normalize_variance, Nsamps=1000,
     X = np.random.normal(size=(Nsamps, 3))
     R = np.random.random((3, Nfeats))
     X = np.dot(X, R)
-    assert X.shape == (Nsamps, Nfeats) 
+    assert X.shape == (Nsamps, Nfeats)
 
     wf = WaveletFeatures()
     object_names = np.array(list('sn_{}'.format(i) for i in range(Nsamps)))
@@ -89,7 +89,7 @@ def test_extract_wavelets(ncomp, method, tol, normalize_variance, Nsamps=1000,
     assert M.size == Nfeats
     # Can't run this test, as this is a structured array with object names
     # assert np.asarray(wavs.to_pandas()).shape == Nsamps, ncomp
-    # When we set ncomp from tols 
+    # When we set ncomp from tols
     if ncomp is None:
         ncomp = vals.size
     assert vals.size == ncomp
@@ -115,7 +115,7 @@ def test_lossy_reconstruct(ncomp, method, tol, normalize_variance,
     X = np.random.normal(size=(Nsamps, 3))
     R = np.random.random((3, Nfeats))
     X = np.dot(X, R)
-    assert X.shape == (Nsamps, Nfeats) 
+    assert X.shape == (Nsamps, Nfeats)
 
     wf = WaveletFeatures()
     vec, comps, M, s, vals = wf._pca(X, ncomp=ncomp, method=method, tol=tol,
@@ -126,7 +126,7 @@ def test_lossy_reconstruct(ncomp, method, tol, normalize_variance,
     assert M.size == Nfeats
     # Can't run this test, as this is a structured array with object names
     # assert np.asarray(wavs.to_pandas()).shape == Nsamps, ncomp
-    # When we set ncomp from tols 
+    # When we set ncomp from tols
     D = WaveletFeatures.reconstruct_datamatrix_lossy(comps, vec, M, s)
     assert D.shape == (Nsamps, Nfeats)
     Delta = D - X

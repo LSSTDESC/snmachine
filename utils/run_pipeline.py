@@ -10,7 +10,7 @@ from snmachine import sndata, snfeatures, snclassifier
 import time, os, pywt,subprocess, sys#, StringIO
 from sklearn.decomposition import PCA
 from astropy.table import Table,join,vstack
-import sklearn.metrics 
+import sklearn.metrics
 import sncosmo
 from functools import partial
 from multiprocessing import Pool
@@ -54,14 +54,14 @@ else:
 
 if dataset=='des':
     if len(sys.argv)>1:
-        
+
         if 'redshift' in sys.argv:
             use_redshift=True
             run_name='des_z_augment'
         else:
             use_redshift=False
             run_name='des_no_z_augment'
-            
+
         if 'non-repr' in sys.argv:
             train_choice='non-repr'
             repr=False
@@ -278,7 +278,7 @@ if dataset=='des':
     types['Type'][np.floor(types['Type']/10)==2]=2
     types['Type'][np.floor(types['Type']/10)==3]=3
 
-    
+
 
     # #### Choose training and validation samples
     if len(cls)>0:
@@ -302,7 +302,7 @@ if dataset=='des':
 
             training_set=np.genfromtxt(out_features+'train-%s.txt' %train_choice, dtype='str')
             test_set=np.genfromtxt(out_features+'test-%s.txt' %train_choice, dtype='str')
-	
+
 
         #train_inds=[np.where(d.object_names==x)[0][0] for x in training_set]
         #val_inds=[np.where(d.object_names==x)[0][0] for x in test_set]
@@ -546,7 +546,7 @@ if 'no-xtr' not in sys.argv:
             vals=np.genfromtxt(out_features+'%s_%s_PCA_vals.txt' %(run_name, subset_name))
             vec=np.genfromtxt(out_features+'%s_%s_PCA_vec.txt' %(run_name, subset_name))
             mn=np.genfromtxt(out_features+'%s_%s_PCA_mean.txt' %(run_name, subset_name))
-        
+
             d.set_model(waveletFeat.fit_sn,wavelet_features,vec,  mn, xmin, xmax,d.filter_set)
             d.plot_all()
         #Copy across intermediate files from temp directory
@@ -556,7 +556,7 @@ if 'no-xtr' not in sys.argv:
 
 
 else:
-    #This part gets executed if we run the pipeline with the flag 'no-extr'. We read in the feature files that 
+    #This part gets executed if we run the pipeline with the flag 'no-extr'. We read in the feature files that
     #are listed in the logfile, insert the extracted features, and move on to classification.
     #NB: The feature extraction can be distributed on nodes. The classification is to be on a single node only!
 
@@ -612,7 +612,7 @@ else:
         flname=os.path.join(final_outdir, 'features', subset_name+'_wavelets.dat')
         wavelet_features.write(flname,format='ascii')
     logfile.close()
-   
+
 
 
 ################################################################################
@@ -630,12 +630,12 @@ def do_classification(classifier, param_dict, Xtrain, Ytrain, Xtest, read_from_o
         probs=probs[1:,:]
     else:
         c=snclassifier.OptimisedClassifier(classifier)
-        
+
         if classifier in param_dict.keys():
             Yfit, probs=c.optimised_classify(Xtrain, Ytrain, Xtest,params=param_dict[classifier])
         else:
             Yfit, probs=c.optimised_classify(Xtrain, Ytrain, Xtest) #Use defaults
-        
+
         if save_output:
             fil=open('%shyper_params_%s_%s.txt' %(out_class,feature_set,classifier),'w')
             fil.write((str)(c.clf.best_params_))
@@ -650,10 +650,10 @@ def do_classification(classifier, param_dict, Xtrain, Ytrain, Xtest, read_from_o
             nms=['Object']+typs
             tab=Table(dat,dtype=['S64']+['f']*probs.shape[1],names=nms)
             tab.write(flname,format='ascii')
-            
+
             if classifier=='boost_forest':
                 np.savetxt('%s%s_%s.importances' %(out_class, feature_set, classifier), c.clf.best_estimator_.feature_importances_)
-    
+
     return probs
 
 def run_classifier(Xtrain,Ytrain,Xtest,Ytest,save_output=True,feature_set='templates',out_root='',read_from_output=False, nprocesses=1):
@@ -661,8 +661,8 @@ def run_classifier(Xtrain,Ytrain,Xtest,Ytest,save_output=True,feature_set='templ
     #These are the current possible choices of classifier.
     #read_from_output will bypass the actual classification and read from files instead (if you want to replot a ROC curve)
 
-    
-    #You set classifier-specific parameter ranges here. If the classifier is not in this dictionary, it will use the 
+
+    #You set classifier-specific parameter ranges here. If the classifier is not in this dictionary, it will use the
     #defaults to search for optimum parameters. If your parameter range is restrictive, it will print a warning and you
     #should then increase your range to ensure you get an optimum. SVM is particularly sensitive to this.
     param_dict={}
@@ -672,18 +672,18 @@ def run_classifier(Xtrain,Ytrain,Xtest,Ytest,save_output=True,feature_set='templ
     n_features=Xtrain.shape[1]
 
     #Rescale the data
-    scaler = StandardScaler() 
+    scaler = StandardScaler()
     scaler.fit(np.vstack((Xtrain, Xtest)))
-    Xtrain = scaler.transform(Xtrain)  
+    Xtrain = scaler.transform(Xtrain)
     Xtest = scaler.transform(Xtest)
-    
+
     t1=time.time()
-    
+
     if nprocesses<2:
         for i in range(len(cls)):
             flname='%s_%s_%s.dat' %(run_name,feature_set,cls[i])
             probs=do_classification(cls[i], param_dict, Xtrain, Ytrain, Xtest, read_from_output, save_output, feature_set)
-            
+
             fpr, tpr, auc=snclassifier.roc(probs, Ytest, true_class=1)
             f1, thresh_f1=snclassifier.F1(probs, Ytest, 1, full_output=False)
             fom, thresh_fom=snclassifier.FoM(probs, Ytest, 1, full_output=False)
@@ -697,13 +697,13 @@ def run_classifier(Xtrain,Ytrain,Xtest,Ytest,save_output=True,feature_set='templ
                 AUC.append(auc)
             FOM[cls[i]]=fom
             F1[cls[i]]=f1
-            
+
     else:
-        partial_func=partial(do_classification, param_dict=param_dict, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, 
+        partial_func=partial(do_classification, param_dict=param_dict, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest,
                             read_from_output=read_from_output, save_output=save_output, feature_set=feature_set)
         p=Pool(nprocesses)
         probs_all=p.map(partial_func, cls)
-        
+
         for i in range(len(cls)):
             probs=probs_all[i]
             fpr, tpr, auc=snclassifier.roc(probs, Ytest, true_class=1)
@@ -722,7 +722,7 @@ def run_classifier(Xtrain,Ytrain,Xtest,Ytest,save_output=True,feature_set='templ
                 AUC.append(auc)
             FOM[cls[i]]=fom
             F1[cls[i]]=f1
-            
+
     print('Kessler figure of merit')
     print(FOM)
     print()
@@ -738,7 +738,7 @@ def run_classifier(Xtrain,Ytrain,Xtest,Ytest,save_output=True,feature_set='templ
         snclassifier.plot_roc(FPR, TPR, AUC, labels=cls,label_size=16,tick_size=12)
         plt.savefig(os.path.join(os.path.sep, out_root, 'new_roc_%s_%s.png' %(run_name,feature_set)))
         plt.close()
-    
+
 
 
 if len(cls)>0 and 'no-class' not in sys.argv:

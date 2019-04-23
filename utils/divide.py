@@ -14,7 +14,7 @@ linecounter=0
 
 for i in range(nproc-1):
 	print(i)
-	print('linecounter: '+str(linecounter))	
+	print('linecounter: '+str(linecounter))
 	start_counter=linecounter
 	linecounter+=lines_per_proc
 
