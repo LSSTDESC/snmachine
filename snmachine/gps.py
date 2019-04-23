@@ -12,6 +12,7 @@ import george
 import numpy as np
 import pandas as pd
 import scipy
+import scipy.optimize as op
 import sncosmo
 
 from astropy.table import Table, vstack, hstack, join
@@ -19,7 +20,7 @@ from functools import partial
 from multiprocessing import Pool
 from scipy import interpolate
 from scipy.interpolate import interp1d
-import scipy.optimize as op
+from snmachine import sndata, reducedchisquared
 
 try:
     import george
@@ -34,202 +35,295 @@ except ImportError:
     has_gapp=False
 
 
-def extract_GP(d, ngp, t_min, t_max, initheta, output_root, nprocesses, gp_algo='george', save_output=False):
-    """
-    Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
+def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], output_root=None, number_processes=1, gp_algo='george'):
+    """Runs Gaussian process code on entire dataset. The result is stored inside the models attribute of the dataset object.
+
+    The result is also saved on external files, if an output root is given.
 
     Parameters
     ----------
-    d : Dataset object
-        Dataset
-    ngp : int
-        Number of points to evaluate Gaussian Process at
+    dataset : Dataset object (sndata class)
+        Dataset.
+    number_gp : int
+        Number of points to evaluate the Gaussian Process Regression at.
     t_min : float
-        Minimim time to evaluate at
+        Minimim time to evaluate the Gaussian Process Regression at.
     t_max : float
-        Maximum time to evaluate at
-    initheta : list-like
-        Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
-    output_root : str
-        Output directory.
-    nprocesses : int, optional
-        Number of processors to use for parallelisation (shared memory only)
+        Maximum time to evaluate the Gaussian Process Regression at.
+    kernel_param : list-like, optional
+        Initial values for kernel parameters. These should be roughly the scale length in the y & x directions.
+    output_root : {None, str}, optional
+        If None, don't save anything. If str, it is the output directory, so save the flux and error estimates and used kernels there.
+    number_processes : int, optional
+        Number of processors to use for parallelisation (shared memory only). By default `nprocesses` = 1.
     gp_algo : str, optional
         which gp package is used for the Gaussian Process Regression, GaPP or george
-    save_output : bool, optional
-        whether or not to save the fitted GP means and errors
     """
     print ('Performing Gaussian process regression')
     initial_time = time.time()
 
     # Check for parallelisation
-    if nprocesses == 1: # non parallelizing
-        for i in range(len(d.object_names)):
-            obj = d.object_names[i]
-            try:
-                output, gpdict, used_kernels_obj = _GP(obj, d=d,ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta,
-                                                        output_root=output_root, gp_algo=gp_algo, save_output=save_output)
-                d.models[obj] = output
-            except ValueError:
-                print('Object {} has fallen over!'.format(obj))
+    if number_processes == 1: # non parallelizing
+        _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, output_root, gp_algo)
+
     else: # parallelizing
-        p = Pool(nprocesses, maxtasksperchild=10)
-
-        #Pool and map can only really work with single-valued functions
-        partial_GP = partial(_GP, d=d, ngp=ngp, t_min=t_min, t_max=t_max, initheta=initheta, output_root=output_root, gp_algo=gp_algo, save_output=save_output)
-
-
-        out = p.map(partial_GP, d.object_names, chunksize=10)
-        p.close()
-        gp = {}
-        used_kernels = {}
-
-        out = np.reshape(out,(len(d.object_names),3))
-        for i in range(len(out)):
-            obj = d.object_names[i]
-            d.models[obj] = out[i,0]
-            gp[obj] = out[i,1]
-            used_kernels[obj] = out[i,2]
-
-        #with open(output_root+'/used_kernels.yaml', 'w') as kernels:
-        #    yaml.dump(used_kernels, kernels, default_flow_style=False)
+        _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output_root, number_processes, gp_algo)
 
     print ('Time taken for Gaussian process regression', time.time()-initial_time)
 
 
-def _GP(obj, d, ngp, t_min, t_max, initheta, output_root, gp_algo='george', save_output=False):
+def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, output_root, gp_algo):
+    """Computes the Gaussian process code on entire dataset in a single core.
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    number_gp : int
+        Number of points to evaluate the Gaussian Process Regression at.
+    t_min : float
+        Minimim time to evaluate the Gaussian Process Regression at.
+    t_max : float
+        Maximum time to evaluate the Gaussian Process Regression at.
+    kernel_param : list-like, optional
+        Initial values for kernel parameters. These should be roughly the scale length in the y & x directions.
+    output_root : {None, str}, optional
+        If None, don't save anything. If str, it is the output directory, so save the flux and error estimates and used kernels there.
+    gp_algo : str, optional
+        which gp package is used for the Gaussian Process Regression, GaPP or george
     """
-    Fit a Gaussian process curve in every filter of an object.
+    for i in range(len(dataset.object_names)):
+        obj = dataset.object_names[i]
+        try:
+            output, used_gp_dict, used_kernels_dict = _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_param,
+                                                    output_root=output_root, gp_algo=gp_algo)
+            dataset.models[obj] = output
+        except ValueError:
+            print('Object {} has fallen over!'.format(obj))
+
+
+def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output_root, number_processes, gp_algo):
+    """Computes the Gaussian process code on entire dataset in a parallel way.
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    number_gp : int
+        Number of points to evaluate the Gaussian Process Regression at.
+    t_min : float
+        Minimim time to evaluate the Gaussian Process Regression at.
+    t_max : float
+        Maximum time to evaluate the Gaussian Process Regression at.
+    kernel_param : list-like, optional
+        Initial values for kernel parameters. These should be roughly the scale length in the y & x directions.
+    output_root : {None, str}, optional
+        If None, don't save anything. If str, it is the output directory, so save the flux and error estimates and used kernels there.
+    number_processes : int, optional
+        Number of processors to use for parallelisation (shared memory only). By default `nprocesses` = 1.
+    gp_algo : str, optional
+        which gp package is used for the Gaussian Process Regression, GaPP or george
+    """
+    p = Pool(number_processes, maxtasksperchild=10)
+
+    #Pool and map can only really work with single-valued functions
+    partial_gp = partial(_compute_gp_all_passbands, dataset, number_gp, t_min, t_max, kernel_param, output_root=output_root, gp_algo=gp_algo)
+
+    out = p.map(partial_gp, dataset.object_names, chunksize=10)
+    p.close()
+    gp = {}
+    used_kernels = {}
+
+    out = np.reshape(out,(len(dataset.object_names),3))
+    for i in range(len(out)):
+        obj = dataset.object_names[i]
+        dataset.models[obj] = out[i,0]
+
+
+def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None, gp_algo='george'):
+    """Compute/ Fit a Gaussian process curve in every passband of an object.
+
+    If asked to save the output, it saves the Gaussian process curve in every passband of an object and the GP instances and kernel used.
 
     Parameters
     ----------
     obj : str
-        Name of the object
-    d : Dataset-like object
-        Dataset
-    ngp : int
-        Number of points to evaluate Gaussian Process at
+        Name of the object.
+    dataset : Dataset object (sndata class)
+        Dataset.
+    number_gp : int
+        Number of points to evaluate the Gaussian Process Regression at.
     t_min : float
-        Minimim time to evaluate at
+        Minimim time to evaluate the Gaussian Process Regression at.
     t_max : float
-        Maximum time to evaluate at
-    initheta : list-like
-        Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
-    output_root : str
-        Output directory.
+        Maximum time to evaluate the Gaussian Process Regression at.
+    kernel_param : list-like
+        Initial values for kernel parameters. These should be roughly the scale length in the y & x directions.
+    output_root : {None, str}, optional
+        If None, don't save anything. If str, it is the output directory, so save the flux and error estimates and used kernels there.
     gp_algo : str
         which gp package is used for the Gaussian Process Regression, GaPP or george
-    save_output : bool, optional
-        whether or not to save the fitted GP means and errors
 
     Returns
     -------
-    output: astropy.table.Table
-        Table with evaluated Gaussian process curve and errors
+    obj_gps : astropy.table.Table
+        Table with evaluated Gaussian process curve and errors at each passband.
+    used_gp_dict : dict
+        Dictionary whose key is the passband and whose value is the Gaussian Process Regression instance that fitted that passband.
+    used_kernels_dict: dict
+        Dictionary whose key is the passband and whose value is the id of the kernel used in the GP that fitted that passband.
     """
 
     if gp_algo=='gapp' and not has_gapp:
         print('No GP module gapp. Defaulting to george instead.')
         gp_algo='george'
-    lc      = d.data[obj]
-    filters = np.unique(lc['filter'])
-    gp_times = np.linspace(t_min, t_max, ngp)
+    obj_data = dataset.data[obj] # object's lightcurve
+    obj_data = reducedchisquared.rename_passband_column(obj_data.to_pandas())
+    unique_passbands = np.unique(obj_data.passband)
+    gp_times = np.linspace(t_min, t_max, number_gp)
 
     # Store the output in another astropy table
-    output = []
-    gpdict = {}
-    filter_set = np.asarray(d.filter_set)
-    used_kernels_obj = np.array([None]*len(filter_set)) # inilialize None kernel to each filter
-    for fil in filter_set:
-        if fil in filters:
-            obj_times    = lc['mjd'][lc['filter']==fil]  # x
-            obj_flux     = lc['flux'][lc['filter']==fil] # y
-            obj_flux_err = lc['flux_error'][lc['filter']==fil] # y_err
-            obj_obs = pd.DataFrame(columns=['mjd'], data=obj_times)
-            obj_obs['flux']  = obj_flux
-            obj_obs['flux_err'] = obj_flux_err
+    obj_gps = []
+    used_gp_dict = {}
+    used_kernels_dict = {}
+    filter_set = np.asarray(dataset.filter_set)
+    for pb in filter_set:
+        used_kernels_dict[pb] = None # inilialize None kernel to each passband
+        if pb in unique_passbands:
+            obj_data_pb = obj_data.loc[obj_data.passband == pb] # the observations in this passband
 
             if gp_algo=='gapp':
-                gp         = dgp.DGaussianProcess(obj_times, obj_flux, obj_flux_err, cXstar=(t_min, t_max, ngp))
-                rec, theta = gp.gp(theta=initheta)
+                gp         = dgp.DGaussianProcess(obj_data_pb.mjd, obj_data_pb.flux, obj_data_pb.flux_error, cXstar=(t_min, t_max, number_gp))
+                obj_gp_pb_array, theta = gp.gp(theta=kernel_param)
+
             elif gp_algo=='george':
-                metric  = initheta[1]**2
-                gp_obs_0, redChi2_0, gp_0 = get_GP_redChi2(np.array([initheta[0]**2, metric, 2., 4., 4., 6., 6.]), 'ExpSquared', obj_obs, gp_times)
-                if redChi2_0 < 2: # good gp
-                    gp_obs, redChi2, gp, chosen_kernel = gp_obs_0, redChi2_0, gp_0, 'ExpSquared 0'
-                else: # bad gp
-                    gp_obs_1, redChi2_1, gp_1 = get_GP_redChi2(np.array([400., 200., 2., 4., 4., 6., 6.]), 'ExpSquared', obj_obs, gp_times)
-                    if redChi2_1 < 2: # good gp
-                        gp_obs, redChi2, gp, chosen_kernel = gp_obs_1, redChi2_1, gp_1, 'ExpSquared 1'
-                    else:             # bad gp
-                        gp_obs_all  = [gp_obs_0, gp_obs_1]
-                        redChi2_all = [redChi2_0, redChi2_1]
-                        gp_all      = [gp_0, gp_1]
-                        gp_obs_2, redChi2_2, gp_2 = get_GP_redChi2(np.array([400., 20., 2., 4., 4., 6., 6.]), 'ExpSquared', obj_obs, gp_times)
-                        if redChi2_2 < 2: # good gp
-                            gp_obs, redChi2, gp, chosen_kernel =  gp_obs_2, redChi2_2, gp_2, 'ExpSquared 2'
-                        else:             # bad gp
-                            gp_obs_all.append(gp_obs_2)
-                            redChi2_all.append(redChi2_2)
-                            gp_all.append(gp_2)
-                            gp_obs_3, redChi2_3, gp_3 = get_GP_redChi2(np.array([19., 9., 2., 4., 4., 6., 6.]), 'ExpSquared+ExpSine2',  obj_obs, gp_times)
-                            if redChi2_3 < 2: # good gp
-                                gp_obs, redChi2, gp, chosen_kernel =  gp_obs_3, redChi2_3, gp_3, 'ExpSquared+ExpSine2'
-                            else:             # bad gp
-                                gp_obs_all.append(gp_obs_3)
-                                redChi2_all.append(redChi2_3)
-                                gp_all.append(gp_3)
-                                kernels = ['bad ExpSquared 0', 'bad ExpSquared 1', 'bad ExpSquared 2', 'bad ExpSquared+ExpSine2']
-                                indMinRedChi2 = np.argmin(redChi2_all)
-                                gp_obs, redChi2, gp = gp_obs_all[indMinRedChi2], redChi2_all[indMinRedChi2], gp_all[indMinRedChi2]
-                                chosen_kernel = kernels[indMinRedChi2]
+                gp_obs, gp, chosen_kernel = fit_best_gp(kernel_param, obj_data_pb, gp_times)
 
-                used_kernels_obj[filter_set==fil] = chosen_kernel
-                mu,cov = gp_obs.flux.values, gp_obs.flux_err.values
-                std    = np.sqrt(np.diag(cov))
-                rec    = np.column_stack((gp_times, mu, std))
-            gpdict[fil] = gp
+                mu, std = gp_obs.flux.values, gp_obs.flux_error.values
+                obj_gp_pb_array = np.column_stack((gp_times, mu, std)) # stack the GP results in a array momentarily
+                used_kernels_dict[pb] = chosen_kernel
+            used_gp_dict[pb] = gp
         else:
-            rec=np.zeros([ngp, 3])
-        newtable=Table([rec[:, 0], rec[:, 1], rec[:, 2], [fil]*ngp], names=['mjd', 'flux', 'flux_error', 'filter'])
-        if len(output)==0:
-            output=newtable
+            obj_gp_pb_array = np.zeros([number_gp, 3])
+        obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1], obj_gp_pb_array[:, 2], [pb]*number_gp],
+                           names=['mjd', 'flux', 'flux_error', 'filter'])
+        if len(obj_gps) == 0: # this is the first passband so we initialize the table
+            obj_gps = obj_gp_pb
         else:
-            output=vstack((output, newtable))
+            obj_gps = vstack((obj_gps, obj_gp_pb))
 
-    if save_output:
-        output.write(os.path.join(output_root, 'gp_'+obj), format='fits',overwrite=True)
+    if output_root != None:
+        obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits', overwrite=True)
+        with open(os.path.join(output_root, 'used_gp_dict_'+obj+'.pckl'), 'wb') as f:
+            pickle.dump(used_gp_dict, f, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(output_root, 'used_kernels_dict_'+obj+'.pckl'), 'wb') as f:
+            pickle.dump(used_kernels_dict, f, pickle.HIGHEST_PROTOCOL)
 
-    return output, gpdict, used_kernels_obj
+    return obj_gps, used_gp_dict, used_kernels_dict
 
 
-def get_GP_redChi2(iniTheta, kernel_name, obj_obs, gp_times):
-    """
-    Fit a Gaussian process curve at specific evenly spaced points along a light curve.
+def fit_best_gp(kernel_param, obj_data, gp_times):
+    """Fits Gaussian processes in a hierarchical way until it finds one whose reduced X^2 < 1 or tried all.
 
     Parameters
     ----------
-    initheta : list-like
-        Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
-    kernel_name : str
-        The kernel to fit the data. It can be ExpSquared or ExpSquared+ExpSine2
-    obj_obs : pandas.core.frame.DataFrame
-        Time, flux and flux error of the data (specific filter of an object)
+    kernel_param : list-like
+        Initial values for kernel parameters. These should be roughly the scale length in the y & x directions.
+    obj_data : pandas.core.frame.DataFrame
+        Time, flux and flux error of the data (specific filter of an object).
     gp_times :
-        Times to evaluate the Gaussian Process at
+        Times to evaluate the Gaussian Process at.
 
     Returns
     -------
     gp_obs : pandas.core.frame.DataFrame
-        Time, flux and flux error of the fitted Gaussian Process
-    redChi2: float
-        Reduced chi^2 of that particular object and filter
+        Time, flux and flux error of the fitted Gaussian Process.
     gp : george.gp.GP
-        The GP instance that was used to fit the object
+        The GP instance that was used to fit the object.
+    kernel_id : str
+        The id of the kernel chosen. This can then be used as a feature.
     """
-    obj_times = obj_obs.mjd
-    obj_flux = obj_obs.flux
-    obj_flux_err = obj_obs.flux_err
+    possible_kernel_ids = ['kernel 0', 'kernel 1', 'kernel 2', 'kernel 3', 'kernel 4']
+    possible_kernel_names = ['ExpSquared', 'ExpSquared', 'ExpSquared', 'ExpSquared+ExpSine2', 'ExpSquared+ExpSine2']
+    possible_kernel_params = [[kernel_param[0]**2, kernel_param[1]**2, None, None, None, None, None],
+                              [400., 200., None, None, None, None, None],
+                              [400., 20., None, None, None, None, None],
+                              [400., 20., 2., 4., 4., 6., 6.],
+                              [19., 9., 2., 4., 4., 6., 6.]]
+    number_diff_kernels = len(possible_kernel_names)
+    i = 0 # initializing the while loop
+    all_obj_gp = number_diff_kernels*[''] # initializing
+    all_gp_instances = number_diff_kernels*[''] # initializing
+    all_reduced_chi_squared = np.zeros(number_diff_kernels) + 666 # just a random number > 1 to initialize
+    while i < number_diff_kernels and all_reduced_chi_squared[i-1] > 1 :
+        obj_gp, gp_instance = fit_gp(kernel_name=possible_kernel_names[i], kernel_param=possible_kernel_params[i], obj_data=obj_data, gp_times=gp_times)
+        reduced_chi_squared = reducedchisquared.compute_reduced_chi_squared(obj_data, obj_gp)
+        kernel_id = possible_kernel_ids[i]
+        all_obj_gp[i] = obj_gp
+        all_gp_instances[i] = gp_instance
+        all_reduced_chi_squared[i] = reduced_chi_squared
+        i += 1
+        if i == number_diff_kernels and reduced_chi_squared > 1: # all kernels/parameters are bad for this object
+            obj_gp, gp_instance, reduced_chi_squared, kernel_id = _choose_less_bad_kernel(all_obj_gp, all_gp_instances, all_reduced_chi_squared,
+                                                                                          possible_kernel_ids)
+    return obj_gp, gp_instance, kernel_id
+
+
+def _choose_less_bad_kernel(all_obj_gp, all_gp_instances, all_reduced_chi_squared, possible_kernel_ids):
+    """If all kernels give a bad reduced X^2, choose the less bad of them.
+
+    Parameters
+    ----------
+    all_obj_gp : list-like
+        List of the DataFrames containing time, flux and flux error for each GP instance in `all_gp_instances`.
+    all_gp_instances : list-like
+        List of all GP instances used to fit the object.
+    all_reduced_chi_squared : list-like
+        List of the reduced X^2 values for each GP instance in `all_gp_instances`.
+    possible_kernel_ids : list-like
+        List of all the possible kernel ids.
+
+    Returns
+    -------
+    less_bad_obj_gp : pandas.core.frame.DataFrame
+        Time, flux and flux error of the fitted Gaussian Process `gp`.
+    less_bad_gp_instance : george.gp.GP
+        The GP instance that was used to fit the object. It is the one that gives the lower reduced X^2.
+    less_bad_reduced_chi_squared : float
+        The reduced X^2 given by the Gaussian Process `gp`.
+    """
+    index_min_reduced_chi_squared = np.argmin(all_reduced_chi_squared)
+    less_bad_obj_gp = all_obj_gp[index_min_reduced_chi_squared]
+    less_bad_gp_instance = all_gp_instances[index_min_reduced_chi_squared]
+    less_bad_reduced_chi_squared = all_reduced_chi_squared[index_min_reduced_chi_squared]
+    less_bad_kernel = possible_kernel_ids[index_min_reduced_chi_squared]
+    return less_bad_obj_gp, less_bad_gp_instance, less_bad_reduced_chi_squared, less_bad_kernel
+
+
+def fit_gp(kernel_name, kernel_param, obj_data, gp_times): # Old get_GP_redChi2
+    """Fit a Gaussian process curve at specific evenly spaced points along a light curve.
+
+    Parameters
+    ----------
+    kernel_name : str
+        The kernel to fit the data. It can be ExpSquared or ExpSquared+ExpSine2.
+    kernel_param : list-like
+        Initial values for kernel parameters. These should be roughly the scale length in the y & x directions.
+    obj_data : pandas.core.frame.DataFrame
+        Time, flux and flux error of the data (specific filter of an object).
+    gp_times :
+        Times to evaluate the Gaussian Process at.
+
+    Returns
+    -------
+    obj_gp : pandas.core.frame.DataFrame
+        Time, flux and flux error of the fitted Gaussian Process.
+    gp : george.gp.GP
+        The GP instance that was used to fit the object.
+    """
+    obj_times = obj_data.mjd
+    obj_flux = obj_data.flux
+    obj_flux_error = obj_data.flux_error
 
     def neg_log_like(p): # Objective function: negative log-likelihood
         gp.set_parameter_vector(p)
@@ -240,81 +334,58 @@ def get_GP_redChi2(iniTheta, kernel_name, obj_obs, gp_times):
         gp.set_parameter_vector(p)
         return -gp.grad_log_likelihood(obj_flux, quiet=True)
 
-    kernel = get_kernel(kernel_name, iniTheta)
+    kernel = get_kernel(kernel_name, kernel_param)
 
     gp = george.GP(kernel)
-    gp.compute(obj_times, obj_flux_err)
+    gp.compute(obj_times, obj_flux_error)
     results = op.minimize(neg_log_like, gp.get_parameter_vector(), jac=grad_neg_log_like,
                           method="L-BFGS-B", tol=1e-6)
 
     if np.sum(np.isnan(results.x)) != 0 : # the minimiser reaches a local minimum
-        iniTheta[4] = iniTheta[4]+.1 # change a bit initial conditions so we don't go to that minima
-        kernel = get_kernel(kernel_name, iniTheta)
+        kernel_param[4] = kernel_param[4]+.1 # change a bit initial conditions so we don't go to that minima
+        kernel = get_kernel(kernel_name, kernel_param)
         gp = george.GP(kernel)
-        gp.compute(obj_times, obj_flux_err)
+        gp.compute(obj_times, obj_flux_error)
         results = op.minimize(neg_log_like, gp.get_parameter_vector(), jac=grad_neg_log_like,
                           method="L-BFGS-B", tol=1e-6)
 
     gp.set_parameter_vector(results.x)
     gp_mean, gp_cov = gp.predict(obj_flux, gp_times)
-    gp_obs          = pd.DataFrame(columns=['mjd'], data=gp_times)
-    gp_obs['flux']  = gp_mean
+    obj_gp = pd.DataFrame(columns=['mjd'], data=gp_times)
+    obj_gp['flux']  = gp_mean
     if np.sum(np.diag(gp_cov)<0) == 0:
-        gp_obs['flux_err'] = np.sqrt(np.diag(gp_cov))
-        redChi2 = reducedChi2(obj_obs, gp_obs)
-    else:
-        gp_obs['flux_err'] = 66666
-        redChi2            = 666666666 # do not choose this kernel
-    return gp_obs, redChi2, gp
+        obj_gp['flux_error'] = np.sqrt(np.diag(gp_cov))
+    else: # do not choose this kernel
+        obj_gp['flux_error'] = 666666
+    return obj_gp, gp
 
 
-def get_kernel(kernel_name, iniTheta):
-    """
-    Fit the chosen kernel with the given initial conditions
+def get_kernel(kernel_name, kernel_param):
+    """Get the chosen kernel with the given initial conditions.
 
     Parameters
     ----------
-    initheta : list-like
-        Initial values for theta parameters. These should be roughly the scale length in the y & x directions.
     kernel_name : str
-        The kernel to fit the data. It can be ExpSquared or ExpSquared+ExpSine2
+        The kernel to fit the data. It can be ExpSquared or ExpSquared+ExpSine2.
+    kernel_param : list-like
+        Initial values for kernel parameters.
 
     Returns
     -------
     kernel : george.kernels
-        The kernel instance to be used in the Gaussian Process
+        The kernel instance to be used in the Gaussian Process.
+
+    Raises
+    ------
+    AttributeError
+        The only available kernels are 'ExpSquared' and 'ExpSquared+ExpSine2'.
     """
-    kExpSquared = iniTheta[0]*george.kernels.ExpSquaredKernel(metric=iniTheta[1])
-    kExpSine2   = iniTheta[4]*george.kernels.ExpSine2Kernel(gamma=iniTheta[5],log_period=iniTheta[6])
+    if kernel_name not in ['ExpSquared', 'ExpSquared+ExpSine2']:
+        raise AttributeError("The only available kernels are 'ExpSquared' and 'ExpSquared+ExpSine2'.")
+    kExpSquared = kernel_param[0]*george.kernels.ExpSquaredKernel(metric=kernel_param[1])
     if kernel_name == 'ExpSquared':
         kernel = kExpSquared
     elif kernel_name == 'ExpSquared+ExpSine2':
+        kExpSine2 = kernel_param[4]*george.kernels.ExpSine2Kernel(gamma=kernel_param[5],log_period=kernel_param[6])
         kernel = kExpSquared + kExpSine2
     return kernel
-
-
-def reducedChi2(obj_obs, gp_obs):
-    """
-    Returns the reduced chi^2 calculated comparing the Gaussian Process and the object
-
-    Parameters
-    ----------
-    obj_obs : pandas.core.frame.DataFrame
-        Time, flux and flux error of the data (specific filter of an object)
-    gp_obs : pandas.core.frame.DataFrame
-        Time, flux and flux error of the fitted Gaussian Process
-
-    Returns
-    -------
-    redChi2 : float
-        Reduced chi^2 of that particular object and filter
-    """
-    gp_times, gp_flux = gp_obs.mjd, gp_obs.flux
-    obj_times, obj_flux = obj_obs.mjd, obj_obs.flux
-
-    interpolate_flux = interpolate.interp1d(gp_times, gp_flux, kind='cubic')
-    gp_flux_obj_times  = np.array(interpolate_flux(obj_times))
-    chi2            = np.sum( ((obj_flux-gp_flux_obj_times)/obj_obs.flux_err)**2 )
-    redChi2         = chi2 / len(obj_times)
-
-    return redChi2
