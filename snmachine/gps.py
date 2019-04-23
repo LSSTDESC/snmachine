@@ -72,6 +72,31 @@ def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], outp
     print ('Time taken for Gaussian process regression', time.time()-initial_time)
 
 
+def read_gp_files_into_models(dataset, path_saved_gp_files):
+    """Reads the saved files into the dataset models so we can start from a previously saved point.
+
+    The files can have been stored as `.ascii` or `.fits`.
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    path_saved_gp_files : str
+        Path for the Gaussian Process curve files.
+    """
+    print ('Restarting from stored Gaussian Processes...')
+    for obj in dataset.object_names:
+            obj_saved_gps_file = os.path.join(path_saved_gp_files, 'gp_'+obj)
+            try:
+                obj_saved_gps = Table.read(obj_saved_gps_file, format='ascii')
+            except:
+                try:
+                    obj_saved_gps = Table.read(obj_saved_gps_file, format='fits')
+                except IOError:
+                    print ('IOError, file ', obj_saved_gps_file, 'does not exist.')
+            dataset.models[obj] = obj_saved_gps
+
+
 def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, output_root, gp_algo):
     """Computes the Gaussian process code on entire dataset in a single core.
 
