@@ -64,7 +64,7 @@ except ImportError:
 # util_module_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','utils')
 # if util_module_path not in sys.path:
 #    sys.path.append(util_module_path)
-from .gps import extract_GP
+from .gps import compute_gps
 
 
 def _run_leastsq(obj, d, model, n_attempts, seed=-1):
@@ -579,15 +579,15 @@ class Features:
     and fit_sn.
     """
     def __init__(self):
-        self.p_limit=0.05 #At what point to we suggest a model has been a bad fit.
+        self.p_limit=0.05 # At what point to we suggest a model has been a bad fit.
 
-    def extract_features(self):
+    def extract_features(self): # CAT: Why do we have this empty method? Either we write that is not implemented and then it is overwritten or erase it
         pass
 
-    def fit_sn(self):
+    def fit_sn(self): # CAT: Why do we have this empty method? Either we write that is not implemented and then it is overwritten or erase it
         pass
 
-    def goodness_of_fit(self, d):
+    def goodness_of_fit(self, d): # CAT: Is this another code to calculate the reduced X^2 ?? If so we can erase it and call it from `analysis.py`
         """
         Test (for any feature set) how well the reconstruction from the features fits each of the objects in the dataset.
 
@@ -628,7 +628,7 @@ class Features:
 
         return rcs
 
-    def posterior_predictor(self, lc, nparams, chi2):
+    def posterior_predictor(self, lc, nparams, chi2): # CAT: I am not sure if there is a point on keeping this. I would add it to `experimental-code.py`
         """
         Computes posterior predictive p-value to see if the model fits sufficient well.
         ***UNTESTED***
@@ -650,7 +650,6 @@ class Features:
         -------
         float
             The posterior predictive p-value. If this number is too close to 0 or 1 it implies the model is a poor fit.
-
         """
 
         #Count the number of data points over all filters.
@@ -669,7 +668,7 @@ class Features:
             print ('Model fit unsatisfactory, p value=', p_value)
         return p_value
 
-    def convert_astropy_array(self, tab):
+    def convert_astropy_array(self, tab): # CAT: I get this can be useful but it is not used anywhere. Besides, it should be a static method
         """
         Convenience function to convert an astropy table (floats only) into a numpy array.
         """
@@ -1300,7 +1299,7 @@ class WaveletFeatures(Features):
             if restart=='gp':
                 self.restart_from_gp(d, output_root)
             else:
-                extract_GP(d, self.ngp, xmin, xmax, initheta, output_root, nprocesses, gp_algo=gp_algo, save_output=save_output)
+                compute_gps(d, self.ngp, xmin, xmax, initheta, output_root, nprocesses, gp_algo=gp_algo, save_output=save_output)
 
             wavout, waveout_err=self.extract_wavelets(d, self.wav, self.mlev,  nprocesses, save_output, output_root)
         self.features,vals,vec,mn,s=self.extract_pca(d.object_names.copy(), wavout, recompute_pca=recompute_pca, pca_path=pca_path, output_root=output_root)
@@ -1423,7 +1422,6 @@ class WaveletFeatures(Features):
         wavout_err :  array
             A similar numpy array storing the (assuming Gaussian) error on each coefficient.
         """
-
         print ('Restarting from stored wavelets...')
         nfilts=len(d.filter_set)
         wavout=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts]) #This is just a very big array holding coefficients in memory
@@ -1431,19 +1429,19 @@ class WaveletFeatures(Features):
 
         for i in range(len(d.object_names)):
             obj=d.object_names[i]
-            fname=os.path.join(output_root, 'wavelet_train_'+obj)
+            fname=os.path.join(output_root, 'wavelet_'+obj)
             try:
                 # out=Table.read(fname, format='ascii')
                 out=Table.read(fname, format='fits')
                 cols=out.colnames[:-1]
                 n=self.ngp*2*self.mlev
-                for j in range(nfilts):
-                    x=out[out['filter']==d.filter_set[j]]
-                    coeffs=x[cols[:self.mlev*2]]
+                for j in range(nfilts): # I think I can do this in a more clear/ easy to understand way
+                    x=out[out['filter']==d.filter_set[j]] # select the filter
+                    coeffs=x[cols[:self.mlev*2]] # select the coeeficients ['cA2', 'cD2', 'cA1', 'cD1'] of that filter
                     coeffs_err=x[cols[self.mlev*2:]]
-                    newcoeffs=np.array([coeffs[c] for c in coeffs.columns]).T
+                    newcoeffs=np.array([coeffs[c] for c in coeffs.columns]).T # (np.shape(newcoeffs) = 100, 4)
                     newcoeffs_err=np.array([coeffs_err[c] for c in coeffs_err.columns]).T
-                    wavout[i, j*n:(j+1)*n]=newcoeffs.flatten('F')
+                    wavout[i, j*n:(j+1)*n]=newcoeffs.flatten('F') # [cA2 cD2 cA1 cD1]
                     wavout_err[i, j*n:(j+1)*n]=newcoeffs_err.flatten('F')
 
             except IOError:
@@ -1747,7 +1745,7 @@ class WaveletFeatures(Features):
         assert len(U.shape) == 2
 
         # eigenvals in descending order
-        vals = sDiag * sDiag
+        vals = sDiag * sDiag # shape = (nsamples, nsamples)
 
 
         # Find number of components to keep
