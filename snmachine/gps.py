@@ -95,7 +95,7 @@ def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, out
     for i in range(len(dataset.object_names)):
         obj = dataset.object_names[i]
         try:
-            output, used_gp_dict, used_kernels_dict = _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_param,
+            output = _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_param,
                                                     output_root=output_root, gp_algo=gp_algo)
             dataset.models[obj] = output
         except ValueError:
@@ -131,8 +131,6 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output
 
     out = p.map(partial_gp, dataset.object_names, chunksize=10)
     p.close()
-    gp = {}
-    used_kernels = {}
 
     out = np.reshape(out,(len(dataset.object_names),3))
     for i in range(len(out)):
@@ -219,7 +217,7 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_para
         with open(os.path.join(output_root, 'used_kernels_dict_'+obj+'.pckl'), 'wb') as f:
             pickle.dump(used_kernels_dict, f, pickle.HIGHEST_PROTOCOL)
 
-    return obj_gps, used_gp_dict, used_kernels_dict
+    return obj_gps
 
 
 def fit_best_gp(kernel_param, obj_data, gp_times):
