@@ -126,6 +126,7 @@ def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, out
             dataset.models[obj] = output
         except ValueError:
             print('Object {} has fallen over!'.format(obj))
+    print('Models fitted with the GP values.')
 
 
 def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output_root, number_processes, gp_algo):
@@ -153,13 +154,17 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output
     p = Pool(number_processes, maxtasksperchild=10)
 
     #Pool and map can only really work with single-valued functions
-    partial_gp = partial(_compute_gp_all_passbands, dataset=dataset, number_gp=number_gp, t_min=t_min, t_max=t_max, kernel_param=kernel_param, output_root=output_root, gp_algo=gp_algo)
+    partial_gp = partial(_compute_gp_all_passbands, dataset=dataset, number_gp=number_gp, t_min=t_min, t_max=t_max, kernel_param=kernel_param,
+                         output_root=output_root, gp_algo=gp_algo)
+
     out = p.map(partial_gp, dataset.object_names, chunksize=10)
     p.close()
 
+    out = np.reshape(out,(len(dataset.object_names),3))
     for i in range(len(out)):
         obj = dataset.object_names[i]
-        dataset.models[obj] = out[i]
+        dataset.models[obj] = out[i,0]
+    print('Models fitted with the GP values.')
 
 
 def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None, gp_algo='george'):
@@ -195,6 +200,7 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_para
     used_kernels_dict: dict
         Dictionary whose key is the passband and whose value is the id of the kernel used in the GP that fitted that passband.
     """
+
     if gp_algo=='gapp' and not has_gapp:
         print('No GP module gapp. Defaulting to george instead.')
         gp_algo='george'
