@@ -2,7 +2,7 @@
 Module containing Dataset classes. These read in data from various sources and turns the light curves into astropy tables that
 can be read by the rest of the code.
 """
-from __future__ import division # Do we still need this?
+from __future__ import division # To be compatible with python 2
 
 import math
 import os
@@ -24,6 +24,7 @@ from astropy.table import Table, Column
 from past.builtins import basestring
 from random import shuffle, sample
 from scipy import interpolate
+from snmachine import chisq as cs
 
 #Colours for graphs
 colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00',
@@ -244,7 +245,7 @@ class EmptyDataset:
         #plt.gca().tick_params(labelsize=8)
         try:
             chi_obj = [fname]
-            chi_2_single_object = self.reduced_chi_squared(chi_obj)[chi_obj[0]]
+            chi_2_single_object = self.compute_chisq_over_datapoints(chi_obj)[chi_obj[0]]
         except:
             chi_2_single_object = 0
 
@@ -387,7 +388,6 @@ class EmptyDataset:
             self.models[obj]=fit_sn(self.data[obj], *args)
         print ('Models fitted.')
 
-
     def get_types(self):
         """
         Returns a list of the types of the entire dataset.
@@ -470,7 +470,7 @@ class EmptyDataset:
             plt.xlabel('Redshift', fontsize=16)
             plt.show()
 
-    def reduced_chi_squared(self, subset = 'none'):
+    def compute_chisq_over_datapoints(self, subset='none'):
         """
         Returns the reduced chi squared for each object, once a model has been set.
 
@@ -482,43 +482,25 @@ class EmptyDataset:
         Returns
         -------
         dict
-            Dictionary of reduced chi^2 for each object
+            Dictionary of reduced X^2 for each object
         """
-
-        if subset == 'none':
-            data_list = self.object_names
+        if len(self.models) == 0 :
+            print('No models fitted so it is not possible to calculate the reduced X^2.')
         else:
-            data_list = subset
-        chi_dict ={}
-        for name in data_list:
-            lc=self.data[name]
+            if subset == 'none':
+                data_list = self.object_names
+            else:
+                data_list = subset
+            chisq_over_datapoints_dict = {}
 
-            #This selects the filters from the possible set that this object has measurements in and maintains the order
-            filts=sorted(set(self.filter_set) & set(np.unique(lc['filter'])), key = self.filter_set.index)
-            chi_2 = 0
-            N = 0 # counts total number of points
-            for j in range(len(filts)):
-                inds=np.where(lc['filter']==filts[j])[0]
-                t, F, F_err = np.array(lc['mjd'][inds]), np.array(lc['flux'][inds]), np.array(lc['flux_error'][inds])
-                #tdelt=t-t.min()
-                tdelt=t
-                N = N + len(tdelt)
-                if name in self.models:
-                    mod=self.models[name]
-                    if mod is not None:
-                        inds=np.where(mod['filter']==filts[j])[0]
-                        t_mod, F_mod = np.array(mod['mjd'][inds]), np.array(mod['flux'][inds])
+            for obj in data_list:
+                obj_data_pd = self.data[obj].to_pandas()
+                obj_model_pd = self.models[obj].to_pandas()
+                obj_data_pd['filter'] = obj_data_pd['filter'].values.astype(str) # the passband is saved as bytes
+                obj_model_pd['filter'] = obj_model_pd['filter'].values.astype(str) # the passband is saved as bytes
+                chisq_over_datapoints_dict[obj] = cs.compute_overall_chisq_over_datapoints(obj_data_pd, obj_model_pd)
 
-                        #interpolate the model so that we can compare the model with the data
-                        int_f = interpolate.interp1d(t_mod, F_mod, kind='cubic')
-                        F_mod_mjd = np.array(int_f(tdelt))
-                        summand=(F-F_mod_mjd)**2/(F_err**2)
-                        chi_2 = np.sum(summand) + chi_2
-
-            chi_dict[name] = chi_2 / N
-
-        return chi_dict
-
+            return chisq_over_datapoints_dict
 
 
 class Dataset(EmptyDataset):
@@ -651,8 +633,6 @@ class Dataset(EmptyDataset):
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'name':flname,'z':z, 'z_err':z_err, 'type':type, 'initial_observation_time':start_mjd})
 
         return tab
-
-
 
 
 class OpsimDataset(EmptyDataset):
@@ -866,8 +846,6 @@ class LSSTCadenceSimulations(OpsimDataset):
             print ('%d objects were invalid and not added to the dataset.' %invalid)
         self.object_names=np.array(self.object_names, dtype='str')
         print ('%d objects read into memory.' %len(self.data))
-
-
 
 
 class SDSS_Data(EmptyDataset):
@@ -1208,6 +1186,7 @@ class SDSS_Data(EmptyDataset):
 
         return tab
 
+
 class SDSS_Simulations(EmptyDataset):
     """
     Class to read in the SDSS simulations dataset
@@ -1321,7 +1300,7 @@ class SDSS_Simulations(EmptyDataset):
         mjd = np.array([lc['MJD'][i] for i in range(len(lc['MJD'])) if lc['FLUXCAL'][i] > 0])
         flt = np.array(['sdss' + lc['FLT'][i] for i in range(len(lc['FLT'])) if lc['FLUXCAL'][i] > 0])
         flux = np.array( [(lc['FLUXCAL'][i]*math.pow(10,-1.44)) for i in range(len(lc['FLUXCAL'])) if lc['FLUXCAL'][i] > 0]) # ignore negative flux values
-#FLUX: MULTIPLY BY 10^-1.44 (FLUX IN SDSS IS CALCULATED AS 10^(-0.4MAG +9.56) WHEREAS SIMULATED FLUXES ARE CALCULATED AS 10^(-0.4MAG + 11)- WE USE THE SDSS CONVENTION).
+        #FLUX: MULTIPLY BY 10^-1.44 (FLUX IN SDSS IS CALCULATED AS 10^(-0.4MAG +9.56) WHEREAS SIMULATED FLUXES ARE CALCULATED AS 10^(-0.4MAG + 11)- WE USE THE SDSS CONVENTION).
         fluxerr = np.array([(lc['FLUXCALERR'][i]*math.pow(10,-1.44)) for i in range(len(lc['FLUXCALERR'])) if lc['FLUXCAL'][i] > 0])
         mag = np.array([lc['MAG'][i] for i in range(len(lc['MAGERR'])) if lc['FLUXCAL'][i] > 0])
         magerr = np.array([lc['MAGERR'][i] for i in range(len(lc['MAGERR'])) if lc['FLUXCAL'][i] > 0])
