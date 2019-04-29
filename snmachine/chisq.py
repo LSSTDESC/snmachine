@@ -10,12 +10,12 @@ import pandas as pd
 
 from scipy import interpolate
 
-def compute_overall_reduced_chi_squared(obj_data_with_passband, obj_model_with_passband):
-    """Calculates the reduced X^2 statistic between an objects's observations with different passbands and the interpolated computed data.
+def compute_overall_chisq_over_datapoints(obj_data_with_passband, obj_model_with_passband):
+    """Calculates the X^2/number of points between an objects's observations with different passbands and the interpolated computed data.
 
     `obj_data_with_passband` is considered the real data and `obj_model_with_passband` the data we get from a model we
-    wish to compare the goodness of fit using the reduced X^2 statictic. The reduced X^2 of the observation is the sum
-    of the reduced X^2 of each `passband` (filter/passband).
+    wish to compare the goodness of fit using X^2/number of datapoints. The X^2/number of datapoints of the observation is the sum
+    of the X^2 of each `passband` (filter/passband) divided by the total number of datapoints.
     `obj_model_with_passband` does not need to contain the fluxes at the same times as `obj_data_with_passband` as
     this function performs an interpolation.
 
@@ -29,8 +29,8 @@ def compute_overall_reduced_chi_squared(obj_data_with_passband, obj_model_with_p
 
     Returns
     -------
-    reduced_chi_squared : float
-        Reduced_chi_squared statistic between observations and the interpolated computed data over all passbands
+    chisq_over_datapoints : float
+        X^2/number of datapoints between observations and the interpolated computed data over all passbands.
     """
     obj_data_with_passband = rename_passband_column(obj_data_with_passband) # rename the passband column if needed
     obj_model_with_passband = rename_passband_column(obj_model_with_passband)
@@ -41,18 +41,18 @@ def compute_overall_reduced_chi_squared(obj_data_with_passband, obj_model_with_p
         obj_model_pb = obj_model_with_passband.loc[obj_model_with_passband.passband == pb]
         chi_squared += compute_chi_squared(obj_data_pb, obj_model_pb)
     number_data_points = np.shape(obj_data_with_passband)[0]
-    reduced_chi_squared = chi_squared/number_data_points
-    return reduced_chi_squared
+    chisq_over_datapoints = chi_squared/number_data_points
+    return chisq_over_datapoints
 
 
-def compute_reduced_chi_squared(obj_data, obj_model):
-    """Calculates the reduced X^2 statistic between an object's observations and the interpolated computed data.
+def compute_chisq_over_datapoints(obj_data, obj_model):
+    """Calculates X^2/number of datapoints between an object's observations and the interpolated computed data.
 
     `obj_data` is considered the real data and `obj_model` the data we get from a model
-    we wish to compare the goodness of fit using the reduced X^2 statictic. The X^2
-    statistic is calculated as the sum of squared errors between the fluxes
-    of `obj_data` and `obj_model` divided by the flux errors of `obj_data`. The reduced
-    X^2 statictic is the X^2 statistic divided by the number of points in `obj_data`.
+    we wish to compare the goodness of fit using X^2/number of datapoints. The X^2/number of datapoints
+    is calculated as the sum of squared errors between the fluxes of `obj_data` and `obj_model` divided
+    by the flux errors of `obj_data`. The X^2/number of datapoints is the X^2 statistic divided by the
+    number of points in `obj_data`.
     `obj_model` does not need to contain the fluxes at the same times as `obj_data` as
     this function performs an interpolation.
 
@@ -66,18 +66,18 @@ def compute_reduced_chi_squared(obj_data, obj_model):
 
     Returns
     -------
-    reduced_chi_squared : float
-        Reduced_chi_squared statistic between observations and the interpolated computed data
+    chisq_over_datapoints : float
+        X^2/number of datapoints between observations and the interpolated computed data.
 
     Raises
     ------
     AttributeError
         Both `obj_data` and `obj_model` need to contain the columns `mjd` and `flux`. `obj_data` also needs `flux_error`.
     """
-    number_freedom_degrees = np.shape(obj_data)[0] # number of objects in the data
+    number_datapoints = np.shape(obj_data)[0]
     chi_squared = compute_chi_squared(obj_data, obj_model)
-    reduced_chi_squared = chi_squared/number_freedom_degrees
-    return reduced_chi_squared
+    chisq_over_datapoints = chi_squared/number_datapoints
+    return chisq_over_datapoints
 
 
 def compute_chi_squared(obj_data, obj_model):
@@ -101,7 +101,7 @@ def compute_chi_squared(obj_data, obj_model):
     Returns
     -------
     chi_squared : float
-        chi_squared statistic between observations and the interpolated computed data
+        X^2 statistic between observations and the interpolated computed data
 
     Raises
     ------
