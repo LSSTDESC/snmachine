@@ -60,7 +60,7 @@ def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], outp
     gp_algo : str, optional
         which gp package is used for the Gaussian Process Regression, GaPP or george
     """
-    print ('Performing Gaussian process regression')
+    print ('Performing Gaussian process regression.')
     initial_time = time.time()
 
     # Check for parallelisation
@@ -70,7 +70,7 @@ def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], outp
     else: # parallelizing
         _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output_root, number_processes, gp_algo)
 
-    print ('Time taken for Gaussian process regression', time.time()-initial_time)
+    print ('Time taken for Gaussian process regression: {:.2f}s.'.format(time.time()-initial_time))
 
 
 def read_gp_files_into_models(dataset, path_saved_gp_files):
