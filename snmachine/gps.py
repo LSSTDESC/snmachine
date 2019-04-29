@@ -122,9 +122,9 @@ def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, out
     for i in range(len(dataset.object_names)):
         obj = dataset.object_names[i]
         try:
-            output = _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_param,
-                                                    output_root=output_root, gp_algo=gp_algo)
-            dataset.models[obj] = output
+            obj_gps = _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_param,
+                                                output_root=output_root, gp_algo=gp_algo)
+            dataset.models[obj] = obj_gps
         except ValueError:
             print('Object {} has fallen over!'.format(obj))
     print('Models fitted with the Gaussian Processes values.')
@@ -158,13 +158,13 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output
     partial_gp = partial(_compute_gp_all_passbands, dataset=dataset, number_gp=number_gp, t_min=t_min, t_max=t_max, kernel_param=kernel_param,
                          output_root=output_root, gp_algo=gp_algo)
 
-    out = p.map(partial_gp, dataset.object_names, chunksize=10)
+    dataset_gps = p.map(partial_gp, dataset.object_names, chunksize=10)
     p.close()
 
-    out = np.reshape(out,(len(dataset.object_names),3))
-    for i in range(len(out)):
+    for i in range(len(dataset.object_names)):
         obj = dataset.object_names[i]
-        dataset.models[obj] = out[i,0]
+        obj_gps = dataset_gps[i]
+        dataset.models[obj] = obj_gps
     print('Models fitted with the Gaussian Processes values.')
 
 
@@ -196,10 +196,6 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_para
     -------
     obj_gps : astropy.table.Table
         Table with evaluated Gaussian process curve and errors at each passband.
-    used_gp_dict : dict
-        Dictionary whose key is the passband and whose value is the Gaussian Process Regression instance that fitted that passband.
-    used_kernels_dict: dict
-        Dictionary whose key is the passband and whose value is the id of the kernel used in the GP that fitted that passband.
     """
 
     if gp_algo=='gapp' and not has_gapp:
