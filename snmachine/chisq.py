@@ -35,13 +35,13 @@ def compute_overall_chisq_over_datapoints(obj_data_with_passband, obj_model_with
     obj_data_with_passband = rename_passband_column(obj_data_with_passband) # rename the passband column if needed
     obj_model_with_passband = rename_passband_column(obj_model_with_passband)
     unique_passbands = np.unique(obj_data_with_passband.passband)
-    chi_squared = 0
+    chisq = 0
     for pb in unique_passbands:
         obj_data_pb = obj_data_with_passband.loc[obj_data_with_passband.passband == pb]
         obj_model_pb = obj_model_with_passband.loc[obj_model_with_passband.passband == pb]
-        chi_squared += compute_chi_squared(obj_data_pb, obj_model_pb)
+        chisq += compute_chisq(obj_data_pb, obj_model_pb)
     number_data_points = np.shape(obj_data_with_passband)[0]
-    chisq_over_datapoints = chi_squared/number_data_points
+    chisq_over_datapoints = chisq/number_data_points
     return chisq_over_datapoints
 
 
@@ -75,12 +75,12 @@ def compute_chisq_over_datapoints(obj_data, obj_model):
         Both `obj_data` and `obj_model` need to contain the columns `mjd` and `flux`. `obj_data` also needs `flux_error`.
     """
     number_datapoints = np.shape(obj_data)[0]
-    chi_squared = compute_chi_squared(obj_data, obj_model)
-    chisq_over_datapoints = chi_squared/number_datapoints
+    chisq = compute_chisq(obj_data, obj_model)
+    chisq_over_datapoints = chisq/number_datapoints
     return chisq_over_datapoints
 
 
-def compute_chi_squared(obj_data, obj_model):
+def compute_chisq(obj_data, obj_model):
     """Calculates the X^2 statistic between an object's observations and the interpolated computed data.
 
     `obj_data` is considered the real data and `obj_model` the data we get from a model
@@ -100,7 +100,7 @@ def compute_chi_squared(obj_data, obj_model):
 
     Returns
     -------
-    chi_squared : float
+    chisq : float
         X^2 statistic between observations and the interpolated computed data
 
     Raises
@@ -117,8 +117,8 @@ def compute_chi_squared(obj_data, obj_model):
     interpolate_model_flux_at_times = interpolate.interp1d(obj_model.mjd, obj_model.flux, kind='cubic')
     interpolated_model_flux = interpolate_model_flux_at_times(obj_data.mjd)
 
-    chi_squared = np.sum(((obj_data.flux-interpolated_model_flux) / obj_data.flux_error)**2)
-    return chi_squared
+    chisq = np.sum(((obj_data.flux-interpolated_model_flux) / obj_data.flux_error)**2)
+    return chisq
 
 
 def rename_passband_column(obj_obs, original_passband_column_name=None):
