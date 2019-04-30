@@ -19,14 +19,16 @@ with open(example_data_path, 'rb') as input:
 
 # Start the tests
 @pytest.mark.gp
-def test_gps_reduced_chi2():
+def test_gps_chisq_over_datapoints():
     """
-    Test if the GPs are returning the expected values of reduced X^2.
+    Test if the GPs are returning the expected values of X^2/number of datapoints.
     """
-    reduced_chi2_true_values = {
-        '615': 5695.3046266894344, '713': 1.067914355545299, '730': 0.83081248341774283, '745': 1.0721592615480273, '1124': 0.77149815252112608
+    chisq_over_datapoints_true_values = {
+        '615': 5695.7282978660587, '713': 1.0678220723794234, '730': 0.83081717132128197, '745': 1.0721589469244539, 
+        '1124': 0.77145060447736791
         } # These are the objects in example_data. They are the first 5 PLAsTiCC's objects.
-    gps.extract_GP(example_data, ngp=100, t_min=0, t_max=1100, initheta=[100., 400.], output_root=None, nprocesses=1)
-    reduced_chi2_example_data = example_data.reduced_chi_squared()
-    for obj in reduced_chi2_example_data.keys():
-        np.testing.assert_allclose(reduced_chi2_example_data[obj], reduced_chi2_true_values[obj])
+    gps.compute_gps(example_data, number_gp=100, t_min=0, t_max=1100, kernel_param=[500., 20.], output_root=None, 
+                    number_processes=1)
+    chisq_over_datapoints_example_data = example_data.compute_chisq_over_datapoints()
+    for obj in chisq_over_datapoints_example_data.keys():
+        np.testing.assert_allclose(chisq_over_datapoints_example_data[obj], chisq_over_datapoints_true_values[obj])
