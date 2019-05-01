@@ -33,6 +33,34 @@ def compute_overall_chisq_over_datapoints(obj_data_with_passband, obj_model_with
         X^2/number of datapoints between observations and the interpolated computed data over all passbands.
     """
     obj_data_with_passband = rename_passband_column(obj_data_with_passband) # rename the passband column if needed
+    chisq = compute_overall_chisq(obj_data_with_passband, obj_model_with_passband)
+    number_data_points = np.shape(obj_data_with_passband)[0]
+    chisq_over_datapoints = chisq/number_data_points
+    return chisq_over_datapoints
+
+
+def compute_overall_chisq(obj_data_with_passband, obj_model_with_passband):
+    """Calculates the X^2 statistic between an objects's observations with different passbands and the interpolated computed data.
+
+    `obj_data_with_passband` is considered the real data and `obj_model_with_passband` the data we get from a model we
+    wish to compare the goodness of fit using X^2. The X^2 of the observation is the sum of the X^2 of each `passband` (filter/passband).
+    `obj_model_with_passband` does not need to contain the fluxes at the same times as `obj_data_with_passband` as
+    this function performs an interpolation.
+
+    Parameters
+    ----------
+    obj_data : pandas.core.frame.DataFrame with `mjd`, `flux`, `flux_error` and 'passband' columns
+        DataFrame containing all the times, flux, flux errors and passband of the real data of the object.
+    obj_model : pandas.core.frame.DataFrame with `mjd`, `flux` and 'passband' columns
+        DataFrame containing all the times and flux of the computed data/ model of the object. The
+        fluxes don't need to be calculated for the same times `obj_data` have.
+
+    Returns
+    -------
+    chisq : float
+        X^2 between observations and the interpolated computed data over all passbands.
+    """
+    obj_data_with_passband = rename_passband_column(obj_data_with_passband) # rename the passband column if needed
     obj_model_with_passband = rename_passband_column(obj_model_with_passband)
     unique_passbands = np.unique(obj_data_with_passband.passband)
     chisq = 0
@@ -40,9 +68,7 @@ def compute_overall_chisq_over_datapoints(obj_data_with_passband, obj_model_with
         obj_data_pb = obj_data_with_passband.loc[obj_data_with_passband.passband == pb]
         obj_model_pb = obj_model_with_passband.loc[obj_model_with_passband.passband == pb]
         chisq += compute_chisq(obj_data_pb, obj_model_pb)
-    number_data_points = np.shape(obj_data_with_passband)[0]
-    chisq_over_datapoints = chisq/number_data_points
-    return chisq_over_datapoints
+    return chisq
 
 
 def compute_chisq_over_datapoints(obj_data, obj_model):
