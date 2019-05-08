@@ -1,20 +1,18 @@
-# snmachine machine learning pipeline for the PLAsTiCC competition.
+"""
+Machine learning pipeline for the PLAsTiCC competition using snmachine codebase
+"""
 
-## IMPORTS
 import numpy as np
 import pandas as pd
 import sys
 import os
 import subprocess
 import multiprocessing
-import glob
-from astropy.table import Table,join,vstack
+from astropy.table import Table
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-import pickle
 from argparse import ArgumentParser
 import yaml
-import multiprocessing
 import warnings
 warnings.filterwarnings("ignore")
 try:
@@ -34,15 +32,15 @@ from plasticc_utils import plasticcLogLoss, plotConfusionMatrix
 
 def createFolderStructure(ANALYSIS_DIR, ANALYSIS_NAME):
 
-    method_dir   = os.path.join(ANALYSIS_DIR, ANALYSIS_NAME)
+    method_dir = os.path.join(ANALYSIS_DIR, ANALYSIS_NAME)
     features_dir = os.path.join(method_dir, 'wavelet_features')
-    classif_dir  = os.path.join(method_dir, 'classifications')
-    interm_dir   = os.path.join(method_dir, 'intermediate')
-    plots_dir    = os.path.join(method_dir, 'plots')
+    classif_dir = os.path.join(method_dir, 'classifications')
+    interm_dir = os.path.join(method_dir, 'intermediate')
+    plots_dir = os.path.join(method_dir, 'plots')
 
-    dirs = {"method_dir" : method_dir, "features_dir" : features_dir,
-            "classif_dir" : classif_dir, "interm_dir" : interm_dir,
-            "plots_dir" : plots_dir}
+    dirs = {"method_dir": method_dir, "features_dir": features_dir,
+            "classif_dir": classif_dir, "interm_dir": interm_dir,
+            "plots_dir": plots_dir}
 
     for key, value in dirs.items():
         subprocess.call(['mkdir', value])
@@ -72,8 +70,7 @@ def loadDataset(DATA_PATH):
             meta_file = "_metadata.".join(data_file.split("."))
 
             print("Opening from CSV")
-            dat = sndata.PlasticcData(folder=folder, data_file=data_file, meta_file=meta_file,
-                            from_pickle=False)
+            dat = sndata.PlasticcData(folder=folder, data_file=data_file, meta_file=meta_file, from_pickle=False)
             print("Dataset loaded from csv file as: {}".format(dat))
             print("Saving {} object to pickle binary".format(dat))
 
@@ -101,39 +98,29 @@ def reduceDataset(dat, dirs, subset_size, SEED):
         np.savetxt(subset_file, rand_objs, fmt='%s')
 
     dat.object_names = rand_objs
-    dat.data = {objects:dat.data[objects] for objects in dat.object_names} # erase the data we are not using
+    dat.data = {objects: dat.data[objects] for objects in dat.object_names}  # Erase the data we are not using
 
     print("Dataset reduced to {} objects".format(dat.object_names.shape[0]))
 
-    return dat # Cat: I don't think we need to return anything
+    return dat  # Cat: I don't think we need to return anything
 
 
 def augmentData(dat, number_per_type):
-
-    def print_stats_by_type(dat):
-            print('total obj in dataset: %d'%len(dat.data))
-            types=dat.get_types()
-            t_unique=np.unique(types['Type'])
-
-            for t in t_unique:
-                thistype=types[types['Type']==t]
-                print('type: %d - %d obj in dataset'%(t,len(thistype)))
-            return t_unique
-
-    t_unique=print_stats_by_type(dat)
-    aug=snaugment.GPAugment(dat)
-    numbers={types:number_per_type for types in t_unique}
-    res=aug.augment(numbers)
-    t_unique_new=print_stats_by_type(dat)
+    # Tarek: This might be removed as a function call and replaced with calls to
+    # functions inside snmachine.snaugment
+    pass
 
 
-def fitGaussianProcess(dat, **kwargs): # Cat: Do we really want a mask funtion?
+def fitGaussianProcess(dat, **kwargs):  # Cat: Do we really want a mask funtion?
+    # Tarek: Now that this file lives in snmachine and with the extensive
+    # refactoring this is no longer necessary I believe
 
-    extract_GP(dat, **kwargs)
+    # extract_GP(dat, **kwargs)
     # snfeatures.WaveletFeatures.extract_GP(dat, **kwargs)
+    pass
 
 
-def waveletDecomposition(dat, ngp, **kwargs): # Cat: we need to add ngp as input otherwise it doesn't run on the notebbok
+def waveletDecomposition(dat, ngp, **kwargs):  # Cat: we need to add ngp as input otherwise it doesn't run on the notebbok
 
     wavelet_object = snfeatures.WaveletFeatures(ngp=ngp)
     print("WAV = {}\n".format(wavelet_object.wav))
@@ -155,7 +142,7 @@ def dimentionalityReduction(wavelet_object, dirs, object_names, waveout, toleran
     return wavelet_features, eigenvalues, eigenvectors, means
 
 
-def getMeta(dat): # including mjd
+def getMeta(dat):  # including mjd
     object_names = dat.object_names
     meta_df = pd.DataFrame(index=object_names, columns=dat.data[object_names[0]].meta.keys())
     mjd_diff = np.zeros_like(object_names)
@@ -174,7 +161,7 @@ def getMeta(dat): # including mjd
             meta_df.at[obj, key] = meta_key
     try:
         meta_df.drop(['distmod','mwebv', 'stencil', 'augment_algo'] , axis=1, inplace=True)
-    except KeyError: # if we are only using the original objects, 'stencil', 'augment_algo' aren't part of the metadata
+    except KeyError:  # if we are only using the original objects, 'stencil', 'augment_algo' aren't part of the metadata
         meta_df.drop(['distmod','mwebv'] , axis=1, inplace=True)
     meta_df.rename(index=str, columns={"name": "Object", "type":"target"}, inplace=True)
     meta_df['mjd_diff'] = mjd_diff
@@ -210,13 +197,11 @@ def createClassififer(combined_features, RANDOM_STATE):
     print("X = \n{}".format(X))
     print("y = \n{}".format(y))
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y,
-            random_state=RANDOM_STATE)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=RANDOM_STATE)
 
-
-    clf = RandomForestClassifier(n_estimators=700, criterion='entropy',\
-                                         oob_score=True, n_jobs=-1,
-                                         random_state=RANDOM_STATE)
+    clf = RandomForestClassifier(n_estimators=700, criterion='entropy',
+                                 oob_score=True, n_jobs=-1,
+                                 random_state=RANDOM_STATE)
 
     clf.fit(X_train, y_train)
 
@@ -252,20 +237,24 @@ def makePredictions(LOCATION_OF_TEST_DATA, CLASSIFIER):
     # RETURN SUBMISSION_FILE_WITHOUT_99
     pass
 
+
 def runFullPipeline():
     pass
+
 
 def restartFromGPs():
     pass
 
+
 def restartFromWavelets():
     pass
+
 
 if __name__ == "__main__":
 
     parser = ArgumentParser(description="Run pipeline end to end")
     parser.add_argument('--configuration', '-c')
-    parser.add_argument('--restart', '-r', default="full")
+    parser.add_argument('--restart-from', '-r', help='Either restart from saved "GPs" or from saved "Wavelets"', default="full")
     arguments = parser.parse_args()
 
     # LOAD CONFIGURATION FILE --->>>> COULD BE ITS OWN LOAD CONFIGURATION FUNCTION?
@@ -287,7 +276,7 @@ if __name__ == "__main__":
     ANALYSIS_NAME = params.get("ANALYSIS_NAME", None)
 
     # Set the number of processes you want to use throughout the notebook
-    nprocesses  = multiprocessing.cpu_count()
+    nprocesses = multiprocessing.cpu_count()
     print("Running with {} cores".format(nprocesses))
 
     # SNMACHINE PARAMETERS
@@ -300,9 +289,9 @@ if __name__ == "__main__":
     # RUN PIPELINE
     if (arguments.restart.lower() == "wavelets"):
 
-        wavelet_features    = Table.read(dirs.get("features_dir")+"/wavelet_features.fits")
-        combined_features   = combineAdditionalFeatures(wavelet_features, DATA_PATH)
-        classifer           = createClassififer(combined_features)
+        wavelet_features = Table.read(dirs.get("features_dir")+"/wavelet_features.fits")
+        combined_features = combineAdditionalFeatures(wavelet_features, DATA_PATH)
+        classifer = createClassififer(combined_features)
 
     elif (arguments.restart.lower() == "gps"):
         print("Hello")
@@ -312,14 +301,14 @@ if __name__ == "__main__":
         dat = loadDataset(DATA_PATH)
         # dat = reduceDataset(dat, dirs, subset_size=10, SEED=SEED)
         fitGaussianProcess(dat, ngp=ngp, t_min=0, initheta=initheta,
-                            nprocesses=nprocesses, output_root=dirs.get("interm_dir"), t_max=1100)
+                           nprocesses=nprocesses, output_root=dirs.get("interm_dir"), t_max=1100)
 
         waveout, waveout_err, wavelet_object = waveletDecomposition(dat, ngp=ngp, nprocesses=nprocesses, save_output='all', output_root=dirs.get("interm_dir"))
 
         wavelet_features, eigenvalues, eigenvectors, means = dimentionalityReduction(wavelet_object, dirs, dat.object_names.copy(), waveout, tolerance=0.99, save_output=True, recompute_pca=True, output_root=dirs.get("features_dir"))
 
-        combined_features   = combineAdditionalFeatures(wavelet_features, DATA_PATH)
-        classifer           = createClassififer(combined_features)
+        combined_features = combineAdditionalFeatures(wavelet_features, DATA_PATH)
+        classifer = createClassififer(combined_features)
         # snmachine.utils.fit_gaussian_process.extract_GP()
         # check for wavelets, if so restartFromWavelets()
         # else, check for gp's, if so restartFromGPs()
