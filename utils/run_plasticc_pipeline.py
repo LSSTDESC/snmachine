@@ -30,7 +30,7 @@ if util_module_path not in sys.path:
 from plasticc_utils import plasticcLogLoss, plotConfusionMatrix
 
 
-def createFolderStructure(ANALYSIS_DIR, ANALYSIS_NAME):
+def create_folder_structure(ANALYSIS_DIR, ANALYSIS_NAME):
 
     method_dir = os.path.join(ANALYSIS_DIR, ANALYSIS_NAME)
     features_dir = os.path.join(method_dir, 'wavelet_features')
@@ -48,14 +48,14 @@ def createFolderStructure(ANALYSIS_DIR, ANALYSIS_NAME):
     return dirs
 
 
-def saveConfigurationFile(dirs):
+def save_configuration_file(dirs):
 
     METHOD_DIR = dirs.get("method_dir", None)
     with open('/{}/config.yaml'.format(METHOD_DIR), 'w') as config:
             yaml.dump(params, config, default_flow_style=False)
 
 
-def loadDataset(DATA_PATH):
+def load_dataset(DATA_PATH):
 
     try:
         if DATA_PATH.lower().endswith((".pickle", ".pkl", ".p", ".pckl")):
@@ -84,7 +84,7 @@ def loadDataset(DATA_PATH):
     return dat
 
 
-def reduceDataset(dat, dirs, subset_size, SEED):
+def reduce_dataset(dat, dirs, subset_size, SEED):
 
     METHOD_DIR = dirs.get("method_dir", None)
     subset_file = '/{}/subset.list'.format(METHOD_DIR)
@@ -105,13 +105,7 @@ def reduceDataset(dat, dirs, subset_size, SEED):
     return dat  # Cat: I don't think we need to return anything
 
 
-def augmentData(dat, number_per_type):
-    # Tarek: This might be removed as a function call and replaced with calls to
-    # functions inside snmachine.snaugment
-    pass
-
-
-def fitGaussianProcess(dat, **kwargs):  # Cat: Do we really want a mask funtion?
+def fit_gaussian_process(dat, **kwargs):  # Cat: Do we really want a mask funtion?
     # Tarek: Now that this file lives in snmachine and with the extensive
     # refactoring this is no longer necessary I believe
 
@@ -120,7 +114,7 @@ def fitGaussianProcess(dat, **kwargs):  # Cat: Do we really want a mask funtion?
     pass
 
 
-def waveletDecomposition(dat, ngp, **kwargs):  # Cat: we need to add ngp as input otherwise it doesn't run on the notebbok
+def wavelet_decomposition(dat, ngp, **kwargs):  # Cat: we need to add ngp as input otherwise it doesn't run on the notebbok
 
     wavelet_object = snfeatures.WaveletFeatures(ngp=ngp)
     print("WAV = {}\n".format(wavelet_object.wav))
@@ -130,7 +124,7 @@ def waveletDecomposition(dat, ngp, **kwargs):  # Cat: we need to add ngp as inpu
     return waveout, waveout_err, wavelet_object
 
 
-def dimentionalityReduction(wavelet_object, dirs, object_names, waveout, tolerance, **kwargs): # Cat: we need to add tolerance
+def dimentionality_reduction(wavelet_object, dirs, object_names, waveout, tolerance, **kwargs): # Cat: we need to add tolerance
 
     # check if reduced wavelet features already exist
     wavelet_features, eigenvalues, eigenvectors, means, num_feats = wavelet_object.extract_pca(object_names, waveout, **kwargs)
@@ -142,33 +136,7 @@ def dimentionalityReduction(wavelet_object, dirs, object_names, waveout, toleran
     return wavelet_features, eigenvalues, eigenvectors, means
 
 
-def getMeta(dat):  # including mjd
-    object_names = dat.object_names
-    meta_df = pd.DataFrame(index=object_names, columns=dat.data[object_names[0]].meta.keys())
-    mjd_diff = np.zeros_like(object_names)
-    for i in np.arange(len(object_names)):
-        obj = object_names[i]
-        obj_data = dat.data[obj]
-        obj_meta = obj_data.meta
-        mjd_diff[i] = np.max(obj_data['mjd'])-np.min(obj_data['mjd'])
-        for key in obj_meta.keys():
-            meta_key = obj_meta[key]
-            try:
-                assert type(meta_key) == np.ndarray
-                meta_key = meta_key[0]
-            except:
-                pass
-            meta_df.at[obj, key] = meta_key
-    try:
-        meta_df.drop(['distmod','mwebv', 'stencil', 'augment_algo'] , axis=1, inplace=True)
-    except KeyError:  # if we are only using the original objects, 'stencil', 'augment_algo' aren't part of the metadata
-        meta_df.drop(['distmod','mwebv'] , axis=1, inplace=True)
-    meta_df.rename(index=str, columns={"name": "Object", "type":"target"}, inplace=True)
-    meta_df['mjd_diff'] = mjd_diff
-    return meta_df
-
-
-def mergeFeatures(some_features, other_features):
+def merge_features(some_features, other_features):
     if type(some_features) != pd.core.frame.DataFrame:
         some_features = some_features.to_pandas()
     if type(other_features) != pd.core.frame.DataFrame:
@@ -178,13 +146,15 @@ def mergeFeatures(some_features, other_features):
     return merged_df
 
 
-def combineAdditionalFeatures(wavelet_features, dat):
-    meta_df = getMeta(dat)
-    combined_features = mergeFeatures(wavelet_features, meta_df)
+def combine_additional_features(wavelet_features, dat):
+    # Combine snmachine wavelet features with PLASTICC features. Allow user to
+    # define the dataframe they would like to merge
+    meta_df = dat.metadata
+    combined_features = merge_features(wavelet_features, meta_df)
     return combined_features
 
 
-def createClassififer(combined_features, RANDOM_STATE):
+def create_classififer(combined_features, RANDOM_STATE):
 
     X = combined_features.drop('target', axis=1)
     y = combined_features['target'].values
@@ -230,7 +200,7 @@ def createClassififer(combined_features, RANDOM_STATE):
     return clf
 
 
-def makePredictions(LOCATION_OF_TEST_DATA, CLASSIFIER):
+def make_predictions(LOCATION_OF_TEST_DATA, CLASSIFIER):
     # LOAD TEST SET AT THIS POINT
     # USE CLASFFIFER FROM createClassififer, BY USING THAT WE THEN
     # clf.predict(test_set)
@@ -238,25 +208,19 @@ def makePredictions(LOCATION_OF_TEST_DATA, CLASSIFIER):
     pass
 
 
-def runFullPipeline():
+def run_full_pipeline():
     pass
 
 
-def restartFromGPs():
+def restart_from_saved_gps():
     pass
 
 
-def restartFromWavelets():
+def restart_from_save_wavelets():
     pass
 
 
-if __name__ == "__main__":
-
-    parser = ArgumentParser(description="Run pipeline end to end")
-    parser.add_argument('--configuration', '-c')
-    parser.add_argument('--restart-from', '-r', help='Either restart from saved "GPs" or from saved "Wavelets"', default="full")
-    arguments = parser.parse_args()
-
+def load_configuration_file(path_to_configuration_file):
     # LOAD CONFIGURATION FILE --->>>> COULD BE ITS OWN LOAD CONFIGURATION FUNCTION?
     try:
         with open(arguments.configuration) as f:
@@ -267,48 +231,62 @@ if __name__ == "__main__":
 
     print("The PARAMS are:\n {}".format(params))
 
-    # GLOBAL SETTINGS
+    return params
+
+
+if __name__ == "__main__":
+
+    parser = ArgumentParser(description="Run pipeline end to end")
+    parser.add_argument('--configuration', '-c')
+    parser.add_argument('--restart-from', '-r', help='Either restart from saved "GPs" or from saved "Wavelets"', default="full")
+    arguments = parser.parse_args()
+
+    params = load_configuration_file(arguments.configuration)
+
+    # global settings
     RANDOM_STATE = params.get("RANDOM_STATE", None)
-    print("RANDOM_STATE:\n{}".format(RANDOM_STATE))
+    # Tarek: maybe remove this completely and
+    # set inside a function call itself, i.e. have a default which can be
+    # overridden
     SEED = params.get("SEED", None)
     DATA_PATH = params.get("DATA_PATH", None)
     ANALYSIS_DIR = params.get("ANALYSIS_DIR", None)
     ANALYSIS_NAME = params.get("ANALYSIS_NAME", None)
 
+    # snmachine parameters
+    ngp = params.get("ngp", None)
+    initheta = params.get("initheta", None)
+
     # Set the number of processes you want to use throughout the notebook
     nprocesses = multiprocessing.cpu_count()
     print("Running with {} cores".format(nprocesses))
 
-    # SNMACHINE PARAMETERS
-    ngp = params.get("ngp", None)
-    initheta = params.get("initheta", None)
-
-    dirs = createFolderStructure(ANALYSIS_DIR, ANALYSIS_NAME)
-    saveConfigurationFile(dirs)
+    dirs = create_folder_structure(ANALYSIS_DIR, ANALYSIS_NAME)
+    save_configuration_file(dirs)
 
     # RUN PIPELINE
     if (arguments.restart.lower() == "wavelets"):
 
         wavelet_features = Table.read(dirs.get("features_dir")+"/wavelet_features.fits")
-        combined_features = combineAdditionalFeatures(wavelet_features, DATA_PATH)
-        classifer = createClassififer(combined_features)
+        combined_features = combine_additional_features(wavelet_features, DATA_PATH)
+        classifer = create_classififer(combined_features)
 
     elif (arguments.restart.lower() == "gps"):
         print("Hello")
     else:
         print("Running full pipeline .. ")
 
-        dat = loadDataset(DATA_PATH)
+        dat = load_dataset(DATA_PATH)
         # dat = reduceDataset(dat, dirs, subset_size=10, SEED=SEED)
-        fitGaussianProcess(dat, ngp=ngp, t_min=0, initheta=initheta,
-                           nprocesses=nprocesses, output_root=dirs.get("interm_dir"), t_max=1100)
+        fit_gaussian_process(dat, ngp=ngp, t_min=0, initheta=initheta,
+                             nprocesses=nprocesses, output_root=dirs.get("interm_dir"), t_max=1100)
 
-        waveout, waveout_err, wavelet_object = waveletDecomposition(dat, ngp=ngp, nprocesses=nprocesses, save_output='all', output_root=dirs.get("interm_dir"))
+        waveout, waveout_err, wavelet_object = wavelet_decomposition(dat, ngp=ngp, nprocesses=nprocesses, save_output='all', output_root=dirs.get("interm_dir"))
 
-        wavelet_features, eigenvalues, eigenvectors, means = dimentionalityReduction(wavelet_object, dirs, dat.object_names.copy(), waveout, tolerance=0.99, save_output=True, recompute_pca=True, output_root=dirs.get("features_dir"))
+        wavelet_features, eigenvalues, eigenvectors, means = dimentionality_reduction(wavelet_object, dirs, dat.object_names.copy(), waveout, tolerance=0.99, save_output=True, recompute_pca=True, output_root=dirs.get("features_dir"))
 
-        combined_features = combineAdditionalFeatures(wavelet_features, DATA_PATH)
-        classifer = createClassififer(combined_features)
+        combined_features = combine_additional_features(wavelet_features, DATA_PATH)
+        classifer = create_classififer(combined_features)
         # snmachine.utils.fit_gaussian_process.extract_GP()
         # check for wavelets, if so restartFromWavelets()
         # else, check for gp's, if so restartFromGPs()
