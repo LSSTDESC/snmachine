@@ -1628,8 +1628,12 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        tuple of U, SDiag, VT of shapes (Nsamps, Nsamps),  (, Nsamps) and
-        (Nfeats, Nfeats) respectively.
+        The svd decomposition matrices such that X = U SDiag V
+        U : `np.ndarray`
+            Left Singular Matrix shape (Nsamps, Nsamps)
+        SDiag : `np.ndarray` of shape (, NSamps)
+        VT : `np.ndarray` 
+            Transpose of Right Singular Matrix of shape (Nfeats, Nfeats) respectively.
         """
         return np.linalg.svd(X, full_matrices=False)
 
@@ -1693,7 +1697,7 @@ class WaveletFeatures(Features):
     def pca_SVD(self, dataMatrix, ncomp=None, tol=0.999,
                 normalize_variance=False):
         """
-        Perform PCA using SVD
+        Perform PCA of the dataMatrix using SVD
 
         Parameters
         ----------
@@ -1712,11 +1716,18 @@ class WaveletFeatures(Features):
             are scaled to have unit variance.
         Returns
         -------
-        Principal Components V (which has normalized eigenvectors as columns),
-        PCA scores (ie. the components of the reduced Data Matrix in the basis
-        of PCA), M the Mean of the features over samples and Vals, s the scaling
-        used the eigenvalues
-        corresponding to the retained components in descending order
+        V : `np.ndarray`
+            Right Singular Matrix, with shape (Nsamps, min(Ncomps, Nfeats))
+        Z : `np.ndarray`
+            PCA scores (ie. the components of the reduced Data Matrix in the basis
+        of PCA)
+        M : `np.ndarray`
+            the Mean of the features over samples and Vals
+        s : `np.ndarray`
+            the scaling used with shape Nsamps
+        vals : `np.ndarray`
+            eigenvalues corresponding to the retained components in descending
+            order. Only as many as the number of components kept. 
         """
 
         # We are dealing with data matrix of shape (Nsamps, Nfeats)
@@ -1782,8 +1793,10 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        X, M, s : normalized and centered data matrix X, and Means of the features ,
-         scalings to recover original data matrix
+        X : `np.ndarray`
+            normalized and centered data matrix X
+        M : Means of the features
+        s : scalings to recover original data matrix
         """
         # We are dealing with data matrix of shape (Nsamps, Nfeats)
         err_msg = 'dataMatrix for normalizaton has wrong shape'
@@ -2015,14 +2028,18 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        tuple : (wavs, vals, vec, M, s)
-            where wavs is an `astropy.table.Table` containing PCA features.
-            vals is an array of eigenvalues in the descending orders of the
+        wavs :`astropy.table.Table`
+            table containing PCA features.
+        vals : `np.ndarray`
+            array of eigenvalues in the descending orders, keeping only
             retained components
-            vec is an array of shape (Nfeat, Ncomp) whose columns are the
+        vec : `np.ndarray`
+            array of shape (Nfeat, Ncomp) whose columns are the
             eigenvectors of the covariance matrix.
-            M is an additive matrix used in normalization
-            while s is a vector of size Nfeats used in normalization
+        M : `np.ndarray`
+            An additive matrix used in normalization
+        s : `np.ndarray`
+           scaling for the normalization
         """
         object_names = np.asarray(object_names)
         assert object_names.shape == (wavout.shape[0],)
