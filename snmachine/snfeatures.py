@@ -1567,7 +1567,7 @@ class WaveletFeatures(Features):
 
     def pca(self, X):
         """
-        Performs PCA decomposition of a feature array X.
+        Performs Principal Components Analysis of a feature array X.
 
         Parameters
         ----------
@@ -1587,6 +1587,9 @@ class WaveletFeatures(Features):
         -----
         Although SVD is considerably more efficient than eigh, it seems more numerically unstable and results in many more components
         being required to adequately describe the dataset, at least for the wavelet feature sets considered.
+
+        .. deprecated::1.2.1
+            Note this code should not be called anywhere
         """
 
         #Find the normalised spectra
@@ -1615,10 +1618,9 @@ class WaveletFeatures(Features):
     @staticmethod
     def get_svd(X):
         """
-        Return a tuple of U, SDiag, and VT which are the usual
-        matrices in the SVD decomposition of X, such that
+        Obtain Singular Value Decomposition of X, such that
 
-        X =  U DiagonalMatrix(SDiag) VT
+        X =  U SDiag VT
 
         Parameters
         ----------
@@ -1628,19 +1630,21 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        The svd decomposition matrices such that X = U SDiag V
         U : `np.ndarray`
-            Left Singular Matrix shape (Nsamps, Nsamps)
-        SDiag : `np.ndarray` of shape (, NSamps)
+            Left Singular Matrix of shape (Nsamps, min(Nsamps, Nfeats))
+        SDiag : `np.ndarray` 
+            Singular values in an array of shape (,min(Nsamps, Nfeats))
         VT : `np.ndarray` 
-            Transpose of Right Singular Matrix of shape (Nfeats, Nfeats) respectively.
+            Transpose of Right Singular Matrix of shape
+            (min(Nfeats, Nsamps), Nfeats).
+
         """
         return np.linalg.svd(X, full_matrices=False)
 
     def pca_eigendecomposition(self, dataMatrix, ncomp=None, tol=0.999,
                                normalize_variance=False):
         """
-        Perform PCA using an eigendecomposition
+        Perform Principal Component Analysis using an eigendecomposition
 
         Parameters
         ----------
@@ -1697,7 +1701,7 @@ class WaveletFeatures(Features):
     def pca_SVD(self, dataMatrix, ncomp=None, tol=0.999,
                 normalize_variance=False):
         """
-        Perform PCA of the dataMatrix using SVD
+        Perform Principal Component Analysis of the dataMatrix using SVD
 
         Parameters
         ----------
@@ -1735,10 +1739,8 @@ class WaveletFeatures(Features):
         assert len(dataMatrix.shape) == 2, err_msg
 
         # perform SVD on normalized Data Matrix
-        ## ts = time.time()
         X, M, s = self.normalize_datamatrix(dataMatrix,
                                             normalize_variance=normalize_variance)
-        ## te = time.time()
         # print('Took {} secs for normalization'.format(te - ts))
 
         #Construct the covariance matrix # Cat Temp
@@ -1748,13 +1750,8 @@ class WaveletFeatures(Features):
         C2 = np.dot(X, X.T)
         condNumber2 = np.linalg.cond(C2)
         print('The condition number in the SVD is '+str(condNumber1)+' and the normalized one is '+str(condNumber2))
-        ##
 
-        ## print('Shape of reduced data matrix X', X.shape)
         U, sDiag, VT =  self.get_svd(X)
-        ## ts = time.time()
-        ## print('Took {} secs for svd'.format(- te + ts))
-        ## print('U shape is ', U.shape)
         assert len(U.shape) == 2
 
         # eigenvals in descending order
@@ -1767,8 +1764,6 @@ class WaveletFeatures(Features):
             ncomp = self.ncompsForTolerance(vals, tol=tol)
         else:
             assert isinstance(ncomp, np.int)
-        ## print('Using number of components = ', ncomp)
-        ## print(' shape of U is ', U.shape)
 
         # Coefficients of Data in basis of Principal Components
         Z = np.dot(U[:, :ncomp], np.diag(sDiag[:ncomp]))
@@ -1816,7 +1811,7 @@ class WaveletFeatures(Features):
     @staticmethod
     def ncompsForTolerance(vals, tol=.99):
         """
-        Determine the minimum number of PCA components required to adequately describe the dataset.
+        Determine the minimum number of Principal Components required to adequately describe the dataset.
 
         Parameters
         ----------
@@ -1932,7 +1927,8 @@ class WaveletFeatures(Features):
     @staticmethod
     def reconstruct_datamatrix_lossy(Z, vec, M=None, s=None):
         """
-        Reconstruct (lossily) the original Data Matrix from the compressed data
+        Reconstruct (lossily) the original Data Matrix from the data compressed
+        by Principal Component Analysis.
         ie. the coefficients of the eigenvectors to represent the data.
 
         Parameters
@@ -1956,11 +1952,8 @@ class WaveletFeatures(Features):
         """
         # Go to the space of normalized data
 
-        # assert Z.shape == (Nsamps, ncomps)
-        # assert vec.shape == (Nfeats, ncomps)
         Nsamps, ncomps_ = Z.shape
         Nfeats, ncomps = vec.shape
-
 
 
         # While we have enough information to create a zero matrix of the right
@@ -2000,7 +1993,7 @@ class WaveletFeatures(Features):
                     save_output=False, output_root=None,
                     normalize_variance=False):
         """
-        Dimensionality reduction of wavelet coefficients using PCA.
+        Obtain Principal Components from wavelets using Principal Component Analysis.
 
         Parameters
         ----------
@@ -2043,6 +2036,7 @@ class WaveletFeatures(Features):
         """
         object_names = np.asarray(object_names)
         assert object_names.shape == (wavout.shape[0],)
+        # This is necessary for the creation of `Table` objnames
 
         t1=time.time()
 
