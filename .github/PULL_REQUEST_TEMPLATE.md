@@ -1,5 +1,5 @@
 **IMPORTANT: Please create an issue first before opening a Pull Request.**
-Linked to issue(s): _put link_
+Linked to issue(s): _put link here_
 
 ## Type of change
 
@@ -23,4 +23,12 @@ How is the issue this PR is referenced against solved with this PR?
 - [ ] My code follows the style guidelines of this project
 - [ ] I have made corresponding changes to the documentation
 - [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] I am up to date with `dev` branch via `git rebase dev` at the time of this PR
+- [ ] I am up to date with `dev` branch of `snmachine` at the time of this PR
+<!-- Assuming you are working from the guidelines outlined in CONTRIBUTING.md,
+this can be achieve with `git pull --rebase upstream dev`
+
+If this reveals a myriad of conflicts, one can run: `git rebase --abort` and
+then one can submit a PR without checking the above box.
+
+If you would like assistance with this, people contact on of the core developers
+of snmachine for help-->
