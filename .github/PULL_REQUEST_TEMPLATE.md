@@ -30,5 +30,5 @@ this can be achieve with `git pull --rebase upstream dev`
 If this reveals a myriad of conflicts, one can run: `git rebase --abort` and
 then one can submit a PR without checking the above box.
 
-If you would like assistance with this, people contact on of the core developers
+If you would like assistance with this, people contact one of the core developers
 of snmachine for help-->

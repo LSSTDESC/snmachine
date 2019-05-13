@@ -55,7 +55,7 @@ To submit a PR, please follow these steps:
 2. Create a branch from `dev` on your fork with the convention of: `issue/<issue-number>/one-or-two-word-token-description-of-issue`
 	- If you are working on a `[FEATURE]`, please branch from `dev` with the
 	    convention of: `feauture/<issue-number>/one-or-two-word-token-description-of-issue`, this is to allow for issues to be raised on specific features also, which would then have the convention of:
-	    `feature/<original-issue-number>/issue/<new-issue-number>/short-description`(where issues on a particular feautre would be branched from the feature-branch in question)
+	    `feature/<original-issue-number>/issue/<new-issue-number>/short-description`(where issues on a particular feature would be branched from the feature-branch in question)
 
 3. Make changes, add code etc and open a PR
 
@@ -64,7 +64,7 @@ Please ensure your branch is up-to-date with `dev` branch by rebasing your chang
 <a name="style"></a>
 ## Code Style
 
-Much of our code style follows the convention defined in [PEP8](https://pep8.org/).
+Much of our code style follows the convention defined in [PEP8](https://pep8.org/), with the exception in some cases of [`E501`](https://lintlyci.github.io/Flake8Rules/rules/E501.html)
 
 In addition, codebase guidelines outlined in the [LSST Developer Guide](https://developer.lsst.io/python/style.html)
 and in the [LSST DESC Coding Guidelines](https://confluence.slac.stanford.edu/display/LSSTDESC/Interim+LSST+DESC+Paper+Tracking?preview=/217813295/244908471/LSST%20DESC%20Coding%20Guidelines%20v1.1.pdf)
@@ -197,12 +197,12 @@ Furthermore, `snmachine` adopts the release formatting of
 
 ### Release Planning
 
-The authors of this package have adopted [milestones on github](https://help.github.com/en/articles/about-milestones) as a vehile to
+The authors of this package have adopted [milestones on Github](https://help.github.com/en/articles/about-milestones) as a vehile to
 scope and schedule upcoming releases.  The main goal for a release is written in
 the milestone description.  Then, any ideas, specific functionality, bugs, etcs
 submitted as [issues](https://help.github.com/en/articles/about-issues)
 pertinent to that goal are tagged for that milestone.  Goals for milestone are
-discussed openly via a github issue.
+discussed openly via a Github issue.
 
 Past and upcoming releases can be seen on the  [snmachine milestones
 page](https://github.com/LSSTDESC/snmachine/milestones).
