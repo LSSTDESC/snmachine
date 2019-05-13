@@ -174,7 +174,7 @@ We use Azure Pipelines to automatically run tests and other
 automated checks on every PR commit and merge to `master` and `dev` branches.
 
 However, if you would like to run the test suite locally, one can simply run:
-```i{bash}
+```{bash}
 cd /path/to/snmachine/ && pytest -vs tests/
 ```
 <a name="version"></a>
