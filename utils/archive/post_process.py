@@ -67,4 +67,3 @@ if len(not_done)!=0:
     np.savetxt(flname, not_done, fmt='%s')
 else:
     print 'All objects accounted for'
-
