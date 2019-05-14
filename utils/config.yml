@@ -1,12 +1,8 @@
-#
-#
-# GENERAL PARAMS
-SEED : 1234
-REPO_DIR : "/share/hypatia/snmachine_resources/data/plasticc/"
-ANALYSIS_DIR : "/share/hypatia/snmachine_resources/data/plasticc/analysis/"
-ANALYSIS_NAME : "test-analysis"
-DATA_PATH : "/share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set.pkl"
-
-# SNMACHINE_PARAMS
+# Global settings
+analysis_dir : "/share/hypatia/snmachine_resources/data/plasticc/analysis/"
+analysis_name : "pipeline-test"
+data_path : "/share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set_snia.pickle"
+# snmachine parameters
 ngp : 1100
-initheta : [500, 20]
+initheta : [500., 20.]
+number_of_principle_components : 200
