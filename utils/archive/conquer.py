@@ -88,10 +88,11 @@ for o,counter in zip(objects,range(len(objects))):
 	tab.meta['z']=tab.meta['hostgal_specz']
 
 	#insert into data set
-	d.insert_lightcurve(tab)
+        d.insert_lightcurve(tab)
+
 
 with open(os.path.join(out_folder,'dataset_%d.pickle'%index),'wb') as f:
-        pickle.dump(d,f)
+    pickle.dump(d,f)
 
 '''
 wf=snfeatures.WaveletFeatures()
@@ -99,9 +100,9 @@ feats=wf.extract_features(d,nprocesses=80,save_output='all',output_root=int_fold
 feats.write(os.path.join(feats_folder, 'wavelet_features.fits'),overwrite=True)
 
 with open(os.path.join(feats_folder,'PCA_mean.pickle'),'wb') as f1:
-	pickle.dump(wf.PCA_mean,f1)
+    pickle.dump(wf.PCA_mean,f1)
 with open(os.path.join(feats_folder,'PCA_eigenvals.pickle'),'wb') as f2:
-        pickle.dump(wf.PCA_eigenvals,f2)
+    pickle.dump(wf.PCA_eigenvals,f2)
 with open(os.path.join(feats_folder,'PCA_eigenvectors.pickle'),'wb') as f3:
         pickle.dump(wf.PCA_eigenvectors,f3)
 
@@ -110,4 +111,3 @@ np.savetxt(os.path.join(feats_folder,'PCA_mean.txt'),wf.PCA_mean)
 np.savetxt(os.path.join(feats_folder,'PCA_eigenvals.txt'),wf.PCA_eigenvals)
 np.savetxt(os.path.join(feats_folder,'PCA_eigenvectors.txt'),wf.PCA_eigenvectors)
 '''
-
