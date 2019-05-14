@@ -2,15 +2,15 @@
 Machine learning pipeline for the PLAsTiCC competition using snmachine codebase
 """
 from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
+from astropy.table import Table
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from argparse import ArgumentParser
 import numpy as np
 import pandas as pd
 import os
 import subprocess
 import multiprocessing
-from astropy.table import Table
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from argparse import ArgumentParser
 import yaml
 import warnings
 warnings.filterwarnings("ignore")
@@ -34,6 +34,7 @@ def get_git_revision_short_hash():
 
     Examples
     --------
+    >>> ...
     >>> sha = get_git_revision_short_hash()
     >>> print(sha)
     'ede068e'
@@ -62,7 +63,7 @@ def create_folder_structure(analysis_directory, analysis_name):
     Examples
     --------
     Each folder name can then be accessed with dictionary methods:
-
+    >>> ...
     >>> analysis_directory = params.get("analysis_directory", None)
     >>> analysis_name = params.get("analysis_name", None)
     """
@@ -82,105 +83,203 @@ def create_folder_structure(analysis_directory, analysis_name):
     return dirs
 
 
-def save_configuration_file(dirs):
+def load_configuration_file(path_to_configuration_file):
+    # TODO: Finish doctring examples
+    """ Load from disk the configuration file that is to be used
 
-    METHOD_DIR = dirs.get("method_dir", None)
-    with open('/{}/config.yaml'.format(METHOD_DIR), 'w') as config:
+    Parameters
+    ----------
+    path_to_configuration_file : str
+        System path to where the configuration file is located
+
+    Returns
+    -------
+    params : dict
+        Dictionary of parameters contained inside the configuration file
+
+    Examples
+    --------
+    Each item inside the configuration file can be accessed like so:
+    >>> ...
+    >>> params = load_configuration_file(path_to_configuration_file)
+    >>> data_path = params.get("data_path", None)
+    >>> print(data_path)
+    >>> ngp = params.get("ngp", None)
+    >>> print(ngp)
+    """
+    try:
+        with open(path_to_configuration_file) as f:
+            params = yaml.load(f)
+    except IOError:
+        print("Invalid yaml file provided")
+        exit()
+    print("The PARAMS are:\n {}".format(params))
+    return params
+
+
+def save_configuration_file(dirs):
+    # TODO: Provide a doctring example
+    """ Make a copy of the configuration file that has been used inside the
+    analysis directory
+
+    Parameters
+    ----------
+    dirs : dict
+        Dictionary containing the names of the folder paths used in this analysis
+
+    Returns
+    -------
+    None
+
+    """
+    method_directory = dirs.get("method_directory", None)
+    with open(os.path.join(method_directory, "config.yml"), 'w') as config:
             yaml.dump(params, config, default_flow_style=False)
 
 
-def load_dataset(DATA_PATH):
+def load_training_data(data_path):
+    # TODO: Finish doctring examples
+    """ Load from disk the training data one will use for this analysis
 
+    Parameters
+    ----------
+    params : dict
+        Dictionary containing the parameters that reside in the configuration
+        file. This will be used to obtain the path to the training data.
+
+    Returns
+    -------
+    training_data : snmachine.PlasticcData
+        snmachine.PlasticcData instance of the training data
+
+    Examples
+    --------
+    >>> ...
+    >>> training_data = load_training_data(params)
+    >>> print(training_data)
+
+    """
     try:
-        if DATA_PATH.lower().endswith((".pickle", ".pkl", ".p", ".pckl")):
-            with open(DATA_PATH, 'rb') as input:
+        if data_path.lower().endswith((".pickle", ".pkl", ".p", ".pckl")):
+            with open(data_path, 'rb') as input:
                 print("Opening from binary pickle")
-                dat = pickle.load(input)
-                print("Dataset loaded from pickle file as: {}".format(dat))
+                training_data = pickle.load(input)
+                print("Dataset loaded from pickle file as: {}".format(training_data))
         else:
-
-            folder, data_file = os.path.split(DATA_PATH)
-            print(folder, data_file)
-            meta_file = "_metadata.".join(data_file.split("."))
+            folder_path, train_data_file_name = os.path.split(data_path)
+            print(folder_path, train_data_file_name)
+            meta_data_file_name = "_metadata.".join(train_data_file_name.split("."))
 
             print("Opening from CSV")
-            dat = sndata.PlasticcData(folder=folder, data_file=data_file, meta_file=meta_file, from_pickle=False)
-            print("Dataset loaded from csv file as: {}".format(dat))
-            print("Saving {} object to pickle binary".format(dat))
+            training_data = sndata.PlasticcData(folder=folder_path, data_file=train_data_file_name,
+                                                metadata_file=meta_data_file_name, cut_non_detections=False)
+            print("Dataset loaded from csv file as: {}".format(training_data))
+            print("Saving {} object to pickle binary".format(training_data))
 
-            dat_binary = os.path.splitext(data_file)[0]+".pckl"
-            print(os.path.join(folder, dat_binary))
-            with open(os.path.join(folder, dat_binary), 'wb') as f:
-                pickle.dump(dat, f, pickle.HIGHEST_PROTOCOL)
+            dat_binary = os.path.splitext(train_data_file_name)[0] + ".pckl"
+            print(os.path.join(folder_path, dat_binary))
+            with open(os.path.join(folder_path, dat_binary), 'wb') as f:
+                pickle.dump(training_data, f, pickle.HIGHEST_PROTOCOL)
     except FileNotFoundError:
-        print("Oii, load something !!")
+        print("No file found to load")
+        exit()
 
-    return dat
+    return training_data
 
 
-def reduce_dataset(dat, dirs, subset_size, seed=1234):
+def reduce_size_of_training_data(training_data, dirs, subset_size, seed=1234):
+    # TODO: Incorpate further doctrings and finish examples. Tarek: Catarina and I need to
+    # discuss this further. There is some overlap between this and
+    # sndata.PlasticcData.update_data() and it would be good to comebine this.
+    """ Load from disk the training data one will use for this analysis
 
-    METHOD_DIR = dirs.get("method_dir", None)
-    subset_file = '/{}/subset.list'.format(METHOD_DIR)
+    Parameters
+    ----------
+    training_data : snmachine.PlasticcData
+        Dictionary containing the parameters that reside in the configuration
+        file. This will be used to obtain the path to the training data.
+    dirs : dict
+        Dictionary containing
+    subset_size : int
+        Number of objects the user would like to reduce the training data to
+    seed : int
+        Default set to 1234. This can be overridden by the user to check for
+        consistancy of results
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> ...
+    >>> print(shape.training_data)
+
+    >>> new_training_data = reduce_size_of_training_data(training_data, dirs, 1000))
+    >>> print(shape.new_training_data)
+
+    """
+
+    method_directory = dirs.get("method_directory", None)
+    subset_file = os.path.join(method_directory, "subset.list")
     if os.path.exists(subset_file):
         rand_objs = np.genfromtxt(subset_file, dtype='U')
     else:
         np.random.seed(seed)
-        rand_objs = np.random.choice(dat.object_names, replace=False, size=subset_size)
+        rand_objs = np.random.choice(training_data.object_names, replace=False, size=subset_size)
         rand_objs_sorted_int = np.sort(rand_objs.astype(np.int))
         rand_objs = rand_objs_sorted_int.astype('<U9')
         np.savetxt(subset_file, rand_objs, fmt='%s')
 
-    dat.object_names = rand_objs
-    dat.data = {objects: dat.data[objects] for objects in dat.object_names}  # Erase the data we are not using
+    training_data.object_names = rand_objs
 
-    print("Dataset reduced to {} objects".format(dat.object_names.shape[0]))
+    # Erase the data we are not using
+    training_data.data = {objects: training_data.data[objects] for objects in training_data.object_names}
+    print("Dataset reduced to {} objects".format(training_data.object_names.shape[0]))
 
-    return dat  # Cat: I don't think we need to return anything
+# def fit_gaussian_process(dat, **kwargs):  # Cat: Do we really want a mask funtion?
+#     # Tarek: Now that this file lives in snmachine and with the extensive
+#     # refactoring this is no longer necessary I believe
 
-
-def fit_gaussian_process(dat, **kwargs):  # Cat: Do we really want a mask funtion?
-    # Tarek: Now that this file lives in snmachine and with the extensive
-    # refactoring this is no longer necessary I believe
-
-    # extract_GP(dat, **kwargs)
-    # snfeatures.WaveletFeatures.extract_GP(dat, **kwargs)
-    pass
+#     # extract_GP(dat, **kwargs)
+#     # snfeatures.WaveletFeatures.extract_GP(dat, **kwargs)
+#     pass
 
 
-def wavelet_decomposition(dat, ngp, **kwargs):  # Cat: we need to add ngp as input otherwise it doesn't run on the notebbok
+# def wavelet_decomposition(dat, ngp, **kwargs):  # Cat: we need to add ngp as input otherwise it doesn't run on the notebbok
 
-    wavelet_object = snfeatures.WaveletFeatures(ngp=ngp)
-    print("WAV = {}\n".format(wavelet_object.wav))
-    print("MLEV = {}\n".format(wavelet_object.mlev))
-    print("NGP = {}\n".format(ngp))
-    waveout, waveout_err = wavelet_object.extract_wavelets(dat, wavelet_object.wav, wavelet_object.mlev, **kwargs)
-    return waveout, waveout_err, wavelet_object
-
-
-def dimentionality_reduction(wavelet_object, dirs, object_names, waveout, tolerance, **kwargs): # Cat: we need to add tolerance
-
-    # check if reduced wavelet features already exist
-    wavelet_features, eigenvalues, eigenvectors, means, num_feats = wavelet_object.extract_pca(object_names, waveout, **kwargs)
-
-    output_root = dirs.get("features_dir")
-    print("Inside dimRedux: {}\n".format(output_root))
-    wavelet_features.write('{}/wavelet_features_{}.fits'.format(output_root, str(tolerance)[2:]))
-
-    return wavelet_features, eigenvalues, eigenvectors, means
+#     wavelet_object = snfeatures.WaveletFeatures(ngp=ngp)
+#     print("WAV = {}\n".format(wavelet_object.wav))
+#     print("MLEV = {}\n".format(wavelet_object.mlev))
+#     print("NGP = {}\n".format(ngp))
+#     waveout, waveout_err = wavelet_object.extract_wavelets(dat, wavelet_object.wav, wavelet_object.mlev, **kwargs)
+#     return waveout, waveout_err, wavelet_object
 
 
-def merge_features(some_features, other_features):
-    if type(some_features) != pd.core.frame.DataFrame:
-        some_features = some_features.to_pandas()
-    if type(other_features) != pd.core.frame.DataFrame:
-        other_features = other_features.to_pandas()
-    merged_df = pd.merge(some_features, other_features)
-    merged_df.set_index("Object", inplace=True)
-    return merged_df
+# def dimentionality_reduction(wavelet_object, dirs, object_names, waveout, tolerance, **kwargs): # Cat: we need to add tolerance
+
+#     # check if reduced wavelet features already exist
+#     wavelet_features, eigenvalues, eigenvectors, means, num_feats = wavelet_object.extract_pca(object_names, waveout, **kwargs)
+
+#     output_root = dirs.get("features_dir")
+#     print("Inside dimRedux: {}\n".format(output_root))
+#     wavelet_features.write('{}/wavelet_features_{}.fits'.format(output_root, str(tolerance)[2:]))
+
+#     return wavelet_features, eigenvalues, eigenvectors, means
 
 
-def combine_additional_features(wavelet_features, dat):
+# def merge_features(some_features, other_features):
+#     # TODO: Move this to a data processing file
+#     if type(some_features) != pd.core.frame.DataFrame:
+#         some_features = some_features.to_pandas()
+#     if type(other_features) != pd.core.frame.DataFrame:
+#         other_features = other_features.to_pandas()
+#     merged_df = pd.merge(some_features, other_features)
+#     merged_df.set_index("Object", inplace=True)
+#     return merged_df
+
+
+def combine_all_features(reduced_wavelet_features, dataframe):
     # Combine snmachine wavelet features with PLASTICC features. Allow user to
     # define the dataframe they would like to merge
     meta_df = dat.metadata
@@ -203,72 +302,42 @@ def create_classififer(combined_features, random_state=42):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
 
-    clf = RandomForestClassifier(n_estimators=700, criterion='entropy',
-                                 oob_score=True, n_jobs=-1,
-                                 random_state=random_state)
+    classifer = RandomForestClassifier(n_estimators=700, criterion='entropy',
+                                       oob_score=True, n_jobs=-1,
+                                       random_state=random_state)
 
-    clf.fit(X_train, y_train)
+    classifer.fit(X_train, y_train)
 
-    y_preds = clf.predict(X_test)
+    y_preds = classifer.predict(X_test)
 
-    # confm = plot_confusion_matrix(y_test, y_preds, 'Test data', target_names)
+    confusion_matrix = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names)
 
-    y_probs = clf.predict_proba(X_test)
+    y_probs = classifer.predict_proba(X_test)
 
     nlines = len(target_names)
     # we also need to express the truth table as a matrix
     sklearn_truth = np.zeros((len(y_test), nlines))
-    label_index_map = dict(zip(clf.classes_, np.arange(nlines)))
+    label_index_map = dict(zip(classifer.classes_, np.arange(nlines)))
     for i, x in enumerate(y_test):
             sklearn_truth[i][label_index_map[y_test[i]]] = 1
 
     weights = np.array([1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/18, 1/19])
 
-    logloss = plasticc_log_loss(sklearn_truth, y_probs, relative_class_weights=weights[:-1])
-    print("LogLoss: {:.3f}\nBest Params: {}".format(logloss, clf.get_params))
+    log_loss = plasticc_log_loss(sklearn_truth, y_probs, relative_class_weights=weights[:-1])
+    print("LogLoss: {:.3f}\nBest Params: {}".format(log_loss, classifer.get_params))
 
-    # PASS IN TRAINING DATA IN FORM OF SNMACHINE OBJECT
-    # CREATE rf OBJECT.
-    # CROSS-VAIDATION HERE
-    # RETURN CLASSIFIFER OBJECT
-    return clf
+    return classifer, confusion_matrix
 
 
-def make_predictions(LOCATION_OF_TEST_DATA, CLASSIFIER):
-    # LOAD TEST SET AT THIS POINT
-    # USE CLASFFIFER FROM createClassififer, BY USING THAT WE THEN
-    # clf.predict(test_set)
-    # RETURN SUBMISSION_FILE_WITHOUT_99
+def make_predictions(location_of_test_data, classifier):
     pass
-
-
-def run_full_pipeline():
-    pass
-
-
-def restart_from_saved_gps():
-    pass
-
-
-def restart_from_save_wavelets():
-    pass
-
-
-def load_configuration_file(path_to_configuration_file):
-    # LOAD CONFIGURATION FILE --->>>> COULD BE ITS OWN LOAD CONFIGURATION FUNCTION?
-    try:
-        with open(arguments.configuration) as f:
-            params = yaml.load(f)
-    except IOError:
-        print("Invalid yaml file provided")
-        exit()
-
-    print("The PARAMS are:\n {}".format(params))
-
-    return params
 
 
 if __name__ == "__main__":
+
+    # Set the number of processes you want to use throughout the notebook
+    nprocesses = multiprocessing.cpu_count()
+    print("Running with {} cores".format(nprocesses))
 
     parser = ArgumentParser(description="Run pipeline end to end")
     parser.add_argument('--configuration', '-c')
@@ -277,13 +346,7 @@ if __name__ == "__main__":
 
     params = load_configuration_file(arguments.configuration)
 
-    # global settings
-    RANDOM_STATE = params.get("RANDOM_STATE", None)
-    # Tarek: maybe remove this completely and
-    # set inside a function call itself, i.e. have a default which can be
-    # overridden
-    SEED = params.get("SEED", None)
-    DATA_PATH = params.get("DATA_PATH", None)
+    data_path = params.get("data_path", None)
     analysis_directory = params.get("analysis_directory", None)
     analysis_name = params.get("analysis_name", None)
 
@@ -291,37 +354,44 @@ if __name__ == "__main__":
     ngp = params.get("ngp", None)
     initheta = params.get("initheta", None)
 
-    # Set the number of processes you want to use throughout the notebook
-    nprocesses = multiprocessing.cpu_count()
-    print("Running with {} cores".format(nprocesses))
-
+    # Step 1. Creat folders that contain analysis
     dirs = create_folder_structure(analysis_directory, analysis_name)
+    # Step 2. Save configuration file used for this analysis
     save_configuration_file(dirs)
-
-    # RUN PIPELINE
+    # Step 3. Check at which point the user would like to run the analysis from.
+    # If elements already saved, these will be used but this can be overriden
+    # with command line argument
     if (arguments.restart.lower() == "wavelets"):
-
-        wavelet_features = Table.read(dirs.get("features_dir")+"/wavelet_features.fits")
-        combined_features = combine_additional_features(wavelet_features, DATA_PATH)
+        # Restart from saved uncompressed wavelets.
+        wavelet_features = Table.read(dirs.get("features_dir") + "/wavelet_features.fits")
+        combined_features = combine_all_features(wavelet_features, data_path)
         classifer = create_classififer(combined_features)
-
     elif (arguments.restart.lower() == "gps"):
-        print("Hello")
+        # Restart from saved GPs.
+        pass
     else:
-        print("Running full pipeline .. ")
+        # Run full pipeline but still do checks to see if elements from GPs or
+        # wavelets already exist on disk; the first check should be for:
+        #   1. Saved PCA files
+        #   2. Saved uncompressed wavelets
+        #   3. Saved GPs
 
-        dat = load_dataset(DATA_PATH)
-        # dat = reduceDataset(dat, dirs, subset_size=10, SEED=SEED)
-        fit_gaussian_process(dat, ngp=ngp, t_min=0, initheta=initheta,
-                             nprocesses=nprocesses, output_root=dirs.get("interm_dir"), t_max=1100)
+        training_data = load_training_data(data_path)
+        gps.compute_gps()
+        wavelet_object = snfeatures.WaveletFeatures(ngp=ngp)
+        waveout, waveout_err = wavelet_object.extract_wavelets(training_data, wavelet_object.wav, wavelet_object.mlev, **kwargs)
+        # waveout, waveout_err, wavelet_object = wavelet_decomposition(dat, ngp=ngp, nprocesses=nprocesses, save_output='all', output_root=dirs.get("interm_dir"))
+        # wavelet_features, eigenvalues, eigenvectors, means = dimentionality_reduction(wavelet_object, dirs, dat.object_names.copy(), waveout, tolerance=0.99, save_output=True, recompute_pca=True, output_root=dirs.get("features_dir"))
+        # combined_features = combine_all_features(wavelet_features, DATA_PATH)
+        # classifer = create_classififer(combined_features)
 
-        waveout, waveout_err, wavelet_object = wavelet_decomposition(dat, ngp=ngp, nprocesses=nprocesses, save_output='all', output_root=dirs.get("interm_dir"))
 
-        wavelet_features, eigenvalues, eigenvectors, means = dimentionality_reduction(wavelet_object, dirs, dat.object_names.copy(), waveout, tolerance=0.99, save_output=True, recompute_pca=True, output_root=dirs.get("features_dir"))
+        # fit_gaussian_process(dat, ngp=ngp, t_min=0, initheta=initheta,
+        #                      nprocesses=nprocesses, output_root=dirs.get("interm_dir"), t_max=1100)
 
-        combined_features = combine_additional_features(wavelet_features, DATA_PATH)
-        classifer = create_classififer(combined_features)
-        # snmachine.utils.fit_gaussian_process.extract_GP()
-        # check for wavelets, if so restartFromWavelets()
-        # else, check for gp's, if so restartFromGPs()
-        # otherwise runFullPipeline()
+        # waveout, waveout_err, wavelet_object = wavelet_decomposition(dat, ngp=ngp, nprocesses=nprocesses, save_output='all', output_root=dirs.get("interm_dir"))
+
+        # wavelet_features, eigenvalues, eigenvectors, means = dimentionality_reduction(wavelet_object, dirs, dat.object_names.copy(), waveout, tolerance=0.99, save_output=True, recompute_pca=True, output_root=dirs.get("features_dir"))
+
+        # combined_features = combine_all_features(wavelet_features, DATA_PATH)
+        # classifer = create_classififer(combined_features)
