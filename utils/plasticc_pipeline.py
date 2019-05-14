@@ -66,6 +66,9 @@ def create_folder_structure(analysis_directory, analysis_name):
     >>> ...
     >>> analysis_directory = params.get("analysis_directory", None)
     >>> analysis_name = params.get("analysis_name", None)
+    >>> directories = create_folder_structure(analysis_directory, analysis_name)
+    >>> print(directories.get("method_directory"))
+
     """
     method_directory = os.path.join(analysis_directory, analysis_name + get_git_revision_short_hash())
     features_directory = os.path.join(method_directory, 'wavelet_features')
@@ -104,8 +107,10 @@ def load_configuration_file(path_to_configuration_file):
     >>> params = load_configuration_file(path_to_configuration_file)
     >>> data_path = params.get("data_path", None)
     >>> print(data_path)
+
     >>> ngp = params.get("ngp", None)
     >>> print(ngp)
+
     """
     try:
         with open(path_to_configuration_file) as f:
@@ -117,22 +122,27 @@ def load_configuration_file(path_to_configuration_file):
     return params
 
 
-def save_configuration_file(dirs):
+def save_configuration_file(method_directory):
     # TODO: Provide a doctring example
     """ Make a copy of the configuration file that has been used inside the
     analysis directory
 
     Parameters
     ----------
-    dirs : dict
-        Dictionary containing the names of the folder paths used in this analysis
+    method_directory : string
+        The folder path used for this analysis
 
     Returns
     -------
     None
 
+    Examples
+    --------
+    >>> ...
+    >>> save_configuration_file(method_directory)
+    >>> print()
+
     """
-    method_directory = dirs.get("method_directory", None)
     with open(os.path.join(method_directory, "config.yml"), 'w') as config:
             yaml.dump(params, config, default_flow_style=False)
 
@@ -261,10 +271,9 @@ def wavelet_decomposition(training_data, ngp, **kwargs):
     Examples
     --------
     >>> ...
-    >>> print(shape.training_data)
-
-    >>> new_training_data = reduce_size_of_training_data(training_data, dirs, 1000))
-    >>> print(shape.new_training_data)
+    >>> waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, ngp=ngp, nprocesses=nprocesses,
+                                                                     save_output='all', output_root=dirs.get("intermediate_files_directory"))
+    >>> print()
 
     """
 
@@ -306,10 +315,12 @@ def combine_all_features(reduced_wavelet_features, dataframe):
     Examples
     --------
     >>> ...
-    >>> print(shape.training_data)
+    >>> print(shape.reduced_wavelet_features)
 
-    >>> new_training_data = reduce_size_of_training_data(training_data, dirs, 1000))
-    >>> print(shape.new_training_data)
+    >>> print(shape.dataframe)
+
+    >>> combined_features = combine_all_features(reduced_wavelet_features, dataframe)
+    >>> print(shape.combined_features)
 
     """
     meta_df = dat.metadata
@@ -335,10 +346,10 @@ def create_classififer(combined_features, random_state=42):
     Examples
     --------
     >>> ...
-    >>> print(shape.training_data)
+    >>> classifier, confusion_matrix = create_classififer(combined_features)
+    >>> print(classifier)
 
-    >>> new_training_data = reduce_size_of_training_data(training_data, dirs, 1000))
-    >>> print(shape.new_training_data)
+    >>> plot_confusion_matrix(confusion_matrix)
 
     """
 
@@ -439,8 +450,8 @@ if __name__ == "__main__":
         training_data = load_training_data(data_path)
 
         # Step 5. Compute GPs
-        gps.compute_gps(training_data, number_gp=100, t_min=0, t_max=1100,
-                        kernel_param=[500., 20.],
+        gps.compute_gps(training_data, number_gp=ngp, t_min=0, t_max=1100,
+                        kernel_param=initheta,
                         output_root=dirs['intermediate_files_directory'],
                         number_processes=nprocesses)
 
