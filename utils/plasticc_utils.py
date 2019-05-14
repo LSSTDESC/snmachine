@@ -2,21 +2,23 @@
 Utility script for calculating the log loss
 """
 
+from sklearn.metrics import confusion_matrix
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import auc, roc_curve, confusion_matrix
 
-def plotConfusionMatrix(yTrue, yPredict, dataName, targetNames):
+
+def plot_confusion_matrix(yTrue, yPredict, dataName, targetNames):
     cm = confusion_matrix(yTrue, yPredict, labels=targetNames)
     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
     annot = np.around(cm, 2)
 
-    fig, ax = plt.subplots(figsize=(9,7))
+    fig, ax = plt.subplots(figsize=(9, 7))
     sns.heatmap(cm, xticklabels=targetNames,
-    yticklabels=targetNames, cmap='Blues',
-    annot=annot, lw=0.5)
+                yticklabels=targetNames, cmap='Blues',
+                annot=annot, lw=0.5)
+
     ax.set_xlabel('Predicted Label')
     ax.set_ylabel('True Label')
     ax.set_aspect('equal')
@@ -24,14 +26,15 @@ def plotConfusionMatrix(yTrue, yPredict, dataName, targetNames):
 
     return cm
 
-def plasticcLogLoss(y_true, y_pred, relative_class_weights=None):
+
+def plasticc_log_loss(y_true, y_pred, relative_class_weights=None):
     """
     Implementation of weighted log loss used for the Kaggle challenge
     """
     predictions = y_pred.copy()
 
     # sanitize predictions
-    epsilon = sys.float_info.epsilon # this is machine dependent but essentially prevents log(0)
+    epsilon = sys.float_info.epsilon  # this is machine dependent but essentially prevents log(0)
     predictions = np.clip(predictions, epsilon, 1.0 - epsilon)
     predictions = predictions / np.sum(predictions, axis=1)[:, np.newaxis]
 
