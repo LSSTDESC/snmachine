@@ -27,20 +27,60 @@ except ImportError:
 util_module_path = os.path.abspath(os.path.join('snmachine', 'utils'))
 if util_module_path not in sys.path:
     sys.path.append(util_module_path)
-from plasticc_utils import plasticcLogLoss, plotConfusionMatrix
+from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
 
 
-def create_folder_structure(ANALYSIS_DIR, ANALYSIS_NAME):
+def get_git_revision_short_hash():
+    """ Helper function to obtain current version control hash value
 
-    method_dir = os.path.join(ANALYSIS_DIR, ANALYSIS_NAME)
-    features_dir = os.path.join(method_dir, 'wavelet_features')
-    classif_dir = os.path.join(method_dir, 'classifications')
-    interm_dir = os.path.join(method_dir, 'intermediate')
-    plots_dir = os.path.join(method_dir, 'plots')
+    Returns
+    -------
+    _hash : str
+        Short representation of current version control hash value
 
-    dirs = {"method_dir": method_dir, "features_dir": features_dir,
-            "classif_dir": classif_dir, "interm_dir": interm_dir,
-            "plots_dir": plots_dir}
+    Examples
+    --------
+    >>> sha = get_git_revision_short_hash()
+    >>> print(sha)
+    'ede068e'
+    """
+    _hash = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
+    return _hash.decode("utf-8").rstrip()
+
+
+def create_folder_structure(analysis_directory, analysis_name):
+    """ Make directories that will be used for analysis
+
+    Parameters
+    ----------
+    analysis_directory : str
+        System path to where the user would like to contain
+        a run of the analysis
+    analysis_name : str
+        Given name of analysis run. This is appended with the current git hash
+        the code has been run with.
+
+    Returns
+    -------
+    dirs: dict
+        Dictionary containing the mapping of folders that have been created.
+
+    Examples
+    --------
+    Each folder name can then be accessed with dictionary methods:
+
+    >>> analysis_directory = params.get("analysis_directory", None)
+    >>> analysis_name = params.get("analysis_name", None)
+    """
+    method_directory = os.path.join(analysis_directory, analysis_name + get_git_revision_short_hash())
+    features_directory = os.path.join(method_directory, 'wavelet_features')
+    classifications_directory = os.path.join(method_directory, 'classifications')
+    intermediate_files_directory = os.path.join(method_directory, 'intermediate')
+    plots_directory = os.path.join(method_directory, 'plots')
+
+    dirs = {"method_directory": method_directory, "features_directory": features_directory,
+            "classifications_directory": classifications_directory, "intermediate_files_directory": intermediate_files_directory,
+            "plots_directory": plots_directory}
 
     for key, value in dirs.items():
         subprocess.call(['mkdir', value])
