@@ -1,0 +1,12 @@
+#
+#
+# GENERAL PARAMS
+SEED : 1234
+REPO_DIR : "/share/hypatia/snmachine_resources/data/plasticc/"
+ANALYSIS_DIR : "/share/hypatia/snmachine_resources/data/plasticc/analysis/"
+ANALYSIS_NAME : "test-analysis"
+DATA_PATH : "/share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set.pkl"
+
+# SNMACHINE_PARAMS
+ngp : 1100
+initheta : [500, 20]

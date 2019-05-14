@@ -124,14 +124,14 @@ def load_dataset(DATA_PATH):
     return dat
 
 
-def reduce_dataset(dat, dirs, subset_size, SEED):
+def reduce_dataset(dat, dirs, subset_size, seed=1234):
 
     METHOD_DIR = dirs.get("method_dir", None)
     subset_file = '/{}/subset.list'.format(METHOD_DIR)
     if os.path.exists(subset_file):
         rand_objs = np.genfromtxt(subset_file, dtype='U')
     else:
-        np.random.seed(SEED)
+        np.random.seed(seed)
         rand_objs = np.random.choice(dat.object_names, replace=False, size=subset_size)
         rand_objs_sorted_int = np.sort(rand_objs.astype(np.int))
         rand_objs = rand_objs_sorted_int.astype('<U9')
@@ -194,7 +194,7 @@ def combine_additional_features(wavelet_features, dat):
     return combined_features
 
 
-def create_classififer(combined_features, RANDOM_STATE):
+def create_classififer(combined_features, random_state=42):
 
     X = combined_features.drop('target', axis=1)
     y = combined_features['target'].values
@@ -207,17 +207,17 @@ def create_classififer(combined_features, RANDOM_STATE):
     print("X = \n{}".format(X))
     print("y = \n{}".format(y))
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=RANDOM_STATE)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
 
     clf = RandomForestClassifier(n_estimators=700, criterion='entropy',
                                  oob_score=True, n_jobs=-1,
-                                 random_state=RANDOM_STATE)
+                                 random_state=random_state)
 
     clf.fit(X_train, y_train)
 
     y_preds = clf.predict(X_test)
 
-    # confm = plotConfusionMatrix(y_test, y_preds, 'Test data', target_names)
+    # confm = plot_confusion_matrix(y_test, y_preds, 'Test data', target_names)
 
     y_probs = clf.predict_proba(X_test)
 
@@ -230,7 +230,7 @@ def create_classififer(combined_features, RANDOM_STATE):
 
     weights = np.array([1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/18, 1/19])
 
-    logloss = plasticcLogLoss(sklearn_truth, y_probs, relative_class_weights=weights[:-1])
+    logloss = plasticc_log_loss(sklearn_truth, y_probs, relative_class_weights=weights[:-1])
     print("LogLoss: {:.3f}\nBest Params: {}".format(logloss, clf.get_params))
 
     # PASS IN TRAINING DATA IN FORM OF SNMACHINE OBJECT
@@ -290,8 +290,8 @@ if __name__ == "__main__":
     # overridden
     SEED = params.get("SEED", None)
     DATA_PATH = params.get("DATA_PATH", None)
-    ANALYSIS_DIR = params.get("ANALYSIS_DIR", None)
-    ANALYSIS_NAME = params.get("ANALYSIS_NAME", None)
+    analysis_directory = params.get("analysis_directory", None)
+    analysis_name = params.get("analysis_name", None)
 
     # snmachine parameters
     ngp = params.get("ngp", None)
@@ -301,7 +301,7 @@ if __name__ == "__main__":
     nprocesses = multiprocessing.cpu_count()
     print("Running with {} cores".format(nprocesses))
 
-    dirs = create_folder_structure(ANALYSIS_DIR, ANALYSIS_NAME)
+    dirs = create_folder_structure(analysis_directory, analysis_name)
     save_configuration_file(dirs)
 
     # RUN PIPELINE
