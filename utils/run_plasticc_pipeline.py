@@ -1,10 +1,9 @@
 """
 Machine learning pipeline for the PLAsTiCC competition using snmachine codebase
 """
-
+from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
 import numpy as np
 import pandas as pd
-import sys
 import os
 import subprocess
 import multiprocessing
@@ -23,11 +22,6 @@ try:
     from snmachine import snfeatures, sndata, snaugment, gps
 except ImportError:
     print("Unable to import snmachine. Check environment set correctly")
-
-util_module_path = os.path.abspath(os.path.join('snmachine', 'utils'))
-if util_module_path not in sys.path:
-    sys.path.append(util_module_path)
-from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
 
 
 def get_git_revision_short_hash():
