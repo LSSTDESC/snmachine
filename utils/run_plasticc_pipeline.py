@@ -113,7 +113,7 @@ def load_configuration_file(path_to_configuration_file):
     except IOError:
         print("Invalid yaml file provided")
         exit()
-    print("The PARAMS are:\n {}".format(params))
+    print("The parameters are:\n {}".format(params))
     return params
 
 
@@ -280,14 +280,62 @@ def reduce_size_of_training_data(training_data, dirs, subset_size, seed=1234):
 
 
 def combine_all_features(reduced_wavelet_features, dataframe):
-    # Combine snmachine wavelet features with PLASTICC features. Allow user to
-    # define the dataframe they would like to merge
+    # TODO: Improve docstrings. Discuss whether the user should pass in a CSV
+    # instead?
+    """ Combine snmachine wavelet features with PLASTICC features. The
+    user should define a dataframe they would like to merge.
+
+    Parameters
+    ----------
+    reduced_wavelet_features : numpy.ndarray
+        These are the N principle components from the uncompressed wavelets
+    dataframe : pandas.DataFrame
+        Dataframe
+
+    Returns
+    -------
+    combined_features : pandas.DataFrame
+
+    Examples
+    --------
+    >>> ...
+    >>> print(shape.training_data)
+
+    >>> new_training_data = reduce_size_of_training_data(training_data, dirs, 1000))
+    >>> print(shape.new_training_data)
+
+    """
     meta_df = dat.metadata
     combined_features = merge_features(wavelet_features, meta_df)
     return combined_features
 
 
 def create_classififer(combined_features, random_state=42):
+    # TODO: Improve docstrings. Discuss whether the user should pass in a CSV
+    # instead?
+    """ Combine snmachine wavelet features with PLASTICC features. The
+    user should define a dataframe they would like to merge.
+
+    Parameters
+    ----------
+    reduced_wavelet_features : numpy.ndarray
+        These are the N principle components from the uncompressed wavelets
+    dataframe : pandas.DataFrame
+        Dataframe
+
+    Returns
+    -------
+    combined_features : pandas.DataFrame
+
+    Examples
+    --------
+    >>> ...
+    >>> print(shape.training_data)
+
+    >>> new_training_data = reduce_size_of_training_data(training_data, dirs, 1000))
+    >>> print(shape.new_training_data)
+
+    """
 
     X = combined_features.drop('target', axis=1)
     y = combined_features['target'].values
@@ -323,6 +371,7 @@ def create_classififer(combined_features, random_state=42):
 
     weights = np.array([1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/18, 1/19])
 
+    # weights[:-1] to ignore last class, the anomaly class
     log_loss = plasticc_log_loss(sklearn_truth, y_probs, relative_class_weights=weights[:-1])
     print("LogLoss: {:.3f}\nBest Params: {}".format(log_loss, classifer.get_params))
 
@@ -330,6 +379,7 @@ def create_classififer(combined_features, random_state=42):
 
 
 def make_predictions(location_of_test_data, classifier):
+    # TODO: Move to a seperate make_predictions file
     pass
 
 
