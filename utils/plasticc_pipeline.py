@@ -1,5 +1,5 @@
 """
-Machine learning pipeline for the PLAsTiCC competition using snmachine codebase
+Machine learning pipeline for the PLAsTiCC competition using snmachine codebase.
 """
 from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
 from astropy.table import Table
@@ -237,36 +237,43 @@ def reduce_size_of_training_data(training_data, dirs, subset_size, seed=1234):
     training_data.data = {objects: training_data.data[objects] for objects in training_data.object_names}
     print("Dataset reduced to {} objects".format(training_data.object_names.shape[0]))
 
-# def fit_gaussian_process(dat, **kwargs):  # Cat: Do we really want a mask funtion?
-#     # Tarek: Now that this file lives in snmachine and with the extensive
-#     # refactoring this is no longer necessary I believe
 
-#     # extract_GP(dat, **kwargs)
-#     # snfeatures.WaveletFeatures.extract_GP(dat, **kwargs)
-#     pass
+def wavelet_decomposition(training_data, ngp, **kwargs):
+    """ Load from disk the training data one will use for this analysis
 
+    Parameters
+    ----------
+    training_data : snmachine.PlasticcData
+        Dictionary containing the parameters that reside in the configuration
+        file. This will be used to obtain the path to the training data.
+    dirs : dict
+        Dictionary containing
+    subset_size : int
+        Number of objects the user would like to reduce the training data to
+    seed : int
+        Default set to 1234. This can be overridden by the user to check for
+        consistancy of results
 
-# def wavelet_decomposition(dat, ngp, **kwargs):  # Cat: we need to add ngp as input otherwise it doesn't run on the notebbok
+    Returns
+    -------
+    None
 
-#     wavelet_object = snfeatures.WaveletFeatures(ngp=ngp)
-#     print("WAV = {}\n".format(wavelet_object.wav))
-#     print("MLEV = {}\n".format(wavelet_object.mlev))
-#     print("NGP = {}\n".format(ngp))
-#     waveout, waveout_err = wavelet_object.extract_wavelets(dat, wavelet_object.wav, wavelet_object.mlev, **kwargs)
-#     return waveout, waveout_err, wavelet_object
+    Examples
+    --------
+    >>> ...
+    >>> print(shape.training_data)
 
+    >>> new_training_data = reduce_size_of_training_data(training_data, dirs, 1000))
+    >>> print(shape.new_training_data)
 
-# def dimentionality_reduction(wavelet_object, dirs, object_names, waveout, tolerance, **kwargs): # Cat: we need to add tolerance
+    """
 
-#     # check if reduced wavelet features already exist
-#     wavelet_features, eigenvalues, eigenvectors, means, num_feats = wavelet_object.extract_pca(object_names, waveout, **kwargs)
-
-#     output_root = dirs.get("features_dir")
-#     print("Inside dimRedux: {}\n".format(output_root))
-#     wavelet_features.write('{}/wavelet_features_{}.fits'.format(output_root, str(tolerance)[2:]))
-
-#     return wavelet_features, eigenvalues, eigenvectors, means
-
+    wavelet_object = snfeatures.WaveletFeatures(ngp=ngp)
+    print("WAV = {}\n".format(wavelet_object.wav))
+    print("MLEV = {}\n".format(wavelet_object.mlev))
+    print("NGP = {}\n".format(ngp))
+    waveout, waveout_err = wavelet_object.extract_wavelets(training_data, wavelet_object.wav, wavelet_object.mlev, **kwargs)
+    return waveout, waveout_err, wavelet_object
 
 # def merge_features(some_features, other_features):
 #     # TODO: Move this to a data processing file
@@ -311,21 +318,19 @@ def combine_all_features(reduced_wavelet_features, dataframe):
 
 
 def create_classififer(combined_features, random_state=42):
-    # TODO: Improve docstrings. Discuss whether the user should pass in a CSV
-    # instead?
-    """ Combine snmachine wavelet features with PLASTICC features. The
-    user should define a dataframe they would like to merge.
+    # TODO: Improve docstrings.
+    """ Creation of an optimised Random Forest classifier.
 
     Parameters
     ----------
-    reduced_wavelet_features : numpy.ndarray
-        These are the N principle components from the uncompressed wavelets
-    dataframe : pandas.DataFrame
-        Dataframe
+    combined_features : pandas.DataFrame
+        This contains. Index on objects
+    random_state : int
+        To allow for reproducible...
 
     Returns
     -------
-    combined_features : pandas.DataFrame
+    classifer : sklearn.RandomForestClassifier object
 
     Examples
     --------
@@ -403,6 +408,7 @@ if __name__ == "__main__":
     # snmachine parameters
     ngp = params.get("ngp", None)
     initheta = params.get("initheta", None)
+    number_of_principal_components = params.get("number_of_principal_components", None)
 
     # Step 1. Creat folders that contain analysis
     dirs = create_folder_structure(analysis_directory, analysis_name)
@@ -422,26 +428,32 @@ if __name__ == "__main__":
     else:
         # Run full pipeline but still do checks to see if elements from GPs or
         # wavelets already exist on disk; the first check should be for:
-        #   1. Saved PCA files
-        #   2. Saved uncompressed wavelets
-        #   3. Saved GPs
+        #   a. Saved PCA files
+            # path_saved_reduced_wavelets = dirs.get("intermediate_files_directory")
+            # eigenvectors_saved_file = np.load(os.path.join(path_saved_reduced_wavelets, 'eigenvectors_' + str(number_of_principal_components) + '.npy'))
+            # means_saved_file = np.load(os.path.join(path_saved_reduced_wavelets, 'means_' + str(number_of_principal_components) + '.npy'))
+        #   b. Saved uncompressed wavelets
+        #   c. Saved GPs
 
+        # Step 4. Load in training data
         training_data = load_training_data(data_path)
-        gps.compute_gps()
-        wavelet_object = snfeatures.WaveletFeatures(ngp=ngp)
-        waveout, waveout_err = wavelet_object.extract_wavelets(training_data, wavelet_object.wav, wavelet_object.mlev, **kwargs)
-        # waveout, waveout_err, wavelet_object = wavelet_decomposition(dat, ngp=ngp, nprocesses=nprocesses, save_output='all', output_root=dirs.get("interm_dir"))
-        # wavelet_features, eigenvalues, eigenvectors, means = dimentionality_reduction(wavelet_object, dirs, dat.object_names.copy(), waveout, tolerance=0.99, save_output=True, recompute_pca=True, output_root=dirs.get("features_dir"))
-        # combined_features = combine_all_features(wavelet_features, DATA_PATH)
-        # classifer = create_classififer(combined_features)
 
+        # Step 5. Compute GPs
+        gps.compute_gps(training_data, number_gp=100, t_min=0, t_max=1100,
+                        kernel_param=[500., 20.],
+                        output_root=dirs['intermediate_files_directory'],
+                        number_processes=nprocesses)
 
-        # fit_gaussian_process(dat, ngp=ngp, t_min=0, initheta=initheta,
-        #                      nprocesses=nprocesses, output_root=dirs.get("interm_dir"), t_max=1100)
+        # Step 6. Extract wavelet coeffiencts
+        waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, ngp=ngp, nprocesses=nprocesses,
+                                                                     save_output='all', output_root=dirs.get("intermediate_files_directory"))
 
-        # waveout, waveout_err, wavelet_object = wavelet_decomposition(dat, ngp=ngp, nprocesses=nprocesses, save_output='all', output_root=dirs.get("interm_dir"))
+        # Step 7. Reduce dimensionality of wavelets by using only N principle components
+        wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(object_names=training_data.object_names, wavout=waveout, recompute_pca=True, method='svd', ncomp=number_of_principal_components,
+                                                                                              tol=None, pca_path=None, save_output=True, output_root=dirs.get("intermediate_files_directory"))
 
-        # wavelet_features, eigenvalues, eigenvectors, means = dimentionality_reduction(wavelet_object, dirs, dat.object_names.copy(), waveout, tolerance=0.99, save_output=True, recompute_pca=True, output_root=dirs.get("features_dir"))
+        # Step 8. TODO Combine snmachine features with user defined features
+        # Step 9. TODO Create a Random Forest classifier; need to fit model and
+        # save it.
 
-        # combined_features = combine_all_features(wavelet_features, DATA_PATH)
-        # classifer = create_classififer(combined_features)
+        # Step 10. TODO Use saved classifier to make predictions. This can occur using a seperate file
