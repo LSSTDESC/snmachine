@@ -70,7 +70,10 @@ def create_folder_structure(analysis_directory, analysis_name):
     >>> print(directories.get("method_directory"))
 
     """
-    method_directory = os.path.join(analysis_directory, analysis_name + get_git_revision_short_hash())
+    # Append Git has to analysis name
+    analysis_name = analysis_name + get_git_revision_short_hash()
+
+    method_directory = os.path.join(analysis_directory, analysis_name)
     features_directory = os.path.join(method_directory, 'wavelet_features')
     classifications_directory = os.path.join(method_directory, 'classifications')
     intermediate_files_directory = os.path.join(method_directory, 'intermediate')
