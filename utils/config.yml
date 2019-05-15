@@ -1,7 +1,7 @@
 # Global settings
 analysis_dir : "/share/hypatia/snmachine_resources/data/plasticc/analysis/"
-analysis_name : "test-analysis"
-data_path : "/share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set.pkl"
+analysis_name : "pipeline-test"
+data_path : "/share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set_snia.pickle"
 # snmachine parameters
 ngp : 1100
 initheta : [500., 20.]
