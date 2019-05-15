@@ -4,5 +4,5 @@ analysis_name : "test-analysis"
 data_path : "/share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set.pkl"
 # snmachine parameters
 ngp : 1100
-initheta : [500, 20]
+initheta : [500., 20.]
 number_of_principle_components : 200

@@ -450,8 +450,8 @@ if __name__ == "__main__":
         training_data = load_training_data(data_path)
 
         # Step 5. Compute GPs
-        gps.compute_gps(training_data, number_gp=100, t_min=0, t_max=1100,
-                        kernel_param=[500., 20.],
+        gps.compute_gps(training_data, number_gp=ngp, t_min=0, t_max=1100,
+                        kernel_param=initheta,
                         output_root=dirs['intermediate_files_directory'],
                         number_processes=nprocesses)
 
