@@ -70,7 +70,10 @@ def create_folder_structure(analysis_directory, analysis_name):
     >>> print(directories.get("method_directory"))
 
     """
-    method_directory = os.path.join(analysis_directory, analysis_name + get_git_revision_short_hash())
+    # Append Git has to analysis name
+    analysis_name = analysis_name + "-" + get_git_revision_short_hash()
+
+    method_directory = os.path.join(analysis_directory, analysis_name)
     features_directory = os.path.join(method_directory, 'wavelet_features')
     classifications_directory = os.path.join(method_directory, 'classifications')
     intermediate_files_directory = os.path.join(method_directory, 'intermediate')
@@ -409,8 +412,9 @@ if __name__ == "__main__":
     parser.add_argument('--configuration', '-c')
     parser.add_argument('--restart-from', '-r', help='Either restart from saved "GPs" or from saved "Wavelets"', default="full")
     arguments = parser.parse_args()
+    arguments = vars(arguments)
 
-    params = load_configuration_file(arguments.configuration)
+    params = load_configuration_file(arguments['configuration'])
 
     data_path = params.get("data_path", None)
     analysis_directory = params.get("analysis_directory", None)
@@ -424,16 +428,16 @@ if __name__ == "__main__":
     # Step 1. Creat folders that contain analysis
     dirs = create_folder_structure(analysis_directory, analysis_name)
     # Step 2. Save configuration file used for this analysis
-    save_configuration_file(dirs)
+    save_configuration_file(dirs.get("method_directory"))
     # Step 3. Check at which point the user would like to run the analysis from.
     # If elements already saved, these will be used but this can be overriden
     # with command line argument
-    if (arguments.restart.lower() == "wavelets"):
+    if (arguments['restart_from'].lower() == "wavelets"):
         # Restart from saved uncompressed wavelets.
         wavelet_features = Table.read(dirs.get("features_dir") + "/wavelet_features.fits")
         combined_features = combine_all_features(wavelet_features, data_path)
         classifer = create_classififer(combined_features)
-    elif (arguments.restart.lower() == "gps"):
+    elif (arguments['restart_from'].lower() == "gps"):
         # Restart from saved GPs.
         pass
     else:
