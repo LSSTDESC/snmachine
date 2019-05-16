@@ -55,9 +55,16 @@ def get_dict_chisq_over_datapoints_per_label(dataset):
     dict_chisq_over_datapoints_per_label : dict
         A dictionary whose keys are the labels and whose values are the
         X^2/number of datapoints values of all the objects with that label.
+
+    Raises
+    ------
+    AttributeError
+        `dataset` needs to contain labels, so it can't be a test dataset.
     """
     chisq_over_datapoints_per_obj = get_chisq_over_datapoints_per_obj(dataset)
     labels = dataset.labels
+    if labels == None:
+        raise AttributeError("This dataset does not contain labels so we can't get anything per label.")
     unique_labels = np.unique(labels)
     dict_chisq_over_datapoints_per_label = {}
     for label in unique_labels:
