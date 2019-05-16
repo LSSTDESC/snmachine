@@ -587,7 +587,8 @@ class Features:
     def fit_sn(self): # CAT: Why do we have this empty method? Either we write that is not implemented and then it is overwritten or erase it
         pass
 
-    def convert_astropy_array(self, tab): # CAT: I get this can be useful but it is not used anywhere. Besides, it should be a static method
+    @staticmethod
+    def convert_astropy_array(self, tab): # CAT: I get this can be useful but it is not used anywhere.
         """
         Convenience function to convert an astropy table (floats only) into a numpy array.
         """
