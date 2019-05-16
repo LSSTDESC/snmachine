@@ -587,47 +587,6 @@ class Features:
     def fit_sn(self): # CAT: Why do we have this empty method? Either we write that is not implemented and then it is overwritten or erase it
         pass
 
-    def goodness_of_fit(self, d): # CAT: Is this another code to calculate the reduced X^2 ?? If so we can erase it and call it from `analysis.py`
-        """
-        Test (for any feature set) how well the reconstruction from the features fits each of the objects in the dataset.
-
-        Parameters
-        ----------
-        d : Dataset
-            Dataset object.
-
-        Returns
-        -------
-        astropy.table.Table
-            Table with the reduced Chi2 for each object
-        """
-        if len(d.models)==0:
-            print ('Call Dataset.set_models first.')
-            return None
-        filts=np.unique(d.data[d.object_names[0]]['filter'])
-        filts=np.array(filts).tolist()
-        rcs=Table(names=['Object']+filts, dtype=['U32']+['float64']*len(filts)) #Reduced chi2
-        for obj in d.object_names:
-            #Go through each filter
-            chi2=[]
-            lc=d.data[obj]
-            mod=d.models[obj]
-            for filt in filts:
-                l=lc[lc['filter']==filt]
-                m=mod[mod['filter']==filt]
-                x=l['mjd']
-                y=l['flux']
-                e=l['flux_error']
-                xmod=m['mjd']
-                ymod=m['flux']
-                #Interpolate
-                fit=interp1d(xmod, ymod)
-                yfit=fit(x)
-                chi2.append(sum((yfit-y)**2/e**2)/(len(x)-1))
-            rcs.add_row([obj]+chi2)
-
-        return rcs
-
     def posterior_predictor(self, lc, nparams, chi2): # CAT: I am not sure if there is a point on keeping this. I would add it to `experimental-code.py`
         """
         Computes posterior predictive p-value to see if the model fits sufficient well.
