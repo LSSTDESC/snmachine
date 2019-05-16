@@ -587,46 +587,6 @@ class Features:
     def fit_sn(self): # CAT: Why do we have this empty method? Either we write that is not implemented and then it is overwritten or erase it
         pass
 
-    def posterior_predictor(self, lc, nparams, chi2): # CAT: I am not sure if there is a point on keeping this. I would add it to `experimental-code.py`
-        """
-        Computes posterior predictive p-value to see if the model fits sufficient well.
-        ***UNTESTED***
-
-        Parameters
-        ----------
-        lc : astropy.table.Table
-            Light curve
-        nparams : int
-            The number of parameters in the model. For the wavelets, this will be the number of PCA coefficients. For the parametric
-            models, this will be the number parameters per model multiplied by the number of filters. For the template models, this is simply the number
-            of parameters in the model.
-        chi2 : array-like
-            An array of chi2 values for each set of parameter space in the parameter samples. This is easy to obtain as -2*loglikelihood output
-            from a multinest or mcmc chain. For features such as the wavelets, this will have to be separately calculated by drawing thousands of curves
-            consistent with the coefficients and their errors and then computing the chi2.
-
-        Returns
-        -------
-        float
-            The posterior predictive p-value. If this number is too close to 0 or 1 it implies the model is a poor fit.
-        """
-
-        #Count the number of data points over all filters.
-        ndata=len(lc['mjd'])
-        dof=ndata-nparams-1
-
-        if dof<=0:
-            dof=1
-        chi2_limit=stats.chi2.ppf(1-self.p_limit, dof)
-        print (chi2_limit)
-        print (chi2.min(), chi2.max())
-        chi2=np.sort(chi2)
-        p_value=np.count_nonzero(chi2>chi2_limit)/len(chi2)
-
-        if p_value>self.p_limit:
-            print ('Model fit unsatisfactory, p value=', p_value)
-        return p_value
-
     def convert_astropy_array(self, tab): # CAT: I get this can be useful but it is not used anywhere. Besides, it should be a static method
         """
         Convenience function to convert an astropy table (floats only) into a numpy array.
