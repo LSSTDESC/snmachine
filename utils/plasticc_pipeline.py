@@ -111,8 +111,8 @@ def load_configuration_file(path_to_configuration_file):
     >>> data_path = params.get("data_path", None)
     >>> print(data_path)
 
-    >>> ngp = params.get("ngp", None)
-    >>> print(ngp)
+    >>> number_gp = params.get("number_gp", None)
+    >>> print(number_gp)
 
     """
     try:
@@ -251,7 +251,7 @@ def reduce_size_of_training_data(training_data, dirs, subset_size, seed=1234):
     print("Dataset reduced to {} objects".format(training_data.object_names.shape[0]))
 
 
-def wavelet_decomposition(training_data, ngp, **kwargs):
+def wavelet_decomposition(training_data, number_gp, **kwargs):
     """ Load from disk the training data one will use for this analysis
 
     Parameters
@@ -274,16 +274,17 @@ def wavelet_decomposition(training_data, ngp, **kwargs):
     Examples
     --------
     >>> ...
-    >>> waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, ngp=ngp, nprocesses=nprocesses,
+    >>> waveout, waveout_err, wavelet_object =
+    wavelet_decomposition(training_data, number_gp=number_gp, nprocesses=nprocesses,
                                                                      save_output='all', output_root=dirs.get("intermediate_files_directory"))
     >>> print()
 
     """
 
-    wavelet_object = snfeatures.WaveletFeatures(ngp=ngp)
+    wavelet_object = snfeatures.WaveletFeatures(number_gp=number_gp)
     print("WAV = {}\n".format(wavelet_object.wav))
     print("MLEV = {}\n".format(wavelet_object.mlev))
-    print("NGP = {}\n".format(ngp))
+    print("number_gp = {}\n".format(number_gp))
     waveout, waveout_err = wavelet_object.extract_wavelets(training_data, wavelet_object.wav, wavelet_object.mlev, **kwargs)
     return waveout, waveout_err, wavelet_object
 
@@ -421,8 +422,8 @@ if __name__ == "__main__":
     analysis_name = params.get("analysis_name", None)
 
     # snmachine parameters
-    ngp = params.get("ngp", None)
-    initheta = params.get("initheta", None)
+    number_gp = params.get("number_gp", None)
+    kernel_param = params.get("kernel_param", None)
     number_of_principal_components = params.get("number_of_principal_components", None)
 
     # Step 1. Creat folders that contain analysis
@@ -454,13 +455,13 @@ if __name__ == "__main__":
         training_data = load_training_data(data_path)
 
         # Step 5. Compute GPs
-        gps.compute_gps(training_data, number_gp=ngp, t_min=0, t_max=1100,
-                        kernel_param=initheta,
+        gps.compute_gps(training_data, number_gp=number_gp, t_min=0, t_max=1100,
+                        kernel_param=kernel_param,
                         output_root=dirs['intermediate_files_directory'],
                         number_processes=nprocesses)
 
         # Step 6. Extract wavelet coeffiencts
-        waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, ngp=ngp, nprocesses=nprocesses,
+        waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, nprocesses=nprocesses,
                                                                      save_output='all', output_root=dirs.get("intermediate_files_directory"))
 
         # Step 7. Reduce dimensionality of wavelets by using only N principle components
