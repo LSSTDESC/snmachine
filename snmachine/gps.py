@@ -56,7 +56,7 @@ def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], outp
     output_root : {None, str}, optional
         If None, don't save anything. If str, it is the output directory, so save the flux and error estimates and used kernels there.
     number_processes : int, optional
-        Number of processors to use for parallelisation (shared memory only). By default `nprocesses` = 1.
+        Number of processors to use for parallelisation (shared memory only). By default `number_processes` = 1.
     gp_algo : str, optional
         which gp package is used for the Gaussian Process Regression, GaPP or george
     """
@@ -148,7 +148,7 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output
     output_root : {None, str}, optional
         If None, don't save anything. If str, it is the output directory, so save the flux and error estimates and used kernels there.
     number_processes : int, optional
-        Number of processors to use for parallelisation (shared memory only). By default `nprocesses` = 1.
+        Number of processors to use for parallelisation (shared memory only). By default `number_processes` = 1.
     gp_algo : str, optional
         which gp package is used for the Gaussian Process Regression, GaPP or george
     """

@@ -275,7 +275,7 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
     --------
     >>> ...
     >>> waveout, waveout_err, wavelet_object =
-    wavelet_decomposition(training_data, number_gp=number_gp, nprocesses=nprocesses,
+    wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
                                                                      save_output='all', output_root=dirs.get("intermediate_files_directory"))
     >>> print()
 
@@ -406,8 +406,8 @@ def make_predictions(location_of_test_data, classifier):
 if __name__ == "__main__":
 
     # Set the number of processes you want to use throughout the notebook
-    nprocesses = multiprocessing.cpu_count()
-    print("Running with {} cores".format(nprocesses))
+    number_processes = multiprocessing.cpu_count()
+    print("Running with {} cores".format(number_processes))
 
     parser = ArgumentParser(description="Run pipeline end to end")
     parser.add_argument('--configuration', '-c')
@@ -458,10 +458,10 @@ if __name__ == "__main__":
         gps.compute_gps(training_data, number_gp=number_gp, t_min=0, t_max=1100,
                         kernel_param=kernel_param,
                         output_root=dirs['intermediate_files_directory'],
-                        number_processes=nprocesses)
+                        number_processes=number_processes)
 
         # Step 6. Extract wavelet coeffiencts
-        waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, nprocesses=nprocesses,
+        waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
                                                                      save_output='all', output_root=dirs.get("intermediate_files_directory"))
 
         # Step 7. Reduce dimensionality of wavelets by using only N principle components
