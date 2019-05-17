@@ -123,7 +123,7 @@ class SNAugment:
             #tf=snfeatures.TemplateFeatures(sampler='leastsq')
             tf=snfeatures.TemplateFeatures(sampler=sampler)
             if salt2feats is None:
-                salt2feats=tf.extract_features(self.dataset,nprocesses=nproc,use_redshift=fix_redshift)
+                salt2feats=tf.extract_features(self.dataset,number_processes=nproc,use_redshift=fix_redshift)
 
             #fit models and extract r-peakmags
             peaklogflux=[]

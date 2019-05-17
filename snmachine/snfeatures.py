@@ -686,7 +686,7 @@ class TemplateFeatures(Features):
                     'nugent-sn2l':{'z':(0.01, 1.5)},
                     'nugent-sn1bc':{'z':(0.01, 1.5)}}
 
-    def extract_features(self, d, save_output=False, chain_directory='chains', use_redshift=False, nprocesses=1, restart=False, seed=-1):
+    def extract_features(self, d, save_output=False, chain_directory='chains', use_redshift=False, number_processes=1, restart=False, seed=-1):
         """
         Extract template features for a dataset.
 
@@ -700,7 +700,7 @@ class TemplateFeatures(Features):
             Where to save the chains
         use_redshift : bool
             Whether or not to use provided redshift when fitting objects
-        nprocesses : int, optional
+        number_processes : int, optional
             Number of processors to use for parallelisation (shared memory only)
         restart : bool
             Whether or not to restart from multinest chains
@@ -736,7 +736,7 @@ class TemplateFeatures(Features):
             output = Table(names=labels, dtype=['U32'] + ['f'] * (len(labels) - 1))
 
             k=0
-            if nprocesses<2:
+            if number_processes<2:
                 for obj in d.object_names:
                     if k%100==0:
                         print (k, 'objects fitted')
@@ -779,7 +779,7 @@ class TemplateFeatures(Features):
 
             else:
                 if self.sampler=='leastsq':
-                    p=Pool(nprocesses, maxtasksperchild=1)
+                    p=Pool(number_processes, maxtasksperchild=1)
                     partial_func=partial(_run_leastsq_templates, d=d, model_name=self.templates[mod_name], use_redshift=use_redshift, bounds=self.bounds[self.templates[mod_name]])
                     out=p.map(partial_func, d.object_names)
                     output=out[0]
@@ -790,7 +790,7 @@ class TemplateFeatures(Features):
                     else:
                         all_output=vstack((all_output, output))
                 elif self.sampler=='nested':
-                    p=Pool(nprocesses, maxtasksperchild=1)
+                    p=Pool(number_processes, maxtasksperchild=1)
                     partial_func=partial(_run_multinest_templates, d=d, model_name=self.templates[mod_name], bounds=self.bounds[self.templates[mod_name]],
                     chain_directory=chain_directory, nlp=1000, convert_to_binary=True, use_redshift=use_redshift, short_name=self.short_names[mod_name], restart=restart, seed=seed)
                     out=p.map(partial_func, d.object_names)
@@ -914,7 +914,7 @@ class ParametricFeatures(Features):
 
 
 
-    def extract_features(self, d, chain_directory='chains', save_output=True, n_attempts=20, nprocesses=1, n_walkers=100,
+    def extract_features(self, d, chain_directory='chains', save_output=True, n_attempts=20, number_processes=1, n_walkers=100,
     n_steps=500, walker_spread=0.1, burn=50, nlp=1000, starting_point=None, convert_to_binary=True, n_iter=0, restart=False, seed=-1):
         """
         Fit parametric models and return best-fitting parameters as features.
@@ -930,7 +930,7 @@ class ParametricFeatures(Features):
         n_attempts : int
             Allow the minimiser to start in new random locations if the fit is bad. Put n_attempts=1 to fit only once
             with the default starting position.
-        nprocesses : int, optional
+        number_processes : int, optional
             Number of processors to use for parallelisation (shared memory only)
         n_walkers : int
             emcee parameter - number of walkers to use
@@ -963,7 +963,7 @@ class ParametricFeatures(Features):
         output=[]
 
         #obj=d.object_names[0]
-        if nprocesses<2:
+        if number_processes<2:
             k=0
             for obj in d.object_names:
                 if k%100==0:
@@ -984,14 +984,14 @@ class ParametricFeatures(Features):
                 k+=1
         else:
             if self.sampler=='leastsq':
-                p=Pool(nprocesses, maxtasksperchild=1)
+                p=Pool(number_processes, maxtasksperchild=1)
                 partial_func=partial(_run_leastsq, d=d, model=self.model,  n_attempts=n_attempts, seed=seed)
                 out=p.map(partial_func, d.object_names)
                 output=out[0]
                 for i in range(1, len(out)):
                     output=vstack((output, out[i]))
             elif self.sampler=='nested':
-                p=Pool(nprocesses, maxtasksperchild=1)
+                p=Pool(number_processes, maxtasksperchild=1)
                 partial_func=partial(_run_multinest, d=d, model=self.model,chain_directory=chain_directory,
                 nlp=nlp, convert_to_binary=convert_to_binary, n_iter=n_iter, restart=restart, seed=seed)
                 #Pool starts a number of threads, all of which may try to tackle all of the data. Better to take it in chunks
@@ -999,7 +999,7 @@ class ParametricFeatures(Features):
                 k=0
                 objs=d.object_names
                 while k<len(objs):
-                    objs_subset=objs[k:k+nprocesses]
+                    objs_subset=objs[k:k+number_processes]
                     out=p.map(partial_func, objs_subset)
                     for i in range(0, len(out)):
                         if out[i]==None:
@@ -1187,7 +1187,7 @@ class WaveletFeatures(Features):
     Uses wavelets to decompose the data and then reduces dimensionality of the feature space using PCA.
     """
 
-    def __init__(self, wavelet='sym2', ngp=100, **kwargs):
+    def __init__(self, wavelet='sym2', number_gp=100, **kwargs):
         """
         Initialises the pywt wavelet object and sets the maximum depth for deconstruction.
 
@@ -1195,7 +1195,7 @@ class WaveletFeatures(Features):
         ----------
         wavelet : str, optional
             String for which wavelet family to use.
-        ngp : int, optional
+        number_gp : int, optional
             Number of points on the Gaussian process curve
         level : int, optional
             The maximum depth for wavelet deconstruction. If not provided, will use the maximum depth possible
@@ -1204,7 +1204,7 @@ class WaveletFeatures(Features):
         Features.__init__(self)
 
         self.wav=pywt.Wavelet(wavelet)
-        self.ngp=ngp #Number of points to use on the Gaussian process curve
+        self.number_gp=number_gp #Number of points to use on the Gaussian process curve
         self.wavelet_list=pywt.wavelist() #All possible families
 
         if wavelet not in self.wavelet_list:
@@ -1215,10 +1215,10 @@ class WaveletFeatures(Features):
         if 'level' in kwargs:
             self.mlev=kwargs['level']
         else:
-            self.mlev=pywt.swt_max_level(self.ngp)
+            self.mlev=pywt.swt_max_level(self.number_gp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output=False, output_root='features', nprocesses=24, restart='none', gp_algo='george', xmin=None, xmax=None, recompute_pca=True, pca_path=None):
+    def extract_features(self, d, initheta=[500, 20], save_output=False, output_root='features', number_processes=24, restart='none', gp_algo='george', xmin=None, xmax=None, recompute_pca=True, pca_path=None):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
@@ -1232,7 +1232,7 @@ class WaveletFeatures(Features):
             Whether or not to save the output
         output_root : str, optional
             Output directory
-        nprocesses : int, optional
+        number_processes : int, optional
             Number of processors to use for parallelisation (shared memory only)
         restart : str, optional
             Either 'none' to start from scratch, 'gp' to restart from saved Gaussian processes, or 'wavelet' to
@@ -1260,9 +1260,9 @@ class WaveletFeatures(Features):
             if restart=='gp':
                 self.restart_from_gp(d, output_root)
             else:
-                compute_gps(d, self.ngp, xmin, xmax, initheta, output_root, nprocesses, gp_algo=gp_algo, save_output=save_output)
+                compute_gps(d, self.number_gp, xmin, xmax, initheta, output_root, number_processes, gp_algo=gp_algo, save_output=save_output)
 
-            wavout, waveout_err=self.extract_wavelets(d, self.wav, self.mlev,  nprocesses, save_output, output_root)
+            wavout, waveout_err=self.extract_wavelets(d, self.wav, self.mlev,  number_processes, save_output, output_root)
         self.features,vals,vec,mn,s=self.extract_pca(d.object_names.copy(), wavout, recompute_pca=recompute_pca, pca_path=pca_path, output_root=output_root)
 
         #Save the PCA information
@@ -1316,14 +1316,14 @@ class WaveletFeatures(Features):
 
             coeffs=np.array(np.dot(new_comps, eigs.T)+mn).flatten()
 
-        n=self.mlev*2*self.ngp
-        xnew=np.linspace(xmin, xmax, self.ngp)
+        n=self.mlev*2*self.number_gp
+        xnew=np.linspace(xmin, xmax, self.number_gp)
         output=[]
         for i in range(len(filter_set)):
             if filter_set[i] in filts:
                 if waveUni==0:
                     filt_coeffs=coeffs[i*n:(i+1)*n]
-                    filt_coeffs=filt_coeffs.reshape(self.mlev, 2, self.ngp, order='C')
+                    filt_coeffs=filt_coeffs.reshape(self.mlev, 2, self.number_gp, order='C')
                 else: # tweak things
                     ifFil = comps['filter'] == filter_set[i]
                     filt_coeffs = (( np.array(comps[ifFil]['cA2']), np.array(comps[ifFil]['cD2']) ),
@@ -1331,7 +1331,7 @@ class WaveletFeatures(Features):
 
                 ynew=self.iswt(filt_coeffs, self.wav)
 
-                newtable=Table([xnew, ynew, [filter_set[i]]*self.ngp], names=['mjd', 'flux', 'filter'], dtype=['f', 'f', 'U32'])
+                newtable=Table([xnew, ynew, [filter_set[i]]*self.number_gp], names=['mjd', 'flux', 'filter'], dtype=['f', 'f', 'U32'])
                 if len(output)==0:
                     output=newtable
                 else:
@@ -1385,8 +1385,8 @@ class WaveletFeatures(Features):
         """
         print ('Restarting from stored wavelets...')
         nfilts=len(d.filter_set)
-        wavout=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts]) #This is just a very big array holding coefficients in memory
-        wavout_err=np.zeros([len(d.object_names), self.ngp*2*self.mlev*nfilts])
+        wavout=np.zeros([len(d.object_names), self.number_gp*2*self.mlev*nfilts]) #This is just a very big array holding coefficients in memory
+        wavout_err=np.zeros([len(d.object_names), self.number_gp*2*self.mlev*nfilts])
 
         for i in range(len(d.object_names)):
             obj=d.object_names[i]
@@ -1395,7 +1395,7 @@ class WaveletFeatures(Features):
                 # out=Table.read(fname, format='ascii')
                 out=Table.read(fname, format='fits')
                 cols=out.colnames[:-1]
-                n=self.ngp*2*self.mlev
+                n=self.number_gp*2*self.mlev
                 for j in range(nfilts): # I think I can do this in a more clear/ easy to understand way
                     x=out[out['filter']==d.filter_set[j]] # select the filter
                     coeffs=x[cols[:self.mlev*2]] # select the coeeficients ['cA2', 'cD2', 'cA1', 'cD1'] of that filter
@@ -1430,7 +1430,7 @@ class WaveletFeatures(Features):
         """
 
         filters=np.unique(lc['filter'])
-        ngp=len(lc['flux'][lc['filter']==filters[0]])
+        number_gp=len(lc['flux'][lc['filter']==filters[0]])
         #Store the output in another astropy table
         output=0
         for fil in filters:
@@ -1465,8 +1465,9 @@ class WaveletFeatures(Features):
 
         return output
 
-    def extract_wavelets(self, d, wav, mlev, nprocesses, save_output, output_root):
-        """Perform wavelet decomposition on all objects in dataset. Output is stored as astropy table for each object.
+    def extract_wavelets(self, d, wav, mlev, number_processes, save_output, output_root):
+        """
+        Perform wavelet decomposition on all objects in dataset. Output is stored as astropy table for each object.
 
         Parameters
         ----------
@@ -1476,7 +1477,7 @@ class WaveletFeatures(Features):
             Which wavelet family to use
         mlev : int
             Max depth
-        nprocesses : int, optional
+        number_processes : int, optional
             Number of processors to use for parallelisation (shared memory only)
         save_output : bool, optional
             Whether or not to save the output
@@ -1494,8 +1495,8 @@ class WaveletFeatures(Features):
         print ('Performing wavelet decomposition')
 
         nfilts=len(d.filter_set)
-        wavout=np.zeros([len(d.object_names), self.ngp*2*mlev*nfilts]) #This is just a big array holding coefficients in memory
-        wavout_err=np.zeros([len(d.object_names), self.ngp*2*mlev*nfilts])
+        wavout=np.zeros([len(d.object_names), self.number_gp*2*mlev*nfilts]) #This is just a big array holding coefficients in memory
+        wavout_err=np.zeros([len(d.object_names), self.number_gp*2*mlev*nfilts])
         t1=time.time()
         for i in range(len(d.object_names)):
             obj=d.object_names[i]
@@ -1506,7 +1507,7 @@ class WaveletFeatures(Features):
                 out.write(os.path.join(output_root, 'wavelet_'+obj), format='fits',overwrite=True)
             #We go by filter, then by set of coefficients
             cols=out.colnames[:-1]
-            n=self.ngp*2*mlev
+            n=self.number_gp*2*mlev
             filts=np.unique(lc['filter'])
             for j in range(nfilts):
                 if d.filter_set[j] in filts:
@@ -1572,7 +1573,7 @@ class WaveletFeatures(Features):
         Z : `np.ndarray`
             Components of the vectors forming the data matrix in the PCA bases of shape (Nsamps, number_comps)
         M : `np.ndarray`
-            Means of the features of the data matrix over the samples, should have shape (Nfeats,) 
+            Means of the features of the data matrix over the samples, should have shape (Nfeats,)
         s : `np.ndarray`
             scalings used to rescale X so that the variance of each feature in
             X is 1. Should have shape (Nfeats, ) or be `None`
@@ -1631,11 +1632,11 @@ class WaveletFeatures(Features):
         -------
         V : `np.ndarray`
             Right Singular Matrix, with shape (Nsamps, min(`number_comp`, Nfeats))
-        Z : `np.ndarray` 
-            Components of the vectors forming the data matrix in the PCA bases 
+        Z : `np.ndarray`
+            Components of the vectors forming the data matrix in the PCA bases
             of shape (Nsamps, `number_comp`)
         M : `np.ndarray`
-            Means of the features of the data matrix over the samples, should have shape (Nfeats,) 
+            Means of the features of the data matrix over the samples, should have shape (Nfeats,)
         s : `np.ndarray`
             scalings used to rescale X so that the variance of each feature in
             X is 1. Should have shape (Nfeats, ) or be `None`
@@ -1703,7 +1704,7 @@ class WaveletFeatures(Features):
         X : `np.ndarray`
             normalized and centered data matrix X. Should have shape (Nsamps, Nfeats)
         M : `np.ndarray`
-            Means of the features of the data matrix over the samples, should have shape (Nfeats,) 
+            Means of the features of the data matrix over the samples, should have shape (Nfeats,)
         s : `np.ndarray`
             scalings used to rescale X so that the variance of each feature in
             X is 1. Should have shape (Nfeats, ) or be `None`
@@ -1841,7 +1842,7 @@ class WaveletFeatures(Features):
             If `True` pass to `normalize_variance` method so that the features
             are scaled to have unit variance.
         method : {'svd'| 'eigendecomposition'}
-        
+
         Notes
         -----
         normalize_variance defaults to False. Please read notes in
@@ -1871,12 +1872,12 @@ class WaveletFeatures(Features):
         M : `np.ndarray`, defaults to `None`
             Matrix subtracted from original Data Matrix to center it.
             Must have shape (Nfeats, ). If `None`, M is assumed to be 0
-        s : `np.ndarry` 
+        s : `np.ndarry`
             scale factor applied to normalize data matrix so that each feature
             vector has variance 1. Must have shape (Nfeats, ) or be `None`
         Returns
         -------
-        D : `np.ndarray` 
+        D : `np.ndarray`
             Reconstructed un-normalized data matrix of shape (Nsamps, Nfeats)
             that was compressed via PCA
         """
@@ -1957,7 +1958,7 @@ class WaveletFeatures(Features):
             array of shape (Nfeat, Ncomp) whose columns are the
             eigenvectors of the covariance matrix.
         M : `np.ndarray`
-            Means of the features of the data matrix over the samples, should have shape (Nfeats,) 
+            Means of the features of the data matrix over the samples, should have shape (Nfeats,)
         s : `np.ndarray`
             scalings used to rescale X so that the variance of each feature in
             X is 1. Should have shape (Nfeats, ) or be `None`
