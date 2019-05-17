@@ -3,6 +3,6 @@ analysis_directory : "/share/hypatia/snmachine_resources/data/plasticc/analysis/
 analysis_name : "pipeline-test"
 data_path : "/share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set_snia.pickle"
 # snmachine parameters
-ngp : 1100
-initheta : [500., 20.]
+number_gp : 1100
+kernel_param : [500., 20.]
 number_of_principle_components : 200
