@@ -65,7 +65,7 @@ def get_timestamp(path_to_configuration_file):
     '2019-05-18-2100'
     """
     _timestamp = subprocess.check_output(['date', '+%Y-%m-%d-%H%M', '-r', path_to_configuration_file])
-    return _timestamp
+    return _timestamp.decode("utf-8").rstrip()
 
 
 def create_folder_structure(analysis_directory, analysis_name, path_to_configuration_file):
