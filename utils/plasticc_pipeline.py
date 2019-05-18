@@ -180,7 +180,6 @@ def load_training_data(data_path):
                 print("Dataset loaded from pickle file as: {}".format(training_data))
         else:
             folder_path, train_data_file_name = os.path.split(data_path)
-            print(folder_path, train_data_file_name)
             meta_data_file_name = "_metadata.".join(train_data_file_name.split("."))
 
             print("Opening from CSV")
