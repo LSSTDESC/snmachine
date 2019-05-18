@@ -43,7 +43,32 @@ def get_git_revision_short_hash():
     return _hash.decode("utf-8").rstrip()
 
 
-def create_folder_structure(analysis_directory, analysis_name):
+def get_timestamp(path_to_configuration_file):
+    """ Helper function to obtain latest modified time of the configuration file
+
+    Parameters
+    ----------
+    path_to_configuration_file : str
+        System path to where the configuration file is located
+
+    Returns
+    -------
+    timestamp : str
+        Short representation of last modified time for the configuration file used.
+        'YYYY-MM-DD-HOURMINUTE'
+
+    Examples
+    --------
+    >>> ...
+    >>> timestamp = get_timestamp(path_to_configuration_file)
+    >>> print(timestamp)
+    '2019-05-18-2100'
+    """
+    _timestamp = subprocess.check_output(['date', '+%Y-%m-%d-%H%M', '-r', path_to_configuration_file])
+    return _timestamp
+
+
+def create_folder_structure(analysis_directory, analysis_name, path_to_configuration_file):
     """ Make directories that will be used for analysis
 
     Parameters
@@ -66,17 +91,17 @@ def create_folder_structure(analysis_directory, analysis_name):
     >>> ...
     >>> analysis_directory = params.get("analysis_directory", None)
     >>> analysis_name = params.get("analysis_name", None)
-    >>> directories = create_folder_structure(analysis_directory, analysis_name)
+    >>> directories = create_folder_structure(analysis_directory, analysis_name, path_to_configuration_file)
     >>> print(directories.get("method_directory", None))
 
     """
-    # Append Git has to analysis name
-    analysis_name = analysis_name + "-" + get_git_revision_short_hash()
+    # Prepend last modified time of configuration file and git SHA to analysis name
+    analysis_name = get_timestamp(path_to_configuration_file) + "-" + get_git_revision_short_hash() + "-" + analysis_name
 
     method_directory = os.path.join(analysis_directory, analysis_name)
     features_directory = os.path.join(method_directory, 'wavelet_features')
     classifications_directory = os.path.join(method_directory, 'classifications')
-    intermediate_files_directory = os.path.join(method_directory, 'intermediate')
+    intermediate_files_directory = os.path.join(method_directory, 'intermediate_files')
     plots_directory = os.path.join(method_directory, 'plots')
 
     dirs = {"method_directory": method_directory, "features_directory": features_directory,
@@ -414,7 +439,9 @@ if __name__ == "__main__":
     arguments = parser.parse_args()
     arguments = vars(arguments)
 
-    params = load_configuration_file(arguments['configuration'])
+    path_to_configuration_file = arguments['configuration']
+
+    params = load_configuration_file(path_to_configuration_file)
 
     data_path = params.get("data_path", None)
     analysis_directory = params.get("analysis_directory", None)
@@ -426,7 +453,7 @@ if __name__ == "__main__":
     number_of_principal_components = params.get("number_of_principal_components", None)
 
     # Step 1. Creat folders that contain analysis
-    dirs = create_folder_structure(analysis_directory, analysis_name)
+    dirs = create_folder_structure(analysis_directory, analysis_name, path_to_configuration_file)
     # Step 2. Save configuration file used for this analysis
     save_configuration_file(dirs.get("method_directory"))
     # Step 3. Check at which point the user would like to run the analysis from.
