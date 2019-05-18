@@ -67,7 +67,7 @@ def create_folder_structure(analysis_directory, analysis_name):
     >>> analysis_directory = params.get("analysis_directory", None)
     >>> analysis_name = params.get("analysis_name", None)
     >>> directories = create_folder_structure(analysis_directory, analysis_name)
-    >>> print(directories.get("method_directory"))
+    >>> print(directories.get("method_directory", None))
 
     """
     # Append Git has to analysis name
