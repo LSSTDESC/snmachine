@@ -608,7 +608,7 @@ def __call_classifier(classifier, X_train, y_train, X_test, param_dict, return_c
 
 
 def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb', 'knn', 'svm', 'neural_network', 'boost_dt'],
-                 training_set=0.3, param_dict={}, nprocesses=1, scale=True,
+                 training_set=0.3, param_dict={}, number_processes=1, scale=True,
                  plot_roc_curve=True, return_classifier=False, classifiers_for_cm_plots=[],
                  type_dict=None, seed=1234):
     """
@@ -632,7 +632,7 @@ def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb',
         the ID's of the objects to be used
     param_dict : dict, optional
         Use to run different ranges of hyperparameters for the classifiers when optimising
-    nprocesses : int, optional
+    number_processes : int, optional
         Number of processors for multiprocessing (shared memory only). Each classifier will then be run in parallel.
     scale : bool, optional
         Rescale features using sklearn's preprocessing Scalar class (highly recommended this is True)
@@ -707,15 +707,15 @@ def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb',
     probabilities = {}
     classifier_objects = {}
 
-    if nprocesses > 1 and return_classifier:
+    if number_processes > 1 and return_classifier:
         print("Due to limitations with python's multiprocessing module, classifier objects cannot be returned if " \
               "multiple processors are used. Continuing serially...")
         print()
 
-    if nprocesses > 1 and not return_classifier:
+    if number_processes > 1 and not return_classifier:
         partial_func=partial(__call_classifier, X_train=X_train, y_train=y_train, X_test=X_test,
                              param_dict=param_dict, return_classifier=False)
-        p = Pool(nprocesses, maxtasksperchild=1)
+        p = Pool(number_processes, maxtasksperchild=1)
         result = p.map(partial_func, classifiers)
 
         for i in range(len(result)):

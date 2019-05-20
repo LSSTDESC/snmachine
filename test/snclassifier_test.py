@@ -41,7 +41,7 @@ def classification_test(cls, featz, types):
     if not os.path.exists(out_dir):
         subprocess.call(['mkdir',out_dir])
 
-    snclassifier.run_pipeline(featz, types, classifiers=cls, nprocesses=4, plot_roc_curve=False, output_name=out_dir)
+    snclassifier.run_pipeline(featz, types, classifiers=cls, number_processes=4, plot_roc_curve=False, output_name=out_dir)
 
     auc_truth={'nb':5.498296484233418102e-01, 'svm': 9.607832585029829620e-01, 'knn':8.683540372670807139e-01, 'random_forest': 9.794267790146994335e-01, 'decision_tree':9.046528076757488490e-01, 'boost_dt': 9.597607478934744307e-01, 'boost_rf': 9.791576972753551766e-01, 'neural_network': 9.637969739836398375e-01}
 

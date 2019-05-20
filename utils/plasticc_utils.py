@@ -9,20 +9,26 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-def plot_confusion_matrix(yTrue, yPredict, dataName, targetNames):
-    cm = confusion_matrix(yTrue, yPredict, labels=targetNames)
-    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
+    cm = confusion_matrix(y_true, y_pred, labels=target_names)
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+    print(cm)
+
     annot = np.around(cm, 2)
 
     fig, ax = plt.subplots(figsize=(9, 7))
-    sns.heatmap(cm, xticklabels=targetNames,
-                yticklabels=targetNames, cmap='Blues',
+    sns.heatmap(cm, xticklabels=target_names,
+                yticklabels=target_names, cmap='Blues',
                 annot=annot, lw=0.5)
 
     ax.set_xlabel('Predicted Label')
     ax.set_ylabel('True Label')
     ax.set_aspect('equal')
-    plt.title(dataName)
+    plt.title(title)
 
     return cm
 

@@ -43,7 +43,32 @@ def get_git_revision_short_hash():
     return _hash.decode("utf-8").rstrip()
 
 
-def create_folder_structure(analysis_directory, analysis_name):
+def get_timestamp(path_to_configuration_file):
+    """ Helper function to obtain latest modified time of the configuration file
+
+    Parameters
+    ----------
+    path_to_configuration_file : str
+        System path to where the configuration file is located
+
+    Returns
+    -------
+    timestamp : str
+        Short representation of last modified time for the configuration file used.
+        'YYYY-MM-DD-HOURMINUTE'
+
+    Examples
+    --------
+    >>> ...
+    >>> timestamp = get_timestamp(path_to_configuration_file)
+    >>> print(timestamp)
+    '2019-05-18-2100'
+    """
+    _timestamp = subprocess.check_output(['date', '+%Y-%m-%d-%H%M', '-r', path_to_configuration_file])
+    return _timestamp.decode("utf-8").rstrip()
+
+
+def create_folder_structure(analysis_directory, analysis_name, path_to_configuration_file):
     """ Make directories that will be used for analysis
 
     Parameters
@@ -66,17 +91,17 @@ def create_folder_structure(analysis_directory, analysis_name):
     >>> ...
     >>> analysis_directory = params.get("analysis_directory", None)
     >>> analysis_name = params.get("analysis_name", None)
-    >>> directories = create_folder_structure(analysis_directory, analysis_name)
-    >>> print(directories.get("method_directory"))
+    >>> directories = create_folder_structure(analysis_directory, analysis_name, path_to_configuration_file)
+    >>> print(directories.get("method_directory", None))
 
     """
-    # Append Git has to analysis name
-    analysis_name = analysis_name + "-" + get_git_revision_short_hash()
+    # Prepend last modified time of configuration file and git SHA to analysis name
+    analysis_name = get_timestamp(path_to_configuration_file) + "-" + get_git_revision_short_hash() + "-" + analysis_name
 
     method_directory = os.path.join(analysis_directory, analysis_name)
     features_directory = os.path.join(method_directory, 'wavelet_features')
     classifications_directory = os.path.join(method_directory, 'classifications')
-    intermediate_files_directory = os.path.join(method_directory, 'intermediate')
+    intermediate_files_directory = os.path.join(method_directory, 'intermediate_files')
     plots_directory = os.path.join(method_directory, 'plots')
 
     dirs = {"method_directory": method_directory, "features_directory": features_directory,
@@ -180,7 +205,6 @@ def load_training_data(data_path):
                 print("Dataset loaded from pickle file as: {}".format(training_data))
         else:
             folder_path, train_data_file_name = os.path.split(data_path)
-            print(folder_path, train_data_file_name)
             meta_data_file_name = "_metadata.".join(train_data_file_name.split("."))
 
             print("Opening from CSV")
@@ -269,34 +293,26 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
 
     Returns
     -------
-    None
+    waveout:
+
+    waveout_err:
+
+    wavelet_object:
 
     Examples
     --------
     >>> ...
-    >>> waveout, waveout_err, wavelet_object =
-    wavelet_decomposition(training_data, number_gp=number_gp, nprocesses=nprocesses,
+    >>> waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
                                                                      save_output='all', output_root=dirs.get("intermediate_files_directory"))
     >>> print()
 
     """
-
     wavelet_object = snfeatures.WaveletFeatures(number_gp=number_gp)
     print("WAV = {}\n".format(wavelet_object.wav))
     print("MLEV = {}\n".format(wavelet_object.mlev))
     print("number_gp = {}\n".format(number_gp))
     waveout, waveout_err = wavelet_object.extract_wavelets(training_data, wavelet_object.wav, wavelet_object.mlev, **kwargs)
     return waveout, waveout_err, wavelet_object
-
-# def merge_features(some_features, other_features):
-#     # TODO: Move this to a data processing file
-#     if type(some_features) != pd.core.frame.DataFrame:
-#         some_features = some_features.to_pandas()
-#     if type(other_features) != pd.core.frame.DataFrame:
-#         other_features = other_features.to_pandas()
-#     merged_df = pd.merge(some_features, other_features)
-#     merged_df.set_index("Object", inplace=True)
-#     return merged_df
 
 
 def combine_all_features(reduced_wavelet_features, dataframe):
@@ -308,7 +324,7 @@ def combine_all_features(reduced_wavelet_features, dataframe):
     Parameters
     ----------
     reduced_wavelet_features : numpy.ndarray
-        These are the N principle components from the uncompressed wavelets
+        These are the N principal components from the uncompressed wavelets
     dataframe : pandas.DataFrame
         Dataframe
 
@@ -327,12 +343,22 @@ def combine_all_features(reduced_wavelet_features, dataframe):
     >>> print(shape.combined_features)
 
     """
-    meta_df = dat.metadata
-    combined_features = merge_features(wavelet_features, meta_df)
+# def merge_features(some_features, other_features):
+#     # TODO: Move this to a data processing file
+#     if type(some_features) != pd.core.frame.DataFrame:
+#         some_features = some_features.to_pandas()
+#     if type(other_features) != pd.core.frame.DataFrame:
+#         other_features = other_features.to_pandas()
+#     merged_df = pd.merge(some_features, other_features)
+#     merged_df.set_index("Object", inplace=True)
+#     return merged_df
+
+#     meta_df = dat.metadata
+#     combined_features = merge_features(wavelet_features, meta_df)
     return combined_features
 
 
-def create_classififer(combined_features, random_state=42):
+def create_classifier(combined_features, training_data, random_state=42):
     # TODO: Improve docstrings.
     """ Creation of an optimised Random Forest classifier.
 
@@ -350,12 +376,20 @@ def create_classififer(combined_features, random_state=42):
     Examples
     --------
     >>> ...
-    >>> classifier, confusion_matrix = create_classififer(combined_features)
+    >>> classifier, confusion_matrix = create_classifier(combined_features)
     >>> print(classifier)
 
     >>> plot_confusion_matrix(confusion_matrix)
 
     """
+    # TODO: This is temporary while the pipeline is tested.
+    print("COMBINED_FEATURES_TYPE: {}".format(type(combined_features)))
+    if isinstance(combined_features, np.ndarray):
+        combined_features = pd.DataFrame(combined_features, index=training_data.object_names)
+        combined_features['target'] = training_data.labels.values
+    else:
+        combined_features = combined_features.to_pandas()
+        combined_features['target'] = training_data.labels.values
 
     X = combined_features.drop('target', axis=1)
     y = combined_features['target'].values
@@ -370,30 +404,13 @@ def create_classififer(combined_features, random_state=42):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
 
-    classifer = RandomForestClassifier(n_estimators=700, criterion='entropy',
-                                       oob_score=True, n_jobs=-1,
-                                       random_state=random_state)
-
+    classifer = RandomForestClassifier(n_estimators=700, criterion='entropy', oob_score=True, n_jobs=-1, random_state=random_state)
     classifer.fit(X_train, y_train)
 
     y_preds = classifer.predict(X_test)
-
-    confusion_matrix = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names)
+    confusion_matrix = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names, normalize=True)
 
     y_probs = classifer.predict_proba(X_test)
-
-    nlines = len(target_names)
-    # we also need to express the truth table as a matrix
-    sklearn_truth = np.zeros((len(y_test), nlines))
-    label_index_map = dict(zip(classifer.classes_, np.arange(nlines)))
-    for i, x in enumerate(y_test):
-            sklearn_truth[i][label_index_map[y_test[i]]] = 1
-
-    weights = np.array([1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/18, 1/19])
-
-    # weights[:-1] to ignore last class, the anomaly class
-    log_loss = plasticc_log_loss(sklearn_truth, y_probs, relative_class_weights=weights[:-1])
-    print("LogLoss: {:.3f}\nBest Params: {}".format(log_loss, classifer.get_params))
 
     return classifer, confusion_matrix
 
@@ -406,8 +423,8 @@ def make_predictions(location_of_test_data, classifier):
 if __name__ == "__main__":
 
     # Set the number of processes you want to use throughout the notebook
-    nprocesses = multiprocessing.cpu_count()
-    print("Running with {} cores".format(nprocesses))
+    number_processes = multiprocessing.cpu_count()
+    print("Running with {} cores".format(number_processes))
 
     parser = ArgumentParser(description="Run pipeline end to end")
     parser.add_argument('--configuration', '-c')
@@ -415,19 +432,24 @@ if __name__ == "__main__":
     arguments = parser.parse_args()
     arguments = vars(arguments)
 
-    params = load_configuration_file(arguments['configuration'])
+    path_to_configuration_file = arguments['configuration']
+
+    params = load_configuration_file(path_to_configuration_file)
 
     data_path = params.get("data_path", None)
+    print(data_path)
     analysis_directory = params.get("analysis_directory", None)
     analysis_name = params.get("analysis_name", None)
 
     # snmachine parameters
     number_gp = params.get("number_gp", None)
+    print(number_gp)
     kernel_param = params.get("kernel_param", None)
+    print(kernel_param)
     number_of_principal_components = params.get("number_of_principal_components", None)
 
     # Step 1. Creat folders that contain analysis
-    dirs = create_folder_structure(analysis_directory, analysis_name)
+    dirs = create_folder_structure(analysis_directory, analysis_name, path_to_configuration_file)
     # Step 2. Save configuration file used for this analysis
     save_configuration_file(dirs.get("method_directory"))
     # Step 3. Check at which point the user would like to run the analysis from.
@@ -437,7 +459,7 @@ if __name__ == "__main__":
         # Restart from saved uncompressed wavelets.
         wavelet_features = Table.read(dirs.get("features_dir") + "/wavelet_features.fits")
         combined_features = combine_all_features(wavelet_features, data_path)
-        classifer = create_classififer(combined_features)
+        classifer = create_classifier(combined_features)
     elif (arguments['restart_from'].lower() == "gps"):
         # Restart from saved GPs.
         pass
@@ -453,23 +475,35 @@ if __name__ == "__main__":
 
         # Step 4. Load in training data
         training_data = load_training_data(data_path)
+        print(training_data)
 
         # Step 5. Compute GPs
         gps.compute_gps(training_data, number_gp=number_gp, t_min=0, t_max=1100,
                         kernel_param=kernel_param,
                         output_root=dirs['intermediate_files_directory'],
-                        number_processes=nprocesses)
+                        number_processes=number_processes)
 
         # Step 6. Extract wavelet coeffiencts
-        waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, nprocesses=nprocesses,
+        waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
                                                                      save_output='all', output_root=dirs.get("intermediate_files_directory"))
+        print(waveout)
+        print(type(waveout))
+        print(waveout_err)
+        print(type(waveout_err))
+        print(wavelet_object)
+        print(type(wavelet_object))
 
-        # Step 7. Reduce dimensionality of wavelets by using only N principle components
+        # Step 7. Reduce dimensionality of wavelets by using only N principal components
         wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(object_names=training_data.object_names, wavout=waveout, recompute_pca=True, method='svd', ncomp=number_of_principal_components,
-                                                                                              tol=None, pca_path=None, save_output=True, output_root=dirs.get("intermediate_files_directory"))
+                                                                                              tol=None, pca_path=None, save_output=True, output_root=dirs.get("features_directory"))
+        print(wavelet_features)
+        print(type(wavelet_features))
 
         # Step 8. TODO Combine snmachine features with user defined features
-        # Step 9. TODO Create a Random Forest classifier; need to fit model and
-        # save it.
+
+        # Step 9. TODO Create a Random Forest classifier; need to fit model and save it.
+        combined_features = wavelet_features  # For running tests for now
+        classifer = create_classifier(combined_features, training_data)
+        print(classifer.best_params_)
 
         # Step 10. TODO Use saved classifier to make predictions. This can occur using a seperate file
