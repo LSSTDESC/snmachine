@@ -492,7 +492,7 @@ if __name__ == "__main__":
 
         # Step 7. Reduce dimensionality of wavelets by using only N principle components
         wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(object_names=training_data.object_names, wavout=waveout, recompute_pca=True, method='svd', ncomp=number_of_principal_components,
-                                                                                              tol=None, pca_path=None, save_output=True, output_root=dirs.get("intermediate_files_directory"))
+                                                                                              tol=None, pca_path=None, save_output=True, output_root=dirs.get("features_directory"))
 
         # Step 8. TODO Combine snmachine features with user defined features
         # Step 9. TODO Create a Random Forest classifier; need to fit model and
