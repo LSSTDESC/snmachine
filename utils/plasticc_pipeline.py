@@ -356,7 +356,7 @@ def combine_all_features(reduced_wavelet_features, dataframe):
     return combined_features
 
 
-def create_classififer(combined_features, random_state=42):
+def create_classifier(combined_features, training_data, random_state=42):
     # TODO: Improve docstrings.
     """ Creation of an optimised Random Forest classifier.
 
@@ -374,12 +374,16 @@ def create_classififer(combined_features, random_state=42):
     Examples
     --------
     >>> ...
-    >>> classifier, confusion_matrix = create_classififer(combined_features)
+    >>> classifier, confusion_matrix = create_classifier(combined_features)
     >>> print(classifier)
 
     >>> plot_confusion_matrix(confusion_matrix)
 
     """
+    # TODO: This is temporary while the pipeline is tested.
+    if isinstance(combined_features, np.ndarray):
+        features_pd = pd.DataFrame(combined_features, index=training_data.object_names)
+        features_pd['target'] = training_data.labels.values
 
     X = combined_features.drop('target', axis=1)
     y = combined_features['target'].values
@@ -463,7 +467,7 @@ if __name__ == "__main__":
         # Restart from saved uncompressed wavelets.
         wavelet_features = Table.read(dirs.get("features_dir") + "/wavelet_features.fits")
         combined_features = combine_all_features(wavelet_features, data_path)
-        classifer = create_classififer(combined_features)
+        classifer = create_classifier(combined_features)
     elif (arguments['restart_from'].lower() == "gps"):
         # Restart from saved GPs.
         pass
@@ -495,7 +499,8 @@ if __name__ == "__main__":
                                                                                               tol=None, pca_path=None, save_output=True, output_root=dirs.get("features_directory"))
 
         # Step 8. TODO Combine snmachine features with user defined features
-        # Step 9. TODO Create a Random Forest classifier; need to fit model and
-        # save it.
+        # Step 9. TODO Create a Random Forest classifier; need to fit model and save it.
+        combined_features = wavelet_features  # For running tests for now
+        create_classifier(combined_features, training_data)
 
         # Step 10. TODO Use saved classifier to make predictions. This can occur using a seperate file
