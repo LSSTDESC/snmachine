@@ -332,7 +332,7 @@ def combine_all_features(reduced_wavelet_features, dataframe):
     Parameters
     ----------
     reduced_wavelet_features : numpy.ndarray
-        These are the N principle components from the uncompressed wavelets
+        These are the N principal components from the uncompressed wavelets
     dataframe : pandas.DataFrame
         Dataframe
 
@@ -490,7 +490,7 @@ if __name__ == "__main__":
         waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
                                                                      save_output='all', output_root=dirs.get("intermediate_files_directory"))
 
-        # Step 7. Reduce dimensionality of wavelets by using only N principle components
+        # Step 7. Reduce dimensionality of wavelets by using only N principal components
         wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(object_names=training_data.object_names, wavout=waveout, recompute_pca=True, method='svd', ncomp=number_of_principal_components,
                                                                                               tol=None, pca_path=None, save_output=True, output_root=dirs.get("features_directory"))
 
