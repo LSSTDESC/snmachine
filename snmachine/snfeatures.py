@@ -1710,6 +1710,8 @@ class WaveletFeatures(Features):
 
 
         # Find number of components to keep
+        print("NCOMP: {}".format(ncomp))
+        print("TYPE NCOMP: {}".format(type(ncomp)))
         if ncomp is None:
             assert isinstance(tol, np.float)
             ncomp = self.ncompsForTolerance(vals, tol=tol)
