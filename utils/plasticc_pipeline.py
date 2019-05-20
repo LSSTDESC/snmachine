@@ -293,34 +293,26 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
 
     Returns
     -------
-    None
+    waveout:
+
+    waveout_err:
+
+    wavelet_object:
 
     Examples
     --------
     >>> ...
-    >>> waveout, waveout_err, wavelet_object =
-    wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
+    >>> waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
                                                                      save_output='all', output_root=dirs.get("intermediate_files_directory"))
     >>> print()
 
     """
-
     wavelet_object = snfeatures.WaveletFeatures(number_gp=number_gp)
     print("WAV = {}\n".format(wavelet_object.wav))
     print("MLEV = {}\n".format(wavelet_object.mlev))
     print("number_gp = {}\n".format(number_gp))
     waveout, waveout_err = wavelet_object.extract_wavelets(training_data, wavelet_object.wav, wavelet_object.mlev, **kwargs)
     return waveout, waveout_err, wavelet_object
-
-# def merge_features(some_features, other_features):
-#     # TODO: Move this to a data processing file
-#     if type(some_features) != pd.core.frame.DataFrame:
-#         some_features = some_features.to_pandas()
-#     if type(other_features) != pd.core.frame.DataFrame:
-#         other_features = other_features.to_pandas()
-#     merged_df = pd.merge(some_features, other_features)
-#     merged_df.set_index("Object", inplace=True)
-#     return merged_df
 
 
 def combine_all_features(reduced_wavelet_features, dataframe):
@@ -351,8 +343,18 @@ def combine_all_features(reduced_wavelet_features, dataframe):
     >>> print(shape.combined_features)
 
     """
-    meta_df = dat.metadata
-    combined_features = merge_features(wavelet_features, meta_df)
+# def merge_features(some_features, other_features):
+#     # TODO: Move this to a data processing file
+#     if type(some_features) != pd.core.frame.DataFrame:
+#         some_features = some_features.to_pandas()
+#     if type(other_features) != pd.core.frame.DataFrame:
+#         other_features = other_features.to_pandas()
+#     merged_df = pd.merge(some_features, other_features)
+#     merged_df.set_index("Object", inplace=True)
+#     return merged_df
+
+#     meta_df = dat.metadata
+#     combined_features = merge_features(wavelet_features, meta_df)
     return combined_features
 
 
@@ -381,9 +383,13 @@ def create_classifier(combined_features, training_data, random_state=42):
 
     """
     # TODO: This is temporary while the pipeline is tested.
+    print("COMBINED_FEATURES_TYPE: {}".format(type(combined_features)))
     if isinstance(combined_features, np.ndarray):
-        features_pd = pd.DataFrame(combined_features, index=training_data.object_names)
-        features_pd['target'] = training_data.labels.values
+        combined_features = pd.DataFrame(combined_features, index=training_data.object_names)
+        combined_features['target'] = training_data.labels.values
+    else:
+        combined_features = combined_features.to_pandas()
+        combined_features['target'] = training_data.labels.values
 
     X = combined_features.drop('target', axis=1)
     y = combined_features['target'].values
@@ -398,30 +404,13 @@ def create_classifier(combined_features, training_data, random_state=42):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
 
-    classifer = RandomForestClassifier(n_estimators=700, criterion='entropy',
-                                       oob_score=True, n_jobs=-1,
-                                       random_state=random_state)
-
+    classifer = RandomForestClassifier(n_estimators=700, criterion='entropy', oob_score=True, n_jobs=-1, random_state=random_state)
     classifer.fit(X_train, y_train)
 
     y_preds = classifer.predict(X_test)
-
-    confusion_matrix = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names)
+    confusion_matrix = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names, normalize=True)
 
     y_probs = classifer.predict_proba(X_test)
-
-    nlines = len(target_names)
-    # we also need to express the truth table as a matrix
-    sklearn_truth = np.zeros((len(y_test), nlines))
-    label_index_map = dict(zip(classifer.classes_, np.arange(nlines)))
-    for i, x in enumerate(y_test):
-            sklearn_truth[i][label_index_map[y_test[i]]] = 1
-
-    weights = np.array([1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/18, 1/19])
-
-    # weights[:-1] to ignore last class, the anomaly class
-    log_loss = plasticc_log_loss(sklearn_truth, y_probs, relative_class_weights=weights[:-1])
-    print("LogLoss: {:.3f}\nBest Params: {}".format(log_loss, classifer.get_params))
 
     return classifer, confusion_matrix
 
@@ -448,12 +437,15 @@ if __name__ == "__main__":
     params = load_configuration_file(path_to_configuration_file)
 
     data_path = params.get("data_path", None)
+    print(data_path)
     analysis_directory = params.get("analysis_directory", None)
     analysis_name = params.get("analysis_name", None)
 
     # snmachine parameters
     number_gp = params.get("number_gp", None)
+    print(number_gp)
     kernel_param = params.get("kernel_param", None)
+    print(kernel_param)
     number_of_principal_components = params.get("number_of_principal_components", None)
 
     # Step 1. Creat folders that contain analysis
@@ -483,6 +475,7 @@ if __name__ == "__main__":
 
         # Step 4. Load in training data
         training_data = load_training_data(data_path)
+        print(training_data)
 
         # Step 5. Compute GPs
         gps.compute_gps(training_data, number_gp=number_gp, t_min=0, t_max=1100,
@@ -493,14 +486,24 @@ if __name__ == "__main__":
         # Step 6. Extract wavelet coeffiencts
         waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
                                                                      save_output='all', output_root=dirs.get("intermediate_files_directory"))
+        print(waveout)
+        print(type(waveout))
+        print(waveout_err)
+        print(type(waveout_err))
+        print(wavelet_object)
+        print(type(wavelet_object))
 
         # Step 7. Reduce dimensionality of wavelets by using only N principal components
         wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(object_names=training_data.object_names, wavout=waveout, recompute_pca=True, method='svd', ncomp=number_of_principal_components,
                                                                                               tol=None, pca_path=None, save_output=True, output_root=dirs.get("features_directory"))
+        print(wavelet_features)
+        print(type(wavelet_features))
 
         # Step 8. TODO Combine snmachine features with user defined features
+
         # Step 9. TODO Create a Random Forest classifier; need to fit model and save it.
         combined_features = wavelet_features  # For running tests for now
-        create_classifier(combined_features, training_data)
+        classifer = create_classifier(combined_features, training_data)
+        print(classifer.best_params_)
 
         # Step 10. TODO Use saved classifier to make predictions. This can occur using a seperate file
