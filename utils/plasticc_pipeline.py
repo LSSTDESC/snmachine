@@ -44,13 +44,8 @@ def get_git_revision_short_hash():
     return _hash.decode("utf-8").rstrip()
 
 
-def get_timestamp(path_to_configuration_file):
+def get_timestamp():
     """ Helper function to obtain latest modified time of the configuration file
-
-    Parameters
-    ----------
-    path_to_configuration_file : str
-        System path to where the configuration file is located
 
     Returns
     -------
@@ -116,7 +111,7 @@ def create_folder_structure(analysis_directory, analysis_name):
                 Are you sure you would like to proceed, this will overwrite the
                 {} folder [Y/n]
                 """.format(analysis_name)
-        raise OSError(errmsg)
+        print(errmsg)
 
         _yes = ["yes", "y", "ye"]
         _no = ["no", "n"]
@@ -124,9 +119,9 @@ def create_folder_structure(analysis_directory, analysis_name):
         choice = input().lower()
 
         if choice in _yes:
-            print("I am sure")
+            print("Overwriting existing folder..")
             for key, value in dirs.items():
-                subprocess.call(['mkdir', value])
+                subprocess.call(['mkdir', value], stderr=subprocess.DEVNULL)
         elif choice in _no:
             print("I am NOT sure")
             sys.exit()
@@ -194,7 +189,7 @@ def save_configuration_file(method_directory):
 
     """
     git_hash = {"git_hash": get_git_revision_short_hash()}
-    timestamp = {"timestamp": get_timestamp(path_to_configuration_file)}
+    timestamp = {"timestamp": get_timestamp()}
 
     params.update(git_hash)
     params.update(timestamp)
