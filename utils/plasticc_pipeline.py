@@ -5,6 +5,7 @@ from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
 from astropy.table import Table
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_curve, auc
 from argparse import ArgumentParser
 import numpy as np
 import pandas as pd
@@ -414,10 +415,10 @@ def _to_pandas(features):
     --------
     >>> ...
     >>> print(type(features))
-
+    <class 'astropy.table.table.Table'>
     >>> features = _to_pandas(features)
     >>> print(type(features))
-
+    <class 'pandas.core.frame.DataFrame'>
     """
 
     if isinstance(features, np.ndarray):
@@ -480,7 +481,12 @@ def create_classifier(combined_features, training_data, random_state=42):
     y_preds = classifer.predict(X_test)
     confusion_matrix = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names, normalize=True)
 
+    false_positive_rate, true_positive_rate, thresholds = roc_curve(y_test, y_preds)
+    roc_auc = auc(false_positive_rate, true_positive_rate)
+    print(F"ROC {roc_auc}")
+
     y_probs = classifer.predict_proba(X_test)
+    print(y_probs)
 
     return classifer, confusion_matrix
 
