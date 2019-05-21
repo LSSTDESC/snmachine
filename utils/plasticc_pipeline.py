@@ -9,6 +9,7 @@ from argparse import ArgumentParser
 import numpy as np
 import pandas as pd
 import os
+import sys
 import subprocess
 import multiprocessing
 import yaml
@@ -60,15 +61,15 @@ def get_timestamp(path_to_configuration_file):
     Examples
     --------
     >>> ...
-    >>> timestamp = get_timestamp(path_to_configuration_file)
+    >>> timestamp = get_timestamp()
     >>> print(timestamp)
     '2019-05-18-2100'
     """
-    _timestamp = subprocess.check_output(['date', '+%Y-%m-%d-%H%M', '-r', path_to_configuration_file])
+    _timestamp = subprocess.check_output(['date', '+%Y-%m-%d-%H%M'])
     return _timestamp.decode("utf-8").rstrip()
 
 
-def create_folder_structure(analysis_directory, analysis_name, path_to_configuration_file):
+def create_folder_structure(analysis_directory, analysis_name):
     """ Make directories that will be used for analysis
 
     Parameters
@@ -91,12 +92,12 @@ def create_folder_structure(analysis_directory, analysis_name, path_to_configura
     >>> ...
     >>> analysis_directory = params.get("analysis_directory", None)
     >>> analysis_name = params.get("analysis_name", None)
-    >>> directories = create_folder_structure(analysis_directory, analysis_name, path_to_configuration_file)
+    >>> directories = create_folder_structure(analysis_directory, analysis_name)
     >>> print(directories.get("method_directory", None))
 
     """
     # Prepend last modified time of configuration file and git SHA to analysis name
-    analysis_name = get_timestamp(path_to_configuration_file) + "-" + get_git_revision_short_hash() + "-" + analysis_name
+    # analysis_name = get_timestamp() + "-" + get_git_revision_short_hash() + "-" + analysis_name
 
     method_directory = os.path.join(analysis_directory, analysis_name)
     features_directory = os.path.join(method_directory, 'wavelet_features')
@@ -108,8 +109,29 @@ def create_folder_structure(analysis_directory, analysis_name, path_to_configura
             "classifications_directory": classifications_directory, "intermediate_files_directory": intermediate_files_directory,
             "plots_directory": plots_directory}
 
-    for key, value in dirs.items():
-        subprocess.call(['mkdir', value])
+    if os.path.isdir(method_directory):
+        errmsg = """
+                Folders already exist with this analysis name.
+
+                Are you sure you would like to proceed, this will overwrite the
+                {} folder [Y/n]
+                """.format(analysis_name)
+        raise OSError(errmsg)
+
+        _yes = ["yes", "y", "ye"]
+        _no = ["no", "n"]
+
+        choice = input().lower()
+
+        if choice in _yes:
+            print("I am sure")
+            for key, value in dirs.items():
+                subprocess.call(['mkdir', value])
+        elif choice in _no:
+            print("I am NOT sure")
+            sys.exit()
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no'")
 
     return dirs
 
@@ -145,7 +167,7 @@ def load_configuration_file(path_to_configuration_file):
             params = yaml.load(f)
     except IOError:
         print("Invalid yaml file provided")
-        exit()
+        sys.exit()
     print("The parameters are:\n {}".format(params))
     return params
 
@@ -171,6 +193,12 @@ def save_configuration_file(method_directory):
     >>> print()
 
     """
+    git_hash = {"git_hash": get_git_revision_short_hash()}
+    timestamp = {"timestamp": get_timestamp(path_to_configuration_file)}
+
+    params.update(git_hash)
+    params.update(timestamp)
+
     with open(os.path.join(method_directory, "config.yml"), 'w') as config:
             yaml.dump(params, config, default_flow_style=False)
 
@@ -449,7 +477,7 @@ if __name__ == "__main__":
     number_of_principal_components = params.get("number_of_principal_components", None)
 
     # Step 1. Creat folders that contain analysis
-    dirs = create_folder_structure(analysis_directory, analysis_name, path_to_configuration_file)
+    dirs = create_folder_structure(analysis_directory, analysis_name)
     # Step 2. Save configuration file used for this analysis
     save_configuration_file(dirs.get("method_directory"))
     # Step 3. Check at which point the user would like to run the analysis from.
