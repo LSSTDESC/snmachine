@@ -72,11 +72,17 @@ document
 
 #### Import Conventions
 
-Imports should be grouped in the following order:
+Imports should be grouped according to the
+[PEP402](https://www.python.org/dev/peps/pep-0402/) standard;
 
-1. standard library imports (https://docs.python.org/3/library/)
-2. related third party imports (like `numpy`, `pandas` or `snmachine`)
-3. local application/library specific imports
+1. Module level imports :
+```bash
+from astropy.table import Table
+from sklearn.model_selection import train_test_split
+```
+2. standard library imports (https://docs.python.org/3/library/)
+3. related third party imports (like `numpy`, `pandas` or `snmachine`)
+4. local application/library specific imports
 
 There should be a blank line between each group of imports.
 
