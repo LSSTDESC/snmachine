@@ -126,6 +126,9 @@ def create_folder_structure(analysis_directory, analysis_name):
             sys.exit()
         else:
             sys.stdout.write("Please respond with 'yes' or 'no'")
+    else:
+        for key, value in dirs.items():
+            subprocess.call(['mkdir', value])
 
     return dirs
 
