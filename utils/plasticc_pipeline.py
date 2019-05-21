@@ -91,8 +91,6 @@ def create_folder_structure(analysis_directory, analysis_name):
     >>> print(directories.get("method_directory", None))
 
     """
-    # Prepend last modified time of configuration file and git SHA to analysis name
-    # analysis_name = get_timestamp() + "-" + get_git_revision_short_hash() + "-" + analysis_name
 
     method_directory = os.path.join(analysis_directory, analysis_name)
     features_directory = os.path.join(method_directory, 'wavelet_features')
@@ -132,7 +130,6 @@ def create_folder_structure(analysis_directory, analysis_name):
 
 
 def load_configuration_file(path_to_configuration_file):
-    # TODO: Finish doctring examples
     """ Load from disk the configuration file that is to be used
 
     Parameters
@@ -150,12 +147,12 @@ def load_configuration_file(path_to_configuration_file):
     Each item inside the configuration file can be accessed like so:
     >>> ...
     >>> params = load_configuration_file(path_to_configuration_file)
-    >>> data_path = params.get("data_path", None)
-    >>> print(data_path)
-
+    >>> kernel_param = params.get("kernel_param", None)
+    >>> print(kernel_param)
+    [500.0, 20.0]
     >>> number_gp = params.get("number_gp", None)
     >>> print(number_gp)
-
+    '1100'
     """
     try:
         with open(path_to_configuration_file) as f:
@@ -168,7 +165,6 @@ def load_configuration_file(path_to_configuration_file):
 
 
 def save_configuration_file(method_directory):
-    # TODO: Provide a doctring example
     """ Make a copy of the configuration file that has been used inside the
     analysis directory
 
@@ -185,9 +181,19 @@ def save_configuration_file(method_directory):
     --------
     >>> ...
     >>> save_configuration_file(method_directory)
-    >>> print()
-
+    >>> subprocess.call(['cat', os.path.join(method_directory, "config.yml")])
+    analysis_directory: /share/hypatia/snmachine_resources/data/plasticc/analysis/
+    analysis_name: pipeline-test
+    data_path: /share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set_snia.pickle
+    git_hash: 916eaec
+    kernel_param:
+    - 500.0
+    - 20.0
+    number_gp: 1100
+    number_of_principal_components: 10
+    timestamp: 2019-05-21-1204
     """
+
     git_hash = {"git_hash": get_git_revision_short_hash()}
     timestamp = {"timestamp": get_timestamp()}
 
@@ -199,7 +205,6 @@ def save_configuration_file(method_directory):
 
 
 def load_training_data(data_path):
-    # TODO: Finish doctring examples
     """ Load from disk the training data one will use for this analysis
 
     Parameters
@@ -218,8 +223,9 @@ def load_training_data(data_path):
     >>> ...
     >>> training_data = load_training_data(params)
     >>> print(training_data)
-
+    <snmachine.sndata.PlasticcData object at 0x7f8dc9dd4e10>
     """
+
     try:
         if data_path.lower().endswith((".pickle", ".pkl", ".p", ".pckl")):
             with open(data_path, 'rb') as input:
@@ -299,20 +305,27 @@ def reduce_size_of_training_data(training_data, dirs, subset_size, seed=1234):
 
 
 def wavelet_decomposition(training_data, number_gp, **kwargs):
-    """ Load from disk the training data one will use for this analysis
+    """ Wrapper function for `snmachine.snfeatures.WaveletFeatures`. This
+    performs a wavelet decomposition on training data evaluated at 'number_gp'
+    points on a light curve
 
     Parameters
     ----------
     training_data : snmachine.PlasticcData
         Dictionary containing the parameters that reside in the configuration
         file. This will be used to obtain the path to the training data.
-    dirs : dict
-        Dictionary containing
-    subset_size : int
-        Number of objects the user would like to reduce the training data to
-    seed : int
-        Default set to 1234. This can be overridden by the user to check for
-        consistancy of results
+    number_gp : int
+        Number of points on the light curve to do wavelet analysis. Note, this
+        should be an even number for the wavelet decomposition to be able to be
+        performed.
+    number_processes : int
+        Number CPU cores avaiable to the user, this is how many cores the
+        decomposition will take place over
+    save_output : string
+        String defining what should be saved. See docs in
+        `snmachine.snfeatures.extract_wavelets` for more details on options.
+    output_root : string
+        Path to where one would like the uncompressed wavelet files to be stored
 
     Returns
     -------
@@ -456,19 +469,15 @@ if __name__ == "__main__":
     arguments = vars(arguments)
 
     path_to_configuration_file = arguments['configuration']
-
     params = load_configuration_file(path_to_configuration_file)
 
     data_path = params.get("data_path", None)
-    print(data_path)
     analysis_directory = params.get("analysis_directory", None)
     analysis_name = params.get("analysis_name", None)
 
     # snmachine parameters
     number_gp = params.get("number_gp", None)
-    print(number_gp)
     kernel_param = params.get("kernel_param", None)
-    print(kernel_param)
     number_of_principal_components = params.get("number_of_principal_components", None)
 
     # Step 1. Creat folders that contain analysis
@@ -498,7 +507,7 @@ if __name__ == "__main__":
 
         # Step 4. Load in training data
         training_data = load_training_data(data_path)
-        print(training_data)
+        print("training_data = {}".format(training_data))
 
         # Step 5. Compute GPs
         gps.compute_gps(training_data, number_gp=number_gp, t_min=0, t_max=1100,
@@ -509,24 +518,26 @@ if __name__ == "__main__":
         # Step 6. Extract wavelet coeffiencts
         waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
                                                                      save_output='all', output_root=dirs.get("intermediate_files_directory"))
-        print(waveout)
-        print(type(waveout))
-        print(waveout_err)
-        print(type(waveout_err))
-        print(wavelet_object)
-        print(type(wavelet_object))
+        print("waveout = {}".format(waveout))
+        print("waveout, type = {}".format(type(waveout)))
+
+        print("waveout_err = {}".format(waveout_err))
+        print("waveout_err, type = {}".format(type(waveout_err)))
+
+        print("wavelet_object = {}".format(wavelet_object))
+        print("wavelet_object, type = {}".format(type(wavelet_object)))
 
         # Step 7. Reduce dimensionality of wavelets by using only N principal components
         wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(object_names=training_data.object_names, wavout=waveout, recompute_pca=True, method='svd', ncomp=number_of_principal_components,
                                                                                               tol=None, pca_path=None, save_output=True, output_root=dirs.get("features_directory"))
-        print(wavelet_features)
-        print(type(wavelet_features))
+        print("wavelet_features = {}".format(wavelet_features))
+        print("wavelet_features, type = {}".format(type(wavelet_features)))
 
         # Step 8. TODO Combine snmachine features with user defined features
 
         # Step 9. TODO Create a Random Forest classifier; need to fit model and save it.
         combined_features = wavelet_features  # For running tests for now
-        classifer = create_classifier(combined_features, training_data)
-        print(classifer.best_params_)
+        classifier = create_classifier(combined_features, training_data)
+        print(F"classifier = {classifier}")
 
         # Step 10. TODO Use saved classifier to make predictions. This can occur using a seperate file
