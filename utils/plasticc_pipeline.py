@@ -329,11 +329,12 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
 
     Returns
     -------
-    waveout:
+    waveout: numpy.ndarray
 
-    waveout_err:
+    waveout_err: numpy.ndarray
 
-    wavelet_object:
+    wavelet_object: snmachine.snfeatures.WaveletFeatures object
+
 
     Examples
     --------
@@ -352,14 +353,13 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
 
 
 def combine_all_features(reduced_wavelet_features, dataframe):
-    # TODO: Improve docstrings. Discuss whether the user should pass in a CSV
-    # instead?
+    # TODO: Improve docstrings.
     """ Combine snmachine wavelet features with PLASTICC features. The
     user should define a dataframe they would like to merge.
 
     Parameters
     ----------
-    reduced_wavelet_features : numpy.ndarray
+    reduced_wavelet_features :  astropy.table.table.Table
         These are the N principal components from the uncompressed wavelets
     dataframe : pandas.DataFrame
         Dataframe
@@ -379,6 +379,7 @@ def combine_all_features(reduced_wavelet_features, dataframe):
     >>> print(shape.combined_features)
 
     """
+
 # def merge_features(some_features, other_features):
 #     # TODO: Move this to a data processing file
 #     if type(some_features) != pd.core.frame.DataFrame:
@@ -392,6 +393,39 @@ def combine_all_features(reduced_wavelet_features, dataframe):
 #     meta_df = dat.metadata
 #     combined_features = merge_features(wavelet_features, meta_df)
     return combined_features
+
+
+def _to_pandas(features):
+    # TODO: Improve docstrings.
+    """ Helper function to take either an astropy Table
+    or numpy ndarray and convert to a pandas DataFrame representation
+
+    Parameters
+    ----------
+    features: astropy.table.table.Table OR numpy.ndarray
+        This parameter can be either an astropy Table or numpy ndarray
+        representation of the wavelet features
+
+    Returns
+    -------
+    features : pandas.DataFrame
+
+    Examples
+    --------
+    >>> ...
+    >>> print(type(features))
+
+    >>> features = _to_pandas(features)
+    >>> print(type(features))
+
+    """
+
+    if isinstance(features, np.ndarray):
+        features = pd.DataFrame(features, index=training_data.object_names)
+    else:
+        features = features.to_pandas()
+
+    return features
 
 
 def create_classifier(combined_features, training_data, random_state=42):
@@ -414,18 +448,18 @@ def create_classifier(combined_features, training_data, random_state=42):
     >>> ...
     >>> classifier, confusion_matrix = create_classifier(combined_features)
     >>> print(classifier)
-
-    >>> plot_confusion_matrix(confusion_matrix)
-
+    (RandomForestClassifier(bootstrap=True, class_weight=None, criterion='entropy',
+        max_depth=None, max_features='auto', max_leaf_nodes=None,
+        min_impurity_split=1e-07, min_samples_leaf=1,
+        min_samples_split=2, min_weight_fraction_leaf=0.0,
+        n_estimators=700, n_jobs=-1, oob_score=True, random_state=42,
+        verbose=0, warm_start=False), array([[ 1.]]))
     """
-    # TODO: This is temporary while the pipeline is tested.
+
     print("COMBINED_FEATURES_TYPE: {}".format(type(combined_features)))
-    if isinstance(combined_features, np.ndarray):
-        combined_features = pd.DataFrame(combined_features, index=training_data.object_names)
-        combined_features['target'] = training_data.labels.values
-    else:
-        combined_features = combined_features.to_pandas()
-        combined_features['target'] = training_data.labels.values
+    combined_features = _to_pandas(combined_features)
+    print("COMBINED_FEATURES_TYPE, after _to_pandas(): {}".format(type(combined_features)))
+    combined_features['target'] = training_data.labels.values
 
     X = combined_features.drop('target', axis=1)
     y = combined_features['target'].values
