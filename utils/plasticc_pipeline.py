@@ -208,7 +208,7 @@ def save_configuration_file(params, method_directory):
     params.update(git_hash)
     params.update(timestamp)
 
-    with open(os.path.join(method_directory, "logs.yml"), 'a') as config:
+    with open(os.path.join(method_directory, "logs.yml"), 'a+') as config:
             yaml.dump(params, config, default_flow_style=False)
 
 
