@@ -496,6 +496,22 @@ def make_predictions(location_of_test_data, classifier):
     pass
 
 
+def restart_from_saved_gps(dirs):
+    pass
+
+
+def restart_from_saved_wavelets(dirs):
+    pass
+
+
+def restart_from_saved_pca(dirs):
+    # TODO: Write docstrings
+    wavelet_features = Table.read(os.path.join(dirs.get("features_directory"), "reduced_wavelet_features.fits"))
+    combined_features = wavelet_features  # For running tests for now
+    classifier, confusion_matrix = create_classifier(combined_features, training_data)
+    print(F"classifier = {classifier}")
+
+
 if __name__ == "__main__":
 
     # Set the number of processes you want to use throughout the notebook
@@ -527,18 +543,15 @@ if __name__ == "__main__":
     # Step 3. Check at which point the user would like to run the analysis from.
     # If elements already saved, these will be used but this can be overriden
     # with command line argument
-    if (arguments['restart_from'].lower() == "wavelets"):
-        # Restart from saved uncompressed wavelets.
-        wavelet_features = Table.read(os.path.join(dirs.get("features_dir"), "reduced_wavelet_features.fits"))
-        combined_features = wavelet_features  # For running tests for now
-        classifier, confusion_matrix = create_classifier(combined_features, training_data)
-        print(F"classifier = {classifier}")
-    elif (arguments['restart_from'].lower() == "gps"):
+    if (arguments['restart_from'].lower() == "gps"):
         # Restart from saved GPs.
+        pass
+    elif (arguments['restart_from'].lower() == "wavelets"):
+        # Restart from saved uncompressed wavelets.
         pass
     elif (arguments['restart_from'].lower() == "pca"):
         # Restart from saved PCA components
-        pass
+        restart_from_saved_pca(dirs)
     else:
         # Run full pipeline but still do checks to see if elements from GPs or
         # wavelets already exist on disk; the first check should be for:
