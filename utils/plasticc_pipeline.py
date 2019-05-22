@@ -189,7 +189,7 @@ def save_configuration_file(params, method_directory):
     --------
     >>> ...
     >>> save_configuration_file(params, method_directory)
-    >>> subprocess.call(['cat', os.path.join(method_directory, "config.yml")])
+    >>> subprocess.call(['cat', os.path.join(method_directory, "logs.yml")])
     analysis_directory: /share/hypatia/snmachine_resources/data/plasticc/analysis/
     analysis_name: pipeline-test
     data_path: /share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set_snia.pickle
@@ -208,7 +208,7 @@ def save_configuration_file(params, method_directory):
     params.update(git_hash)
     params.update(timestamp)
 
-    with open(os.path.join(method_directory, "config.yml"), 'w') as config:
+    with open(os.path.join(method_directory, "logs.yml"), 'a') as config:
             yaml.dump(params, config, default_flow_style=False)
 
 
