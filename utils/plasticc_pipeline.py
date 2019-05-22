@@ -529,11 +529,15 @@ if __name__ == "__main__":
     # with command line argument
     if (arguments['restart_from'].lower() == "wavelets"):
         # Restart from saved uncompressed wavelets.
-        wavelet_features = Table.read(dirs.get("features_dir") + "/wavelet_features.fits")
-        combined_features = combine_all_features(wavelet_features, data_path)
-        classifer = create_classifier(combined_features)
+        wavelet_features = Table.read(os.path.join(dirs.get("features_dir"), "reduced_wavelet_features.fits"))
+        combined_features = wavelet_features  # For running tests for now
+        classifier, confusion_matrix = create_classifier(combined_features, training_data)
+        print(F"classifier = {classifier}")
     elif (arguments['restart_from'].lower() == "gps"):
         # Restart from saved GPs.
+        pass
+    elif (arguments['restart_from'].lower() == "pca"):
+        # Restart from saved PCA components
         pass
     else:
         # Run full pipeline but still do checks to see if elements from GPs or
