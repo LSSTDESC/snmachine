@@ -5,7 +5,6 @@ from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
 from astropy.table import Table
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import roc_curve, auc
 from argparse import ArgumentParser
 import numpy as np
 import pandas as pd
@@ -168,14 +167,16 @@ def load_configuration_file(path_to_configuration_file):
     return params
 
 
-def save_configuration_file(method_directory):
+def save_configuration_file(params, method_directory):
     """ Make a copy of the configuration file that has been used inside the
     analysis directory
 
     Parameters
     ----------
+    params : dict
+        Dictionary containing the parameters used for this analysis
     method_directory : string
-        The folder path used for this analysis
+        Folder where this analysis is taking place
 
     Returns
     -------
@@ -184,7 +185,7 @@ def save_configuration_file(method_directory):
     Examples
     --------
     >>> ...
-    >>> save_configuration_file(method_directory)
+    >>> save_configuration_file(params, method_directory)
     >>> subprocess.call(['cat', os.path.join(method_directory, "config.yml")])
     analysis_directory: /share/hypatia/snmachine_resources/data/plasticc/analysis/
     analysis_name: pipeline-test
@@ -484,10 +485,6 @@ def create_classifier(combined_features, training_data, random_state=42):
     y_preds = classifer.predict(X_test)
     confusion_matrix = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names, normalize=True)
 
-    false_positive_rate, true_positive_rate, thresholds = roc_curve(y_test, y_preds)
-    roc_auc = auc(false_positive_rate, true_positive_rate)
-    print(F"ROC {roc_auc}")
-
     y_probs = classifer.predict_proba(X_test)
     print(y_probs)
 
@@ -526,7 +523,7 @@ if __name__ == "__main__":
     # Step 1. Creat folders that contain analysis
     dirs = create_folder_structure(analysis_directory, analysis_name)
     # Step 2. Save configuration file used for this analysis
-    save_configuration_file(dirs.get("method_directory"))
+    save_configuration_file(params, dirs.get("method_directory"))
     # Step 3. Check at which point the user would like to run the analysis from.
     # If elements already saved, these will be used but this can be overriden
     # with command line argument
