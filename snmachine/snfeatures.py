@@ -2027,7 +2027,7 @@ class WaveletFeatures(Features):
             np.save(os.path.join(output_root,'means_{}.npy'.format(ncomp)),M)
             # Write the astropy table containing the wavelet features to disk after converting to pandas dataframe
             reduced_wavelet_components = reduced_wavelet_components.to_pandas()
-            reduced_wavelet_components.pickle(os.path.join(output_root, 'reduced_wavelet_components_{}.pickle'.format(ncomp)))
+            reduced_wavelet_components.to_pickle(os.path.join(output_root, 'reduced_wavelet_components_{}.pickle'.format(ncomp)))
 
         return reduced_wavelet_components, vals, vec, M, s
 

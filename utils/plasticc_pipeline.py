@@ -506,7 +506,7 @@ def restart_from_saved_wavelets(dirs):
 
 def restart_from_saved_pca(dirs, number_of_principal_components):
     # TODO: Write docstrings
-    wavelet_features = Table.read(os.path.join(dirs.get("features_directory"), "reduced_wavelet_components_{}.pickle".format(number_of_principal_components)))
+    wavelet_features = pd.read_pickle(os.path.join(dirs.get("features_directory"), "reduced_wavelet_components_{}.pickle".format(number_of_principal_components)))
     combined_features = wavelet_features  # For running tests for now
     classifier, confusion_matrix = create_classifier(combined_features, training_data)
     print(F"classifier = {classifier}")
