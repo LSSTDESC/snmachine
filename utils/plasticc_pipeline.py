@@ -1,20 +1,15 @@
 """
 Machine learning pipeline for the PLAsTiCC competition using snmachine codebase.
 """
-from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
-from astropy.table import Table
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from argparse import ArgumentParser
+import multiprocessing
+import os
+import subprocess
+import sys
+import warnings
+
 import numpy as np
 import pandas as pd
-import os
-import sys
-import subprocess
-import multiprocessing
 import yaml
-import warnings
-warnings.filterwarnings("ignore")
 try:
     import cPickle as pickle
 except ModuleNotFoundError:
@@ -23,6 +18,14 @@ try:
     from snmachine import snfeatures, sndata, snaugment, gps
 except ImportError:
     print("Unable to import snmachine. Check environment set correctly")
+
+from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
+from astropy.table import Table
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from argparse import ArgumentParser
+
+warnings.filterwarnings("ignore")
 
 
 def get_git_revision_short_hash():
@@ -461,9 +464,6 @@ def create_classifier(combined_features, training_data, random_state=42):
         verbose=0, warm_start=False), array([[ 1.]]))
     """
 
-    print("COMBINED_FEATURES_TYPE: {}".format(type(combined_features)))
-    combined_features = _to_pandas(combined_features)
-    print("COMBINED_FEATURES_TYPE, after _to_pandas(): {}".format(type(combined_features)))
     combined_features['target'] = training_data.labels.values
 
     X = combined_features.drop('target', axis=1)
