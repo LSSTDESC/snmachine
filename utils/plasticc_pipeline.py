@@ -504,9 +504,9 @@ def restart_from_saved_wavelets(dirs):
     pass
 
 
-def restart_from_saved_pca(dirs):
+def restart_from_saved_pca(dirs, number_of_principal_components):
     # TODO: Write docstrings
-    wavelet_features = Table.read(os.path.join(dirs.get("features_directory"), "reduced_wavelet_features.fits"))
+    wavelet_features = Table.read(os.path.join(dirs.get("features_directory"), "reduced_wavelet_components_{}.pickle".format(number_of_principal_components)))
     combined_features = wavelet_features  # For running tests for now
     classifier, confusion_matrix = create_classifier(combined_features, training_data)
     print(F"classifier = {classifier}")
@@ -551,7 +551,7 @@ if __name__ == "__main__":
         pass
     elif (arguments['restart_from'].lower() == "pca"):
         # Restart from saved PCA components
-        restart_from_saved_pca(dirs)
+        restart_from_saved_pca(dirs, number_of_principal_components)
     else:
         # Run full pipeline but still do checks to see if elements from GPs or
         # wavelets already exist on disk; the first check should be for:

@@ -2013,10 +2013,10 @@ class WaveletFeatures(Features):
 
         # Now reformat the components as a table
         labels = ['C%d' %i for i in range(ncomp)]
-        wavelet_components = Table(comps, names=labels)
+        reduced_wavelet_components = Table(comps, names=labels)
         objnames = Table(object_names.reshape(len(object_names), 1),
                          names=['Object'])
-        wavelet_components = hstack((objnames, wavelet_components))
+        reduced_wavelet_components = hstack((objnames, reduced_wavelet_components))
         print('Time for PCA', time.time() - t1)
 
         if save_output:
@@ -2026,10 +2026,10 @@ class WaveletFeatures(Features):
             np.save(os.path.join(output_root,'comps_{}.npy'.format(ncomp)),comps)
             np.save(os.path.join(output_root,'means_{}.npy'.format(ncomp)),M)
             # Write the astropy table containing the wavelet features to disk after converting to pandas dataframe
-            wavelet_components = wavelet_components.to_pandas()
-            wavelet_components.pickle(os.path.join(output_root, 'wavelet_components_{}.pickle'.format(ncomp)))
+            reduced_wavelet_components = reduced_wavelet_components.to_pandas()
+            reduced_wavelet_components.pickle(os.path.join(output_root, 'reduced_wavelet_components_{}.pickle'.format(ncomp)))
 
-        return wavelet_components, vals, vec, M, s
+        return reduced_wavelet_components, vals, vec, M, s
 
     def iswt(self, coefficients, wavelet):
         """
