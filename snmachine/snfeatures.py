@@ -2025,6 +2025,8 @@ class WaveletFeatures(Features):
             np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(ncomp)),vec)
             np.save(os.path.join(output_root,'comps_{}.npy'.format(ncomp)),comps)
             np.save(os.path.join(output_root,'means_{}.npy'.format(ncomp)),M)
+            # Write the astropy table containing the wavelet features to disk
+            wavs.write(os.path.join(output_root, 'reduced_wavelet_features'), format='fits',overwrite=True)
 
         return wavs, vals, vec, M, s
 
