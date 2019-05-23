@@ -1641,7 +1641,7 @@ class WaveletFeatures(Features):
         """
         return np.linalg.svd(X, full_matrices=False)
 
-    def pca_eigendecomposition(self, dataMatrix, ncomp=None, tol=0.999,
+    def get_pca_eigendecomposition(self, dataMatrix, ncomp=None, tol=0.999,
                                normalize_variance=False):
         """
         Perform Principal Component Analysis using an eigendecomposition
@@ -1698,7 +1698,7 @@ class WaveletFeatures(Features):
 
         return vecs[:, :ncomp], Z, M, s, vals[:ncomp]
 
-    def pca_SVD(self, dataMatrix, ncomp=None, tol=0.999,
+    def get_pca_svd(self, dataMatrix, ncomp=None, tol=0.999,
                 normalize_variance=False):
         """
         Perform Principal Component Analysis of the dataMatrix using SVD
@@ -1919,9 +1919,9 @@ class WaveletFeatures(Features):
         method : {'svd'| 'eigendecomposition'}
         """
         if method == 'svd':
-            return self.pca_SVD(dataMatrix, ncomp, tol, normalize_variance)
+            return self.get_pca_svd(dataMatrix, ncomp, tol, normalize_variance)
         elif method == 'eigendecomposition':
-            return self.pca_eigendecomposition(dataMatrix, ncomp, tol,
+            return self.get_pca_eigendecomposition(dataMatrix, ncomp, tol,
                                                normalize_variance)
 
     @staticmethod
@@ -2007,8 +2007,8 @@ class WaveletFeatures(Features):
         method: {'svd'|'eigendecomposition'|None} , defaults to `svd`
             strings to pick the SVD or eigenDecompostition method. Ignored if
             `recompute_PCA` is `True`, and may be `None` in that case. `svd`
-            invokes the `pca_SVD` method, while `eigenDecomposition` invokes
-            the `pca_eigendecomposition` method.
+            invokes the `get_pca_svd` method, while `eigenDecomposition` invokes
+            the `get_pca_eigendecomposition` method.
         ncomp: int, defaults to `None`
             Number of components of PCA kept for analysis. If `None`, determined
             internally from `tol` instead.
