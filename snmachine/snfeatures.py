@@ -1565,55 +1565,6 @@ class WaveletFeatures(Features):
         return wavout, wavout_err
 
 
-    def pca(self, X):
-        """
-        Performs Principal Components Analysis of a feature array X.
-
-        Parameters
-        ----------
-        X : array
-            Array of features to perform PCA on.
-
-        Returns
-        -------
-        vals : list-like
-            Ordered array of eigenvalues
-        vec : array
-            Ordered array of eigenvectors, where each column is an eigenvector.
-        mn : array
-            The mean of the dataset, which is subtracted before PCA is performed.
-
-        Notes
-        -----
-        Although SVD is considerably more efficient than eigh, it seems more numerically unstable and results in many more components
-        being required to adequately describe the dataset, at least for the wavelet feature sets considered.
-
-        .. deprecated::1.2.1
-            Note this code should not be called anywhere
-        """
-
-        #Find the normalised spectra
-        X=X.transpose()
-        mn=np.mean(X, axis=1)
-        mn.shape=(len(mn), 1)
-        X=X-mn
-
-        nor=np.sqrt(np.sum(X**2, axis=0))
-        x_norm=X/nor
-
-        #Construct the covariance matrix
-        C=np.dot(x_norm, x_norm.T)
-        condNumber = np.linalg.cond(C)
-        print('The condition number is '+str(condNumber))
-        #C=np.cov(X.T)
-        #print C.shape
-
-        C=np.mat(C)
-        vals, vec = np.linalg.eigh(C)
-        print('finish vals, vec')
-
-        inds=np.argsort(vals)[::-1]
-        return vals[inds], vec[:, inds], mn
 
     @staticmethod
     def get_svd(X):
