@@ -1674,10 +1674,10 @@ class WaveletFeatures(Features):
         V : `np.ndarray`
             Right Singular Matrix, with shape (Nsamps, min(Ncomps, Nfeats))
         Z : `np.ndarray`
-            PCA scores (ie. the components of the reduced Data Matrix in the basis
+            Principal Component Analysis scores (ie. the components of the reduced Data Matrix in the basis
         of PCA)
         M : `np.ndarray`
-            the Mean of the features over samples and Vals
+            the Mean of the features over samples
         s : `np.ndarray`
             the scaling used with shape Nsamps
         vals : `np.ndarray`
