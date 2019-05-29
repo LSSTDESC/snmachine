@@ -30,7 +30,7 @@ def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
     ax.set_aspect('equal')
     plt.title(title)
 
-    return cm
+    return cm, fig
 
 
 def plasticc_log_loss(y_true, y_pred, relative_class_weights=None):
