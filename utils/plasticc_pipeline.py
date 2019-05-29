@@ -495,7 +495,7 @@ def create_classifier(combined_features, training_data, dirs, augmentation_metho
     with open(os.path.join(dirs.get("classifications_directory"), F'classifer_{timestamp}.pkl'), 'wb') as clf:
         pickle.dump(classifer, clf)
 
-    figure.savefig(os.join.path(dirs.get("plots_directory"), F'plot_{timestamp}.png'))
+    figure.savefig(os.path.join(dirs.get("plots_directory"), F'plot_{timestamp}.png'))
 
     return classifer, confusion_matrix
 
