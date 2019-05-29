@@ -23,6 +23,9 @@ from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
 from astropy.table import Table
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from imblearn.metrics import classification_report_imbalanced
+from imblearn.pipeline import make_pipeline
+from imblearn.over_sampling import SMOTE
 from argparse import ArgumentParser
 
 warnings.filterwarnings("ignore")
@@ -436,7 +439,7 @@ def _to_pandas(features):
     return features
 
 
-def create_classifier(combined_features, training_data, random_state=42):
+def create_classifier(combined_features, training_data, dirs, augmentation_method=None, random_state=42):
     # TODO: Improve docstrings.
     """ Creation of an optimised Random Forest classifier.
 
@@ -469,24 +472,30 @@ def create_classifier(combined_features, training_data, random_state=42):
     X = combined_features.drop('target', axis=1)
     y = combined_features['target'].values
 
-    print("X SHAPE = {}\n".format(X.shape))
-    print("y SHAPE = {}\n".format(y.shape))
-
     target_names = combined_features['target'].unique()
-
-    print("X = \n{}".format(X))
-    print("y = \n{}".format(y))
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
 
     classifer = RandomForestClassifier(n_estimators=700, criterion='entropy', oob_score=True, n_jobs=-1, random_state=random_state)
+
+    if augmentation_method in ['SMOTE']:
+        classifer = make_pipeline(augmentation_method(sampling_strategy='not majority'), classifer)
+    else:
+        print("No augmentation selected, proceeding without resampling of classes")
+
     classifer.fit(X_train, y_train)
 
-    y_preds = classifer.predict(X_test)
-    confusion_matrix = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names, normalize=True)
+    # Classify and report the results
+    print(classification_report_imbalanced(y_test, classifer.predict(X_test)))
 
-    y_probs = classifer.predict_proba(X_test)
-    print(y_probs)
+    y_preds = classifer.predict(X_test)
+    confusion_matrix, figure = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names, normalize=True)
+
+    timestamp = get_timestamp()
+    with open(os.path.join(dirs.get("classifications_directory"), F'classifer_{timestamp}.pkl'), 'wb') as clf:
+        pickle.dump(classifer, clf)
+
+    figure.savefig(os.join.path(dirs.get("plots_directory"), F'plot_{timestamp}.png'))
 
     return classifer, confusion_matrix
 
