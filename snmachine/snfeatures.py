@@ -1610,8 +1610,8 @@ class WaveletFeatures(Features):
         -------
         vecs : `np.ndarray` of shape (Nsamps, number_comp)
             `number_comp` PCA basis vectors
-        Z : `np.ndarray` of shape (Nsamps, number_comps)
-            Components of the vectors forming the data matrix in the PCA bases
+        Z : `np.ndarray`
+            Components of the vectors forming the data matrix in the PCA bases of shape (Nsamps, number_comps)
         M : `np.ndarray`
             Means of the features of the data matrix over the samples, should have shape (Nfeats,) 
         s : `np.ndarray`
@@ -1671,10 +1671,10 @@ class WaveletFeatures(Features):
         Returns
         -------
         V : `np.ndarray`
-            Right Singular Matrix, with shape (Nsamps, min(Ncomps, Nfeats))
-        Z : `np.ndarray`
-            Principal Component Analysis scores (ie. the components of the reduced Data Matrix in the basis
-            of PCA)
+            Right Singular Matrix, with shape (Nsamps, min(`number_comp`, Nfeats))
+        Z : `np.ndarray` 
+            Components of the vectors forming the data matrix in the PCA bases 
+            of shape (Nsamps, `number_comp`)
         M : `np.ndarray`
             Means of the features of the data matrix over the samples, should have shape (Nfeats,) 
         s : `np.ndarray`
@@ -1682,11 +1682,12 @@ class WaveletFeatures(Features):
             X is 1. Should have shape (Nfeats, ) or be `None`
         eigenvalues : `np.ndarray`
             eigenvalues corresponding to the retained components in descending
-            order. Only as many as the number of components kept.
+            order. Only as many as the number of components kept. Of size
+            `number_comp`
 
         Notes
         -----
-        normalize_variance defaults to False. Please read notes in
+        `normalize_variance defaults` to False. Please read notes in
         `normalize_datamatrix` on `normalize_variance`.
         """
         # We are dealing with data matrix of shape (Nsamps, Nfeats)
