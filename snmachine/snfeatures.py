@@ -1651,7 +1651,6 @@ class WaveletFeatures(Features):
         ----------
         dataMatrix : `np.ndarray`
             Data Matrix
-
         ncomp : int, defaults to `None`
             Number of components of PCA to keep. If `None`
             gets determined from a tolerance level.
