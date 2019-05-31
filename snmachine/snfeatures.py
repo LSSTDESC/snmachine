@@ -1453,8 +1453,7 @@ class WaveletFeatures(Features):
 
 
     def wavelet_decomp(self, lc, wav, mlev):
-        """
-        Perform a wavelet decomposition on a single light curve.
+        """Perform a wavelet decomposition on a single light curve.
 
         Parameters
         ----------
@@ -1508,8 +1507,7 @@ class WaveletFeatures(Features):
         return output
 
     def extract_wavelets(self, d, wav, mlev, nprocesses, save_output, output_root):
-        """
-        Perform wavelet decomposition on all objects in dataset. Output is stored as astropy table for each object.
+        """Perform wavelet decomposition on all objects in dataset. Output is stored as astropy table for each object.
 
         Parameters
         ----------
@@ -1568,10 +1566,7 @@ class WaveletFeatures(Features):
 
     @staticmethod
     def get_svd(X):
-        """
-        Obtain Singular Value Decomposition of X, such that
-
-        X =  U SDiag VT
+        """Obtain Singular Value Decomposition of X, such that X =  U SDiag VT
 
         Parameters
         ----------
@@ -1583,9 +1578,9 @@ class WaveletFeatures(Features):
         -------
         U : `np.ndarray`
             Left Singular Matrix of shape (Nsamps, min(Nsamps, Nfeats))
-        SDiag : `np.ndarray` 
+        SDiag : `np.ndarray`
             Singular values in an array of shape (,min(Nsamps, Nfeats))
-        VT : `np.ndarray` 
+        VT : `np.ndarray`
             Transpose of Right Singular Matrix of shape
             (min(Nfeats, Nsamps), Nfeats).
 
@@ -1594,8 +1589,7 @@ class WaveletFeatures(Features):
 
     def get_pca_eigendecomposition(self, dataMatrix, ncomp=None, tol=0.999,
                                normalize_variance=False):
-        """
-        Perform Principal Component Analysis using an eigendecomposition
+        """Perform Principal Component Analysis using an eigendecomposition
 
         Parameters
         ----------
@@ -1651,8 +1645,7 @@ class WaveletFeatures(Features):
 
     def get_pca_svd(self, dataMatrix, ncomp=None, tol=0.999,
                 normalize_variance=False):
-        """
-        Perform Principal Component Analysis of the dataMatrix using SVD
+        """Perform Principal Component Analysis of `dataMatrix` using Singular Value Decomposition.
 
         Parameters
         ----------
@@ -1669,22 +1662,22 @@ class WaveletFeatures(Features):
         normalize_variance : Bool, defaults to `False`
             If `True` pass to `normalize_variance` method so that the features
             are scaled to have unit variance.
+
         Returns
         -------
         V : `np.ndarray`
             Right Singular Matrix, with shape (Nsamps, min(Ncomps, Nfeats))
         Z : `np.ndarray`
             Principal Component Analysis scores (ie. the components of the reduced Data Matrix in the basis
-        of PCA)
+            of PCA)
         M : `np.ndarray`
-            the Mean of the features over samples
+            Mean of the features over samples
         s : `np.ndarray`
             the scaling used with shape Nsamps
-        vals : `np.ndarray`
+        eigenvalues : `np.ndarray`
             eigenvalues corresponding to the retained components in descending
-            order. Only as many as the number of components kept. 
+            order. Only as many as the number of components kept.
         """
-
         # We are dealing with data matrix of shape (Nsamps, Nfeats)
         err_msg = 'dataMatrix input to svd function has wrong shape'
         assert len(dataMatrix.shape) == 2, err_msg
@@ -1692,40 +1685,29 @@ class WaveletFeatures(Features):
         # perform SVD on normalized Data Matrix
         X, M, s = self.normalize_datamatrix(dataMatrix,
                                             normalize_variance=normalize_variance)
-        # print('Took {} secs for normalization'.format(te - ts))
-
-        #Construct the covariance matrix # Cat Temp
-        # print(dataMatrix)
-        C1 = np.dot(dataMatrix, dataMatrix.T)
-        condNumber1 = np.linalg.cond(C1)
-        C2 = np.dot(X, X.T)
-        condNumber2 = np.linalg.cond(C2)
-        print('The condition number in the SVD is '+str(condNumber1)+' and the normalized one is '+str(condNumber2))
-
         U, sDiag, VT =  self.get_svd(X)
         assert len(U.shape) == 2
 
-        # eigenvals in descending order
-        vals = sDiag * sDiag
-
+        # eigenvalues in descending order
+        eigenvalues = sDiag * sDiag
 
         # Find number of components to keep
         if ncomp is None:
             assert isinstance(tol, np.float)
-            ncomp = self.ncompsForTolerance(vals, tol=tol)
+            ncomp = self.ncompsForTolerance(eigenvalues, tol=tol)
         else:
             assert isinstance(ncomp, np.int)
 
         # Coefficients of Data in basis of Principal Components
         Z = np.dot(U[:, :ncomp], np.diag(sDiag[:ncomp]))
 
-        return VT.T[:, :ncomp], Z, M, s, vals[:ncomp]
+        return VT.T[:, :ncomp], Z, M, s, eigenvalues[:ncomp]
 
     @staticmethod
     def normalize_datamatrix(D, normalize_variance=True):
-        """
-        Normalize data matrix for doing SVD or computing covariance. This
-        does X = (D - mean(D))/sqrt(N - 1), where N is len(D). D is assumed
+        """Normalize data matrix for decomposing in Singular Values (SVD) or computing covariance.
+
+        This does X = (D - mean(D))/sqrt(N - 1), where N is len(D). D is assumed
         to have shape (Nsamps, Nfeats) while M has shape (1, Nfeats) and
         X has shape (Nsamps, Nfeats)
 
@@ -1902,14 +1884,11 @@ class WaveletFeatures(Features):
             Reconstructed un-normalized data matrix that was compressed via PCA
         """
         # Go to the space of normalized data
-
         Nsamps, ncomps_ = Z.shape
         Nfeats, ncomps = vec.shape
 
-
         # While we have enough information to create a zero matrix of the right
         # shape, we will avoid using the memory.
-
         if M is not None:
             Nfeats_ = M.size
             assert Nfeats == Nfeats_
