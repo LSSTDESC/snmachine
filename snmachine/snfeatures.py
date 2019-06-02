@@ -2012,7 +2012,7 @@ class WaveletFeatures(Features):
             print('finish projecting PCA')
 
         # Now reformat the components as a table
-        labels = ['C%d' %i for i in range(ncomp)]
+        labels = ['C%d' %i for i in range(number_comp)]
         reduced_wavelet_components = Table(comps, names=labels)
         objnames = Table(object_names.reshape(len(object_names), 1),
                          names=['Object'])
@@ -2021,13 +2021,13 @@ class WaveletFeatures(Features):
 
         if save_output:
             # We need to change the output to make it consistent with new code
-            np.save(os.path.join(output_root,'eigenvalues_{}.npy'.format(ncomp)),vals)
-            np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(ncomp)),vec)
-            np.save(os.path.join(output_root,'comps_{}.npy'.format(ncomp)),comps)
-            np.save(os.path.join(output_root,'means_{}.npy'.format(ncomp)),M)
+            np.save(os.path.join(output_root,'eigenvalues_{}.npy'.format(number_comp)),vals)
+            np.save(os.path.join(output_root,'eigenvectors_{}.npy'.format(number_comp)),vec)
+            np.save(os.path.join(output_root,'comps_{}.npy'.format(number_comp)),comps)
+            np.save(os.path.join(output_root,'means_{}.npy'.format(number_comp)),M)
             # Write the astropy table containing the wavelet features to disk after converting to pandas dataframe
             reduced_wavelet_components = reduced_wavelet_components.to_pandas()
-            reduced_wavelet_components.to_pickle(os.path.join(output_root, 'reduced_wavelet_components_{}.pickle'.format(ncomp)))
+            reduced_wavelet_components.to_pickle(os.path.join(output_root, 'reduced_wavelet_components_{}.pickle'.format(number_comp)))
 
         return reduced_wavelet_components, vals, vec, M, s
 
