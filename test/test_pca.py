@@ -9,7 +9,6 @@ import snmachine as sm
 from snmachine.snfeatures import WaveletFeatures
 import pytest
 
-
 testopts = [(5, 'svd', None, True),
             (5, 'eigendecomposition', None, False),
             (None, 'svd', 0.999, False),
@@ -19,20 +18,17 @@ testopts = [(5, 'svd', None, True),
 
 # Test 1
 @pytest.mark.skip(reason='will eventually replace')
-def test_best_coeffs(tol=0.999):
+def test_number_comps_for_tolerance(tol=0.999):
     """
     Check the new code for calculating the best number of coefficients for
     a value of tolerance.
 
     This is more of an integration test, where we check that the number matches
-    the previous code. We make it match the previous code, and we should remove the ad-hoc
-    addition of 1., ie the number should be 1 less than what it is.
+    the previous code. 
     """
     fname = os.path.join(sm.example_data, 'eigenvals.npz')
     eigs = np.load(fname)['arr_0'][::-1]
     number_comp = WaveletFeatures.number_comps_for_tolerance(eigs, tol=tol)
-    assert number_comp == 16
-    number_comp = WaveletFeatures.best_coeffs(eigs, tol=tol)
     assert number_comp == 16
 
 

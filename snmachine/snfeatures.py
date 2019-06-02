@@ -1757,38 +1757,8 @@ class WaveletFeatures(Features):
         """
         tot = np.sum(vals)
         c = np.cumsum(vals) / tot
-        # To match prev code that invoked break on >= rather than <
+        # max number of components that would still be less than tol + 1 
         return c[c<tol].size + 1
-
-    @staticmethod
-    def best_coeffs(vals, tol=.99):
-        """
-        Determine the minimum number of PCA components required to adequately describe the dataset.
-
-        Parameters
-        ----------
-        vals : list-like
-            List of eigenvalues (ordered largest to smallest)
-        tol : float, optional
-            How much 'energy' or information must be retained in the dataset.
-
-        Returns
-        -------
-        int
-            The required number of coefficients to retain the requested amount of "information".
-
-        """
-        tot=np.sum(vals)
-        tot2=0
-        for i in range(len(vals)):
-            tot2+=vals[i]
-            if tot2>=tol*tot:
-                print('The tolerance is '+str(tol)+' and currently it has '+str(tot2/tot))
-                return i+1 # the 1st component has index 0
-                break
-
-        print ("No dimensionality reduction achieved. All components of the PCA are required.")
-        return -1
 
     def project_pca(self, X, eig_vec):
         """
