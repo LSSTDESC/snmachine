@@ -594,7 +594,7 @@ if __name__ == "__main__":
         print("wavelet_object, type = {}".format(type(wavelet_object)))
 
         # Step 7. Reduce dimensionality of wavelets by using only N principal components
-        wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(object_names=training_data.object_names, wavout=waveout, recompute_pca=True, method='svd', ncomp=number_of_principal_components,
+        wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(object_names=training_data.object_names, wavout=waveout, recompute_pca=True, method='svd', number_comp=number_of_principal_components,
                                                                                               tol=None, pca_path=None, save_output=True, output_root=dirs.get("features_directory"))
         print("wavelet_features = {}".format(wavelet_features))
         print("wavelet_features, type = {}".format(type(wavelet_features)))
