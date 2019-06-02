@@ -138,6 +138,38 @@ def create_folder_structure(analysis_directory, analysis_name):
     return dirs
 
 
+def get_directories(analyses_directory, analysis_name):
+    """Returns the folder directories inside of a given analysis.
+
+    # TODO [Add a link to the place where we have an explanation of the folder structure]
+
+    Parameters
+    ----------
+    analyses_directory : str
+        System path to where the user stores all analysis.
+    analysis_name : str
+        Name of the analysis we want.
+
+    Returns
+    -------
+    directories : dict
+        Dictionary containing the mapping of folders inside of `analysis_name`.
+    """
+    analysis_directory = os.path.join(analyses_directory, analysis_name)
+    features_directory = os.path.join(analysis_directory, 'wavelet_features')
+    classifications_directory = os.path.join(analysis_directory, 'classifications')
+    intermediate_files_directory = os.path.join(analysis_directory, 'intermediate_files')
+    plots_directory = os.path.join(analysis_directory, 'plots')
+
+    directories = {"analysis_directory": analysis_directory,
+                   "features_directory": features_directory,
+                   "classifications_directory": classifications_directory,
+                   "intermediate_files_directory": intermediate_files_directory,
+                   "plots_directory": plots_directory}
+
+    return directories
+
+
 def load_configuration_file(path_to_configuration_file):
     """ Load from disk the configuration file that is to be used
 
