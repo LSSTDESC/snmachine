@@ -84,7 +84,7 @@ def create_folder_structure(analysis_directory, analysis_name):
 
     Returns
     -------
-    dirs: dict
+    directories: dict
         Dictionary containing the mapping of folders that have been created.
 
     Examples
@@ -104,7 +104,7 @@ def create_folder_structure(analysis_directory, analysis_name):
     intermediate_files_directory = os.path.join(method_directory, 'intermediate_files')
     plots_directory = os.path.join(method_directory, 'plots')
 
-    dirs = {"method_directory": method_directory, "features_directory": features_directory,
+    directories = {"method_directory": method_directory, "features_directory": features_directory,
             "classifications_directory": classifications_directory, "intermediate_files_directory": intermediate_files_directory,
             "plots_directory": plots_directory}
 
@@ -124,7 +124,7 @@ def create_folder_structure(analysis_directory, analysis_name):
 
         if choice in _yes:
             print("Overwriting existing folder..")
-            for key, value in dirs.items():
+            for key, value in directories.items():
                 subprocess.call(['mkdir', value], stderr=subprocess.DEVNULL)
         elif choice in _no:
             print("I am NOT sure")
@@ -132,10 +132,10 @@ def create_folder_structure(analysis_directory, analysis_name):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no'")
     else:
-        for key, value in dirs.items():
+        for key, value in directories.items():
             subprocess.call(['mkdir', value])
 
-    return dirs
+    return directories
 
 
 def get_directories(analyses_directory, analysis_name):
@@ -296,7 +296,7 @@ def load_training_data(data_path):
     return training_data
 
 
-def reduce_size_of_training_data(training_data, dirs, subset_size, seed=1234):
+def reduce_size_of_training_data(training_data, directories, subset_size, seed=1234):
     # TODO: Incorpate further doctrings and finish examples. Tarek: Catarina and I need to
     # discuss this further. There is some overlap between this and
     # sndata.PlasticcData.update_data() and it would be good to comebine this.
@@ -307,7 +307,7 @@ def reduce_size_of_training_data(training_data, dirs, subset_size, seed=1234):
     training_data : snmachine.PlasticcData
         Dictionary containing the parameters that reside in the configuration
         file. This will be used to obtain the path to the training data.
-    dirs : dict
+    directories : dict
         Dictionary containing
     subset_size : int
         Number of objects the user would like to reduce the training data to
@@ -324,12 +324,13 @@ def reduce_size_of_training_data(training_data, dirs, subset_size, seed=1234):
     >>> ...
     >>> print(shape.training_data)
 
-    >>> new_training_data = reduce_size_of_training_data(training_data, dirs, 1000))
+    >>> new_training_data = reduce_size_of_training_data(training_data,
+            directories, 1000))
     >>> print(shape.new_training_data)
 
     """
 
-    method_directory = dirs.get("method_directory", None)
+    method_directory = directories.get("method_directory", None)
     subset_file = os.path.join(method_directory, "subset.list")
     if os.path.exists(subset_file):
         rand_objs = np.genfromtxt(subset_file, dtype='U')
@@ -383,7 +384,8 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
     --------
     >>> ...
     >>> waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
-                                                                     save_output='all', output_root=dirs.get("intermediate_files_directory"))
+                                                                     save_output='all',
+                                                                     output_root=directories.get("intermediate_files_directory"))
     >>> print()
 
     """
@@ -471,7 +473,7 @@ def _to_pandas(features):
     return features
 
 
-def create_classifier(combined_features, training_data, dirs, augmentation_method=None, random_state=42):
+def create_classifier(combined_features, training_data, directories, augmentation_method=None, random_state=42):
     # TODO: Improve docstrings.
     """ Creation of an optimised Random Forest classifier.
 
@@ -524,10 +526,10 @@ def create_classifier(combined_features, training_data, dirs, augmentation_metho
     confusion_matrix, figure = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names, normalize=True)
 
     timestamp = get_timestamp()
-    with open(os.path.join(dirs.get("classifications_directory"), F'classifer_{timestamp}.pkl'), 'wb') as clf:
+    with open(os.path.join(directories.get("classifications_directory"), F'classifer_{timestamp}.pkl'), 'wb') as clf:
         pickle.dump(classifer, clf)
 
-    figure.savefig(os.path.join(dirs.get("plots_directory"), F'plot_{timestamp}.png'))
+    figure.savefig(os.path.join(directories.get("plots_directory"), F'plot_{timestamp}.png'))
 
     return classifer, confusion_matrix
 
@@ -537,17 +539,17 @@ def make_predictions(location_of_test_data, classifier):
     pass
 
 
-def restart_from_saved_gps(dirs):
+def restart_from_saved_gps(directories):
     pass
 
 
-def restart_from_saved_wavelets(dirs):
+def restart_from_saved_wavelets(directories):
     pass
 
 
-def restart_from_saved_pca(dirs, number_of_principal_components):
+def restart_from_saved_pca(directories, number_of_principal_components):
     # TODO: Write docstrings
-    wavelet_features = pd.read_pickle(os.path.join(dirs.get("features_directory"), "reduced_wavelet_components_{}.pickle".format(number_of_principal_components)))
+    wavelet_features = pd.read_pickle(os.path.join(directories.get("features_directory"), "reduced_wavelet_components_{}.pickle".format(number_of_principal_components)))
     combined_features = wavelet_features  # For running tests for now
     classifier, confusion_matrix = create_classifier(combined_features, training_data)
     print(F"classifier = {classifier}")
@@ -578,9 +580,9 @@ if __name__ == "__main__":
     number_of_principal_components = params.get("number_of_principal_components", None)
 
     # Step 1. Creat folders that contain analysis
-    dirs = create_folder_structure(analysis_directory, analysis_name)
+    directories = create_folder_structure(analysis_directory, analysis_name)
     # Step 2. Save configuration file used for this analysis
-    save_configuration_file(params, dirs.get("method_directory"))
+    save_configuration_file(params, directories.get("method_directory"))
     # Step 3. Check at which point the user would like to run the analysis from.
     # If elements already saved, these will be used but this can be overriden
     # with command line argument
@@ -592,12 +594,12 @@ if __name__ == "__main__":
         pass
     elif (arguments['restart_from'].lower() == "pca"):
         # Restart from saved PCA components
-        restart_from_saved_pca(dirs, number_of_principal_components)
+        restart_from_saved_pca(directories, number_of_principal_components)
     else:
         # Run full pipeline but still do checks to see if elements from GPs or
         # wavelets already exist on disk; the first check should be for:
         #   a. Saved PCA files
-            # path_saved_reduced_wavelets = dirs.get("intermediate_files_directory")
+            # path_saved_reduced_wavelets = directories.get("intermediate_files_directory")
             # eigenvectors_saved_file = np.load(os.path.join(path_saved_reduced_wavelets, 'eigenvectors_' + str(number_of_principal_components) + '.npy'))
             # means_saved_file = np.load(os.path.join(path_saved_reduced_wavelets, 'means_' + str(number_of_principal_components) + '.npy'))
         #   b. Saved uncompressed wavelets
@@ -610,12 +612,13 @@ if __name__ == "__main__":
         # Step 5. Compute GPs
         gps.compute_gps(training_data, number_gp=number_gp, t_min=0, t_max=1100,
                         kernel_param=kernel_param,
-                        output_root=dirs['intermediate_files_directory'],
+                        output_root=directories['intermediate_files_directory'],
                         number_processes=number_processes)
 
         # Step 6. Extract wavelet coeffiencts
         waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
-                                                                     save_output='all', output_root=dirs.get("intermediate_files_directory"))
+                                                                     save_output='all',
+                                                                     output_root=directories.get("intermediate_files_directory"))
         print("waveout = {}".format(waveout))
         print("waveout, type = {}".format(type(waveout)))
 
@@ -627,7 +630,10 @@ if __name__ == "__main__":
 
         # Step 7. Reduce dimensionality of wavelets by using only N principal components
         wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(object_names=training_data.object_names, wavout=waveout, recompute_pca=True, method='svd', number_comp=number_of_principal_components,
-                                                                                              tol=None, pca_path=None, save_output=True, output_root=dirs.get("features_directory"))
+                                                                                              tol=None,
+                                                                                              pca_path=None,
+                                                                                              save_output=True,
+                                                                                              output_root=directories.get("features_directory"))
         print("wavelet_features = {}".format(wavelet_features))
         print("wavelet_features, type = {}".format(type(wavelet_features)))
 
