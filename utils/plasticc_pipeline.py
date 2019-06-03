@@ -373,11 +373,11 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
     Returns
     -------
     waveout: numpy.ndarray
-
+        Numpy array of the wavelet coefficients where each row is an object and
+        each column a different coefficient
     waveout_err: numpy.ndarray
-
+        Numpy array storing the (assuming Gaussian) error on each coefficient.
     wavelet_object: snmachine.snfeatures.WaveletFeatures object
-
 
     Examples
     --------
