@@ -1750,10 +1750,6 @@ class WaveletFeatures(Features):
         int
             The required number of coefficients to retain the requested amount of "information".
 
-        Notes
-        -----
-        This method should exactly reproduce the method `best_coeffs`
-
         """
         tot = np.sum(vals)
         c = np.cumsum(vals) / tot
