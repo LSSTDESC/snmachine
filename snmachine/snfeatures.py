@@ -1572,7 +1572,7 @@ class WaveletFeatures(Features):
         Z : `np.ndarray`
             Components of the vectors forming the data matrix in the PCA bases of shape (Nsamps, number_comps)
         M : `np.ndarray`
-            Means of the features of the data matrix over the samples, should have shape (Nfeats,) 
+            Means of the features of the data matrix over the samples, should have shape (Nfeats,)
         s : `np.ndarray`
             scalings used to rescale X so that the variance of each feature in
             X is 1. Should have shape (Nfeats, ) or be `None`
@@ -1631,11 +1631,11 @@ class WaveletFeatures(Features):
         -------
         V : `np.ndarray`
             Right Singular Matrix, with shape (Nsamps, min(`number_comp`, Nfeats))
-        Z : `np.ndarray` 
-            Components of the vectors forming the data matrix in the PCA bases 
+        Z : `np.ndarray`
+            Components of the vectors forming the data matrix in the PCA bases
             of shape (Nsamps, `number_comp`)
         M : `np.ndarray`
-            Means of the features of the data matrix over the samples, should have shape (Nfeats,) 
+            Means of the features of the data matrix over the samples, should have shape (Nfeats,)
         s : `np.ndarray`
             scalings used to rescale X so that the variance of each feature in
             X is 1. Should have shape (Nfeats, ) or be `None`
@@ -1703,7 +1703,7 @@ class WaveletFeatures(Features):
         X : `np.ndarray`
             normalized and centered data matrix X. Should have shape (Nsamps, Nfeats)
         M : `np.ndarray`
-            Means of the features of the data matrix over the samples, should have shape (Nfeats,) 
+            Means of the features of the data matrix over the samples, should have shape (Nfeats,)
         s : `np.ndarray`
             scalings used to rescale X so that the variance of each feature in
             X is 1. Should have shape (Nfeats, ) or be `None`
@@ -1753,7 +1753,7 @@ class WaveletFeatures(Features):
         """
         tot = np.sum(vals)
         c = np.cumsum(vals) / tot
-        # max number of components that would still be less than tol + 1 
+        # max number of components that would still be less than tol + 1
         return c[c<tol].size + 1
 
     def project_pca(self, X, eig_vec):
@@ -1807,7 +1807,7 @@ class WaveletFeatures(Features):
             If `True` pass to `normalize_variance` method so that the features
             are scaled to have unit variance.
         method : {'svd'| 'eigendecomposition'}
-        
+
         Notes
         -----
         normalize_variance defaults to False. Please read notes in
@@ -1837,12 +1837,12 @@ class WaveletFeatures(Features):
         M : `np.ndarray`, defaults to `None`
             Matrix subtracted from original Data Matrix to center it.
             Must have shape (Nfeats, ). If `None`, M is assumed to be 0
-        s : `np.ndarry` 
+        s : `np.ndarry`
             scale factor applied to normalize data matrix so that each feature
             vector has variance 1. Must have shape (Nfeats, ) or be `None`
         Returns
         -------
-        D : `np.ndarray` 
+        D : `np.ndarray`
             Reconstructed un-normalized data matrix of shape (Nsamps, Nfeats)
             that was compressed via PCA
         """
@@ -1923,7 +1923,7 @@ class WaveletFeatures(Features):
             array of shape (Nfeat, Ncomp) whose columns are the
             eigenvectors of the covariance matrix.
         M : `np.ndarray`
-            Means of the features of the data matrix over the samples, should have shape (Nfeats,) 
+            Means of the features of the data matrix over the samples, should have shape (Nfeats,)
         s : `np.ndarray`
             scalings used to rescale X so that the variance of each feature in
             X is 1. Should have shape (Nfeats, ) or be `None`
