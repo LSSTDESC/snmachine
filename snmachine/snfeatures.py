@@ -721,6 +721,7 @@ class TemplateFeatures(Features):
                 self.model=sncosmo.Model(self.templates[mod_name],effects=[dust],effect_names=['host'], effect_frames=['rest'])
             else:
                 self.model=sncosmo.Model(self.templates[mod_name])
+                print(F'MODEL-NAME: {mod_name}')
             params=['['+mod_name+']'+pname for pname in self.model.param_names]
             # err_plus=[pname+'_err+' for pname in params]
             # err_minus=[pname+'_err-' for pname in params]
