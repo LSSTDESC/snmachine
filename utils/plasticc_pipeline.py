@@ -473,7 +473,7 @@ def _to_pandas(features):
     return features
 
 
-def create_classifier(combined_features, training_data, directories, augmentation_method=None, random_state=42):
+def create_classifier(combined_features, training_data, directories, augmentation_method=None, random_state=42, number_comps=''):
     # TODO: Improve docstrings.
     """ Creation of an optimised Random Forest classifier.
 
@@ -526,10 +526,10 @@ def create_classifier(combined_features, training_data, directories, augmentatio
     confusion_matrix, figure = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names, normalize=True)
 
     timestamp = get_timestamp()
-    with open(os.path.join(directories.get("classifications_directory"), F'classifer_{timestamp}.pkl'), 'wb') as clf:
+    with open(os.path.join(directories.get("classifications_directory"), F'classifer_{number_comps}_{augmentation_method}.pkl'), 'wb') as clf:
         pickle.dump(classifer, clf)
 
-    figure.savefig(os.path.join(directories.get("plots_directory"), F'plot_{timestamp}.png'))
+    figure.savefig(os.path.join(directories.get("plots_directory"), F'confusion_matrix_{number_comps}_{augmentation_method}.pdf'))
 
     return classifer, confusion_matrix
 
