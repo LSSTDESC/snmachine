@@ -2,6 +2,9 @@
 test/*
 !test/*.py
 
+# Do not track log files in utils
+utils/*stdout.txt
+
 ## Python.gitignore from Github.
 ##
 # Byte-compiled / optimized / DLL files

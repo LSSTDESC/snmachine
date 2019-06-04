@@ -2,36 +2,45 @@
 Utility script for calculating the log loss
 """
 
+from sklearn.metrics import confusion_matrix
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import auc, roc_curve, confusion_matrix
 
-def plotConfusionMatrix(yTrue, yPredict, dataName, targetNames):
-    cm = confusion_matrix(yTrue, yPredict, labels=targetNames)
-    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
+    cm = confusion_matrix(y_true, y_pred, labels=target_names)
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+    print(cm)
+
     annot = np.around(cm, 2)
 
-    fig, ax = plt.subplots(figsize=(9,7))
-    sns.heatmap(cm, xticklabels=targetNames,
-    yticklabels=targetNames, cmap='Blues',
-    annot=annot, lw=0.5)
+    fig, ax = plt.subplots(figsize=(9, 7))
+    sns.heatmap(cm, xticklabels=target_names,
+                yticklabels=target_names, cmap='Blues',
+                annot=annot, lw=0.5)
+
     ax.set_xlabel('Predicted Label')
     ax.set_ylabel('True Label')
     ax.set_aspect('equal')
-    plt.title(dataName)
+    plt.title(title)
 
-    return cm
+    return cm, fig
 
-def plasticcLogLoss(y_true, y_pred, relative_class_weights=None):
+
+def plasticc_log_loss(y_true, y_pred, relative_class_weights=None):
     """
     Implementation of weighted log loss used for the Kaggle challenge
     """
     predictions = y_pred.copy()
 
     # sanitize predictions
-    epsilon = sys.float_info.epsilon # this is machine dependent but essentially prevents log(0)
+    epsilon = sys.float_info.epsilon  # this is machine dependent but essentially prevents log(0)
     predictions = np.clip(predictions, epsilon, 1.0 - epsilon)
     predictions = predictions / np.sum(predictions, axis=1)[:, np.newaxis]
 

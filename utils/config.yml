@@ -1,0 +1,8 @@
+# Global settings
+analysis_directory : "/share/hypatia/snmachine_resources/data/plasticc/analysis/"
+analysis_name : "pipeline-sniabcii"
+data_path : "/share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set_sniabcii.pickle"
+# snmachine parameters
+number_gp : 1100
+kernel_param : [500., 20.]
+number_of_principal_components : 10

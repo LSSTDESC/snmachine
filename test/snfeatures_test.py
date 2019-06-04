@@ -73,10 +73,10 @@ def load_example_data(request):
     return d
 
 
-def fit_templates(d, sampler='leastsq', use_redshift=False, nprocesses=1):
+def fit_templates(d, sampler='leastsq', use_redshift=False, number_processes=1):
     temp_featz = snfeatures.TemplateFeatures(sampler=sampler)
     extr_features = temp_featz.extract_features(d, use_redshift=use_redshift,
-                                                nprocesses=nprocesses, seed=42)
+                                                number_processes=number_processes, seed=42)
     d.set_model(temp_featz.fit_sn, extr_features)
     gof = temp_featz.goodness_of_fit(d)
     gof = np.array([gof[f] for f in d.filter_set]).T
@@ -84,9 +84,9 @@ def fit_templates(d, sampler='leastsq', use_redshift=False, nprocesses=1):
 #    return gof[example_name]
 
 
-def fit_parametric(model_choice, d, sampler='leastsq', nprocesses=1):
+def fit_parametric(model_choice, d, sampler='leastsq', number_processes=1):
     parametric_featz = snfeatures.ParametricFeatures(model_choice=model_choice, sampler=sampler)
-    extr_features = parametric_featz.extract_features(d, nprocesses=nprocesses, seed=42)
+    extr_features = parametric_featz.extract_features(d, number_processes=number_processes, seed=42)
     d.set_model(parametric_featz.fit_sn, extr_features)
     gof = parametric_featz.goodness_of_fit(d)
     gof = np.array([gof[f] for f in d.filter_set]).T
@@ -123,7 +123,7 @@ if has_george:
 def test_templates_leastsq(load_example_data):
     d = load_example_data
     for nproc in parallel_cores:
-        gof = fit_templates(d, sampler='leastsq', use_redshift=False, nprocesses=nproc)
+        gof = fit_templates(d, sampler='leastsq', use_redshift=False, number_processes=nproc)
 
         # This case distinction is necessary, since from sncosmo-1.4 to sncosmo-1.5 there have been
         # significant changes in the salt2 templates that result in different fits.
@@ -135,7 +135,7 @@ def test_templates_leastsq(load_example_data):
         np.testing.assert_allclose(gof, gof_truth, rtol=rtol)
 
     for nproc in parallel_cores:
-        gof = fit_templates(d, sampler='leastsq', use_redshift=True, nprocesses=nproc)
+        gof = fit_templates(d, sampler='leastsq', use_redshift=True, number_processes=nproc)
         if sncosmo.__version__ < '1.5.0':
             gof_truth = [6.21906514,  18.35383076,   6.08646565,   1.0458849]
         else:
@@ -148,14 +148,14 @@ def test_templates_leastsq(load_example_data):
 def test_templates_mcmc(load_example_data):
     d=load_example_data
     for nproc in parallel_cores:
-        gof=fit_templates(d, sampler='mcmc', use_redshift=False, nprocesses=nproc)
+        gof=fit_templates(d, sampler='mcmc', use_redshift=False, number_processes=nproc)
         if sncosmo.__version__<'1.5.0':
 	    gof_truth=[  6.16634571,  17.82825731,   6.23085278,   1.11415153]
 	else:
 	    gof_truth=[  6.09118872,  18.24212791,   6.6823486,    1.29993102]
         np.testing.assert_allclose(gof, gof_truth, rtol=rtol)
     for nproc in parallel_cores:
-        gof=fit_templates(d, sampler='mcmc', use_redshift=True, nprocesses=nproc)
+        gof=fit_templates(d, sampler='mcmc', use_redshift=True, number_processes=nproc)
 	if sncosmo.__version__<'1.5.0':
 	    gof_truth=[  5.34752278,  18.87138068,   6.98768329,   1.84565766]
 	else:
@@ -168,7 +168,7 @@ def test_templates_mcmc(load_example_data):
 def test_templates_nested(load_example_data):
     d = load_example_data
     for nproc in parallel_cores:
-        gof = fit_templates(d, sampler='nested', use_redshift=False, nprocesses=nproc)
+        gof = fit_templates(d, sampler='nested', use_redshift=False, number_processes=nproc)
         if sncosmo.__version__ < '1.5.0':
             gof_truth = [6.14752938,  18.26134481,   6.12642616,   1.06306042]
         else:
@@ -176,7 +176,7 @@ def test_templates_nested(load_example_data):
         np.testing.assert_allclose(np.sort(gof), np.sort(gof_truth), rtol=rtol)
 #        np.testing.assert_allclose(np.sort(gof), np.sort([ 2.4059210272, 2.0797560142, 1.7905944939, 3.57346633979]), rtol=rtol)
     for nproc in parallel_cores:
-        gof=fit_templates(d, sampler='nested', use_redshift=True, nprocesses=nproc)
+        gof=fit_templates(d, sampler='nested', use_redshift=True, number_processes=nproc)
         if sncosmo.__version__ < '1.5.0':
             gof_truth = [6.27339226,  18.63956378,   6.16584135,   1.05712933]
         else:
@@ -189,14 +189,14 @@ def test_templates_nested(load_example_data):
 def test_newling_leastsq(load_example_data):
     d = load_example_data
     for nproc in parallel_cores:
-        gof = fit_parametric('newling', d, sampler='leastsq', nprocesses=nproc)
+        gof = fit_parametric('newling', d, sampler='leastsq', number_processes=nproc)
         np.testing.assert_allclose(gof, [6.00072104,  22.03567143,   7.2070583,    1.28674332], rtol=rtol)
 #        np.testing.assert_allclose(gof, [ 0.83526717,  0.51772027,  1.1398396,   1.11812427], rtol=rtol)
 
 def test_karpenka_leastsq(load_example_data):
     d=load_example_data
     for nproc in parallel_cores:
-        gof=fit_parametric('karpenka', d, sampler='leastsq', nprocesses=nproc)
+        gof=fit_parametric('karpenka', d, sampler='leastsq', number_processes=nproc)
         np.testing.assert_allclose(gof, [  5.24617927,  23.03744351,   7.82406324,   0.88721942], rtol=rtol)
 
 """
@@ -204,7 +204,7 @@ def test_karpenka_leastsq(load_example_data):
 def test_newling_mcmc(load_example_data):
     d=load_example_data
     for nproc in parallel_cores:
-        gof=fit_parametric('newling', d, sampler='mcmc', nprocesses=nproc)
+        gof=fit_parametric('newling', d, sampler='mcmc', number_processes=nproc)
 	print gof
 #        np.testing.assert_allclose(gof, , rtol=rtol)
 #        np.testing.assert_allclose(gof, [ 0.83526717,  0.51772027,  1.1398396,   1.11812427], rtol=rtol)
@@ -213,7 +213,7 @@ def test_newling_mcmc(load_example_data):
 def test_karpenka_mcmc(load_example_data):
     d=load_example_data
     for nproc in parallel_cores:
-        gof=fit_parametric('karpenka', d, sampler='mcmc', nprocesses=nproc)
+        gof=fit_parametric('karpenka', d, sampler='mcmc', number_processes=nproc)
 	print gof
 #        np.testing.assert_allclose(gof, , rtol=rtol)
 #"""
@@ -224,7 +224,7 @@ def test_karpenka_mcmc(load_example_data):
 def test_newling_nested(load_example_data):
     d = load_example_data
     for nproc in parallel_cores:
-        gof = fit_parametric('newling', d, sampler='nested', nprocesses=nproc)
+        gof = fit_parametric('newling', d, sampler='nested', number_processes=nproc)
         np.testing.assert_allclose(gof, [5.83656883,  21.81049531,   7.21428601,   1.29572207], rtol=rtol)
 
 
@@ -233,7 +233,7 @@ def test_newling_nested(load_example_data):
 def test_karpenka_nested(load_example_data):
     d = load_example_data
     for nproc in parallel_cores:
-        gof = fit_parametric('karpenka', d, sampler='nested', nprocesses=nproc)
+        gof = fit_parametric('karpenka', d, sampler='nested', number_processes=nproc)
         np.testing.assert_allclose(gof, [5.10496956,  29.83861575,   6.50170389,   0.89942577], rtol=rtol)
 
 
