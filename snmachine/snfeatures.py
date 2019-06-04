@@ -1751,10 +1751,12 @@ class WaveletFeatures(Features):
             The required number of coefficients to retain the requested amount of "information".
 
         """
-        tot = np.sum(vals)
-        c = np.cumsum(vals) / tot
-        # max number of components that would still be less than tol + 1
-        return c[c<tol].size + 1
+        total = np.sum(vals)
+        cum_totals = np.cumsum(vals) / total
+
+        # (max components that would still capture < tol fraction of variance)
+        # + 1 
+        return cum_totals[cum_totals<tol].size + 1
 
     def project_pca(self, X, eig_vec):
         """
