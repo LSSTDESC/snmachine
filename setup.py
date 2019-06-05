@@ -8,25 +8,11 @@ import tarfile
 
 
 PACKAGENAME = 'snmachine'
-packageDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          PACKAGENAME)
-
-# Obtain the package version
-versionFile = os.path.join(packageDir, 'version.py')
-with open(versionFile, 'r') as f:
-    s = f.read()
-# Look up the string value assigned to __version__ in version.py using regexp
-versionRegExp = re.compile("__VERSION__ = \"(.*?)\"")
-# Assign to __version__
-__version__ = versionRegExp.findall(s)[0]
-print(__version__)
-
 
 class ExtractExampleData(install):
     """Post-installation data extraction."""
     def run(self):
         install.run(self)
-        os.system("cat testing.egg-info/PKG-INFO")
 
         """Extract example data in the installation directory"""
         if '--user' in sys.argv:
@@ -50,8 +36,9 @@ class ExtractExampleData(install):
 setup(
     name='snmachine',
     version=__version__,
+    use_scm_version = {"root": ".", "relative_to": __file__},
+    setup_requires=['setuptools_scm'],
     packages=['snmachine', 'gapp', 'gapp.covfunctions', 'utils'],
-    packagedir={PACKAGENAME: 'snmachine'},
     include_package_data=True,
     package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz', 'example_data/output_spcc_no_z/features/*.dat', 'example_data/example_data_for_tests.pckl']},
     exclude_package_data={'utils': ['archive/*']},

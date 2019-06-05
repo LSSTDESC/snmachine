@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import os
 
-from .version import __VERSION__ as __version__
+from .version import version as __version__
 
 here = __file__
 basedir = os.path.split(here)[0]
