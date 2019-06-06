@@ -8,6 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+sns.set(font_scale=1.3, style="ticks")
+
 
 def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
     cm = confusion_matrix(y_true, y_pred, labels=target_names)
@@ -19,11 +21,15 @@ def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
     print(cm)
 
     annot = np.around(cm, 2)
+    
+    dict_label_to_real = {15:'TDE', 42:'SNII', 52:'SNIax', 62:'SNIbc', 64:'KN', 67:'SNIa-91bg',
+                          88:'AGN', 90:'SNIa', 95:'SLSN-I'} # to erase later; This is just for de-bug
+    target_names = np.vectorize(dict_label_to_real.get)(target_names)
 
     fig, ax = plt.subplots(figsize=(9, 7))
     sns.heatmap(cm, xticklabels=target_names,
                 yticklabels=target_names, cmap='Blues',
-                annot=annot, lw=0.5)
+                annot=annot, lw=0.5, vmin=0, vmax=1)
 
     ax.set_xlabel('Predicted Label')
     ax.set_ylabel('True Label')

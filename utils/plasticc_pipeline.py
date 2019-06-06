@@ -501,12 +501,12 @@ def create_classifier(combined_features, training_data, directories, augmentatio
         verbose=0, warm_start=False), array([[ 1.]]))
     """
 
-    combined_features['target'] = training_data.labels.values
+    labels = training_data.labels.values
 
-    X = combined_features.drop('target', axis=1)
-    y = combined_features['target'].values
+    X = combined_features
+    y = labels
 
-    target_names = combined_features['target'].unique()
+    target_names = np.unique(labels)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
 
