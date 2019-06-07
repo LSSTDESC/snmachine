@@ -39,11 +39,18 @@ def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
     return cm, fig
 
 
-def plasticc_log_loss(y_true, y_pred, relative_class_weights=None):
+def plasticc_log_loss(y_true, probs):
     """
     Implementation of weighted log loss used for the Kaggle challenge
+    
+    Parameters:
+    -------
+    probs : np.array of shape (# samples, # features)
     """
-    predictions = y_pred.copy()
+    predictions = probs.copy()
+    labels = np.unique(y_true) # assumes the probabilities are also ordered in the same way
+    weights_dict = {6:1/18, 15:1/9, 16:1/18, 42:1/18, 52:1/18, 53:1/18, 62:1/18, 64:1/9, 
+                    65:1/18, 67:1/18, 88:1/18, 90:1/18, 92:1/18, 95:1/18, 99:1/19}
 
     # sanitize predictions
     epsilon = sys.float_info.epsilon  # this is machine dependent but essentially prevents log(0)
@@ -53,10 +60,11 @@ def plasticc_log_loss(y_true, y_pred, relative_class_weights=None):
     predictions = np.log(predictions)
     # multiplying the arrays is equivalent to a truth mask as y_true only contains zeros and ones
     class_logloss = []
-    for i in range(predictions.shape[1]):
+    weights = []
+    for i in range(predictions.shape[1]): # for each class
         # average column wise log loss with truth mask applied
-        result = np.average(predictions[:, i][y_true[:, i] == 1])
+        current_label = labels[i]
+        result = np.average(predictions[y_true==current_label, i]) 
         class_logloss.append(result)
-    return -1 * np.average(class_logloss, weights=relative_class_weights)
-
-weights = np.array([1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/9, 1/18, 1/18, 1/18, 1/18, 1/18, 1/18, 1/19])
+        weights.append(weights_dict[current_label])
+    return -1 * np.average(class_logloss, weights=weights)
