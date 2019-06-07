@@ -39,7 +39,7 @@ except ImportError:
     print('Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.')
 
 
-def roc(pr, Yt, true_class=0):
+def roc(pr, Yt, true_class=0, which_column=-1):
     """
     Produce the false positive rate and true positive rate required to plot
     a ROC curve, and the area under that curve.
@@ -51,8 +51,12 @@ def roc(pr, Yt, true_class=0):
         in which case the column corresponding to the true class will be used.
     Yt : array
         An array of class labels, of size (N_samples,)
-    true_class : int
-        which class is taken to be the "true class" (e.g. Ia vs everything else)
+    true_class : int, optional
+        which class is taken to be the "true class" (e.g. Ia vs everything else) - NOTE this only works for SPCC or when
+        the labels are sequential. Should NOT be used for Plasticc!
+    which_column : int, optional
+        Select which column of the probabilities to take as the "true class" - use this instead of true_class for
+        Plasticc
 
     Returns
     -------
@@ -69,8 +73,10 @@ def roc(pr, Yt, true_class=0):
     min_class = (int)(Y_test.min())  # This is to deal with starting class assignment at 1.
     Y_test = Y_test.squeeze()
 
-    if len(pr.shape) > 1:
+    if len(pr.shape) > 1 and which_column==-1:
         probs_1 = probs[:, true_class-min_class]
+    elif len(pr.shape) > 1 and which_column!=-1:
+        probs_1 = probs[:, which_column]
     else:
         probs_1 = probs
 
