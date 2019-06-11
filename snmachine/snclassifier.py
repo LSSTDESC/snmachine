@@ -23,11 +23,7 @@ from functools import partial
 from multiprocessing import Pool
 from sklearn.preprocessing import StandardScaler
 
-## Needs to be put in setup.py!
-util_path = os.path.abspath(os.path.join('..', 'utils'))
-if util_path not in sys.path:
-    sys.path.append(util_path)
-import plasticc_utils
+from utils import plasticc_utils
 
 if 'DISPLAY' not in os.environ:
     import matplotlib
@@ -49,7 +45,7 @@ except ImportError:
 def roc(pr, Yt, true_class=0, which_column=-1):
     """Produce the false positive rate and true positive rate required to plot
     a ROC curve, and the area under that curve.
-    
+
     Parameters
     ----------
     pr : array
