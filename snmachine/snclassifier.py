@@ -24,7 +24,7 @@ from multiprocessing import Pool
 from sklearn.preprocessing import StandardScaler
 
 ## Needs to be put in setup.py!
-util_path = os.path.abspath(os.path.join('..', 'snmachine', 'utils'))
+util_path = os.path.abspath(os.path.join('..', 'utils'))
 if util_path not in sys.path:
     sys.path.append(util_path)
 import plasticc_utils
