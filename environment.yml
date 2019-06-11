@@ -17,7 +17,6 @@ dependencies:
   - iminuit>=1.2
   - pandas>=0.23.0
   - extinction>=0.3.0
-  - umap-learn>=0.3.6
   - imbalanced-learn>=0.4.3
 
   - pip:
