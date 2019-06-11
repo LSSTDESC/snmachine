@@ -47,9 +47,9 @@ except ImportError:
 
 
 def roc(pr, Yt, true_class=0, which_column=-1):
-    """
-    Produce the false positive rate and true positive rate required to plot
+    """Produce the false positive rate and true positive rate required to plot
     a ROC curve, and the area under that curve.
+    
     Parameters
     ----------
     pr : array
@@ -58,11 +58,13 @@ def roc(pr, Yt, true_class=0, which_column=-1):
     Yt : array
         An array of class labels, of size (N_samples,)
     true_class : int, optional
-        which class is taken to be the "true class" (e.g. Ia vs everything else) - NOTE this only works for SPCC or when
-        the labels are sequential. Should NOT be used for Plasticc!
+        Which class is taken to be the "true class" (e.g. Ia vs everything else). If `which_column`!=-1, `true_class`
+        is overriden. - NOTE this only works for sequential labels (as in SPCC). Should NOT be used for Plasticc!
     which_column : int, optional
-        Select which column of the probabilities to take as the "true class" - use this instead of true_class for
-        Plasticc
+        Defaults to -1 where `true_class` is used instead. If `which_column`!=-1, `true_class` is overriden and
+        `which_column` selects which column of the probabilities to take as the "true class". - use this
+        instead of `true_class` for PLAsTiCC.
+
     Returns
     -------
     fpr : array
