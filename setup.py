@@ -50,13 +50,12 @@ class ExtractExampleData(install):
 setup(
     name='snmachine',
     version=__version__,
-    packages=['snmachine', 'gapp', 'gapp.covfunctions'],
+    packages=['snmachine', 'gapp', 'gapp.covfunctions', 'utils'],
     packagedir={PACKAGENAME: 'snmachine'},
     include_package_data=True,
     package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz', 'example_data/output_spcc_no_z/features/*.dat', 'example_data/example_data_for_tests.pckl']},
-    cmdclass={
-        'install': ExtractExampleData
-        },
+    exclude_package_data={'utils': ['archive/*']},
+    cmdclass={'install': ExtractExampleData},
     url='',
     license='MIT',
     author='Michelle Lochner',
