@@ -23,11 +23,7 @@ from functools import partial
 from multiprocessing import Pool
 from sklearn.preprocessing import StandardScaler
 
-## Needs to be put in setup.py!
-util_path = os.path.abspath(os.path.join('..', 'utils'))
-if util_path not in sys.path:
-    sys.path.append(util_path)
-import plasticc_utils
+from utils import plasticc_utils
 
 if 'DISPLAY' not in os.environ:
     import matplotlib
@@ -550,7 +546,6 @@ class OptimisedClassifier():
         -------
         float
             PLASTICC logloss score
-
         """
         probs = estimator.predict_proba(X)
         logloss = plasticc_utils.plasticc_log_loss(Y, probs)
