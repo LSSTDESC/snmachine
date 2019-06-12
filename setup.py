@@ -35,7 +35,6 @@ class ExtractExampleData(install):
 
 setup(
     name='snmachine',
-    version=__version__,
     use_scm_version = {"root": ".", "relative_to": __file__},
     setup_requires=['setuptools_scm'],
     packages=['snmachine', 'gapp', 'gapp.covfunctions', 'utils'],
