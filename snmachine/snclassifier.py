@@ -79,11 +79,11 @@ def roc(pr, Yt, true_class=0, which_column=-1):
     min_class = (int)(Y_test.min())  # This is to deal with starting class assignment at 1.
     Y_test = Y_test.squeeze()
 
-    if len(pr.shape) > 1 and which_column==-1:
+    if len(pr.shape) > 1 and which_column==-1: # sequential labels (as in SPCC) case - backwards compatibility
         probs_1 = probs[:, true_class-min_class]
-    elif len(pr.shape) > 1 and which_column!=-1:
+    elif len(pr.shape) > 1 and which_column!=-1: # used by `optimised_classify`
         probs_1 = probs[:, which_column]
-    else:
+    else: # we give a 1D array of probability so use it - no ambiguity
         probs_1 = probs
 
     threshold = np.linspace(0., 1., 50)  # 50 evenly spaced numbers between 0,1
@@ -557,8 +557,8 @@ class OptimisedClassifier():
         return logloss
 
     def optimised_classify(self, X_train, y_train, X_test, scoring_func='accuracy', **kwargs):
-        """
-        Run optimised classifier using grid search with cross validation to choose optimal classifier parameters.
+        """Run optimised classifier using grid search with cross validation to choose optimal classifier parameters.
+
         Parameters
         ----------
         X_train : array
