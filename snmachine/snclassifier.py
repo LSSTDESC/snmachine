@@ -15,6 +15,9 @@ import numpy as np
 
 from astropy.table import Table, join, unique
 from functools import partial
+from imblearn.metrics import classification_report_imbalanced
+from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import make_pipeline
 from multiprocessing import Pool
 from scipy.integrate import trapz
 from sklearn import model_selection
@@ -553,7 +556,7 @@ class OptimisedClassifier():
         logloss = plasticc_utils.plasticc_log_loss(Y, probs)
         return logloss
 
-    def optimised_classify(self, X_train, y_train, X_test, scoring_func='accuracy', **kwargs):
+    def optimised_classify(self, X_train, y_train, X_test, scoring_func='accuracy', balance_classes=False, **kwargs):
         """Run optimised classifier using grid search with cross validation to choose optimal classifier parameters.
 
         Parameters
@@ -574,6 +577,9 @@ class OptimisedClassifier():
         true_class : int, optional
             The class determined to be the desired class (e.g. Ias, which might correspond to class 1). This allows
             the user to optimise for different classes (based on ROC curve AUC).
+        balance_classes : bool, optional
+            If True, balances the classes using SMOTE. Otherwise, it runs without balancing.
+            Default is False.
 
         Returns
         -------
@@ -582,7 +588,6 @@ class OptimisedClassifier():
         probs : array
         (If self.prob=True) Probability for each object to belong to each class.
         """
-
         if 'params' in kwargs:
             params = kwargs['params']
         else:
@@ -606,6 +611,13 @@ class OptimisedClassifier():
             scoring = self.__custom_logloss_score
         else:
             scoring = "accuracy"
+
+        if balance_classes == True :
+            self.clf = make_pipeline(SMOTE(sampling_strategy='not majority'), self.clf) # balance dataset
+            new_params = {}
+            for key in params:
+                new_params['randomforestclassifier__'+key] = params[key]
+            params = new_params
 
         self.clf = model_selection.GridSearchCV(self.clf, params, scoring=scoring, cv=5)
 
