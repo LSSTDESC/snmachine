@@ -595,12 +595,10 @@ class OptimisedClassifier():
             self.true_class = kwargs['true_class']
             # Do some error checking here to avoid confusion in the roc curve code when using it for optimisation
             class_labels = np.unique(y_train)
-            which_column = np.where(class_labels == self.true_class)[0][0]
+            self.which_column = np.where(class_labels == self.true_class)[0][0]
         else:
             self.true_class = 0
-            which_column = 0
-
-        self.which_column = which_column
+            self.which_column = 0
 
         if scoring_func == "auc":
             scoring = self.__custom_auc_score
