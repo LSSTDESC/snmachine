@@ -4,25 +4,27 @@ Utility module mostly wrapping sklearn functionality and providing utility funct
 
 from __future__ import division
 from past.builtins import basestring
-import numpy as np
-import os
-import itertools
-from sklearn import svm
-from sklearn import neighbors
-from sklearn import model_selection
-from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import confusion_matrix as sklearn_cm
-from scipy.integrate import trapz
-from astropy.table import Table, join, unique
-import sys
+
 import collections
+import itertools
+import os
+import sys
 import time
+
+import numpy as np
+
+from astropy.table import Table, join, unique
 from functools import partial
 from multiprocessing import Pool
+from scipy.integrate import trapz
+from sklearn import model_selection
+from sklearn import neighbors
+from sklearn import svm
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
+from sklearn.metrics import confusion_matrix as sklearn_cm
+from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.tree import DecisionTreeClassifier
 from utils import plasticc_utils
 
 if 'DISPLAY' not in os.environ:
