@@ -550,11 +550,12 @@ class OptimisedClassifier():
         Returns
         -------
         float
-            PLASTICC logloss score
+            Symmetric of the PLASTICC logloss score. The symmetric is returned because we want 
+            a funtion to maximise and the optimal result of the logloss is its minimum (logloss=0).
         """
         probs = estimator.predict_proba(X)
         logloss = plasticc_utils.plasticc_log_loss(Y, probs)
-        return logloss
+        return -logloss # symmetric because we want to maximise this output
 
     def optimised_classify(self, X_train, y_train, X_test, scoring_func='accuracy', balance_classes=False, **kwargs):
         """Run optimised classifier using grid search with cross validation to choose optimal classifier parameters.
