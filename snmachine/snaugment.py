@@ -4,6 +4,7 @@ import numpy as np
 from astropy.table import Table, vstack
 from snmachine import snfeatures
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 
 """
 Module handling the data augmentation of supernova data sets
