@@ -5,6 +5,10 @@ from astropy.table import Table, vstack
 from snmachine import snfeatures
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
+from collections import Counter
+from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
+from imblearn.combine import SMOTEENN, SMOTETomek
+
 
 """
 Module handling the data augmentation of supernova data sets
@@ -37,8 +41,8 @@ class SNAugment:
         # DO NOT TOUCH FOR SELFISH PURPOSES -- TAREK: Do we need this line anymore?
         self.original = d.object_names.copy()
 
-        def augment(self):
-            pass
+    def augment(self):
+        pass
 
     def remove(self, obj=None):
         """
@@ -238,6 +242,66 @@ class SNAugment:
             return classes, salt2_features
         else:
             return classes
+
+
+class NNAugment(SNAugment):
+    """
+    Derived class that encapsulates data augmentation via Nearest Neighbour
+    inspired algorithms such as SMOTE, ADASYN etc.
+    """
+
+    def __init__(self, X, y, method):
+        self.X = X
+        self.y = y
+        self.method = method
+    # def __init__(self, data, method):
+    #         super().__init__(data)
+    #         self.method = method
+    """
+    Make directories that will be used for analysis
+
+    Parameters
+    ----------
+    X : numpy.ndarray
+        Collection of data containing features
+    y : numpy.ndarray
+        True labels for data
+    method : string
+        Augmentation method one would like to resample the given data with.
+        List of possible choices include:
+
+            ['SMOTE', 'ADASYN', 'SVMSMOTE', 'SMOTEENN', 'SMOTETomek']
+
+    Notes
+    -------
+
+
+    """
+    _METHODS = [
+        'SMOTE',
+        'ADASYN',
+        'SVMSMOTE',
+        'SMOTEENN',
+        'SMOTETomek'
+    ]
+
+    @classmethod
+    def methods(cls):
+        return cls._METHODS
+
+    @staticmethod
+    def augment(X, y, method):
+
+        print(NNAugment.methods())
+        if method not in NNAugment.methods():
+            raise ValueError(F"{method} not a possible augmentation method in `snmachine`")
+
+        print(F"Before resampling: {sorted(Counter(y).items())}")
+
+        X_resampled, y_resampled = eval(method)().fit_resample(X, y)
+        print(F"After resampling: {sorted(Counter(y_resampled).items())}")
+
+        return X_resampled, y_resampled
 
 
 class GPAugment(SNAugment):

@@ -512,7 +512,7 @@ def create_classifier(combined_features, training_data, directories, augmentatio
 
     classifer = RandomForestClassifier(n_estimators=700, criterion='entropy', oob_score=True, n_jobs=-1, random_state=random_state)
 
-    if augmentation_method in ['SMOTE']:
+    if augmentation_method in snaugment.NNAugment.methods():
         classifer = make_pipeline(eval(augmentation_method)(sampling_strategy='not majority'), classifer)
     else:
         print("No augmentation selected, proceeding without resampling of classes")
