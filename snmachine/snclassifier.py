@@ -510,7 +510,7 @@ class OptimisedClassifier():
             # scr=self.clf.score(X_test, y_test)
             return Yfit
 
-    def __custom_auc_score(self, estimator, X, Y):
+    def _custom_auc_score(self, estimator, X, Y):
         """
         Custom scoring method for use with GridSearchCV.
 
@@ -534,7 +534,7 @@ class OptimisedClassifier():
         fpr, tpr, auc = roc(probs, Y, which_column=self.which_column)
         return auc
 
-    def __custom_logloss_score(self, estimator, X, Y):
+    def _custom_logloss_score(self, estimator, X, Y):
         """
         Custom scoring method for use with GridSearchCV.
 
@@ -607,9 +607,9 @@ class OptimisedClassifier():
             self.which_column = 0
 
         if scoring_func == "auc":
-            scoring = self.__custom_auc_score
+            scoring = self._custom_auc_score
         elif scoring_func == "logloss":
-            scoring = self.__custom_logloss_score
+            scoring = self._custom_logloss_score
         else:
             scoring = "accuracy"
 
