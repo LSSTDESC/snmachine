@@ -254,9 +254,11 @@ class NNAugment(SNAugment):
         self.X = X
         self.y = y
         self.method = method
+    # TODO : allow for inheritance from SNAugment's constructor
     # def __init__(self, data, method):
     #         super().__init__(data)
     #         self.method = method
+    # TODO : Update docstrings, add references to Notes section on methods
     """
     Make directories that will be used for analysis
 
