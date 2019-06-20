@@ -50,7 +50,7 @@ except ImportError:
 def roc(pr, Yt, true_class=0, which_column=-1):
     """Produce the false positive rate and true positive rate required to plot
     a ROC curve, and the area under that curve.
-    
+
     Parameters
     ----------
     pr : array
@@ -550,7 +550,7 @@ class OptimisedClassifier():
         Returns
         -------
         float
-            Symmetric of the PLASTICC logloss score. The symmetric is returned because we want 
+            Symmetric of the PLASTICC logloss score. The symmetric is returned because we want
             a funtion to maximise and the optimal result of the logloss is its minimum (logloss=0).
         """
         probs = estimator.predict_proba(X)
