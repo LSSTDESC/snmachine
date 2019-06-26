@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import yaml
+import re
 try:
     import cPickle as pickle
 except ModuleNotFoundError:
@@ -337,9 +338,10 @@ def reduce_size_of_training_data(training_data, directories, subset_size, seed=1
     else:
         np.random.seed(seed)
         rand_objs = np.random.choice(training_data.object_names, replace=False, size=subset_size)
-        rand_objs_sorted_int = np.sort(rand_objs.astype(np.int))
-        rand_objs = rand_objs_sorted_int.astype('<U9')
-        np.savetxt(subset_file, rand_objs, fmt='%s')
+        rand_objs_sorted_int = sorted(rand_objs, key=lambda x: int(re.sub('\D', '', x)))
+        rand_objs = np.asarray(rand_objs_sorted_int, dtype='U')
+        if save_subset_list:
+            np.savetxt(subset_file, rand_objs, fmt='%s')
 
     training_data.object_names = rand_objs
 
