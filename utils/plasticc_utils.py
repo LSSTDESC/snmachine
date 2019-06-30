@@ -21,7 +21,7 @@ def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
     print(cm)
 
     annot = np.around(cm, 2)
-    
+
     dict_label_to_real = {15:'TDE', 42:'SNII', 52:'SNIax', 62:'SNIbc', 64:'KN', 67:'SNIa-91bg',
                           88:'AGN', 90:'SNIa', 95:'SLSN-I'} # to erase later; This is just for de-bug
     target_names = np.vectorize(dict_label_to_real.get)(target_names)
@@ -41,13 +41,13 @@ def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
 
 def plasticc_log_loss(y_true, probs):
     """Implementation of weighted log loss used for the Kaggle challenge.
-    
+
     Parameters
     ----------
     y_true: np.array of shape (# samples,)
         Array of the true classes
     probs : np.array of shape (# samples, # features)
-        Class probabilities for each sample. The order of the classes corresponds to 
+        Class probabilities for each sample. The order of the classes corresponds to
         that in the attribute `classes_` of the classifier used.
 
     Returns
@@ -57,8 +57,9 @@ def plasticc_log_loss(y_true, probs):
     """
     predictions = probs.copy()
     labels = np.unique(y_true) # assumes the probabilities are also ordered in the same way
-    weights_dict = {6:1/18, 15:1/9, 16:1/18, 42:1/18, 52:1/18, 53:1/18, 62:1/18, 64:1/9, 
-                    65:1/18, 67:1/18, 88:1/18, 90:1/18, 92:1/18, 95:1/18, 99:1/19}
+    weights_dict = {6:1/18, 15:1/9, 16:1/18, 42:1/18, 52:1/18, 53:1/18, 62:1/18, 64:1/9,
+                    65:1/18, 67:1/18, 88:1/18, 90:1/18, 92:1/18, 95:1/18, 99:1/19,
+                    1:1/18, 2:1/18, 3:1/18}
 
     # sanitize predictions
     epsilon = sys.float_info.epsilon  # this is machine dependent but essentially prevents log(0)
