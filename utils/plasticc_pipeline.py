@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import yaml
+import re
 try:
     import cPickle as pickle
 except ModuleNotFoundError:
@@ -70,7 +71,7 @@ def get_timestamp():
     return _timestamp.decode("utf-8").rstrip()
 
 
-def create_folder_structure(analysis_directory, analysis_name):
+def create_folder_structure(analyses_directory, analysis_name):
     """ Make directories that will be used for analysis
 
     Parameters
@@ -94,21 +95,24 @@ def create_folder_structure(analysis_directory, analysis_name):
     >>> analysis_directory = params.get("analysis_directory", None)
     >>> analysis_name = params.get("analysis_name", None)
     >>> directories = create_folder_structure(analysis_directory, analysis_name)
-    >>> print(directories.get("method_directory", None))
+    >>> print(directories.get("analysis_directory", None))
 
     """
 
-    method_directory = os.path.join(analysis_directory, analysis_name)
-    features_directory = os.path.join(method_directory, 'wavelet_features')
-    classifications_directory = os.path.join(method_directory, 'classifications')
-    intermediate_files_directory = os.path.join(method_directory, 'intermediate_files')
-    plots_directory = os.path.join(method_directory, 'plots')
+    analysis_directory = os.path.join(analyses_directory, analysis_name)
+    features_directory = os.path.join(analysis_directory, 'wavelet_features')
+    classifications_directory = os.path.join(analysis_directory, 'classifications')
+    intermediate_files_directory = os.path.join(analysis_directory, 'intermediate_files')
+    plots_directory = os.path.join(analysis_directory, 'plots')
 
-    directories = {"method_directory": method_directory, "features_directory": features_directory,
-            "classifications_directory": classifications_directory, "intermediate_files_directory": intermediate_files_directory,
+    directories = {
+            "analysis_directory": analysis_directory,
+            "features_directory": features_directory,
+            "classifications_directory": classifications_directory,
+            "intermediate_files_directory": intermediate_files_directory,
             "plots_directory": plots_directory}
 
-    if os.path.isdir(method_directory):
+    if os.path.isdir(analysis_directory):
         errmsg = """
                 Folders already exist with this analysis name.
 
@@ -205,7 +209,7 @@ def load_configuration_file(path_to_configuration_file):
     return params
 
 
-def save_configuration_file(params, method_directory):
+def save_configuration_file(params, analysis_directory):
     """ Make a copy of the configuration file that has been used inside the
     analysis directory
 
@@ -213,7 +217,7 @@ def save_configuration_file(params, method_directory):
     ----------
     params : dict
         Dictionary containing the parameters used for this analysis
-    method_directory : string
+    analysis_directory : string
         Folder where this analysis is taking place
 
     Returns
@@ -223,8 +227,8 @@ def save_configuration_file(params, method_directory):
     Examples
     --------
     >>> ...
-    >>> save_configuration_file(params, method_directory)
-    >>> subprocess.call(['cat', os.path.join(method_directory, "logs.yml")])
+    >>> save_configuration_file(params, analysis_directory)
+    >>> subprocess.call(['cat', os.path.join(analysis_directory, "logs.yml")])
     analysis_directory: /share/hypatia/snmachine_resources/data/plasticc/analysis/
     analysis_name: pipeline-test
     data_path: /share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set_snia.pickle
@@ -243,7 +247,7 @@ def save_configuration_file(params, method_directory):
     params.update(git_hash)
     params.update(timestamp)
 
-    with open(os.path.join(method_directory, "logs.yml"), 'a+') as config:
+    with open(os.path.join(analysis_directory, "logs.yml"), 'a+') as config:
             yaml.dump(params, config, default_flow_style=False)
 
 
@@ -296,11 +300,12 @@ def load_training_data(data_path):
     return training_data
 
 
-def reduce_size_of_training_data(training_data, directories, subset_size, seed=1234):
+def reduce_size_of_training_data(training_data, directories, subset_size, seed=1234, save_subset_list=False):
     # TODO: Incorpate further doctrings and finish examples. Tarek: Catarina and I need to
     # discuss this further. There is some overlap between this and
     # sndata.PlasticcData.update_data() and it would be good to comebine this.
-    """ Load from disk the training data one will use for this analysis
+    """
+    Load from disk the training data one will use for this analysis
 
     Parameters
     ----------
@@ -322,24 +327,22 @@ def reduce_size_of_training_data(training_data, directories, subset_size, seed=1
     Examples
     --------
     >>> ...
-    >>> print(shape.training_data)
-
-    >>> new_training_data = reduce_size_of_training_data(training_data,
-            directories, 1000))
-    >>> print(shape.new_training_data)
+    >>> new_training_data = reduce_size_of_training_data(training_data, directories, 1000)
 
     """
 
-    method_directory = directories.get("method_directory", None)
-    subset_file = os.path.join(method_directory, "subset.list")
+    analysis_directory = directories.get("analysis_directory", None)
+    print(F"ANALYSIS DIR: {analysis_directory}")
+    subset_file = os.path.join(str(analysis_directory), "subset.list")
     if os.path.exists(subset_file):
         rand_objs = np.genfromtxt(subset_file, dtype='U')
     else:
         np.random.seed(seed)
         rand_objs = np.random.choice(training_data.object_names, replace=False, size=subset_size)
-        rand_objs_sorted_int = np.sort(rand_objs.astype(np.int))
-        rand_objs = rand_objs_sorted_int.astype('<U9')
-        np.savetxt(subset_file, rand_objs, fmt='%s')
+        rand_objs_sorted_int = sorted(rand_objs, key=lambda x: int(re.sub('\D', '', x)))
+        rand_objs = np.asarray(rand_objs_sorted_int, dtype='U')
+        if save_subset_list:
+            np.savetxt(subset_file, rand_objs, fmt='%s')
 
     training_data.object_names = rand_objs
 
@@ -582,7 +585,7 @@ if __name__ == "__main__":
     # Step 1. Creat folders that contain analysis
     directories = create_folder_structure(analysis_directory, analysis_name)
     # Step 2. Save configuration file used for this analysis
-    save_configuration_file(params, directories.get("method_directory"))
+    save_configuration_file(params, directories.get("analysis_directory"))
     # Step 3. Check at which point the user would like to run the analysis from.
     # If elements already saved, these will be used but this can be overriden
     # with command line argument
