@@ -23,7 +23,8 @@ def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
     annot = np.around(cm, 2)
 
     dict_label_to_real = {15:'TDE', 42:'SNII', 52:'SNIax', 62:'SNIbc', 64:'KN', 67:'SNIa-91bg',
-                          88:'AGN', 90:'SNIa', 95:'SLSN-I'} # to erase later; This is just for de-bug
+                          88:'AGN', 90:'SNIa', 95:'SLSN-I',
+                          1:'SNIa', 2:'SNII', 3:'SNIbc'} # to erase later; This is just for de-bug
     target_names = np.vectorize(dict_label_to_real.get)(target_names)
 
     fig, ax = plt.subplots(figsize=(9, 7))
