@@ -84,6 +84,8 @@ def roc(pr, Yt, true_class=0, which_column=-1):
         probs_1 = probs[:, true_class-min_class]
     elif len(pr.shape) > 1 and which_column!=-1: # used by `optimised_classify`
         probs_1 = probs[:, which_column]
+        unique_labels = np.unique(Yt) # the classes are in the same order as `probs`
+        true_class = unique_labels[which_column]
     else: # we give a 1D array of probability so use it - no ambiguity
         probs_1 = probs
 
