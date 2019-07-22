@@ -4,10 +4,10 @@ The goal of this guide is to help users contribute to `snmachine` as quickly and
 
 # Table of contents
 1. [Creating an Issue](#issues)
-2. [Submitting a Pull Request](#prs)
-3. [Code Style](#style)
-4. [Running Tests Locally](#testing)
-5. [Package Versioning](#version)
+* [Submitting a Pull Request](#prs)
+* [Code Style](#style)
+* [Running Tests Locally](#testing)
+* [Package Versioning](#version)
 
 <a name="issues"></a>
 ## Creating an Issue
@@ -87,6 +87,8 @@ There should be a blank line between each group of imports.
 * function names -> start with descriptive verb (eg. get, compute, fit, load)
 * hidden function names -> same as function names but starting with `_`
 * descriptive names that minimize the number of necessary comments
+* how to name:
+	- directories: `directories`
 
 ### Documentation Conventions
 
