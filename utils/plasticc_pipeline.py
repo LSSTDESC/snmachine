@@ -83,11 +83,6 @@ def create_folder_structure(analyses_directory, analysis_name):
         Given name of analysis run. This is appended with the current git hash
         the code has been run with.
 
-    Returns
-    -------
-    directories: dict
-        Dictionary containing the mapping of folders that have been created.
-
     Examples
     --------
     Each folder name can then be accessed with dictionary methods:
@@ -138,8 +133,6 @@ def create_folder_structure(analyses_directory, analysis_name):
     else:
         for key, value in directories.items():
             subprocess.call(['mkdir', value])
-
-    return directories
 
 
 def get_directories(analyses_directory, analysis_name):
