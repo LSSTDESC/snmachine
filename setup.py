@@ -8,6 +8,7 @@ import tarfile
 
 
 PACKAGENAME = 'snmachine'
+__FALLBACK_VERSION__ = '1.5'
 
 class ExtractExampleData(install):
     """Post-installation data extraction."""
@@ -35,8 +36,11 @@ class ExtractExampleData(install):
 
 setup(
     name='snmachine',
-    use_scm_version = {"root": ".", "relative_to": __file__},
-    setup_requires=['setuptools_scm'],
+    use_scm_version={
+        "root": ".",
+        "relative_to": __file__,
+        "fallback_version": __FALLBACK_VERSION__},
+    setup_requires=['setuptools_scm>=3.2.0'],
     packages=['snmachine', 'gapp', 'gapp.covfunctions', 'utils'],
     include_package_data=True,
     package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz', 'example_data/output_spcc_no_z/features/*.dat', 'example_data/example_data_for_tests.pckl']},
