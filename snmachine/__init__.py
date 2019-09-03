@@ -1,8 +1,10 @@
-from __future__ import absolute_import
+from pkg_resources import get_distribution, DistributionNotFound
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    __version__ = 'unknown.dev'
+
 import os
-
-from .version import __VERSION__ as __version__
-
 here = __file__
 basedir = os.path.split(here)[0]
 example_data = os.path.join(basedir, 'example_data')
