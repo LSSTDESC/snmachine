@@ -634,6 +634,25 @@ class Dataset(EmptyDataset):
 
         return tab
 
+    def get_types(self, show_subtypes=True): # It adds a new case to the general `get_types`
+        """
+        Returns a list of the types of the entire dataset.
+
+        Returns
+        -------
+        `astropy.table.Table`
+            Array of types
+        """
+        typs=[]
+        for o in self.object_names:
+            typs.append(self.data[o].meta['type'])
+        tab=Table(data=[self.object_names,typs],names=['Object','Type'])
+
+        if show_subtypes == False: # for SPCC we might just want the types and not subtypes
+            tab['Type'][np.floor(tab['Type']/10)==2]=2
+            tab['Type'][np.floor(tab['Type']/10)==3]=3
+        return tab
+
 
 class OpsimDataset(EmptyDataset):
     """
