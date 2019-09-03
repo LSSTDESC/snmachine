@@ -4,25 +4,30 @@ Utility module mostly wrapping sklearn functionality and providing utility funct
 
 from __future__ import division
 from past.builtins import basestring
-import numpy as np
-import os
-import itertools
-from sklearn import svm
-from sklearn import neighbors
-from sklearn import model_selection
-from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import RandomForestClassifier,  AdaBoostClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import confusion_matrix as sklearn_cm
-from scipy.integrate import trapz
-from astropy.table import Table, join, unique
-import sys
-import collections
-import time
-from functools import partial
-from multiprocessing import Pool
-from sklearn.preprocessing import StandardScaler
 
+import collections
+import itertools
+import os
+import sys
+import time
+
+import numpy as np
+
+from astropy.table import Table, join, unique
+from functools import partial
+from imblearn.metrics import classification_report_imbalanced
+from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import make_pipeline
+from multiprocessing import Pool
+from scipy.integrate import trapz
+from sklearn import model_selection
+from sklearn import neighbors
+from sklearn import svm
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
+from sklearn.metrics import confusion_matrix as sklearn_cm
+from sklearn.naive_bayes import GaussianNB
+from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier
 from utils import plasticc_utils
 
 if 'DISPLAY' not in os.environ:
@@ -45,7 +50,7 @@ except ImportError:
 def roc(pr, Yt, true_class=0, which_column=-1):
     """Produce the false positive rate and true positive rate required to plot
     a ROC curve, and the area under that curve.
-    
+
     Parameters
     ----------
     pr : array
@@ -79,6 +84,8 @@ def roc(pr, Yt, true_class=0, which_column=-1):
         probs_1 = probs[:, true_class-min_class]
     elif len(pr.shape) > 1 and which_column!=-1: # used by `optimised_classify`
         probs_1 = probs[:, which_column]
+        unique_labels = np.unique(Yt) # the classes are in the same order as `probs`
+        true_class = unique_labels[which_column]
     else: # we give a 1D array of probability so use it - no ambiguity
         probs_1 = probs
 
@@ -505,7 +512,7 @@ class OptimisedClassifier():
             # scr=self.clf.score(X_test, y_test)
             return Yfit
 
-    def __custom_auc_score(self, estimator, X, Y):
+    def _custom_auc_score(self, estimator, X, Y):
         """
         Custom scoring method for use with GridSearchCV.
 
@@ -529,7 +536,7 @@ class OptimisedClassifier():
         fpr, tpr, auc = roc(probs, Y, which_column=self.which_column)
         return auc
 
-    def __custom_logloss_score(self, estimator, X, Y):
+    def _custom_logloss_score(self, estimator, X, Y):
         """
         Custom scoring method for use with GridSearchCV.
 
@@ -545,13 +552,14 @@ class OptimisedClassifier():
         Returns
         -------
         float
-            PLASTICC logloss score
+            Symmetric of the PLASTICC logloss score. The symmetric is returned because we want
+            a funtion to maximise and the optimal result of the logloss is its minimum (logloss=0).
         """
         probs = estimator.predict_proba(X)
         logloss = plasticc_utils.plasticc_log_loss(Y, probs)
-        return logloss
+        return -logloss # symmetric because we want to maximise this output
 
-    def optimised_classify(self, X_train, y_train, X_test, scoring_func='accuracy', **kwargs):
+    def optimised_classify(self, X_train, y_train, X_test, scoring_func='accuracy', balance_classes=False, **kwargs):
         """Run optimised classifier using grid search with cross validation to choose optimal classifier parameters.
 
         Parameters
@@ -572,6 +580,9 @@ class OptimisedClassifier():
         true_class : int, optional
             The class determined to be the desired class (e.g. Ias, which might correspond to class 1). This allows
             the user to optimise for different classes (based on ROC curve AUC).
+        balance_classes : bool, optional
+            If True, balances the classes using SMOTE. Otherwise, it runs without balancing.
+            Default is False.
 
         Returns
         -------
@@ -580,7 +591,6 @@ class OptimisedClassifier():
         probs : array
         (If self.prob=True) Probability for each object to belong to each class.
         """
-
         if 'params' in kwargs:
             params = kwargs['params']
         else:
@@ -593,19 +603,24 @@ class OptimisedClassifier():
             self.true_class = kwargs['true_class']
             # Do some error checking here to avoid confusion in the roc curve code when using it for optimisation
             class_labels = np.unique(y_train)
-            which_column = np.where(class_labels == self.true_class)[0][0]
+            self.which_column = np.where(class_labels == self.true_class)[0][0]
         else:
             self.true_class = 0
-            which_column = 0
-
-        self.which_column = which_column
+            self.which_column = 0
 
         if scoring_func == "auc":
-            scoring = self.__custom_auc_score
+            scoring = self._custom_auc_score
         elif scoring_func == "logloss":
-            scoring = self.__custom_logloss_score
+            scoring = self._custom_logloss_score
         else:
             scoring = "accuracy"
+
+        if balance_classes == True :
+            self.clf = make_pipeline(SMOTE(sampling_strategy='not majority'), self.clf) # balance dataset
+            new_params = {}
+            for key in params:
+                new_params['randomforestclassifier__'+key] = params[key]
+            params = new_params
 
         self.clf = model_selection.GridSearchCV(self.clf, params, scoring=scoring, cv=5)
 
