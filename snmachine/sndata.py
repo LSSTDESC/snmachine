@@ -485,7 +485,9 @@ class EmptyDataset:
             Dictionary of reduced X^2 for each object
         """
         if len(self.models) == 0 :
-            print('No models fitted so it is not possible to calculate the reduced X^2.')
+            pass
+            # This gets really annoying as it's being called as part of plot_all
+            #print('No models fitted so it is not possible to calculate the reduced X^2.')
         else:
             if subset == 'none':
                 data_list = self.object_names
@@ -1371,6 +1373,143 @@ class SDSS_Simulations(EmptyDataset):
 
         # form astropy table
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys', 'mag', 'mag_error'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux , 'data type':dtype })
+
+        return tab
+
+
+class SNANA_Data(EmptyDataset):
+    """
+    Generic class to read in any SNANA simulation set.
+    """
+    def __init__(self, folder='', list_of_files=[], subset='none', filter_set=['sdssu','sdssg', 'sdssr', 'sdssi', 'sdssz'], subset_length = False):
+        """
+        Initialisation
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located
+        subset : str or list-like, optional
+            List of a subset of object names. If not supplied, the full dataset will be used
+        filter_set : list-like, optional
+            Set of possible filters
+        subset_length : bool or int, optional
+
+            If supplied, will return this many random objects (can be used in conjunction with subset="spectro")
+        classification : str, optional
+            Can return one specific type of supernova.
+        """
+        self.filter_set=filter_set
+        if len(list_of_files) == 0:
+            if len(folder) == 0:
+                print('WARNING: No files or folder provided')
+            else:
+                fls = os.listdir(folder)
+                list_of_files = []
+                for f in fls:
+                    if 'HEAD' in f and ('FITS' in f or 'fits' in f):
+                        list_of_files.append(os.path.join(folder, f))
+        self.list_of_files = list_of_files
+        #self.survey_name=folder.split(os.path.sep)[-2] # second to last / / /..
+        #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
+        self.data={}
+        invalid=0 #Some objects may have empty data
+        print ('Reading data..')
+        (self.data, invalid) = self.get_data(subset, subset_length)
+        if invalid>0:
+            print ('%d objects were invalid and not added to the dataset.' %invalid)
+        print ('%d objects read into memory.' %len(self.data))
+        self.object_names = list(self.data.keys())
+        #We create an optional model set which can be set by whatever feature class used
+        self.models={}
+
+    def get_data(self, subset='none', subset_length=False):
+        """
+        Function to get all data in same form as SDSS Data
+        """
+        # read in data as snana files
+        # This will automatically look for matching HEAD and PHOT files
+        invalid = 0  # number of invalid LCs
+        data = {}
+
+        for f in self.list_of_files:
+            if 'HEAD' in f:
+                ind = f.index('HEAD')
+                fl_prefix = f[:ind]
+                print('Reading data from the',fl_prefix, 'files')
+                phot_file = fl_prefix+'PHOT'+f[ind+4:]
+                try:
+                    sne = sncosmo.read_snana_fits(f, phot_file)
+                except FileNotFoundError:
+                    print('WARNING Either the HEAD or PHOT file is missing for',fl_prefix)
+
+            for i in range(len(sne)):
+                snid = sne[i].meta['SNID']
+                if subset is 'none' or snid in subset:
+                    SN = self.get_lightcurve(sne[i])
+                    if len(SN['mjd']) > 0 :
+                        data['%s'%SN.meta['snid']] = SN
+                    else:
+                        invalid+=1
+
+
+        return data, invalid
+
+    def get_lightcurve(self, lc):
+
+        mjd = np.array([lc['MJD'][i] for i in range(len(lc['MJD'])) if lc['FLUXCAL'][i] > 0])
+        flt = np.array(['sdss' + lc['FLT'][i] for i in range(len(lc['FLT'])) if lc['FLUXCAL'][i] > 0])
+        flux = np.array( [(lc['FLUXCAL'][i]*math.pow(10,-1.44)) for i in range(len(lc['FLUXCAL'])) if lc['FLUXCAL'][i] > 0]) # ignore negative flux values
+        #FLUX: MULTIPLY BY 10^-1.44 (FLUX IN SDSS IS CALCULATED AS 10^(-0.4MAG +9.56) WHEREAS SIMULATED FLUXES ARE CALCULATED AS 10^(-0.4MAG + 11)- WE USE THE SDSS CONVENTION).
+        fluxerr = np.array([(lc['FLUXCALERR'][i]*math.pow(10,-1.44)) for i in range(len(lc['FLUXCALERR'])) if lc['FLUXCAL'][i] > 0])
+
+        start_mjd = mjd.min()
+        r_flux = np.array([flux[i] for i in range(len(flux)) if flt[i]=='sdssr'])
+        if len(r_flux) > 0:
+            peak_flux = r_flux.max()
+        else:
+            peak_flux = -9
+        mjd=mjd-start_mjd #We shift the times of the observations to all start at zero. If required, the mjd of the initial observation is stored in the metadata.
+        #Note: obviously this will only zero the observations in one filter band, the others have to be zeroed if fitting functions.
+        # find supernova classification and whether it is spectroscopically classified or photometrically
+        sntype = -9
+        dtype = -9
+        if lc.meta['SNTYPE'] == 120:
+            sntype = 1
+            dtype = 'spec'
+        elif lc.meta['SNTYPE'] == 106:
+            sntype =1
+            dtype = 'phot'
+        elif lc.meta['SNTYPE'] == 32 or lc.meta['SNTYPE'] == 33:
+            sntype =3
+            dtype = 'spec'
+        elif lc.meta['SNTYPE'] == 132 or lc.meta['SNTYPE'] == 133:
+            sntype = 3
+            dtype = 'phot'
+        elif lc.meta['SNTYPE'] == 22:
+            sntype = 2
+            dtype = 'spec'
+        elif lc.meta['SNTYPE'] == 122:
+            sntype = 2
+            dtype = 'phot'
+        # get redshift - heliocentric is used where possible, otherwise a simulated heliocentric redshift is used
+        z = -9
+        z_err = -9
+        if lc.meta['REDSHIFT_HELIO'] != -9 and lc.meta['REDSHIFT_HELIO_ERR'] != -9:
+            z = lc.meta['REDSHIFT_HELIO']
+            z_err = lc.meta['REDSHIFT_HELIO_ERR']
+        else:
+            z = lc.meta['SIM_REDSHIFT_HELIO']
+            # no simulated error in redshift available
+
+        #supernova identifier (used as object name)
+        snid = lc.meta['SNID'].decode()
+
+        #Zeropoint
+        zp=np.array([27.5]*len(mjd))
+        zpsys=['ab']*len(mjd)
+
+        # form astropy table
+        tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux , 'data type':dtype })
 
         return tab
 
