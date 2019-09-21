@@ -636,7 +636,12 @@ class Dataset(EmptyDataset):
 
     def get_types(self, show_subtypes=True): # It adds a new case to the general `get_types`
         """
-        Returns a list of the types of the entire dataset.
+        Returns a list of the types and subtypes (optional) of the entire dataset.
+
+        Parameters
+        ----------
+        show_subtypes : bool, optional
+            If true (default), the supernovae subtypes are shown. If false, only the main types (Ia, Ibc, II) are returned.
 
         Returns
         -------
