@@ -1416,6 +1416,25 @@ class SNANA_Data(EmptyDataset):
         self.list_of_files = list_of_files
         #self.survey_name=folder.split(os.path.sep)[-2] # second to last / / /..
         #Get all the data as a list of astropy tables (this should not be memory intensive, even for large numbers of light curves)
+        self.snana_types_dict = {
+            101: 1,
+            20: 2,
+            21: 2,
+            22: 2,
+            23: 2,
+            120: 2,
+            121: 2,
+            122: 2,
+            123: 2,
+            32: 3,
+            33: 3,
+            132: 3,
+            133: 3,
+            42: 4,
+            142: 4
+
+        }
+
         self.data={}
         invalid=0 #Some objects may have empty data
         print ('Reading data..')
@@ -1426,6 +1445,11 @@ class SNANA_Data(EmptyDataset):
         self.object_names = list(self.data.keys())
         #We create an optional model set which can be set by whatever feature class used
         self.models={}
+
+        # SNANA conventions (we use 1 for Ia, 2 for II, 3 for Ibc, 4 for Ia_pec)
+        # Generally a 1 at the beginning denotes a "photometric" SNe. Since these are simulations
+        # this doesn't matter as much
+
 
     def get_data(self, subset='none', subset_length=False):
         """
@@ -1463,9 +1487,8 @@ class SNANA_Data(EmptyDataset):
 
         mjd = np.array([lc['MJD'][i] for i in range(len(lc['MJD'])) if lc['FLUXCAL'][i] > 0])
         flt = np.array(['sdss' + lc['FLT'][i] for i in range(len(lc['FLT'])) if lc['FLUXCAL'][i] > 0])
-        flux = np.array( [(lc['FLUXCAL'][i]*math.pow(10,-1.44)) for i in range(len(lc['FLUXCAL'])) if lc['FLUXCAL'][i] > 0]) # ignore negative flux values
-        #FLUX: MULTIPLY BY 10^-1.44 (FLUX IN SDSS IS CALCULATED AS 10^(-0.4MAG +9.56) WHEREAS SIMULATED FLUXES ARE CALCULATED AS 10^(-0.4MAG + 11)- WE USE THE SDSS CONVENTION).
-        fluxerr = np.array([(lc['FLUXCALERR'][i]*math.pow(10,-1.44)) for i in range(len(lc['FLUXCALERR'])) if lc['FLUXCAL'][i] > 0])
+        flux = np.array([lc['FLUXCAL'][i] for i in range(len(lc['FLUXCAL'])) if lc['FLUXCAL'][i] > 0]) # ignore negative flux values
+        fluxerr = np.array([lc['FLUXCALERR'][i] for i in range(len(lc['FLUXCALERR'])) if lc['FLUXCAL'][i] > 0])
 
         start_mjd = mjd.min()
         r_flux = np.array([flux[i] for i in range(len(flux)) if flt[i]=='sdssr'])
@@ -1476,26 +1499,11 @@ class SNANA_Data(EmptyDataset):
         mjd=mjd-start_mjd #We shift the times of the observations to all start at zero. If required, the mjd of the initial observation is stored in the metadata.
         #Note: obviously this will only zero the observations in one filter band, the others have to be zeroed if fitting functions.
         # find supernova classification and whether it is spectroscopically classified or photometrically
-        sntype = -9
-        dtype = -9
-        if lc.meta['SNTYPE'] == 120:
-            sntype = 1
-            dtype = 'spec'
-        elif lc.meta['SNTYPE'] == 106:
-            sntype =1
-            dtype = 'phot'
-        elif lc.meta['SNTYPE'] == 32 or lc.meta['SNTYPE'] == 33:
-            sntype =3
-            dtype = 'spec'
-        elif lc.meta['SNTYPE'] == 132 or lc.meta['SNTYPE'] == 133:
-            sntype = 3
-            dtype = 'phot'
-        elif lc.meta['SNTYPE'] == 22:
-            sntype = 2
-            dtype = 'spec'
-        elif lc.meta['SNTYPE'] == 122:
-            sntype = 2
-            dtype = 'phot'
+        sntype = lc.meta['SNTYPE']
+        if sntype in list(self.snana_types_dict.keys()):
+            sntype = self.snana_types_dict[sntype]
+
+
         # get redshift - heliocentric is used where possible, otherwise a simulated heliocentric redshift is used
         z = -9
         z_err = -9
@@ -1514,7 +1522,7 @@ class SNANA_Data(EmptyDataset):
         zpsys=['ab']*len(mjd)
 
         # form astropy table
-        tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux , 'data type':dtype })
+        tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux })
 
         return tab
 
