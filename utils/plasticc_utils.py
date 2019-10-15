@@ -1,12 +1,14 @@
 """
-Utility script for calculating the log loss
+Utility script for calculating the log loss and some useful plots
 """
 
-from sklearn.metrics import confusion_matrix
 import sys
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
+
+from sklearn.metrics import confusion_matrix
 
 sns.set(font_scale=1.3, style="ticks")
 
