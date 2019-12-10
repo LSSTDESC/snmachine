@@ -104,10 +104,15 @@ def plot_roc_curve(y_probs, y_true):
         fpr[i], tpr[i], auc[i] = snclassifier.roc(y_probs, y_true, which_column=i)
 
     linewidth = 3
-    colors = ['C0', 'C1', 'C2']
+    colors = {'SNIa':'C2', 'SNII':'C0', 'SNIbc':'C1'}
     for i, color in zip(range(3), colors):
-        plt.plot(fpr[i], tpr[i], color=color, lw=linewidth,
-                label='AUC {} = {:0.3f}'.format(target_true_names[i], auc[i]))
+        true_name = target_true_names[i]
+        try: # we are working with SN Ia, SNbc and SNII
+            plt.plot(fpr[i], tpr[i], color=colors[true_name], lw=linewidth,
+                    label='AUC {} = {:0.3f}'.format(true_name, auc[i]))
+        except:
+            plt.plot(fpr[i], tpr[i], lw=linewidth,
+                    label='AUC {} = {:0.3f}'.format(true_name, auc[i]))
 
     plt.plot([0, 1], [0, 1], 'k--', lw=linewidth)
     plt.xlim([0.0, 1.0])
