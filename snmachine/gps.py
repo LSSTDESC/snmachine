@@ -15,6 +15,7 @@ import scipy
 import scipy.optimize as op
 import sncosmo
 
+from astropy.stats import biweight_location
 from astropy.table import Table, vstack, hstack, join
 from functools import partial
 from multiprocessing import Pool
@@ -66,7 +67,7 @@ def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], outp
         george
     gp_dim : int, optional
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
-        are fitted independetly. If `gp_dim` is 2, the Matern kernel is used
+        are fitted independently. If `gp_dim` is 2, the Matern kernel is used
         with cross-information between the passbands
     """
     print('Performing Gaussian process regression.')
@@ -136,7 +137,7 @@ def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, out
         george
     gp_dim : int, optional
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
-        are fitted independetly. If `gp_dim` is 2, the Matern kernel is used
+        are fitted independently. If `gp_dim` is 2, the Matern kernel is used
         with cross-information between the passbands
     """
     for i in range(len(dataset.object_names)):
@@ -179,7 +180,7 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output
         george
     gp_dim : int, optional
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
-        are fitted independetly. If `gp_dim` is 2, the Matern kernel is used
+        are fitted independently. If `gp_dim` is 2, the Matern kernel is used
         with cross-information between the passbands
     """
     p = Pool(number_processes, maxtasksperchild=10)
@@ -231,7 +232,7 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_para
         george
     gp_dim : int, optional
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
-        are fitted independetly. If `gp_dim` is 2, the Matern kernel is used
+        are fitted independently. If `gp_dim` is 2, the Matern kernel is used
         with cross-information between the passbands
     """
     # Check for number of Gaussian Processes dimension
@@ -308,81 +309,6 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max, kernel_p
                 mu, std = gp_obs.flux.values, gp_obs.flux_error.values
                 obj_gp_pb_array = np.column_stack((gp_times, mu, std))  # stack the GP results in a array momentarily
                 used_kernels_dict[pb] = chosen_kernel
-            used_gp_dict[pb] = gp
-        else:
-            obj_gp_pb_array = np.zeros([number_gp, 3])
-        obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
-                           obj_gp_pb_array[:, 2], [pb]*number_gp],
-                           names=['mjd', 'flux', 'flux_error', 'filter'])
-        if len(obj_gps) == 0:  # this is the first passband so we initialize the table
-            obj_gps = obj_gp_pb
-        else:
-            obj_gps = vstack((obj_gps, obj_gp_pb))
-
-    if output_root is not None:
-        obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits',
-                      overwrite=True)
-        path_save_gps = os.path.join(output_root, 'used_gp_dict_'+obj+'.pckl')
-        path_save_kernels = os.path.join(output_root, 'used_kernels_dict_'+obj+'.pckl')
-        with open(path_save_gps, 'wb') as f:
-            pickle.dump(used_gp_dict, f, pickle.HIGHEST_PROTOCOL)
-        with open(path_save_kernels, 'wb') as f:
-            pickle.dump(used_kernels_dict, f, pickle.HIGHEST_PROTOCOL)
-
-    return obj_gps
-
-
-def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None):
-    """Compute/ Fit a Gaussian process curve in every passband jointly.
-
-    If asked to save the output, it saves the Gaussian process curve in every
-    passband of an object and the GP instances and kernel used.
-
-    Parameters
-    ----------
-    obj : str
-        Name of the object.
-    dataset : Dataset object (sndata class)
-        Dataset.
-    number_gp : int
-        Number of points to evaluate the Gaussian Process Regression at.
-    t_min : float
-        Minimim time to evaluate the Gaussian Process Regression at.
-    t_max : float
-        Maximum time to evaluate the Gaussian Process Regression at.
-    kernel_param : list-like
-        Initial values for kernel parameters. These should be roughly the
-        scale length in the y & x directions.
-    output_root : {None, str}, optional
-        If None, don't save anything. If str, it is the output directory, so
-        save the flux and error estimates and used kernels there.
-
-    Returns
-    -------
-    obj_gps : astropy.table.Table
-        Table with evaluated Gaussian process curve and errors at each
-        passband.
-    """
-    obj_data = dataset.data[obj]  # object's lightcurve
-    obj_data = cs.rename_passband_column(obj_data.to_pandas())
-    unique_passbands = np.unique(obj_data.passband)
-    gp_times = np.linspace(t_min, t_max, number_gp)
-
-    # Store the output in another astropy table
-    obj_gps = []
-    used_gp_dict = {}
-    used_kernels_dict = {}
-    filter_set = np.asarray(dataset.filter_set)
-    for pb in filter_set:
-        used_kernels_dict[pb] = None  # inilialize None kernel to each passband
-        if pb in unique_passbands:
-            obj_data_pb = obj_data.loc[obj_data.passband == pb]  # the observations in this passband
-
-            gp_obs, gp, chosen_kernel = fit_best_gp(kernel_param, obj_data_pb, gp_times)
-
-            mu, std = gp_obs.flux.values, gp_obs.flux_error.values
-            obj_gp_pb_array = np.column_stack((gp_times, mu, std))  # stack the GP results in a array momentarily
-            used_kernels_dict[pb] = chosen_kernel
             used_gp_dict[pb] = gp
         else:
             obj_gp_pb_array = np.zeros([number_gp, 3])
@@ -585,3 +511,144 @@ def get_kernel(kernel_name, kernel_param):
         kExpSine2 = kernel_param[4]*george.kernels.ExpSine2Kernel(gamma=kernel_param[5], log_period=kernel_param[6])
         kernel = kExpSquared + kExpSine2
     return kernel
+
+
+def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None):
+    """Compute/ Fit a Gaussian process curve in every passband jointly.
+
+    If asked to save the output, it saves the Gaussian process curve in every
+    passband of an object and the GP instances and kernel used.
+
+    Parameters
+    ----------
+    obj : str
+        Name of the object.
+    dataset : Dataset object (sndata class)
+        Dataset.
+    number_gp : int
+        Number of points to evaluate the Gaussian Process Regression at.
+    t_min : float
+        Minimim time to evaluate the Gaussian Process Regression at.
+    t_max : float
+        Maximum time to evaluate the Gaussian Process Regression at.
+    kernel_param : list-like
+        Initial values for kernel parameters. These should be roughly the
+        scale length in the y & x directions.
+    output_root : {None, str}, optional
+        If None, don't save anything. If str, it is the output directory, so
+        save the flux and error estimates and used kernels there.
+
+    Returns
+    -------
+    obj_gps : astropy.table.Table
+        Table with evaluated Gaussian process curve and errors at each
+        passband.
+    """
+    obj_data = dataset.data[obj]  # object's lightcurve
+    obj_data = cs.rename_passband_column(obj_data.to_pandas())
+    unique_passbands = np.unique(obj_data.passband)
+    gp_times = np.linspace(t_min, t_max, number_gp)
+
+    # Store the output in another astropy table
+    obj_gps = []
+    used_gp_dict = {}
+    used_kernels_dict = {}
+    filter_set = np.asarray(dataset.filter_set)
+    for pb in filter_set:
+        used_kernels_dict[pb] = None  # inilialize None kernel to each passband
+        if pb in unique_passbands:
+            obj_data_pb = obj_data.loc[obj_data.passband == pb]  # the observations in this passband
+
+            gp_obs, gp, chosen_kernel = fit_best_gp(kernel_param, obj_data_pb, gp_times)
+
+            mu, std = gp_obs.flux.values, gp_obs.flux_error.values
+            obj_gp_pb_array = np.column_stack((gp_times, mu, std))  # stack the GP results in a array momentarily
+            used_kernels_dict[pb] = chosen_kernel
+            used_gp_dict[pb] = gp
+        else:
+            obj_gp_pb_array = np.zeros([number_gp, 3])
+        obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
+                           obj_gp_pb_array[:, 2], [pb]*number_gp],
+                           names=['mjd', 'flux', 'flux_error', 'filter'])
+        if len(obj_gps) == 0:  # this is the first passband so we initialize the table
+            obj_gps = obj_gp_pb
+        else:
+            obj_gps = vstack((obj_gps, obj_gp_pb))
+
+    if output_root is not None:
+        obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits',
+                      overwrite=True)
+        path_save_gps = os.path.join(output_root, 'used_gp_dict_'+obj+'.pckl')
+        path_save_kernels = os.path.join(output_root, 'used_kernels_dict_'+obj+'.pckl')
+        with open(path_save_gps, 'wb') as f:
+            pickle.dump(used_gp_dict, f, pickle.HIGHEST_PROTOCOL)
+        with open(path_save_kernels, 'wb') as f:
+            pickle.dump(used_kernels_dict, f, pickle.HIGHEST_PROTOCOL)
+
+    return obj_gps
+
+
+def preprocess_obs(obj_data, subtract_background=True, **kwargs):
+    """Apply preprocessing to the observations.
+    This function is intended to be used to transform the raw observations
+    table into one that can actually be used for classification. For now,
+    all that this step does is apply background subtraction.
+
+    Parameters
+    ----------
+    subtract_background : bool (optional)
+        If True (the default), a background subtraction routine is applied
+        to the lightcurve before fitting the GP. Otherwise, the flux values
+        are used as-is.
+    kwargs : dict
+        Additional keyword arguments. These are ignored. We allow
+        additional keyword arguments so that the various functions that
+        call this one can be called with the same arguments, even if they
+        don't actually use them.
+
+    Returns
+    -------
+    preprocessed_observations : pandas.DataFrame
+        The preprocessed observations that can be used for further
+        analyses.
+    """
+    if subtract_background:
+        preprocessed_observations = self.subtract_background()
+    else:
+        preprocessed_observations = self.observations
+
+    return preprocessed_observations
+
+
+def subtract_background(obj_data):
+    """Subtract the background flux levels from each band independently.
+
+    The background levels are estimated using a biweight location estimator.
+    This estimator will calculate a robust estimate of the background level
+    for objects that have short-lived light curves, and it will return
+    something like the median flux level for periodic or continuous light
+    curves.
+
+    Parameters
+    ----------
+    obj_data : pandas.core.frame.DataFrame
+        Time, flux and flux error of the data (specific filter of an object).
+
+    Returns
+    -------
+    obj_subtracted_obs_data : pandas.core.frame.DataFrame
+        Modified version of `obj_data` with the background level flux removed.
+    """
+    obj_subtracted_obs_data = obj_data.copy()
+    unique_passbands = np.unique(obj_data.passband)
+
+    for pb in unique_passbands:
+        is_pb = obj_data.passband == pb
+        obj_data_pb = obj_data.loc[is_pb]  # the observations in this passband
+
+        # Use a biweight location to estimate the background
+        ref_flux = biweight_location(obj_data_pb["flux"])
+
+        obj_subtracted_obs_data.loc[is_pb, "flux"] -= ref_flux
+
+    return obj_subtracted_obs_data
