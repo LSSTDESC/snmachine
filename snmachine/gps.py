@@ -590,34 +590,35 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_p
 
 def preprocess_obs(obj_data, subtract_background=True, **kwargs):
     """Apply preprocessing to the observations.
+
     This function is intended to be used to transform the raw observations
     table into one that can actually be used for classification. For now,
     all that this step does is apply background subtraction.
 
     Parameters
     ----------
-    subtract_background : bool (optional)
-        If True (the default), a background subtraction routine is applied
-        to the lightcurve before fitting the GP. Otherwise, the flux values
-        are used as-is.
+    obj_data : pandas.core.frame.DataFrame
+        Time, flux and flux error of the data (specific filter of an object).
+    subtract_background : bool, optional
+        If True (default), estimate a background flux and remove it from the
+        light curve. If False, it does nothing.
     kwargs : dict
-        Additional keyword arguments. These are ignored. We allow
+        Additional keyword arguments that are ignored at the moment. We allow
         additional keyword arguments so that the various functions that
-        call this one can be called with the same arguments, even if they
-        don't actually use them.
+        call this one can be called with the same arguments.
 
     Returns
     -------
-    preprocessed_observations : pandas.DataFrame
-        The preprocessed observations that can be used for further
-        analyses.
+    preprocessed_obj_data : pandas.core.frame.DataFrame
+        Modified version of the observations on `obj_data` after preprocessing
+        that can be used for further analyses.
     """
     if subtract_background:
-        preprocessed_observations = self.subtract_background()
+        preprocessed_obj_data = subtract_background(obj_data)
     else:
-        preprocessed_observations = self.observations
+        preprocessed_obj_data = obj_data
 
-    return preprocessed_observations
+    return preprocessed_obj_data
 
 
 def subtract_background(obj_data):
@@ -637,7 +638,8 @@ def subtract_background(obj_data):
     Returns
     -------
     obj_subtracted_obs_data : pandas.core.frame.DataFrame
-        Modified version of `obj_data` with the background level flux removed.
+        Modified version of the observations on `obj_data` with the background
+        level flux removed.
     """
     obj_subtracted_obs_data = obj_data.copy()
     unique_passbands = np.unique(obj_data.passband)
