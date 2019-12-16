@@ -37,7 +37,17 @@ except ImportError:
     has_gapp = False
 
 
-def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], output_root=None, number_processes=1, gp_algo='george', gp_dim=1):
+band_central_wavelengths = {
+    "lsstu": 3671.0,
+    "lsstg": 4827.0,
+    "lsstr": 6223.0,
+    "lssti": 7546.0,
+    "lsstz": 8691.0,
+    "lssty": 9710.0,
+}
+
+
+def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], output_root=None, number_processes=1, gp_algo='george', gp_dim=1, **kwargs):
     """Runs Gaussian process code on entire dataset.
 
     The result is stored inside the models attribute of the dataset object.
@@ -69,6 +79,10 @@ def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], outp
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
         are fitted independently. If `gp_dim` is 2, the Matern kernel is used
         with cross-information between the passbands
+    kwargs : dict
+        Additional keyword arguments that are ignored at the moment. We allow
+        additional keyword arguments so that the various functions that
+        call this one can be called with the same arguments.
     """
     print('Performing Gaussian process regression.')
     initial_time = time.time()
@@ -76,11 +90,13 @@ def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], outp
     # Check for parallelisation
     if number_processes == 1:  # non parallelizing
         _compute_gps_single_core(dataset, number_gp, t_min, t_max,
-                                 kernel_param, output_root, gp_algo, gp_dim)
+                                 kernel_param, output_root, gp_algo, gp_dim,
+                                 **kwargs)
 
     else:  # parallelizing
         _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param,
-                              output_root, number_processes, gp_algo, gp_dim)
+                              output_root, number_processes, gp_algo, gp_dim,
+                              **kwargs)
 
     print('Time taken for Gaussian process regression: {:.2f}s.'.format(time.time()-initial_time))
 
@@ -113,7 +129,7 @@ def read_gp_files_into_models(dataset, path_saved_gp_files):
     print('Models fitted with the Gaussian Processes values.')
 
 
-def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, output_root, gp_algo, gp_dim):
+def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, output_root, gp_algo, gp_dim, **kwargs):
     """Computes the Gaussian process code on entire dataset in a single core.
 
     Parameters
@@ -134,11 +150,15 @@ def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, out
         save the flux and error estimates and used kernels there.
     gp_algo : str, optional
         which gp package is used for the Gaussian Process Regression, GaPP or
-        george
+        george.
     gp_dim : int, optional
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
         are fitted independently. If `gp_dim` is 2, the Matern kernel is used
-        with cross-information between the passbands
+        with cross-information between the passbands.
+    kwargs : dict
+        Additional keyword arguments that are ignored at the moment. We allow
+        additional keyword arguments so that the various functions that
+        call this one can be called with the same arguments.
     """
     for i in range(len(dataset.object_names)):
         obj = dataset.object_names[i]
@@ -153,7 +173,7 @@ def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, out
     print('Models fitted with the Gaussian Processes values.')
 
 
-def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output_root, number_processes, gp_algo, gp_dim):
+def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output_root, number_processes, gp_algo, gp_dim, **kwargs):
     """Computes the Gaussian process code on entire dataset in a parallel way.
 
     Parameters
@@ -182,6 +202,10 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
         are fitted independently. If `gp_dim` is 2, the Matern kernel is used
         with cross-information between the passbands
+    kwargs : dict
+        Additional keyword arguments that are ignored at the moment. We allow
+        additional keyword arguments so that the various functions that
+        call this one can be called with the same arguments.
     """
     p = Pool(number_processes, maxtasksperchild=10)
 
@@ -189,7 +213,7 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output
     partial_gp = partial(_compute_gp_all_passbands, dataset=dataset,
                          number_gp=number_gp, t_min=t_min, t_max=t_max,
                          kernel_param=kernel_param, output_root=output_root,
-                         gp_algo=gp_algo, gp_dim=gp_dim)
+                         gp_algo=gp_algo, gp_dim=gp_dim, **kwargs)
 
     dataset_gps = p.map(partial_gp, dataset.object_names, chunksize=10)
     p.close()
@@ -201,7 +225,7 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output
     print('Models fitted with the Gaussian Processes values.')
 
 
-def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None, gp_algo='george', gp_dim=1):
+def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None, gp_algo='george', gp_dim=1, **kwargs):
     """Compute/ Fit a Gaussian process curve in every passband of an object.
 
     If asked to save the output, it saves the Gaussian process curve in every
@@ -229,11 +253,15 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_para
         save the flux and error estimates and used kernels there.
     gp_algo : str
         Which gp package is used for the Gaussian Process Regression, GaPP or
-        george
+        george.
     gp_dim : int, optional
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
         are fitted independently. If `gp_dim` is 2, the Matern kernel is used
-        with cross-information between the passbands
+        with cross-information between the passbands.
+    kwargs : dict
+        Additional keyword arguments that are ignored at the moment. We allow
+        additional keyword arguments so that the various functions that
+        call this one can be called with the same arguments.
     """
     # Check for number of Gaussian Processes dimension
     if gp_dim == 1:  # independent passbands
@@ -244,7 +272,7 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_para
     elif gp_dim == 2:  # cross-band information
         _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max,
                                      kernel_param, output_root=output_root,
-                                     gp_algo=gp_algo)
+                                     gp_algo=gp_algo, **kwargs)
 
 
 def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None, gp_algo='george'):
@@ -273,7 +301,7 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max, kernel_p
         save the flux and error estimates and used kernels there.
     gp_algo : str
         Which gp package is used for the Gaussian Process Regression, GaPP or
-        george
+        george.
 
     Returns
     -------
@@ -314,7 +342,7 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max, kernel_p
             obj_gp_pb_array = np.zeros([number_gp, 3])
         obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
                            obj_gp_pb_array[:, 2], [pb]*number_gp],
-                           names=['mjd', 'flux', 'flux_error', 'filter'])
+                          names=['mjd', 'flux', 'flux_error', 'filter'])
         if len(obj_gps) == 0:  # this is the first passband so we initialize the table
             obj_gps = obj_gp_pb
         else:
@@ -366,14 +394,17 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
                               [400., 20., 2., 4., 4., 6., 6.],
                               [19., 9., 2., 4., 4., 6., 6.]]
     number_diff_kernels = len(possible_kernel_names)
-    i = 0 # initializing the while loop
+    i = 0  # initializing the while loop
     all_obj_gp = number_diff_kernels*['']  # initializing
     all_gp_instances = number_diff_kernels*['']  # initializing
     all_chisq_over_datapoints = np.zeros(number_diff_kernels) + 666  # just a random number > 1 to initialize
     threshold_chisq_over_datapoints = 2  # because that is a good number
     while i < number_diff_kernels and all_chisq_over_datapoints[i-1] > threshold_chisq_over_datapoints :
-        obj_gp, gp_instance = fit_gp(kernel_name=possible_kernel_names[i], kernel_param=possible_kernel_params[i], obj_data=obj_data, gp_times=gp_times)
-        chisq_over_datapoints = cs.compute_chisq_over_datapoints(obj_data, obj_gp)
+        obj_gp, gp_instance = fit_gp(kernel_name=possible_kernel_names[i],
+                                     kernel_param=possible_kernel_params[i],
+                                     obj_data=obj_data, gp_times=gp_times)
+        chisq_over_datapoints = cs.compute_chisq_over_datapoints(obj_data,
+                                                                 obj_gp)
         kernel_id = possible_kernel_ids[i]
         all_obj_gp[i] = obj_gp
         all_gp_instances[i] = gp_instance
@@ -459,8 +490,8 @@ def fit_gp(kernel_name, kernel_param, obj_data, gp_times):
 
     gp = george.GP(kernel)
     gp.compute(obj_times, obj_flux_error)
-    results = op.minimize(neg_log_like, gp.get_parameter_vector(), jac=grad_neg_log_like,
-                          method="L-BFGS-B", tol=1e-6)
+    results = op.minimize(neg_log_like, gp.get_parameter_vector(),
+                          jac=grad_neg_log_like, method="L-BFGS-B", tol=1e-6)
 
     if np.sum(np.isnan(results.x)) != 0:  # the minimiser reaches a local minimum
         kernel_param[4] = kernel_param[4]+.1  # change a bit initial conditions so we don't go to that minima
@@ -513,7 +544,7 @@ def get_kernel(kernel_name, kernel_param):
     return kernel
 
 
-def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None):
+def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None, **kwargs):
     """Compute/ Fit a Gaussian process curve in every passband jointly.
 
     If asked to save the output, it saves the Gaussian process curve in every
@@ -537,6 +568,10 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_p
     output_root : {None, str}, optional
         If None, don't save anything. If str, it is the output directory, so
         save the flux and error estimates and used kernels there.
+    kwargs : dict
+        Additional keyword arguments that are ignored at the moment. We allow
+        additional keyword arguments so that the various functions that
+        call this one can be called with the same arguments.
 
     Returns
     -------
@@ -544,51 +579,88 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_p
         Table with evaluated Gaussian process curve and errors at each
         passband.
     """
+    guess_length_scale = 20.0  # a parameter of the Matern32Kernel
+
     obj_data = dataset.data[obj]  # object's lightcurve
     obj_data = cs.rename_passband_column(obj_data.to_pandas())
-    unique_passbands = np.unique(obj_data.passband)
+    obj_data = preprocess_obs(obj_data, **kwargs)  # preprocess obs
     gp_times = np.linspace(t_min, t_max, number_gp)
 
-    # Store the output in another astropy table
+    obj_times = obj_data.mjd
+    obj_flux = obj_data.flux
+    obj_flux_error = obj_data.flux_error
+    obj_wavelengths = obj_data['passband'].map(band_central_wavelengths)
+
+    def neg_log_like(p):  # Objective function: negative log-likelihood
+        gp.set_parameter_vector(p)
+        loglike = gp.log_likelihood(obj_flux, quiet=True)
+        return -loglike if np.isfinite(loglike) else 1e25
+
+    def grad_neg_log_like(p):  # Gradient of the objective function.
+        gp.set_parameter_vector(p)
+        return -gp.grad_log_likelihood(obj_flux, quiet=True)
+
+    # Use the highest signal-to-noise observation to estimate the scale. We
+    # include an error floor so that in the case of very high
+    # signal-to-noise observations we pick the maximum flux value.
+    signal_to_noises = np.abs(obj_flux) / np.sqrt(
+        obj_flux_error ** 2 + (1e-2 * np.max(obj_flux)) ** 2
+    )
+    scale = np.abs(obj_flux[signal_to_noises.idxmax()])
+
+    kernel = (0.5 * scale) ** 2 * george.kernels.Matern32Kernel([
+        guess_length_scale ** 2, 6000 ** 2], ndim=2)
+    kernel.freeze_parameter("k2:metric:log_M_1_1")
+
+    gp = george.GP(kernel)
+    default_gp_param = gp.get_parameter_vector()
+    x_data = np.vstack([obj_times, obj_wavelengths]).T
+    gp.compute(x_data, obj_flux_error)
+
+    bounds = [(0, np.log(1000 ** 2))]
+    bounds = [(default_gp_param[0] - 10, default_gp_param[0] + 10)] + bounds
+    results = op.minimize(neg_log_like, gp.get_parameter_vector(),
+                          jac=grad_neg_log_like, method="L-BFGS-B",
+                          bounds=bounds)
+
+    if results.success:
+        gp.set_parameter_vector(results.x)
+    else:
+        # Fit failed. Print out a warning, and use the initial guesses for
+        # fit parameters.
+        print("GP fit failed for {}! Using guessed GP parameters.".format(obj))
+        gp.set_parameter_vector(default_gp_param)
+
+    # Predict the Gaussian process band-by-band.
     obj_gps = []
-    used_gp_dict = {}
-    used_kernels_dict = {}
     filter_set = np.asarray(dataset.filter_set)
     for pb in filter_set:
-        used_kernels_dict[pb] = None  # inilialize None kernel to each passband
-        if pb in unique_passbands:
-            obj_data_pb = obj_data.loc[obj_data.passband == pb]  # the observations in this passband
-
-            gp_obs, gp, chosen_kernel = fit_best_gp(kernel_param, obj_data_pb, gp_times)
-
-            mu, std = gp_obs.flux.values, gp_obs.flux_error.values
-            obj_gp_pb_array = np.column_stack((gp_times, mu, std))  # stack the GP results in a array momentarily
-            used_kernels_dict[pb] = chosen_kernel
-            used_gp_dict[pb] = gp
-        else:
-            obj_gp_pb_array = np.zeros([number_gp, 3])
+        wavelengths = np.ones(len(gp_times)) * band_central_wavelengths[pb]
+        pred_x_data = np.vstack([gp_times, wavelengths]).T
+        pb_pred, pb_pred_var = gp.predict(obj_flux, pred_x_data, return_var=True)
+        obj_gp_pb_array = np.column_stack((gp_times, pb_pred, pb_pred_var))  # stack the GP results in a array momentarily
         obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
                            obj_gp_pb_array[:, 2], [pb]*number_gp],
-                           names=['mjd', 'flux', 'flux_error', 'filter'])
+                          names=['mjd', 'flux', 'flux_error', 'filter'])
         if len(obj_gps) == 0:  # this is the first passband so we initialize the table
             obj_gps = obj_gp_pb
-        else:
+        else:  # add more entries to the table
             obj_gps = vstack((obj_gps, obj_gp_pb))
 
     if output_root is not None:
         obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits',
                       overwrite=True)
-        path_save_gps = os.path.join(output_root, 'used_gp_dict_'+obj+'.pckl')
-        path_save_kernels = os.path.join(output_root, 'used_kernels_dict_'+obj+'.pckl')
+        path_save_gps = os.path.join(output_root, 'used_gp_'+obj+'.pckl')
+        path_save_kernels = os.path.join(output_root, 'used_kernels_'+obj+'.pckl')
         with open(path_save_gps, 'wb') as f:
-            pickle.dump(used_gp_dict, f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(gp, f, pickle.HIGHEST_PROTOCOL)
         with open(path_save_kernels, 'wb') as f:
-            pickle.dump(used_kernels_dict, f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(kernel, f, pickle.HIGHEST_PROTOCOL)
 
     return obj_gps
 
 
-def preprocess_obs(obj_data, subtract_background=True, **kwargs):
+def preprocess_obs(obj_data, do_subtract_background=True, **kwargs):
     """Apply preprocessing to the observations.
 
     This function is intended to be used to transform the raw observations
@@ -599,7 +671,7 @@ def preprocess_obs(obj_data, subtract_background=True, **kwargs):
     ----------
     obj_data : pandas.core.frame.DataFrame
         Time, flux and flux error of the data (specific filter of an object).
-    subtract_background : bool, optional
+    do_subtract_background : bool, optional
         If True (default), estimate a background flux and remove it from the
         light curve. If False, it does nothing.
     kwargs : dict
@@ -613,7 +685,7 @@ def preprocess_obs(obj_data, subtract_background=True, **kwargs):
         Modified version of the observations on `obj_data` after preprocessing
         that can be used for further analyses.
     """
-    if subtract_background:
+    if do_subtract_background:
         preprocessed_obj_data = subtract_background(obj_data)
     else:
         preprocessed_obj_data = obj_data
@@ -652,5 +724,4 @@ def subtract_background(obj_data):
         ref_flux = biweight_location(obj_data_pb["flux"])
 
         obj_subtracted_obs_data.loc[is_pb, "flux"] -= ref_flux
-
     return obj_subtracted_obs_data
