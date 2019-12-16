@@ -4,31 +4,18 @@ Module for extracting and saving GPs
 
 import os
 import pickle
-import subprocess
-import sys
 import time
 
 import george
 import numpy as np
 import pandas as pd
-import scipy
 import scipy.optimize as op
-import sncosmo
 
 from astropy.stats import biweight_location
-from astropy.table import Table, vstack, hstack, join
+from astropy.table import Table, vstack
 from functools import partial
 from multiprocessing import Pool
-from scipy import interpolate
-from scipy.interpolate import interp1d
-from snmachine import sndata
 from snmachine import chisq as cs
-
-try:
-    import george
-    has_george = True
-except ImportError:
-    has_george = False
 
 try:
     from gapp import dgp
@@ -374,7 +361,7 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
         scale length in the y & x directions.
     obj_data : pandas.core.frame.DataFrame
         Time, flux and flux error of the data (specific filter of an object).
-    gp_times :
+    gp_times : numpy.ndarray
         Times to evaluate the Gaussian Process at.
 
     Returns
@@ -638,7 +625,8 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_p
         wavelengths = np.ones(len(gp_times)) * band_central_wavelengths[pb]
         pred_x_data = np.vstack([gp_times, wavelengths]).T
         pb_pred, pb_pred_var = gp.predict(obj_flux, pred_x_data, return_var=True)
-        obj_gp_pb_array = np.column_stack((gp_times, pb_pred, pb_pred_var))  # stack the GP results in a array momentarily
+        obj_gp_pb_array = np.column_stack((gp_times, pb_pred,
+                                           np.sqrt(pb_pred_var)))  # stack the GP results in a array momentarily
         obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
                            obj_gp_pb_array[:, 2], [pb]*number_gp],
                           names=['mjd', 'flux', 'flux_error', 'filter'])
