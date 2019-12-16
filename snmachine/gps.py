@@ -249,17 +249,25 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_para
         Additional keyword arguments that are ignored at the moment. We allow
         additional keyword arguments so that the various functions that
         call this one can be called with the same arguments.
+
+    Returns
+    -------
+    astropy.table.Table
+        Table with evaluated Gaussian process curve and errors at each
+        passband.
     """
     # Check for number of Gaussian Processes dimension
     if gp_dim == 1:  # independent passbands
-        _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
-                                     kernel_param, output_root=output_root,
-                                     gp_algo=gp_algo)
+        return _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min,
+                                            t_max, kernel_param,
+                                            output_root=output_root,
+                                            gp_algo=gp_algo)
 
     elif gp_dim == 2:  # cross-band information
-        _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max,
-                                     kernel_param, output_root=output_root,
-                                     gp_algo=gp_algo, **kwargs)
+        return _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min,
+                                            t_max, kernel_param,
+                                            output_root=output_root,
+                                            gp_algo=gp_algo, **kwargs)
 
 
 def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None, gp_algo='george'):
