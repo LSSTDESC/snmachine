@@ -34,7 +34,8 @@ band_central_wavelengths = {
 }
 
 
-def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], output_root=None, number_processes=1, gp_algo='george', gp_dim=1, **kwargs):
+def compute_gps(dataset, number_gp, t_min, t_max, output_root=None,
+                number_processes=1, gp_dim=1, **kwargs):
     """Runs Gaussian process code on entire dataset.
 
     The result is stored inside the models attribute of the dataset object.
@@ -50,40 +51,39 @@ def compute_gps(dataset, number_gp, t_min, t_max, kernel_param=[500., 20.], outp
         Minimim time to evaluate the Gaussian Process Regression at.
     t_max : float
         Maximum time to evaluate the Gaussian Process Regression at.
-    kernel_param : list-like, optional
-        Initial values for kernel parameters. These should be roughly the
-        scale length in the y & x directions.
     output_root : {None, str}, optional
         If None, don't save anything. If str, it is the output directory, so
         save the flux and error estimates and used kernels there.
     number_processes : int, optional
         Number of processors to use for parallelisation (shared memory only).
         By default `number_processes` = 1.
-    gp_algo : str, optional
-        Which gp package is used for the Gaussian Process Regression, GaPP or
-        george
     gp_dim : int, optional
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
         are fitted independently. If `gp_dim` is 2, the Matern kernel is used
-        with cross-information between the passbands
-    kwargs : dict
-        Additional keyword arguments that are ignored at the moment. We allow
-        additional keyword arguments so that the various functions that
-        call this one can be called with the same arguments.
+        with cross-information between the passbands.
+    **kwargs : dict
+        Additional keyword arguments that can replace default paremeters in
+        other funtions. At the moment, we have:
+          - kernel_param : list-like, default = [500., 20.]
+                Initial values for kernel parameters. These should be roughly
+                the scale length in the y & x directions.
+          - gp_algo: str, default = 'george'
+                Which gp package is used for the Gaussian Process Regression,
+                GaPP or george.
+          - do_subtract_background : Bool, default = False
+                Whether to estimate a new background subtracting the current.
     """
     print('Performing Gaussian process regression.')
     initial_time = time.time()
 
     # Check for parallelisation
     if number_processes == 1:  # non parallelizing
-        _compute_gps_single_core(dataset, number_gp, t_min, t_max,
-                                 kernel_param, output_root, gp_algo, gp_dim,
-                                 **kwargs)
+        _compute_gps_single_core(dataset, number_gp, t_min, t_max, output_root,
+                                 gp_dim, **kwargs)
 
     else:  # parallelizing
-        _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param,
-                              output_root, number_processes, gp_algo, gp_dim,
-                              **kwargs)
+        _compute_gps_parallel(dataset, number_gp, t_min, t_max, output_root,
+                              number_processes, gp_dim, **kwargs)
 
     print('Time taken for Gaussian process regression: {:.2f}s.'.format(time.time()-initial_time))
 
@@ -116,7 +116,8 @@ def read_gp_files_into_models(dataset, path_saved_gp_files):
     print('Models fitted with the Gaussian Processes values.')
 
 
-def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, output_root, gp_algo, gp_dim, **kwargs):
+def _compute_gps_single_core(dataset, number_gp, t_min, t_max, output_root,
+                             gp_dim, **kwargs):
     """Computes the Gaussian process code on entire dataset in a single core.
 
     Parameters
@@ -129,38 +130,39 @@ def _compute_gps_single_core(dataset, number_gp, t_min, t_max, kernel_param, out
         Minimim time to evaluate the Gaussian Process Regression at.
     t_max : float
         Maximum time to evaluate the Gaussian Process Regression at.
-    kernel_param : list-like, optional
-        Initial values for kernel parameters. These should be roughly the
-        scale length in the y & x directions.
     output_root : {None, str}, optional
         If None, don't save anything. If str, it is the output directory, so
         save the flux and error estimates and used kernels there.
-    gp_algo : str, optional
-        which gp package is used for the Gaussian Process Regression, GaPP or
-        george.
     gp_dim : int, optional
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
         are fitted independently. If `gp_dim` is 2, the Matern kernel is used
         with cross-information between the passbands.
-    kwargs : dict
-        Additional keyword arguments that are ignored at the moment. We allow
-        additional keyword arguments so that the various functions that
-        call this one can be called with the same arguments.
+    **kwargs : dict
+        Additional keyword arguments that can replace default paremeters in
+        other funtions. At the moment, we have:
+          - kernel_param : list-like, default = [500., 20.]
+                Initial values for kernel parameters. These should be roughly
+                the scale length in the y & x directions.
+          - gp_algo: str, default = 'george'
+                Which gp package is used for the Gaussian Process Regression,
+                GaPP or george.
+          - do_subtract_background : Bool, default = False
+                Whether to estimate a new background subtracting the current.
     """
     for i in range(len(dataset.object_names)):
         obj = dataset.object_names[i]
         try:
             obj_gps = _compute_gp_all_passbands(obj, dataset, number_gp, t_min,
-                                                t_max, kernel_param,
-                                                output_root=output_root,
-                                                gp_algo=gp_algo, gp_dim=gp_dim)
+                                                t_max, output_root=output_root,
+                                                gp_dim=gp_dim, **kwargs)
             dataset.models[obj] = obj_gps
         except ValueError:
             print('Object {} has fallen over!'.format(obj))
     print('Models fitted with the Gaussian Processes values.')
 
 
-def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output_root, number_processes, gp_algo, gp_dim, **kwargs):
+def _compute_gps_parallel(dataset, number_gp, t_min, t_max, output_root,
+                          number_processes, gp_dim, **kwargs):
     """Computes the Gaussian process code on entire dataset in a parallel way.
 
     Parameters
@@ -173,34 +175,34 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output
         Minimim time to evaluate the Gaussian Process Regression at.
     t_max : float
         Maximum time to evaluate the Gaussian Process Regression at.
-    kernel_param : list-like, optional
-        Initial values for kernel parameters. These should be roughly the
-        scale length in the y & x directions.
     output_root : {None, str}, optional
         If None, don't save anything. If str, it is the output directory, so
         save the flux and error estimates and used kernels there.
     number_processes : int, optional
         Number of processors to use for parallelisation (shared memory only).
         By default `number_processes` = 1.
-    gp_algo : str, optional
-        which gp package is used for the Gaussian Process Regression, GaPP or
-        george
     gp_dim : int, optional
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
         are fitted independently. If `gp_dim` is 2, the Matern kernel is used
-        with cross-information between the passbands
-    kwargs : dict
-        Additional keyword arguments that are ignored at the moment. We allow
-        additional keyword arguments so that the various functions that
-        call this one can be called with the same arguments.
+        with cross-information between the passbands.
+    **kwargs : dict
+        Additional keyword arguments that can replace default paremeters in
+        other funtions. At the moment, we have:
+          - kernel_param : list-like, default = [500., 20.]
+                Initial values for kernel parameters. These should be roughly
+                the scale length in the y & x directions.
+          - gp_algo: str, default = 'george'
+                Which gp package is used for the Gaussian Process Regression,
+                GaPP or george.
+          - do_subtract_background : Bool, default = False
+                Whether to estimate a new background subtracting the current.
     """
     p = Pool(number_processes, maxtasksperchild=10)
 
     # Pool and map can only really work with single-valued functions
     partial_gp = partial(_compute_gp_all_passbands, dataset=dataset,
                          number_gp=number_gp, t_min=t_min, t_max=t_max,
-                         kernel_param=kernel_param, output_root=output_root,
-                         gp_algo=gp_algo, gp_dim=gp_dim, **kwargs)
+                         output_root=output_root, gp_dim=gp_dim, **kwargs)
 
     dataset_gps = p.map(partial_gp, dataset.object_names, chunksize=10)
     p.close()
@@ -212,7 +214,8 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, kernel_param, output
     print('Models fitted with the Gaussian Processes values.')
 
 
-def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None, gp_algo='george', gp_dim=1, **kwargs):
+def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max,
+                              output_root=None, gp_dim=1, **kwargs):
     """Compute/ Fit a Gaussian process curve in every passband of an object.
 
     If asked to save the output, it saves the Gaussian process curve in every
@@ -232,23 +235,24 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_para
         Minimim time to evaluate the Gaussian Process Regression at.
     t_max : float
         Maximum time to evaluate the Gaussian Process Regression at.
-    kernel_param : list-like
-        Initial values for kernel parameters. These should be roughly the
-        scale length in the y & x directions.
     output_root : {None, str}, optional
         If None, don't save anything. If str, it is the output directory, so
         save the flux and error estimates and used kernels there.
-    gp_algo : str
-        Which gp package is used for the Gaussian Process Regression, GaPP or
-        george.
     gp_dim : int, optional
         The dimension of the Gaussian Process. If  `gp_dim` is 1, the filters
         are fitted independently. If `gp_dim` is 2, the Matern kernel is used
         with cross-information between the passbands.
-    kwargs : dict
-        Additional keyword arguments that are ignored at the moment. We allow
-        additional keyword arguments so that the various functions that
-        call this one can be called with the same arguments.
+    **kwargs : dict
+        Additional keyword arguments that can replace default paremeters in
+        other funtions. At the moment, we have:
+          - kernel_param : list-like, default = [500., 20.]
+                Initial values for kernel parameters. These should be roughly
+                the scale length in the y & x directions.
+          - gp_algo: str, default = 'george'
+                Which gp package is used for the Gaussian Process Regression,
+                GaPP or george.
+          - do_subtract_background : Bool, default = False
+                Whether to estimate a new background subtracting the current.
 
     Returns
     -------
@@ -259,18 +263,17 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max, kernel_para
     # Check for number of Gaussian Processes dimension
     if gp_dim == 1:  # independent passbands
         return _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min,
-                                            t_max, kernel_param,
-                                            output_root=output_root,
-                                            gp_algo=gp_algo)
+                                            t_max, output_root=output_root,
+                                            **kwargs)
 
     elif gp_dim == 2:  # cross-band information
         return _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min,
-                                            t_max, kernel_param,
-                                            output_root=output_root,
-                                            gp_algo=gp_algo, **kwargs)
+                                            t_max, output_root=output_root,
+                                            **kwargs)
 
 
-def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None, gp_algo='george'):
+def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
+                                 output_root=None, **kwargs):
     """Compute/ Fit a Gaussian process curve in every passband independently.
 
     If asked to save the output, it saves the Gaussian process curve in every
@@ -288,15 +291,18 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max, kernel_p
         Minimim time to evaluate the Gaussian Process Regression at.
     t_max : float
         Maximum time to evaluate the Gaussian Process Regression at.
-    kernel_param : list-like
-        Initial values for kernel parameters. These should be roughly the
-        scale length in the y & x directions.
     output_root : {None, str}, optional
         If None, don't save anything. If str, it is the output directory, so
         save the flux and error estimates and used kernels there.
-    gp_algo : str
-        Which gp package is used for the Gaussian Process Regression, GaPP or
-        george.
+    **kwargs : dict
+        Additional keyword arguments that can replace default paremeters in
+        other funtions. At the moment, we have:
+          - kernel_param : list-like, default = [500., 20.]
+                Initial values for kernel parameters. These should be roughly
+                the scale length in the y & x directions.
+          - gp_algo: str, default = 'george'
+                Which gp package is used for the Gaussian Process Regression,
+                GaPP or george.
 
     Returns
     -------
@@ -304,9 +310,19 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max, kernel_p
         Table with evaluated Gaussian process curve and errors at each
         passband.
     """
-    if gp_algo == 'gapp' and not has_gapp:
-        print('No GP module gapp. Defaulting to george instead.')
+    try:
+        gp_algo = kwargs["gp_algo"]
+        if gp_algo == 'gapp' and not has_gapp:
+            print('No GP module gapp. Defaulting to george instead.')
+            gp_algo = 'george'
+    except KeyError:
         gp_algo = 'george'
+
+    try:
+        kernel_param = kwargs["kernel_param"]
+    except KeyError:
+        kernel_param = [500., 20.]
+
     obj_data = dataset.data[obj]  # object's lightcurve
     obj_data = cs.rename_passband_column(obj_data.to_pandas())
     unique_passbands = np.unique(obj_data.passband)
@@ -323,11 +339,14 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max, kernel_p
             obj_data_pb = obj_data.loc[obj_data.passband == pb]  # the observations in this passband
 
             if gp_algo == 'gapp':
-                gp = dgp.DGaussianProcess(obj_data_pb.mjd, obj_data_pb.flux, obj_data_pb.flux_error, cXstar=(t_min, t_max, number_gp))
+                gp = dgp.DGaussianProcess(obj_data_pb.mjd, obj_data_pb.flux,
+                                          obj_data_pb.flux_error,
+                                          cXstar=(t_min, t_max, number_gp))
                 obj_gp_pb_array, theta = gp.gp(theta=kernel_param)
 
             elif gp_algo == 'george':
-                gp_obs, gp, chosen_kernel = fit_best_gp(kernel_param, obj_data_pb, gp_times)
+                gp_obs, gp, chosen_kernel = fit_best_gp(kernel_param,
+                                                        obj_data_pb, gp_times)
 
                 mu, std = gp_obs.flux.values, gp_obs.flux_error.values
                 obj_gp_pb_array = np.column_stack((gp_times, mu, std))  # stack the GP results in a array momentarily
@@ -539,7 +558,8 @@ def get_kernel(kernel_name, kernel_param):
     return kernel
 
 
-def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_param, output_root=None, **kwargs):
+def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max,
+                                 output_root=None, **kwargs):
     """Compute/ Fit a Gaussian process curve in every passband jointly.
 
     If asked to save the output, it saves the Gaussian process curve in every
@@ -557,16 +577,14 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_p
         Minimim time to evaluate the Gaussian Process Regression at.
     t_max : float
         Maximum time to evaluate the Gaussian Process Regression at.
-    kernel_param : list-like
-        Initial values for kernel parameters. These should be roughly the
-        scale length in the y & x directions.
     output_root : {None, str}, optional
         If None, don't save anything. If str, it is the output directory, so
         save the flux and error estimates and used kernels there.
-    kwargs : dict
-        Additional keyword arguments that are ignored at the moment. We allow
-        additional keyword arguments so that the various functions that
-        call this one can be called with the same arguments.
+    **kwargs : dict
+        Additional keyword arguments that can replace default paremeters in
+        other funtions. At the moment, we have:
+          - do_subtract_background : Bool, default = False
+                Whether to estimate a new background subtracting the current.
 
     Returns
     -------
@@ -616,7 +634,7 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_p
     bounds = [(default_gp_param[0] - 10, default_gp_param[0] + 10)] + bounds
     results = op.minimize(neg_log_like, gp.get_parameter_vector(),
                           jac=grad_neg_log_like, method="L-BFGS-B",
-                          bounds=bounds)
+                          bounds=bounds, tol=1e-6)
 
     if results.success:
         gp.set_parameter_vector(results.x)
@@ -656,7 +674,7 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max, kernel_p
     return obj_gps
 
 
-def preprocess_obs(obj_data, do_subtract_background=True, **kwargs):
+def preprocess_obs(obj_data, **kwargs):
     """Apply preprocessing to the observations.
 
     This function is intended to be used to transform the raw observations
@@ -666,10 +684,7 @@ def preprocess_obs(obj_data, do_subtract_background=True, **kwargs):
     Parameters
     ----------
     obj_data : pandas.core.frame.DataFrame
-        Time, flux and flux error of the data (specific filter of an object).
-    do_subtract_background : bool, optional
-        If True (default), estimate a background flux and remove it from the
-        light curve. If False, it does nothing.
+        Time, flux, flux error and passbands of the object.
     kwargs : dict
         Additional keyword arguments that are ignored at the moment. We allow
         additional keyword arguments so that the various functions that
@@ -681,9 +696,14 @@ def preprocess_obs(obj_data, do_subtract_background=True, **kwargs):
         Modified version of the observations on `obj_data` after preprocessing
         that can be used for further analyses.
     """
-    if do_subtract_background:
+    try:
+        do_subtract_background = kwargs["do_subtract_background"]
+    except KeyError:
+        do_subtract_background = False
+
+    if do_subtract_background:  # estimate a background flux and remove it from the light curve.
         preprocessed_obj_data = subtract_background(obj_data)
-    else:
+    else:  # do nothing
         preprocessed_obj_data = obj_data
 
     return preprocessed_obj_data
@@ -701,7 +721,7 @@ def subtract_background(obj_data):
     Parameters
     ----------
     obj_data : pandas.core.frame.DataFrame
-        Time, flux and flux error of the data (specific filter of an object).
+        Time, flux, flux error and passbands of the object.
 
     Returns
     -------
