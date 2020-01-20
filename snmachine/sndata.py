@@ -1,6 +1,7 @@
 """
-Module containing Dataset classes. These read in data from various sources and turns the light curves into astropy tables that
-can be read by the rest of the code.
+Module containing Dataset classes. These read in data from various sources and
+turn the light curves into astropy tables that can be read by the rest of the
+code.
 """
 from __future__ import division # To be compatible with python 2
 
@@ -27,12 +28,13 @@ from scipy import interpolate
 from snmachine import chisq as cs
 
 #Colours for graphs
-colours={'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00',
+colours = {'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00',
 'desz':'k', 'lssty':'#e50000','lsstu':'#9a0eea','lsstg':'#75bbfd','lsstr':'#76ff7b','lssti':'#fdde6c','lsstz':'#f97306','lsstY':'#e50000'}
 
-sntypes={1:'Ia',2:'II',21:'IIn',22:'IIP',23:'IIL',3:'Ibc',32:'Ib',33:'Ic',66:'other'}
-markers={'desg':'^', 'desr':'o', 'desi':'s', 'desz':'*'}
-labels={'desg':'g', 'desr':'r', 'desi':'i', 'desz':'z'}
+sntypes = {1:'Ia',2:'II',21:'IIn',22:'IIP',23:'IIL',3:'Ibc',32:'Ib',33:'Ic',66:'other'}
+markers = {'desg':'^', 'desr':'o', 'desi':'s', 'desz':'*'}
+labels = {'desg':'g', 'desr':'r', 'desi':'i', 'desz':'z'}
+
 
 def plot_lc(lc):
     """
@@ -48,39 +50,40 @@ def plot_lc(lc):
         @param fname The filename of the supernova (relative to data_root)
     """
 
-    #This selects the filters from the possible set that this object has measurements in and maintains the order
-    filts=np.unique(lc['filter'])
+    # This selects the filters from the possible set that this object has measurements in and maintains the order
+    filts = np.unique(lc['filter'])
 
-    #Keep track of the min and max values on the plot for resizing axes
-    min_x=np.inf
-    max_x=-np.inf
-    lines=[]
+    # Keep track of the min and max values on the plot for resizing axes
+    min_x = np.inf
+    max_x = -np.inf
+    lines = []
     for j in range(len(filts)):
-        inds=np.where(lc['filter']==filts[j])[0]
+        inds = np.where(lc['filter']==filts[j])[0]
         if 'flux_error' in lc.keys():
-            t, F, F_err=lc['mjd'][inds], lc['flux'][inds], lc['flux_error'][inds]
-            error=True
+            t, F, F_err = lc['mjd'][inds], lc['flux'][inds], lc['flux_error'][inds]
+            error = True
         else:
-            t, F=lc['mjd'][inds], lc['flux'][inds]
-            error=False
-        #tdelt=t-t.min()
-        tdelt=t
+            t, F = lc['mjd'][inds], lc['flux'][inds]
+            error = False
+
+        tdelt = t  # tdelt=t-t.min()
         if filts[j] in markers.keys():
-            mkr=markers[filts[j]]
+            mkr = markers[filts[j]]
         else:
-            mkr='o'
+            mkr = 'o'
         if error:
-            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr,linestyle='none',  color=colours[filts[j]], markersize=4)
+            l = plt.errorbar(tdelt, F, yerr=F_err,  marker=mkr,
+                             linestyle='none', color=colours[filts[j]],
+                             markersize=4)
         else:
-            l=plt.plot(tdelt, F,lw=2,  marker=mkr,color=colours[filts[j]])
+            l = plt.plot(tdelt, F, lw=2, marker=mkr, color=colours[filts[j]])
         lines.append(l)
-        if tdelt.min()<min_x:
-            min_x=tdelt.min()
-        if tdelt.max()>max_x:
-            max_x=tdelt.max()
+        if tdelt.min() < min_x:
+            min_x = tdelt.min()
+        if tdelt.max() > max_x:
+            max_x = tdelt.max()
 
-
-    ext=0.05*(max_x-min_x)
+    ext = 0.05*(max_x-min_x)
     plt.xlim([min_x-ext, max_x+ext])
     plt.xlabel('Time (days)',  fontsize=16)
     plt.ylabel('Flux',  fontsize=16)
@@ -135,24 +138,25 @@ class EmptyDataset:
         folder : str
             name of the folder
         """
-        self.rootdir=folder
-        #self.survey_name=folder.splot(os.path.sep)[-2]
+        self.rootdir = folder
+        # self.survey_name=folder.splot(os.path.sep)[-2]
 
     def insert_lightcurve(self, lc, subtract_min=True):
         """
         Wraps the insertion of a new light curve into a data set. Also includes
-        the new object names and possibly new filters into the data set metadata.
-        The new object name needs to be in the header.
+        the new object names and possibly new filters into the data set
+        metadata. The new object name needs to be in the header.
+
         Parameters
         ----------
         lc : astropy.table.Table
             new light curve
         """
-        name=lc.meta['name']
-        self.object_names=np.append(self.object_names,name)
-        if subtract_min and len(lc)>0:
-            lc['mjd']-=lc['mjd'].min()
-        self.data[name]=lc
+        name = lc.meta['name']
+        self.object_names = np.append(self.object_names, name)
+        if subtract_min and len(lc) > 0:
+            lc['mjd'] -= lc['mjd'].min()
+        self.data[name] = lc
         for flt in np.unique(lc['filter']):
             if not str(flt) in self.filter_set:
                 print('Adding filter '+str(flt)+' ...')
@@ -172,62 +176,66 @@ class EmptyDataset:
             Location of legend
         """
 
-        lc=self.data[fname]
+        lc = self.data[fname]
 
-        #This selects the filters from the possible set that this object has measurements in and maintains the order
-        filts=sorted(set(self.filter_set) & set(np.unique(lc['filter'])), key = self.filter_set.index)
+        # This selects the filters from the possible set that this object has measurements in and maintains the order
+        filts = sorted(set(self.filter_set) & set(np.unique(lc['filter'])),
+                       key=self.filter_set.index)
 
-        #Keep track of the min and max values on the plot for resizing axes
-        min_x=np.inf
-        max_x=-np.inf
-        lines=[]
+        # Keep track of the min and max values on the plot for resizing axes
+        min_x = np.inf
+        max_x = -np.inf
+        lines = []
         if self.sep_detect:
             lines_d = []
 
         labs = []
         for j in range(len(filts)):
             f = filts[j]
-            inds = np.where(lc['filter']==filts[j])[0]
-            t, F, F_err=lc['mjd'][inds], lc['flux'][inds], lc['flux_error'][inds]
+            inds = np.where(lc['filter'] == filts[j])[0]
+            t, F, F_err = lc['mjd'][inds], lc['flux'][inds], lc['flux_error'][inds]
             if self.sep_detect:
                 inds_d = np.where((lc['filter'] == filts[j]) & (lc['detected'] == 1))[0]
-                t_d, F_d, F_err_d =lc['mjd'][inds_d], lc['flux'][inds_d], lc['flux_error'][inds_d]
+                t_d, F_d, F_err_d = lc['mjd'][inds_d], lc['flux'][inds_d], lc['flux_error'][inds_d]
                 if len(t_d) > 0:
                     detect_in_band = True
                 else:
                     detect_in_band = False
 
-            #tdelt=t-t.min()
-            tdelt=t
+            tdelt = t  # tdelt=t-t.min()
             if self.sep_detect and detect_in_band:
                 tdelt_d = t_d
 
             if filts[j] in markers.keys():
-                mkr=markers[filts[j]]
+                mkr = markers[filts[j]]
             else:
-                mkr='o'
-                mkr_d='x'
+                mkr = 'o'
+                mkr_d = 'x'
 
-            #Plot the model, if it has been set
+            # Plot the model, if it has been set
             if self.plot_model:
                 if fname in self.models.keys():
-                    mod=self.models[fname]
+                    mod = self.models[fname]
                     if mod is not None:
-                        inds=np.where(mod['filter']==filts[j])[0]
-                        t_mod, F_mod=mod['mjd'][inds], mod['flux'][inds]
+                        inds = np.where(mod['filter']==filts[j])[0]
+                        t_mod, F_mod = mod['mjd'][inds], mod['flux'][inds]
                         plt.plot(t_mod, F_mod, color=colours[filts[j]])
 
-            l=plt.errorbar(tdelt, F,yerr=F_err,  marker=mkr, linestyle='none',  color=colours[filts[j]], markersize=4)
+            l = plt.errorbar(tdelt, F, yerr=F_err,  marker=mkr,
+                             linestyle='none', color=colours[filts[j]],
+                             markersize=4)
             lines.append(l)
 
             if self.sep_detect and detect_in_band:
-                l_d=plt.errorbar(tdelt_d, F_d,yerr=F_err_d,  marker=mkr_d, linestyle='none',  color=colours[filts[j]], markersize=7)
+                l_d = plt.errorbar(tdelt_d, F_d, yerr=F_err_d, marker=mkr_d,
+                                   linestyle='none',  color=colours[filts[j]],
+                                   markersize=7)
                 lines.append(l_d)
 
-            if tdelt.min()<min_x:
-                min_x=tdelt.min()
-            if tdelt.max()>max_x:
-                max_x=tdelt.max()
+            if tdelt.min() < min_x:
+                min_x = tdelt.min()
+            if tdelt.max() > max_x:
+                max_x = tdelt.max()
 
             if f in labels.keys():
                 labs.append(labels[f])
@@ -238,11 +246,11 @@ class EmptyDataset:
                 if self.sep_detect and detect_in_band:
                     labs.append(f + ' detected')
 
-        ext=0.05*(max_x-min_x)
+        ext = 0.05*(max_x-min_x)
         plt.xlim([min_x-ext, max_x+ext])
         plt.xlabel('Time (days)')
         plt.ylabel('Flux')
-        #plt.gca().tick_params(labelsize=8)
+        # plt.gca().tick_params(labelsize=8)
         try:
             chi_obj = [fname]
             chi_2_single_object = self.compute_chisq_over_datapoints(chi_obj)[chi_obj[0]]
@@ -258,10 +266,11 @@ class EmptyDataset:
             # plt.title('Object: %s, Type:%s' %(fname,typ))
 
         if self.sep_detect and loc == 'outside':
-            plt.legend(lines, labs, numpoints=1, bbox_to_anchor=(1.02, 1), loc="upper left")
+            plt.legend(lines, labs, numpoints=1, bbox_to_anchor=(1.02, 1),
+                       loc="upper left")
         else:
             plt.legend(lines, labs, numpoints=1, loc=loc)
-        #plt.subplots_adjust(left=0.3)
+        # plt.subplots_adjust(left=0.3)
 
     def plot_lc(self, fname, plot_model=True, title=True, loc='best'):
         """Public function to plot a single light curve.
@@ -277,7 +286,7 @@ class EmptyDataset:
         loc : str, optional
             Location of the legend
         """
-        self.plot_model=plot_model
+        self.plot_model = plot_model
         self.__plot_this(fname, title=title, loc=loc)
         plt.show()
 
@@ -317,7 +326,7 @@ class EmptyDataset:
             self.mix()
 
         self.sep_detect = sep_detect
-        self.plot_model = plot_model #We use a class variable because this can't be passed directly to __on_press
+        self.plot_model = plot_model  # We use a class variable because this can't be passed directly to __on_press
         fig = plt.figure()
         self.__ind = -1
         self.cid = fig.canvas.mpl_connect('key_press_event', self.__on_press)
