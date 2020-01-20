@@ -1,18 +1,18 @@
-import george
-import scipy.optimize as op
-import numpy as np
-from astropy.table import Table, vstack
-from snmachine import snfeatures
-from sklearn.linear_model import LogisticRegression
-from sklearn.neural_network import MLPClassifier
-from collections import Counter
-from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
-from imblearn.combine import SMOTEENN, SMOTETomek
-
-
 """
 Module handling the data augmentation of supernova data sets
 """
+
+import george
+import numpy as np
+import scipy.optimize as op
+
+from astropy.table import Table, vstack
+from collections import Counter
+from imblearn.combine import SMOTEENN, SMOTETomek
+from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
+from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
+from snmachine import snfeatures
 
 
 class SNAugment:
