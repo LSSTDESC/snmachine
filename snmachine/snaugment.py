@@ -24,7 +24,7 @@ class SNAugment:
 
     def __init__(self, d):
         """
-        class constructor.
+        Class constructor.
 
         Parameters: (why would you call this constructor in the first place?)
         ----------
@@ -38,15 +38,13 @@ class SNAugment:
         self.meta = {}
         self.algorithm = None
         # This is a list of object names that were in the data set prior to augmenting.
-        # DO NOT TOUCH FOR SELFISH PURPOSES -- TAREK: Do we need this line anymore?
         self.original = d.object_names.copy()
 
     def augment(self):
         pass
 
     def remove(self, obj=None):
-        """
-        reverts the augmentation step by fully or partially removing those
+        """Reverts the augmentation step by fully or partially removing those
         light curves that have been added in the augmentation procedure from
         the data set.
 
@@ -59,7 +57,6 @@ class SNAugment:
             NB: If obj contains object names that are in the original data set
             then we do not throw an error, but follow through on what you tell
             us to do.
-
         """
         if obj is None:
             obj = list(set(self.dataset.object_names()) - set(self.original))
@@ -69,34 +66,48 @@ class SNAugment:
             self.dataset.data.pop(o)
             self.dataset.object_names = [x for x in self.dataset.object_names if x != o]
 
-    def extract_proxy_features(self, peak_filter='desr', nproc=1, fit_salt2=False, salt2feats=None, return_features=False, fix_redshift=False, which_redshifts='header', sampler='leastsq'):
-        """
-        Extracts the 2D proxy features from raw light curves, e.g., redshift and peak logflux in a certain band.
-        There are plenty of options for how to get these values, if you should be so inclined.
-        For the peak flux, we take either the maximum flux amongst the observations in the specified band (quick and dirty),
-        or we perform SALT2 fits to the data and extract the peak flux from there (proper and slow).
-        For the redshift, we take either the redshift specified in the header or the fitted SALT2 parameter.
+    def extract_proxy_features(self, peak_filter='desr', nproc=1,
+                               fit_salt2=False, salt2feats=None,
+                               return_features=False, fix_redshift=False,
+                               which_redshifts='header', sampler='leastsq'):
+        """Extracts the 2D proxy features from raw light curves, e.g.,
+        redshift and peak logflux in a certain band. There are plenty of
+        options for how to get these values, if you should be so inclined.
+        For the peak flux, we take either the maximum flux amongst the
+        observations in the specified band (quick and dirty), or we perform
+        SALT2 fits to the data and extract the peak flux from there (proper
+        and slow). For the redshift, we take either the redshift specified in
+        the header or the fitted SALT2 parameter.
 
         Parameters:
         ----------
         peak_filter : str, optional (default: 'desr')
-            name of the filter whose peak flux will be used as second column.
+            Name of the filter whose peak flux will be used as second column.
         nproc : int, optional (default: 1)
-            number of processes for salt2 feature extraction
+            Number of processes for salt2 feature extraction
         fit_salt2 : boolean, optional (default: False)
-            if True, we compute the peak flux from SALT2 fits; if False, we return the brightest observation
+            If True, we compute the peak flux from SALT2 fits; if False, we
+            return the brightest observation
         salt2feats : astropy.table.Table, optional (default: None)
-            if you already have the features precomputed and do not want to recompute, you can hand them over here.
+            If you already have the features precomputed and do not want to
+            recompute, you can hand them over here.
         return_features : bool, optional (default: False)
-            if you want to store fitted SALT2 features, you can set this flag to return them
+            If you want to store fitted SALT2 features, you can set this flag
+            to return them
         fix_redshift : bool, optional (default: False)
-            if True, we fix the redshift in the SALT2 fits to the value found in the table headers; if False, we leave the parameter free for sampling
+            If True, we fix the redshift in the SALT2 fits to the value found
+            in the table headers; if False, we leave the parameter free for
+            sampling
         which_redshifts : str, optional (default: 'header')
-            if 'salt2', the first column of proxy features will be the SALT2-fitted redshift; if 'header', we take the redshift from the header,
-            if 'headerfill', we take the header redshift where available and fill with fitted values for the objects without valid redshift.
+            If 'salt2', the first column of proxy features will be the
+            SALT2-fitted redshift; if 'header', we take the redshift from the
+            header, if 'headerfill', we take the header redshift where
+            available and fill with fitted values for the objects without
+            valid redshift.
         sampler : str, optional (default: 'leastsq')
-            Which sampler do we use to perform the SALT2 fit? 'leastsq' is a simple least squares fit,
-            'nested' uses nested sampling and requires MultiNest and PyMultiNest to be installed.
+            Which sampler do we use to perform the SALT2 fit? 'leastsq' is a
+            simple least squares fit, 'nested' uses nested sampling and
+            requires MultiNest and PyMultiNest to be installed.
         Returns:
         -------
         proxy_features : np.array
@@ -127,7 +138,9 @@ class SNAugment:
             # We use a fit to SALT2 model to extract the r-band peak magnitudes
             tf = snfeatures.TemplateFeatures(sampler=sampler)
             if salt2feats is None:
-                salt2feats = tf.extract_features(self.dataset, number_processes=nproc, use_redshift=fix_redshift)
+                salt2feats = tf.extract_features(self.dataset,
+                                                 number_processes=nproc,
+                                                 use_redshift=fix_redshift)
 
             # Fit models and extract r-peakmags
             peaklogflux = []
@@ -171,19 +184,21 @@ class SNAugment:
             return proxy_features
 
     def compute_propensity_scores(self, train_names, algo='logistic', **kwargs):
-        """
-        Wherein we fit a model for the propensity score (the probability of an object to be in the training set)
-        in the proxy-feature parameter space. We then evaluate the model on the full dataset and return the values.
+        """Wherein we fit a model for the propensity score (the probability of
+        an object to be in the training set) in the proxy-feature parameter
+        space. We then evaluate the model on the full dataset and return the
+        values.
 
         Parameters:
         ----------
         train_names : np.array of str
-             names of all objects in the training set
+            Names of all objects in the training set
         algo : str, optional
-             name of the model to fit. 'logistic' is logistic regression, 'network' is a simple ANN with two nodes
-             in one hidden layer.
+            Name of the model to fit. 'logistic' is logistic regression,
+            'network' is a simple ANN with two nodes in one hidden layer.
         kwargs : optional
-             all of these will be handed to self.extract_proxy_features. See there for more info.
+            All of these will be handed to `self.extract_proxy_features`. See
+            there for more info.
 
         Returns:
         -------
@@ -210,21 +225,23 @@ class SNAugment:
             return propensity_scores[:, 0]
 
     def divide_into_propensity_percentiles(self, train_names, nclasses, **kwargs):
-        """
-        Wherein we fit the propensity scores and divide into equal-percentile classes from lowest to hightest
+        """Wherein we fit the propensity scores and divide into
+        equal-percentile classes from lowest to hightest.
 
         Parameters:
         ----------
         train_names : np.array of str
-            names of objects in the training set
+            Names of objects in the training set
         nclasses : int
-            number of classes
+            Number of classes
         kwargs : optional
-            all of these will be handed to self.extract_proxy_features. See there for more info.
+            All of these will be handed to self.extract_proxy_features. See
+            there for more info.
         Returns:
         -------
         classes : np.array of int
-            classes from 0, ..., nclasses-1, in the same order as self.dataset.object_names.
+            classes from 0, ..., nclasses-1, in the same order as
+            `self.dataset.object_names`.
         """
         retval = self.compute_propensity_scores(train_names, **kwargs)
         if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
@@ -259,8 +276,7 @@ class NNAugment(SNAugment):
     #         super().__init__(data)
     #         self.method = method
     # TODO : Update docstrings, add references to Notes section on methods
-    """
-    Make directories that will be used for analysis
+    """Make directories that will be used for analysis
 
     Parameters
     ----------
@@ -271,7 +287,6 @@ class NNAugment(SNAugment):
     method : string
         Augmentation method one would like to resample the given data with.
         List of possible choices include:
-
             ['SMOTE', 'ADASYN', 'SVMSMOTE', 'SMOTEENN', 'SMOTETomek']
 
     Notes
@@ -307,30 +322,29 @@ class NNAugment(SNAugment):
 
 
 class GPAugment(SNAugment):
-    """
-    Derived class that encapsulates data augmentation via Gaussian Processes
+    """Derived class that encapsulates data augmentation via Gaussian Processes.
     """
 
-    def __init__(self, d, stencils=None, cadence_stencils=None, stencil_weights=None, cadence_stencil_weights=None):
-        """
-        class constructor.
+    def __init__(self, d, stencils=None, cadence_stencils=None,
+                 stencil_weights=None, cadence_stencil_weights=None):
+        """Class constructor.
 
         Parameters:
         ----------
-        d : sndata object
-            the supernova data set we want to augment
+        d : `sndata` object
+            The supernova data set we want to augment
         stencils : list of strings
-            If the stencils argument is given (as a list of object names
-            that are in the data set), then the augmentation step will take
-            these light curves to train the GPs on. If not, then every object
-            in the data set is considered fair game.
+            If the stencils argument is given (as a list of object names that
+            are in the data set), then the augmentation step will take these
+            light curves to train the GPs on. If not, then every object in the
+            data set is considered fair game.
         cadence_stencils : list of strings
-            If given, the augmentation will sample the cadence for the new light
-            curves from these objects. If not, every object is fair game.
+            If given, the augmentation will sample the cadence for the new
+            light curves from these objects. If not, every object is fair game.
         stencil_weights : np.array or list of float
-            If given, these weights are the probabilities with which the respective
-            stencils will be picked in the augmentation step. If not given, we will
-            use uniform weights.
+            If given, these weights are the probabilities with which the
+            respective stencils will be picked in the augmentation step. If
+            not given, we will use uniform weights.
         cadence_stencil_weights : np.array or list of float
             Like stencil_weights, but for the cadence stencils.
         """
@@ -356,7 +370,7 @@ class GPAugment(SNAugment):
             self.stencil_weights = np.ones(len(self.stencils)) / len(self.stencils)
 
         if cadence_stencil_weights is not None:
-            assert np.all(cadence_stencil_weigths >= 0.), 'Cadence stencil weights need to be larger than zero!'
+            assert np.all(cadence_stencil_weights >= 0.), 'Cadence stencil weights need to be larger than zero!'
             cadence_stencil_weights = np.array(cadence_stencil_weights)
             self.cadence_stencil_weights = cadence_stencil_weights / sum(cadence_stencil_weights)
         else:
@@ -368,21 +382,20 @@ class GPAugment(SNAugment):
         self.original = d.object_names.copy()
 
     def train_filter(self, x, y, yerr, initheta=[100, 20]):
-        """
-        Train one Gaussian process on the data from one band. We use the squared-exponential
-        kernel, and we optimise its hyperparameters
+        """Train one Gaussian process on the data from one band. We use the
+        squared-exponential kernel, and we optimise its hyperparameters
 
         Parameters:
         -----------
         x : numpy array
-            mjd values for the cadence
+            `mjd` values for the cadence
         y : numpy array
-            flux values
+            Flux values
         yerr : numpy array
-            errors on the flux
+            Errors on the flux
         initheta : list, optional
-            initial values for the hyperparameters. They should roughly correspond to the
-            spread in y and x direction.
+            Initial values for the hyperparameters. They should roughly
+            correspond to the spread in y and x direction.
 
         Returns:
         -------
@@ -408,28 +421,35 @@ class GPAugment(SNAugment):
         return g
 
     def sample_cadence_filter(self, g, cadence, y, yerr, add_measurement_noise=True):
-        """
-        Given a trained GP, and a cadence of mjd values, produce a sample from the distribution
-        defined by the GP, on that cadence. The error bars are set to the spread of the GP distribution
-        at the given mjd value.
+        """Given a trained GP, and a cadence of mjd values, produce a sample from
+        the distribution defined by the GP, on that cadence. The error bars are
+        set to the spread of the GP distribution at the given mjd value.
 
         Parameters:
         -----------
         g : george.GP
-            the trained Gaussian process object
+            The trained Gaussian process object
         cadence : numpy.array
-            the cadence of mjd values.
+            The cadence of mjd values.
         y : numpy array
-            the flux values of the data that the GP has been trained on.
+            The flux values of the data that the GP has been trained on.
+        yerr : numpy array
+            ??? It was never described here.
         add_measurement_noise : bool, optional
-            cf the documentation of snaugment.GPAugment.produce_new_lc
+            Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i,
+            where f is a gaussianly-distributed function, and where eps_i are
+            iid Normal RVs, and sigma_i are the measurement error bars. If this
+            flag is unset, we return a sample from the GP f and its stddev. If
+            it is set, we return y*_j including the measurement noise (also in
+            the error bar). If this is unclear, please consult
+            Rasmussen/Williams chapter 2.2.
 
         Returns:
         --------
         flux : numpy array
-            flux values for the new sample
+            Flux values for the new sample
         fluxerr : numpy array
-            error bars on the flux for the new sample
+            Error bars on the flux for the new sample
         """
         if len(cadence) == 0:
             flux = np.array([])
@@ -438,43 +458,49 @@ class GPAugment(SNAugment):
             mu, cov = g.predict(y, cadence)
             flux = self.rng.multivariate_normal(mu, cov)
             fluxerr = np.sqrt(np.diag(cov))
-        # Adding measurement error
+        # Adding measurement error - Cat no need for this comment
         if add_measurement_noise:
             flux += self.rng.randn(len(y)) * yerr
             fluxerr = np.sqrt(fluxerr**2 + yerr**2)
         return flux, fluxerr
 
     def produce_new_lc(self, obj, cadence=None, savegp=True, samplez=True, name='dummy', add_measurement_noise=True):
-        """
-        Assemble a new light curve from a stencil. If the stencil already has been used
-        and the resulting GPs have been saved, then we use those. If not, we train a new GP.
+        """Assemble a new light curve from a stencil. If the stencil already has
+        been used and the resulting GPs have been saved, then we use those. If
+        not, we train a new GP.
 
         Parameters:
         -----------
         obj : str or astropy.table.Table
-           the object (or name thereof) that we use as a stencil to train the GP on.
+            The object (or name thereof) that we use as a stencil to train the
+            GP on.
         cadence : str or dict of type {string:numpy.array}, optional.
-           the cadence for the new light curve, defined either by object name or by {filter:mjds}. If none is given,
-           then we pull the cadence of the stencil.
+            The cadence for the new light curve, defined either by object name
+            or by {filter:mjds}. If none is given, then we pull the cadence of
+            the stencil.
         savegp : bool, optional
-           Do we save the trained GP in self.meta? This results in a speedup, but costs memory.
+            Do we save the trained GP in self.meta? This results in a speedup,
+            but costs memory.
         samplez : bool, optional
-           Do we give the new light curve a random redshift value drawn from a Gaussian of location
-           and width defined by the stencil? If not, we just take the value of the stencil.
+            Do we give the new light curve a random redshift value drawn from a
+            Gaussian of location and width defined by the stencil? If not, we
+            just take the value of the stencil.
         name : str, optional
-           object name of the new light curve.
+            Object name of the new light curve.
         add_measurement_noise : bool, optional
-           Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i, where f is a gaussianly-distributed function, and
-           where eps_i are iid Normal RVs, and sigma_i are the measurement error bars. If this flag is unset, we return a
-           sample from the GP f and its stddev. If it is set, we return y*_j including the measurement noise (also in the error bar).
-           If this is unclear, please consult Rasmussen/Williams chapter 2.2.
+            Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i,
+            where f is a gaussianly-distributed function, and where eps_i are
+            iid Normal RVs, and sigma_i are the measurement error bars. If this
+            flag is unset, we return a sample from the GP f and its stddev. If
+            it is set, we return y*_j including the measurement noise (also in
+            the error bar). If this is unclear, please consult
+            Rasmussen/Williams chapter 2.2.
 
         Returns:
         --------
         new_lc: astropy.table.Table
-           The new light curve
+            The new light curve
         """
-
         if type(obj) is Table:
             obj_table = obj
             obj_name = obj.meta['name']
@@ -522,35 +548,40 @@ class GPAugment(SNAugment):
         else:
             newz = obj_table.meta['z']
         new_lc_meta = obj_table.meta.copy()
-        modified_meta = {'name': name, 'z': newz, 'stencil': obj_name, 'augment_algo': self.algorithm}
+        modified_meta = {'name': name, 'z': newz, 'stencil': obj_name,
+                         'augment_algo': self.algorithm}
         new_lc_meta.update(modified_meta)
-        new_lc = Table(names=['mjd', 'filter', 'flux', 'flux_error'], dtype=['f', 'U', 'f', 'f'], meta=new_lc_meta)
+        new_lc = Table(names=['mjd', 'filter', 'flux', 'flux_error'],
+                       dtype=['f', 'U', 'f', 'f'], meta=new_lc_meta)
         for f in self.dataset.filter_set:
             obj_f = obj_table[obj_table['filter'] == f]
             y = obj_f['flux']
             yerr = obj_f['flux_error']
-            flux, fluxerr = self.sample_cadence_filter(all_g[f], cadence_dict[f], y, yerr, add_measurement_noise=add_measurement_noise)
+            flux, fluxerr = self.sample_cadence_filter(
+                                all_g[f], cadence_dict[f], y, yerr,
+                                add_measurement_noise=add_measurement_noise)
             filter_col = [str(f)] * len(cadence_dict[f])
-            dummy_table = Table((cadence_dict[f], filter_col, flux, fluxerr), names=['mjd', 'filter', 'flux', 'flux_error'], dtype=['f', 'U', 'f', 'f'])
+            dummy_table = Table((cadence_dict[f], filter_col, flux, fluxerr),
+                                names=['mjd', 'filter', 'flux', 'flux_error'],
+                                dtype=['f', 'U', 'f', 'f'])
             new_lc = vstack([new_lc, dummy_table])
 
-        # Sort by cadence, for cosmetics
-        new_lc.sort('mjd')
+        new_lc.sort('mjd')  # Sort by cadence, for cosmetics
         return new_lc
 
     def extract_cadence(self, obj):
-        """
-        Given a light curve, we extract the cadence in a format that we can insert into produce_lc and sample_cadence_filter.
+        """Given a light curve, we extract the cadence in a format that we can
+        insert into produce_lc and sample_cadence_filter.
 
         Parameters:
         -----------
         obj : str or astropy.table.Table
-            (name of) the object
+            (Name of) the object
 
         Returns:
         --------
         cadence : dict of type {str:numpy.array}
-            the cadence, in the format {filter1:mjd1, filter2:mjd2, ...}
+            The cadence, in the format {filter1:mjd1, filter2:mjd2, ...}
         """
         if type(obj) in [str, np.str_]:
             table = self.dataset.data[obj]
@@ -564,19 +595,24 @@ class GPAugment(SNAugment):
         return cadence
 
     def augment(self, numbers, return_names=False, **kwargs):
-        """
-        High-level wrapper of GP augmentation: The dataset will be augmented to the numbers by type.
+        """High-level wrapper of GP augmentation: The dataset will be
+        augmented to the numbers by type.
+
         Parameters:
         ----------
         numbers : dict of type int:int
-            The numbers to which the data set will be augmented, by type. Keys are the types,
-            values are the numbers of light curves pertaining to a type after augmentation.
-            Types that do not appear in this dict will not be touched.
+            The numbers to which the data set will be augmented, by type. Keys
+            are the types, values are the numbers of light curves pertaining to
+            a type after augmentation. Types that do not appear in this dict
+            will not be touched.
         return_names : bool
-            If True, we return a list of names of the objects that have been added into the data set
+            If True, we return a list of names of the objects that have been
+            added into the data set
         kwargs :
-            Additional arguments that will be handed verbatim to produce_new_lc. Interesting choices
-            include savegp=False and samplez=True
+            Additional arguments that will be handed verbatim to
+            `produce_new_lc`. Interesting choices include `savegp=False` and
+            `samplez=True`.
+
         Returns:
         --------
         newobjects : list of str
