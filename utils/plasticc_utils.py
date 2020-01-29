@@ -110,7 +110,7 @@ def plot_roc_curve(y_probs, y_true):
         try: # we are working with SN Ia, SNbc and SNII
             plt.plot(fpr[i], tpr[i], color=colors[true_name], lw=linewidth,
                     label='AUC {} = {:0.3f}'.format(true_name, auc[i]))
-        except:
+        except KeyError:
             plt.plot(fpr[i], tpr[i], lw=linewidth,
                     label='AUC {} = {:0.3f}'.format(true_name, auc[i]))
 
