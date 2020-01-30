@@ -524,7 +524,6 @@ class Dataset(EmptyDataset):
     Other functions provided here are for plotting and convenience.
     """
 
-
     def __init__(self, folder, subset='none',  filter_set=['desg', 'desr', 'desi', 'desz']):
         """
         Initialisation.
@@ -1475,6 +1474,7 @@ class PlasticcData(EmptyDataset):
         print('Reading metadata...')
         time_start_reading = time.time()
         metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',', index_col=self.id_col)
+        metadata_pd = metadata_pd.astype({'object_id': 'str'}) # force the type of the column to be string
         metadata_pd['object_id'] = metadata_pd.index
         self.metadata = metadata_pd
 
