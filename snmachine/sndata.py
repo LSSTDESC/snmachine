@@ -622,9 +622,9 @@ class PlasticcData(EmptyDataset):
         Parameters
         ----------
         folder : str
-            Folder where simulations are located
+            Folder where simulations are located.
         data_file : str or list-like
-            .csv file of objects metadata
+            .csv file of objects metadata.
         """
         print('Reading metadata...')
         time_start_reading = time.time()
@@ -637,31 +637,41 @@ class PlasticcData(EmptyDataset):
         # Everything bellow is to conform with `snmachine`
         metadata = metadata_pd.drop(columns=['object_id'])  # I don't want this duplicated
         number_objs = len(self.object_names)
-        for i, o in enumerate(self.object_names):
+        for i, obj in enumerate(self.object_names):
             self.print_progress(i+1, number_objs)  # +1 because the order starts at 0 in python
-            ind_o = o
 
-            # Set meta name as the object id string
-            self.data[o].meta['name'] = o
-            self.data[o].meta['z'] = None
+            self.data[obj].meta['name'] = obj  # the name is the objects id
+            self.data[obj].meta['z'] = None
             for col in metadata.columns:
                 if re.search('target', col):
-                    self.data[o].meta['type'] = str(metadata.at[ind_o, col])
-
-                # Default to spectroscopic redshift for z
-                elif re.search('specz', col) and not np.isnan(metadata.at[ind_o, col]):
-                    self.data[o].meta['z'] = metadata.at[ind_o, col]
+                    self.data[obj].meta['type'] = str(metadata.at[obj, col])
                 else:
-                    self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, ind_o))[col].values
+                    self.data[obj].meta[str(col)] = metadata.at[obj, col]
+            self._set_metadata_z(obj)
 
-            # If no spec z set z to phot z
-            if self.data[o].meta['z'] is None:
-                for col in metadata.columns:
-                    if re.search('photoz', col) and re.search('err', col) is None:
-                        self.data[o].meta['z'] = metadata.at[ind_o, col]
-                        break
         print('Finished getting the metadata for {} objects.'.format(number_objs))
-        self.print_time_difference(time_start_reading, time.time())  # TODO this is not working
+        self.print_time_difference(time_start_reading, time.time())
+
+    def _set_metadata_z(self, obj):
+        """Set the redshift as spectroscopic or if not available, photometric.
+
+        This is only used by the onl code of `snmachine` but to keep backwards
+        compatibility, we keep it.
+
+        Parameters
+        ----------
+        obj : str
+            Name of the object we are working with.
+        """
+        metadata = self.data[obj].meta
+        columns = metadata.keys()
+        for col in columns:
+            if re.search('specz', col) and not np.isnan(metadata[col]):
+                self.data[obj].meta['z'] = metadata[col]
+            if re.search('photoz', col) and re.search('err', col) is None:
+                photoz = metadata[col]
+        if self.data[obj].meta['z'] is None:  # if no spec z -> z = photo z
+            self.data[obj].meta['z'] = photoz
 
     @property
     def labels(self):
@@ -673,21 +683,22 @@ class PlasticcData(EmptyDataset):
         return labels
 
     @staticmethod
-    def print_time_difference(initial_time, final_time):  # Cat: this could be a decorator
+    def print_time_difference(initial_time, final_time):
         """Print the a time interval.
 
         Parameters
         ----------
         initial_time : float
-            Time at which the time interval starts
+            Time at which the time interval starts.
         final_time : float
-            Time at which the time interval ends
+            Time at which the time interval ends.
         """
-        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time), unit='s')
+        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time),
+                                                  unit='s')
         print('This has taken {}\n'.format(time_spent_on_this_task))
 
     @staticmethod
-    def print_progress(obj_ordinal, number_objs):  # Cat: this could be a decorator
+    def print_progress(obj_ordinal, number_objs):
         """Print the percentage of objects already saved.
 
         This funtion uses a weird formula to know at which
@@ -696,11 +707,11 @@ class PlasticcData(EmptyDataset):
         Parameters
         ----------
         obj_ordinal : int
-            Ordinal number of the object we are currently on
+            Ordinal number of the object we are currently on.
         number_objs : int
-            Total number of objects to perform the action on
+            Total number of objects to perform the action on.
         """
-        percent_to_print = pow(10, -int(np.log10(number_objs)/2))  # Cat: Why this convoluted formula?
+        percent_to_print = pow(10, -int(np.log10(number_objs)/2))  # Formula that looks good
         if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
             print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
 
@@ -727,7 +738,7 @@ class PlasticcData(EmptyDataset):
         is_new_obj = np.in1d(current_objs, new_objs)
         self.metadata = self.metadata[is_new_obj]
 
-    def remap_filters(self, df): # maybe not in snmachine (raise issue/channel)
+    def remap_filters(self, df):  # maybe not in snmachine (raise issue/channel)
         """Function to remap integer filters to the corresponding lsst filters and
         also to set filter name syntax to what snmachine already recognizes
 
