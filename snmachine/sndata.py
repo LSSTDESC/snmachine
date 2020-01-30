@@ -630,8 +630,8 @@ class PlasticcData(EmptyDataset):
         time_start_reading = time.time()
         metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',',
                                   index_col=self.id_col)
-        metadata_pd = metadata_pd.astype({'object_id': 'str'})  # force the type of the column to be string
-        metadata_pd['object_id'] = metadata_pd.index
+        metadata_pd.index = metadata_pd.index.astype(str)
+        metadata_pd['object_id'] = metadata_pd.index  # it is useful to be able to call this column by name
         self.metadata = metadata_pd
 
         # Everything bellow is to conform with `snmachine`
@@ -639,7 +639,7 @@ class PlasticcData(EmptyDataset):
         number_objs = len(self.object_names)
         for i, o in enumerate(self.object_names):
             self.print_progress(i+1, number_objs)  # +1 because the order starts at 0 in python
-            ind_o = eval(o)
+            ind_o = o
 
             # Set meta name as the object id string
             self.data[o].meta['name'] = o
@@ -661,7 +661,7 @@ class PlasticcData(EmptyDataset):
                         self.data[o].meta['z'] = metadata.at[ind_o, col]
                         break
         print('Finished getting the metadata for {} objects.'.format(number_objs))
-        self.print_time_difference(time_start_reading, time.time())
+        self.print_time_difference(time_start_reading, time.time())  # TODO this is not working
 
     @property
     def labels(self):
