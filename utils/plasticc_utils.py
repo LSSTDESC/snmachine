@@ -1,12 +1,15 @@
 """
-Utility script for calculating the log loss
+Utility script for calculating the log loss and some useful plots
 """
 
-from sklearn.metrics import confusion_matrix
 import sys
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
+
+from sklearn.metrics import confusion_matrix
+from snmachine import snclassifier
 
 sns.set(font_scale=1.3, style="ticks")
 
@@ -75,3 +78,41 @@ def plasticc_log_loss(y_true, probs):
         class_logloss.append(result)
         weights.append(weights_dict[current_label])
     return -1 * np.average(class_logloss, weights=weights)
+
+
+def plot_roc_curve(y_probs, y_true):
+    """Plot a ROC curve with all the classes. It only works for PLAsTiCC SN.
+
+    Parameters
+    ----------
+    y_probs : array (# obj, # classes)
+        An array containing probabilities of each class for each object.
+    y_true : array (N_obj, )
+        An array containing the true class for each object.
+    auc : float
+    """
+    dict_label_to_real = {15:'TDE', 42:'SNII', 52:'SNIax', 62:'SNIbc', 64:'KN', 67:'SNIa-91bg',
+                          88:'AGN', 90:'SNIa', 95:'SLSN-I',
+                          1:'SNIa', 2:'SNII', 3:'SNIbc'} # to erase later; This is just for de-bug
+    target_names = np.unique(y_true)
+    target_true_names = np.vectorize(dict_label_to_real.get)(target_names)
+    plt.figure(figsize=(10,6))
+    # Compute ROC curve and ROC area for each class
+    fpr, tpr, auc = {}, {}, {} # initialize dictionaries
+
+    for i in range(len(target_true_names)):
+        fpr[i], tpr[i], auc[i] = snclassifier.roc(y_probs, y_true, which_column=i)
+
+    linewidth = 3
+    colors = ['C0', 'C1', 'C2']
+    for i, color in zip(range(3), colors):
+        plt.plot(fpr[i], tpr[i], color=color, lw=linewidth,
+                label='AUC {} = {:0.3f}'.format(target_true_names[i], auc[i]))
+
+    plt.plot([0, 1], [0, 1], 'k--', lw=linewidth)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Multi-Class ROC: 1 vs All')
+    plt.legend(loc="lower right")
