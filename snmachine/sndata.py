@@ -27,13 +27,17 @@ from random import shuffle, sample
 from scipy import interpolate
 from snmachine import chisq as cs
 
-#Colours for graphs
-colours = {'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00',
-'desz':'k', 'lssty':'#e50000','lsstu':'#9a0eea','lsstg':'#75bbfd','lsstr':'#76ff7b','lssti':'#fdde6c','lsstz':'#f97306','lsstY':'#e50000'}
+# Colours for graphs
+colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
+           'sdssi': '#d35c00', 'sdssz': 'k', 'desg': '#007718',
+           'desr': '#b30100', 'desi': '#d35c00', 'desz': 'k',
+           'lsstu': '#9a0eea', 'lsstg': '#75bbfd', 'lsstr': '#76ff7b',
+           'lssti': '#fdde6c', 'lsstz': '#f97306', 'lssty': '#e50000'}
 
-sntypes = {1:'Ia',2:'II',21:'IIn',22:'IIP',23:'IIL',3:'Ibc',32:'Ib',33:'Ic',66:'other'}
-markers = {'desg':'^', 'desr':'o', 'desi':'s', 'desz':'*'}
-labels = {'desg':'g', 'desr':'r', 'desi':'i', 'desz':'z'}
+sntypes = {1: 'Ia', 2: 'II', 21: 'IIn', 22: 'IIP', 23: 'IIL',
+           3: 'Ibc', 32: 'Ib', 33: 'Ic', 66: 'other'}
+markers = {'desg': '^', 'desr': 'o', 'desi': 's', 'desz': '*'}
+labels = {'desg': 'g', 'desr': 'r', 'desi': 'i', 'desz': 'z'}
 
 
 def plot_lc(lc):
@@ -301,10 +305,10 @@ class EmptyDataset:
         """
 
         event.canvas.figure.clear()
-        if event.key=='right' and self.__ind<len(self.object_names)-1:
-            self.__ind+=1
-        elif event.key=='left' and self.__ind>0:
-            self.__ind-=1
+        if event.key == 'right' and self.__ind < len(self.object_names)-1:
+            self.__ind += 1
+        elif event.key == 'left' and self.__ind > 0:
+            self.__ind -= 1
         self.__plot_this(self.object_names[self.__ind])
         event.canvas.draw()
 
@@ -331,7 +335,7 @@ class EmptyDataset:
         self.__ind = -1
         self.cid = fig.canvas.mpl_connect('key_press_event', self.__on_press)
         plt.plot([0, 0])
-        #subplots_adjust(right=0.95, top=0.95)
+        # subplots_adjust(right=0.95, top=0.95)
         plt.show()
 
     def save_to_folder(self, outpath, overwrite=True, listname=None):
@@ -927,7 +931,7 @@ class SDSS_Data(EmptyDataset):
                     SN.append("SMP_00%s.dat" % s[0])
                 elif len(str(s[0])) == 5:
                     SN.append("SMP_0%s.dat" % s[0])
-    #SN now contains all file names for supernovae
+    # SN now contains all file names for supernovae
         if subset_length != False:
             SN = [SN[i] for i in sorted(sample(range(len(SN)), subset_length)) ]
 
@@ -963,7 +967,7 @@ class SDSS_Data(EmptyDataset):
                     SN.append("SMP_00%s.dat" % s[0])
                 elif len(str(s[0])) == 5:
                     SN.append("SMP_0%s.dat" % s[0])
-         #SN now contains all file names for spectroscopically confirmed supernovae
+        # SN now contains all file names for spectroscopically confirmed supernovae
 
         if subset_length != False:
             x = sorted(sample(range(len(SN)), subset_length))
@@ -1575,6 +1579,7 @@ class PlasticcData(EmptyDataset):
             Dataframe of lightcurve observations
         """
         df.rename({'passband':'filter'}, axis='columns', inplace=True)
-        filter_replace = {0:'lsstu',1:'lsstg',2:'lsstr',3:'lssti',4:'lsstz',5:'lssty'}
+        filter_replace = {0: 'lsstu', 1: 'lsstg', 2: 'lsstr', 3: 'lssti',
+                          4: 'lsstz', 5: 'lssty'}
         df['filter'].replace(to_replace=filter_replace, inplace=True)
         return df
