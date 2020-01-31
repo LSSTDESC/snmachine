@@ -24,14 +24,8 @@ except ImportError:
     has_gapp = False
 
 
-band_central_wavelengths = {
-    "lsstu": 3671.0,
-    "lsstg": 4827.0,
-    "lsstr": 6223.0,
-    "lssti": 7546.0,
-    "lsstz": 8691.0,
-    "lssty": 9710.0,
-}
+band_central_wavelengths = {"lsstu": 3685.0, "lsstg": 4802.0, "lsstr": 6231.0,
+                            "lssti": 7542.0, "lsstz": 8690.0, "lssty": 9736.0}
 
 
 def compute_gps(dataset, number_gp, t_min, t_max, output_root=None,
@@ -430,7 +424,8 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
     return obj_gp, gp_instance, kernel_id
 
 
-def _choose_less_bad_kernel(all_obj_gp, all_gp_instances, all_chisq_over_datapoints, possible_kernel_ids):
+def _choose_less_bad_kernel(all_obj_gp, all_gp_instances,
+                            all_chisq_over_datapoints, possible_kernel_ids):
     """If all kernels give a bad reduced X^2, choose the less bad of them.
 
     Parameters
