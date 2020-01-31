@@ -27,13 +27,17 @@ from random import shuffle, sample
 from scipy import interpolate
 from snmachine import chisq as cs
 
-#Colours for graphs
-colours = {'sdssu':'#6614de','sdssg':'#007718','sdssr':'#b30100','sdssi':'#d35c00','sdssz':'k','desg':'#007718','desr':'#b30100','desi':'#d35c00',
-'desz':'k', 'lssty':'#e50000','lsstu':'#9a0eea','lsstg':'#75bbfd','lsstr':'#76ff7b','lssti':'#fdde6c','lsstz':'#f97306','lsstY':'#e50000'}
+# Colours for graphs
+colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
+           'sdssi': '#d35c00', 'sdssz': 'k', 'desg': '#007718',
+           'desr': '#b30100', 'desi': '#d35c00', 'desz': 'k',
+           'lsstu': '#9a0eea', 'lsstg': '#75bbfd', 'lsstr': '#76ff7b',
+           'lssti': '#fdde6c', 'lsstz': '#f97306', 'lssty': '#e50000'}
 
-sntypes = {1:'Ia',2:'II',21:'IIn',22:'IIP',23:'IIL',3:'Ibc',32:'Ib',33:'Ic',66:'other'}
-markers = {'desg':'^', 'desr':'o', 'desi':'s', 'desz':'*'}
-labels = {'desg':'g', 'desr':'r', 'desi':'i', 'desz':'z'}
+sntypes = {1: 'Ia', 2: 'II', 21: 'IIn', 22: 'IIP', 23: 'IIL',
+           3: 'Ibc', 32: 'Ib', 33: 'Ic', 66: 'other'}
+markers = {'desg': '^', 'desr': 'o', 'desi': 's', 'desz': '*'}
+labels = {'desg': 'g', 'desr': 'r', 'desi': 'i', 'desz': 'z'}
 
 
 def plot_lc(lc):
@@ -301,10 +305,10 @@ class EmptyDataset:
         """
 
         event.canvas.figure.clear()
-        if event.key=='right' and self.__ind<len(self.object_names)-1:
-            self.__ind+=1
-        elif event.key=='left' and self.__ind>0:
-            self.__ind-=1
+        if event.key == 'right' and self.__ind < len(self.object_names)-1:
+            self.__ind += 1
+        elif event.key == 'left' and self.__ind > 0:
+            self.__ind -= 1
         self.__plot_this(self.object_names[self.__ind])
         event.canvas.draw()
 
@@ -331,7 +335,7 @@ class EmptyDataset:
         self.__ind = -1
         self.cid = fig.canvas.mpl_connect('key_press_event', self.__on_press)
         plt.plot([0, 0])
-        #subplots_adjust(right=0.95, top=0.95)
+        # subplots_adjust(right=0.95, top=0.95)
         plt.show()
 
     def save_to_folder(self, outpath, overwrite=True, listname=None):
@@ -514,6 +518,255 @@ class EmptyDataset:
             return chisq_over_datapoints_dict
 
 
+class PlasticcData(EmptyDataset):
+    """Class to read in the PLAsTiCC dataset. This is a simulated LSST catalog.
+
+    Parameters
+    ----------
+    folder : str
+        Folder where simulations are located.
+    data_file: str
+        Filename of the pandas dataframe which is has the light curve data.
+    metadata_file: str
+        Filename of the pandas dataframe containing the metadata for the light
+        curves.
+    mix : boolean, optional
+        Default False. If True, randomly permutes the objects when they are
+        read in.
+    cut_non_detections : boolean, optional
+        Default False. If True, cuts out non detections, retaining only
+        detections.
+    """
+
+    def __init__(self, folder, data_file, metadata_file, mix=False,
+                 cut_non_detections=False):
+        super().__init__(folder, survey_name='lsst',
+                         filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti',
+                                     'lsstz', 'lssty'])
+        self.set_data(folder, data_file, cut_non_detections)
+        self.set_metadata(folder, metadata_file)
+        if mix is True:
+            self.mix()
+
+    def set_data(self, folder, data_file, cut_non_detections=False):
+        """Reads in simulated data and saves it.
+
+        The data is saved into the `data` method from EmptyDataset.
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located.
+        data_file : str or list-like
+            .csv file of object light curves.
+        cut_non_detections : boolean, optional
+            Default False. If True, cuts out non detections, retaining only
+            detections.
+        """
+        print('Reading data...')
+        time_start_reading = time.time()
+        data = pd.read_csv(folder + '/' + data_file, sep=',')
+        if cut_non_detections:
+            data = data.loc[data.detected == 1]  # Update dataframe with only detected points
+        data = self.remap_filters(df=data)
+        data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)  # snmachine and PLAsTiCC uses a different denomination
+        # Abstract column names from dataset
+        for col in data.columns:
+            if re.search('mjd', col):  # catches the column that has `mjd` in its name
+                self.mjd_col = col
+            if re.search('id', col):  # catches the column that has `id` in its name
+                self.id_col = col
+
+        number_invalid_objs = 0  # Some objects may have empty data
+        number_objs = len(data[self.id_col].unique())
+
+        for i, id in enumerate(data[self.id_col].unique()):
+            self.print_progress(i+1, number_objs)  # +1 because the order starts at 0 in python
+            self.object_names.append(str(id))
+            obj_lc = data.query('{0} == {1}'.format(self.id_col, id))
+            lc = self.get_obj_lc_table_starting_from_mjd_zero(pandas_lc=obj_lc)
+            if len(lc[self.mjd_col] > 0):
+                self.data[str(id)] = lc
+            else:
+                number_invalid_objs += 1
+        if number_invalid_objs > 0:
+            print('{} objects were invalid and not added to the dataset.'.format(number_invalid_objs))
+        self.object_names = np.array(self.object_names, dtype='str')
+        print('{} objects read into memory.'.format(len(self.data)))
+        self.print_time_difference(time_start_reading, time.time())
+
+    def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
+        """Transform the pandas dataframe into an astropy table starting from mjd=0
+
+        Takes a pandas light curve from the plasticc dataset format
+        and converts it to the astropy table.table format starting from mjd=0.
+
+        Parameters
+        ----------
+        pandas_lc: Pandas DataFrame
+            Single object multi-band lightcurve.
+
+        Returns
+        -------
+        lc: astropy.table.table
+            New single object lightcurve.
+        """
+        lc = Table.from_pandas(pandas_lc)
+        lc[self.mjd_col] -= lc[self.mjd_col].min()
+        return lc
+
+    def set_metadata(self, folder, meta_file):
+        """Reads in simulated metadata and saves it.
+
+        The data is saved into the `metadata` method from EmptyDataset and
+        into a dictonary associated with each `data` method (`.data[obj].meta`).
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located.
+        data_file : str or list-like
+            .csv file of objects metadata.
+        """
+        print('Reading metadata...')
+        time_start_reading = time.time()
+        metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',',
+                                  index_col=self.id_col)
+        metadata_pd.index = metadata_pd.index.astype(str)
+        metadata_pd['object_id'] = metadata_pd.index  # it is useful to be able to call this column by name
+        self.metadata = metadata_pd
+
+        # Everything bellow is to conform with `snmachine`
+        number_objs = len(self.object_names)
+        for i, obj in enumerate(self.object_names):
+            self.print_progress(i+1, number_objs)  # +1 because the order starts at 0 in python
+            self.set_inner_metadata(obj)
+        print('Finished getting the metadata for {} objects.'.format(number_objs))
+        self.print_time_difference(time_start_reading, time.time())
+
+    def set_inner_metadata(self, obj):
+        """Set the metadata inside the astropy observation data.
+
+        This inner metadata is only used by the old code of `snmachine` but to
+        keep backwards compatibility, we keep it.
+
+        Parameters
+        ----------
+        obj : str
+            Name of the object we are working with.
+        """
+        metadata = self.metadata.drop(columns=['object_id'])  # I don't want this duplicated
+        metadata_entry = metadata.loc[obj]
+        columns = metadata_entry.keys()
+        self.data[obj].meta['name'] = obj  # the name is the object id
+        self.data[obj].meta['z'] = None
+        for col in columns:
+            if re.search('target', col):
+                self.data[obj].meta['type'] = str(metadata_entry[col])
+            else:
+                self.data[obj].meta[str(col)] = metadata_entry[col]
+        self._set_metadata_z(obj)
+
+    def _set_metadata_z(self, obj):
+        """Set the redshift as spectroscopic or if not available, photometric.
+
+        This is only used by the old code of `snmachine` but to keep backwards
+        compatibility, we keep it.
+
+        Parameters
+        ----------
+        obj : str
+            Name of the object we are working with.
+        """
+        metadata = self.data[obj].meta
+        columns = metadata.keys()
+        for col in columns:
+            if re.search('specz', col) and not np.isnan(metadata[col]):
+                self.data[obj].meta['z'] = metadata[col]
+            if re.search('photoz', col) and re.search('err', col) is None:
+                photoz = metadata[col]
+        if self.data[obj].meta['z'] is None:  # if no spec z -> z = photo z
+            self.data[obj].meta['z'] = photoz
+
+    @property
+    def labels(self):
+        """Returns the labels of the objects, if they are known."""
+        try:
+            labels = self.metadata.target
+        except AttributeError:  # We don't know the objects' labels
+            labels = None
+        return labels
+
+    @staticmethod
+    def print_time_difference(initial_time, final_time):
+        """Print the a time interval.
+
+        Parameters
+        ----------
+        initial_time : float
+            Time at which the time interval starts.
+        final_time : float
+            Time at which the time interval ends.
+        """
+        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time),
+                                                  unit='s')
+        print('This has taken {}\n'.format(time_spent_on_this_task))
+
+    @staticmethod
+    def print_progress(obj_ordinal, number_objs):
+        """Print the percentage of objects already saved.
+
+        This funtion uses a weird formula to know at which
+        percentages to print.
+
+        Parameters
+        ----------
+        obj_ordinal : int
+            Ordinal number of the object we are currently on.
+        number_objs : int
+            Total number of objects to perform the action on.
+        """
+        percent_to_print = pow(10, -int(np.log10(number_objs)/2))  # Formula that looks good
+        if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
+            print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
+
+    def update_dataset(self, new_objs):
+        """Update the datset so it only contains a subset of objects.
+
+        Parameters
+        ----------
+        new_objs : list-like
+            The id of the objects we want to have in our dataset.
+
+        Raises
+        ------
+        ValueError
+            All the objects in `new_objs` need to already exist in the dataset.
+        """
+        if np.sum(~np.in1d(new_objs, self.object_names)) != 0:
+            raise ValueError("All the objects in `new_objs` need to exist in the original dataset.")
+
+        self.object_names = new_objs
+        self.data = {objects: self.data[objects] for objects in self.object_names}
+
+        current_objs = self.metadata.object_id.astype(str)
+        is_new_obj = np.in1d(current_objs, new_objs)
+        self.metadata = self.metadata[is_new_obj]
+
+    def remap_filters(self, df):  # maybe not in snmachine (raise issue/channel)
+        """Function to remap integer filters to the corresponding lsst filters and
+        also to set filter name syntax to what snmachine already recognizes
+
+        df: pandas.dataframe
+            Dataframe of lightcurve observations
+        """
+        df.rename({'passband':'filter'}, axis='columns', inplace=True)
+        filter_replace = {0: 'lsstu', 1: 'lsstg', 2: 'lsstr', 3: 'lssti',
+                          4: 'lsstz', 5: 'lssty'}
+        df['filter'].replace(to_replace=filter_replace, inplace=True)
+        return df
+
+
 class Dataset(EmptyDataset):
     """
     Class to manage the files from a single dataset. The base class works with data from the SPCC.
@@ -521,7 +774,6 @@ class Dataset(EmptyDataset):
     All this class really needs is a list of object names and a method, get_lightcurve, which takes an individual object name and returns a light curve.
     Other functions provided here are for plotting and convenience.
     """
-
 
     def __init__(self, folder, subset='none',  filter_set=['desg', 'desr', 'desi', 'desz']):
         """
@@ -953,7 +1205,7 @@ class SDSS_Data(EmptyDataset):
                     SN.append("SMP_00%s.dat" % s[0])
                 elif len(str(s[0])) == 5:
                     SN.append("SMP_0%s.dat" % s[0])
-    #SN now contains all file names for supernovae
+    # SN now contains all file names for supernovae
         if subset_length != False:
             SN = [SN[i] for i in sorted(sample(range(len(SN)), subset_length)) ]
 
@@ -989,7 +1241,7 @@ class SDSS_Data(EmptyDataset):
                     SN.append("SMP_00%s.dat" % s[0])
                 elif len(str(s[0])) == 5:
                     SN.append("SMP_0%s.dat" % s[0])
-         #SN now contains all file names for spectroscopically confirmed supernovae
+        # SN now contains all file names for spectroscopically confirmed supernovae
 
         if subset_length != False:
             x = sorted(sample(range(len(SN)), subset_length))
@@ -1534,218 +1786,3 @@ class SNANA_Data(EmptyDataset):
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux })
 
         return tab
-
-
-class PlasticcData(EmptyDataset):
-    """Class to read in the PLAsTiCC dataset. This is a simulated LSST catalog.
-
-    Parameters
-    ----------
-    folder : str
-        Folder where simulations are located
-    data_file: str
-        Filename of the pandas dataframe which is has the lc data
-    metadata_file: str
-        Filename of the pandas dataframe containing the metadata for the light curves
-    mix : boolean, optional
-        Default False. If True, randomly permutes the objects when they're read in
-    cut_non_detections : boolean, optional
-        Default False. If True, cuts out nondetections, retaining only detections.
-    """
-
-    def __init__(self, folder, data_file, metadata_file, mix=False, cut_non_detections=False):
-        super().__init__(folder, survey_name='lsst', filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty'])
-        self.set_data(folder, data_file, cut_non_detections)
-        self.set_metadata(folder, metadata_file)
-        if mix is True:
-            self.mix()
-
-    def set_data(self, folder, data_file, cut_non_detections=False):
-        """Reads in simulated data and saves it.
-
-        The data is saved into the `data` method from EmptyDataset.
-
-        Parameters
-        ----------
-        folder : str
-            Folder where simulations are located
-        data_file : str or list-like
-            .csv file of object lightcurves
-        cut_non_detections : boolean, optional
-            Default False. If True, cuts out nondetections, retaining only detections.
-        """
-        print('Reading data...')
-        time_start_reading = time.time()
-        data = pd.read_csv(folder + '/' + data_file, sep=',')
-        if cut_non_detections:
-            data = data.loc[data.detected == 1] # Update dataframe with only detected points
-        data = self.remap_filters(df=data)
-        data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True) # snmachine and PLAsTiCC uses a different denomination
-        # Abstract column names from dataset
-        for col in data.columns:
-            if re.search('mjd', col): # catches the column that has `mjd` in its name
-                self.mjd_col = col
-            if re.search('id', col): # catches the column that has `id` in its name
-                self.id_col = col
-
-        number_invalid_objs = 0 # Some objects may have empty data
-        number_objs = len(data[self.id_col].unique())
-
-        for i, id in enumerate(data[self.id_col].unique()):
-            self.print_progress(i+1, number_objs) # +1 because the order starts at 0 in python
-            self.object_names.append(str(id))
-            obj_lc = data.query('{0} == {1}'.format(self.id_col, id))
-            lc = self.get_obj_lc_table_starting_from_mjd_zero(pandas_lc = obj_lc)
-            if len(lc[self.mjd_col] > 0):
-                self.data[str(id)] = lc
-            else:
-                number_invalid_objs += 1
-        if number_invalid_objs > 0:
-            print('{} objects were invalid and not added to the dataset.'.format(number_invalid_objs))
-        self.object_names = np.array(self.object_names, dtype='str')
-        print('{} objects read into memory.'.format(len(self.data)))
-        self.print_time_difference(time_start_reading, time.time())
-
-    def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
-        """Transform the pandas dataframe into an astropy table starting from mjd=0
-
-        Takes a pandas light curve from the plasticc dataset format
-        and converts it to the astropy table.table format starting from mjd=0.
-
-        Parameters
-        ----------
-        pandas_lc: Pandas DataFrame
-            single object multi-band lightcurve
-
-        Returns
-        -------
-        lc: astropy.table.table
-            new single object lightcurve
-        """
-        lc = Table.from_pandas(pandas_lc)
-        lc[self.mjd_col] -= lc[self.mjd_col].min()
-        return lc
-
-    def set_metadata(self, folder, meta_file):
-        """Reads in simulated metadata and saves it.
-
-        The data is saved into the `metadata` method from EmptyDataset and
-        into a dictonary associated with each `data` method (`.data[obj].meta`).
-
-        Parameters
-        ----------
-        folder : str
-            Folder where simulations are located
-        data_file : str or list-like
-            .csv file of objects metadata
-        """
-        print('Reading metadata...')
-        time_start_reading = time.time()
-        metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',', index_col=self.id_col)
-        metadata_pd['object_id'] = metadata_pd.index
-        self.metadata = metadata_pd
-
-        # Everything bellow is to conform with `snmachine`
-        metadata = metadata_pd.drop(columns=['object_id']) # I don't want this duplicated
-        number_objs = len(self.object_names)
-        for i, o in enumerate(self.object_names):
-            self.print_progress(i+1, number_objs) # +1 because the order starts at 0 in python
-            ind_o = eval(o)
-
-            # Set meta name as the object id string
-            self.data[o].meta['name'] = o
-            self.data[o].meta['z'] = None
-            for col in metadata.columns:
-                if re.search('target', col):
-                    self.data[o].meta['type'] = str(metadata.at[ind_o, col])
-
-                # Default to spectroscopic redshift for z
-                elif re.search('specz', col) and not np.isnan(metadata.at[ind_o, col]):
-                    self.data[o].meta['z'] = metadata.at[ind_o, col]
-                else:
-                    self.data[o].meta[str(col)] = metadata.query('{0} == {1}'.format(self.id_col, ind_o))[col].values
-
-            # If no spec z set z to phot z
-            if self.data[o].meta['z'] is None:
-                for col in metadata.columns:
-                    if re.search('photoz', col) and re.search('err', col) is None:
-                        self.data[o].meta['z'] = metadata.at[ind_o, col]
-                        break
-        print('Finished getting the metadata for {} objects.'.format(number_objs))
-        self.print_time_difference(time_start_reading, time.time())
-
-    @property
-    def labels(self):
-        """Returns the labels of the objects, if they are known."""
-        try:
-            labels = self.metadata.target
-        except AttributeError: # We don't know the objects' labels
-            labels = None
-        return labels
-
-    @staticmethod
-    def print_time_difference(initial_time, final_time): # Cat: this could be a decorator
-        """Print the a time interval.
-
-        Parameters
-        ----------
-        initial_time : float
-            Time at which the time interval starts
-        final_time : float
-            Time at which the time interval ends
-        """
-        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time), unit='s')
-        print('This has taken {}\n'.format(time_spent_on_this_task))
-
-    @staticmethod
-    def print_progress(obj_ordinal, number_objs): # Cat: this could be a decorator
-        """Print the percentage of objects already saved.
-
-        This funtion uses a weird formula to know at which
-        percentages to print.
-
-        Parameters
-        ----------
-        obj_ordinal : int
-            Ordinal number of the object we are currently on
-        number_objs : int
-            Total number of objects to perform the action on
-        """
-        percent_to_print = pow(10, -int(np.log10(number_objs)/2)) # Cat: Why this convoluted formula?
-        if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
-            print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
-
-    def update_dataset(self, new_objs):
-        """Update the datset so it only contains a subset of objects.
-
-        Parameters
-        ----------
-        new_objs : list-like
-            The id of the objects we want to have in our dataset.
-
-        Raises
-        ------
-        ValueError
-            All the objects in `new_objs` need to already exist in the dataset.
-        """
-        if np.sum(~np.in1d(new_objs, self.object_names)) != 0:
-            raise ValueError("All the objects in `new_objs` need to exist in the original dataset.")
-
-        self.object_names = new_objs
-        self.data = {objects:self.data[objects] for objects in self.object_names}
-
-        current_objs = self.metadata.object_id.astype(str)
-        is_new_obj = np.in1d(current_objs, new_objs)
-        self.metadata = self.metadata[is_new_obj]
-
-    def remap_filters(self, df): # maybe not in snmachine (raise issue/channel)
-        """Function to remap integer filters to the corresponding lsst filters and
-        also to set filter name syntax to what snmachine already recognizes
-
-        df: pandas.dataframe
-            Dataframe of lightcurve observations
-        """
-        df.rename({'passband':'filter'}, axis='columns', inplace=True)
-        filter_replace = {0:'lsstu',1:'lsstg',2:'lsstr',3:'lssti',4:'lsstz',5:'lssty'}
-        df['filter'].replace(to_replace=filter_replace, inplace=True)
-        return df
