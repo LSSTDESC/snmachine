@@ -637,27 +637,40 @@ class PlasticcData(EmptyDataset):
         self.metadata = metadata_pd
 
         # Everything bellow is to conform with `snmachine`
-        metadata = metadata_pd.drop(columns=['object_id'])  # I don't want this duplicated
         number_objs = len(self.object_names)
         for i, obj in enumerate(self.object_names):
             self.print_progress(i+1, number_objs)  # +1 because the order starts at 0 in python
-
-            self.data[obj].meta['name'] = obj  # the name is the objects id
-            self.data[obj].meta['z'] = None
-            for col in metadata.columns:
-                if re.search('target', col):
-                    self.data[obj].meta['type'] = str(metadata.at[obj, col])
-                else:
-                    self.data[obj].meta[str(col)] = metadata.at[obj, col]
-            self._set_metadata_z(obj)
-
+            self.set_inner_metadata(obj)
         print('Finished getting the metadata for {} objects.'.format(number_objs))
         self.print_time_difference(time_start_reading, time.time())
+
+    def set_inner_metadata(self, obj):
+        """Set the metadata inside the astropy observation data.
+
+        This inner metadata is only used by the old code of `snmachine` but to
+        keep backwards compatibility, we keep it.
+
+        Parameters
+        ----------
+        obj : str
+            Name of the object we are working with.
+        """
+        metadata = self.metadata.drop(columns=['object_id'])  # I don't want this duplicated
+        metadata_entry = metadata.loc[obj]
+        columns = metadata_entry.keys()
+        self.data[obj].meta['name'] = obj  # the name is the object id
+        self.data[obj].meta['z'] = None
+        for col in columns:
+            if re.search('target', col):
+                self.data[obj].meta['type'] = str(metadata_entry[col])
+            else:
+                self.data[obj].meta[str(col)] = metadata_entry[col]
+        self._set_metadata_z(obj)
 
     def _set_metadata_z(self, obj):
         """Set the redshift as spectroscopic or if not available, photometric.
 
-        This is only used by the onl code of `snmachine` but to keep backwards
+        This is only used by the old code of `snmachine` but to keep backwards
         compatibility, we keep it.
 
         Parameters
