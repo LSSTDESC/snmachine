@@ -389,7 +389,7 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
     -------
     gp_obs : pandas.core.frame.DataFrame
         Time, flux and flux error of the fitted Gaussian Process.
-    gp : george.gp.GP
+    gp_instance : george.gp.GP
         The GP instance that was used to fit the object.
     kernel_id : str
         The id of the kernel chosen. This can then be used as a feature.
