@@ -98,15 +98,15 @@ def read_gp_files_into_models(dataset, path_saved_gp_files):
     """
     print('Restarting from stored Gaussian Processes...')
     for obj in dataset.object_names:
-            obj_saved_gps_file = os.path.join(path_saved_gp_files, 'gp_'+obj)
+        obj_saved_gps_file = os.path.join(path_saved_gp_files, 'gp_'+obj)
+        try:
+            obj_saved_gps = Table.read(obj_saved_gps_file, format='ascii')
+        except:
             try:
-                obj_saved_gps = Table.read(obj_saved_gps_file, format='ascii')
-            except:
-                try:
-                    obj_saved_gps = Table.read(obj_saved_gps_file, format='fits')
-                except IOError:
-                    print('IOError, file ', obj_saved_gps_file, 'does not exist.')
-            dataset.models[obj] = obj_saved_gps
+                obj_saved_gps = Table.read(obj_saved_gps_file, format='fits')
+            except IOError:
+                print('IOError, file ', obj_saved_gps_file, 'does not exist.')
+        dataset.models[obj] = obj_saved_gps
     print('Models fitted with the Gaussian Processes values.')
 
 
