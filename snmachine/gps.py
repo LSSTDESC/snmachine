@@ -24,8 +24,8 @@ except ImportError:
     has_gapp = False
 
 
-band_central_wavelengths = {"lsstu": 3685.0, "lsstg": 4802.0, "lsstr": 6231.0,
-                            "lssti": 7542.0, "lsstz": 8690.0, "lssty": 9736.0}
+band_central_wavelengths = {"lsstu": 3685., "lsstg": 4802., "lsstr": 6231.,
+                            "lssti": 7542., "lsstz": 8690., "lssty": 9736.}
 
 
 def compute_gps(dataset, number_gp, t_min, t_max, output_root=None,
