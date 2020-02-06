@@ -343,9 +343,12 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
                                                         obj_data_pb, gp_times)
 
                 mu, std = gp_obs.flux.values, gp_obs.flux_error.values
-                obj_gp_pb_array = np.column_stack((gp_times, mu, std))  # stack the GP results in a array momentarily
+                # stack the GP results in a array momentarily
+                obj_gp_pb_array = np.column_stack((gp_times, mu, std))
                 used_kernels_dict[pb] = chosen_kernel
-            used_gp_dict[pb] = gp
+            # Save the GP already conditioned on a specific set of observations
+            gp_predict = partial(gp.predict, obj_data_pb.flux)
+            used_gp_dict[pb] = gp_predict
         else:
             obj_gp_pb_array = np.zeros([number_gp, 3])
         obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
@@ -640,12 +643,13 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max,
         gp.set_parameter_vector(default_gp_param)
 
     # Predict the Gaussian process band-by-band.
+    gp_predict = partial(gp.predict, obj_flux)
     obj_gps = []
     filter_set = np.asarray(dataset.filter_set)
     for pb in filter_set:
         wavelengths = np.ones(len(gp_times)) * band_central_wavelengths[pb]
         pred_x_data = np.vstack([gp_times, wavelengths]).T
-        pb_pred, pb_pred_var = gp.predict(obj_flux, pred_x_data, return_var=True)
+        pb_pred, pb_pred_var = gp_predict(pred_x_data, return_var=True)
         obj_gp_pb_array = np.column_stack((gp_times, pb_pred,
                                            np.sqrt(pb_pred_var)))  # stack the GP results in a array momentarily
         obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
@@ -661,8 +665,9 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max,
                       overwrite=True)
         path_save_gps = os.path.join(output_root, 'used_gp_'+obj+'.pckl')
         path_save_kernels = os.path.join(output_root, 'used_kernels_'+obj+'.pckl')
+        # Save the GP already conditioned on a specific set of observations
         with open(path_save_gps, 'wb') as f:
-            pickle.dump(gp, f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(gp_predict, f, pickle.HIGHEST_PROTOCOL)
         with open(path_save_kernels, 'wb') as f:
             pickle.dump(kernel, f, pickle.HIGHEST_PROTOCOL)
 
