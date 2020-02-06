@@ -1784,3 +1784,5 @@ class SNANA_Data(EmptyDataset):
 
         # form astropy table
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux })
+
+        return tab
