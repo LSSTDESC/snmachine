@@ -258,7 +258,8 @@ class EmptyDataset:
         try:
             chi_obj = [fname]
             chi_2_single_object = self.compute_chisq_over_datapoints(chi_obj)[chi_obj[0]]
-        except:
+        except TypeError:
+            print('The chisquare over datapoints can not be computed because no model has been fitted.')
             chi_2_single_object = 0
 
         if title:
