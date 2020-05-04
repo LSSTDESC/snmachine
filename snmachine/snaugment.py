@@ -40,30 +40,6 @@ class SNAugment:
     def augment(self):
         pass
 
-    def remove(self, obj=None):
-        """Reverts the augmentation step by fully or partially removing those
-        light curves that have been added in the augmentation procedure from
-        the data set.
-
-        Parameters:
-        ----------
-        obj : list of strings
-            These are the objects we will remove. If None is given, then we
-            remove all augmented objects that have not been in the data set
-            when we created the SNAugment object.
-            NB: If obj contains object names that are in the original data set
-            then we do not throw an error, but follow through on what you tell
-            us to do.
-        """
-        if obj is None:
-            obj = list(set(self.dataset.object_names())
-                       - set(self.original_object_names))
-
-        for o in obj:
-            assert(o in self.dataset.object_names)
-            self.dataset.data.pop(o)
-            self.dataset.object_names = [x for x in self.dataset.object_names if x != o]
-
     def extract_proxy_features(self, peak_filter='desr', nproc=1,
                                fit_salt2=False, salt2feats=None,
                                return_features=False, fix_redshift=False,
