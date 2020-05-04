@@ -401,7 +401,8 @@ class GPAugment(SNAugment):
         g.set_parameter_vector(results.x)
         return g
 
-    def sample_cadence_filter(self, g, cadence, y, yerr, add_measurement_noise=True):
+    def sample_cadence_filter(self, g, cadence, y, yerr,
+                              add_measurement_noise=True):
         """Given a trained GP, and a cadence of mjd values, produce a sample from
         the distribution defined by the GP, on that cadence. The error bars are
         set to the spread of the GP distribution at the given mjd value.
@@ -445,7 +446,8 @@ class GPAugment(SNAugment):
             fluxerr = np.sqrt(fluxerr**2 + yerr**2)
         return flux, fluxerr
 
-    def produce_new_lc(self, obj, cadence=None, savegp=True, samplez=True, name='dummy', add_measurement_noise=True):
+    def produce_new_lc(self, obj, cadence=None, savegp=True, samplez=True,
+                       name='dummy', add_measurement_noise=True):
         """Assemble a new light curve from a stencil. If the stencil already has
         been used and the resulting GPs have been saved, then we use those. If
         not, we train a new GP.
