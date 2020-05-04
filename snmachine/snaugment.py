@@ -33,7 +33,7 @@ class SNAugment:
         # This can contain any metadata that the augmentation
         # process produces, and we want to keep track of.
         self.meta = {}
-        self.algorithm = None
+        self.augmentation_method = None
         # This is a list of object names that were in the data set prior to augmenting.
         self.original_object_names = dataset.object_names.copy()
 
@@ -302,6 +302,413 @@ class NNAugment(SNAugment):
         return X_resampled, y_resampled
 
 
+class GPAugment(SNAugment):
+    """Augment the dataset using the Gaussian Process extrapolation of the
+    known events."""
+
+    def __init__(self, dataset, objs_number_to_aug=None, choose_z=None,
+                 random_seed=None, **kwargs):
+        """Class enclosing the Gaussian Process augmentation.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to augment.
+        objs_number_to_aug: {`None`, 'all', dict}, optional
+            Specify which events to augment and by how much. If `None`, the
+            dataset it not augmented. If `all`, all the events are augmented
+            10 times. If a dictionary is provided, it should be in the form of:
+                event: number of times to augment that event.
+        choose_z: {None, function}, optional
+            Function used to choose the new true redshift of the augmented
+            events. If `None`, the new events have the same redshift as the
+            original event. If a function is provided, arguments can be
+            included as `**kwargs`.
+        random_seed: int, optional
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        **kwargs: dict, optional
+            Optional keywords to pass arguments into `choose_z`.
+        """
+        # TODO: error handling of `choose_z`
+        self._dataset = dataset
+        self._aug_method = 'GP augmentation'
+        self._random_seed = random_seed
+        self._original_object_names = self.dataset.object_names.copy()
+        self._objs_number_to_aug = objs_number_to_aug
+
+    def sample_cadence_filter(self, g, cadence, y, yerr,
+                              add_measurement_noise=True):
+        """Given a trained GP, and a cadence of mjd values, produce a sample from
+        the distribution defined by the GP, on that cadence. The error bars are
+        set to the spread of the GP distribution at the given mjd value.
+
+        Parameters:
+        -----------
+        g : george.GP
+            The trained Gaussian process object
+        cadence : numpy.array
+            The cadence of mjd values.
+        y : numpy array
+            The flux values of the data that the GP has been trained on.
+        yerr : numpy array
+            ??? It was never described here.
+        add_measurement_noise : bool, optional
+            Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i,
+            where f is a gaussianly-distributed function, and where eps_i are
+            iid Normal RVs, and sigma_i are the measurement error bars. If this
+            flag is unset, we return a sample from the GP f and its stddev. If
+            it is set, we return y*_j including the measurement noise (also in
+            the error bar). If this is unclear, please consult
+            Rasmussen/Williams chapter 2.2.
+
+        Returns:
+        --------
+        flux : numpy array
+            Flux values for the new sample
+        fluxerr : numpy array
+            Error bars on the flux for the new sample
+        """
+        if len(cadence) == 0:
+            flux = np.array([])
+            fluxerr = np.array([])
+        else:
+            mu, cov = g.predict(y, cadence)
+            flux = self.rng.multivariate_normal(mu, cov)
+            fluxerr = np.sqrt(np.diag(cov))
+        # Adding measurement error - Cat no need for this comment
+        if add_measurement_noise:
+            flux += self.rng.randn(len(y)) * yerr
+            fluxerr = np.sqrt(fluxerr**2 + yerr**2)
+        return flux, fluxerr
+
+    def produce_new_lc(self, obj, cadence=None, savegp=True, samplez=True,
+                       name='dummy', add_measurement_noise=True):
+        """Assemble a new light curve from a stencil. If the stencil already has
+        been used and the resulting GPs have been saved, then we use those. If
+        not, we train a new GP.
+
+        Parameters:
+        -----------
+        obj : str or astropy.table.Table
+            The object (or name thereof) that we use as a stencil to train the
+            GP on.
+        cadence : str or dict of type {string:numpy.array}, optional.
+            The cadence for the new light curve, defined either by object name
+            or by {filter:mjds}. If none is given, then we pull the cadence of
+            the stencil.
+        savegp : bool, optional
+            Do we save the trained GP in self.meta? This results in a speedup,
+            but costs memory.
+        samplez : bool, optional
+            Do we give the new light curve a random redshift value drawn from a
+            Gaussian of location and width defined by the stencil? If not, we
+            just take the value of the stencil.
+        name : str, optional
+            Object name of the new light curve.
+        add_measurement_noise : bool, optional
+            Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i,
+            where f is a gaussianly-distributed function, and where eps_i are
+            iid Normal RVs, and sigma_i are the measurement error bars. If this
+            flag is unset, we return a sample from the GP f and its stddev. If
+            it is set, we return y*_j including the measurement noise (also in
+            the error bar). If this is unclear, please consult
+            Rasmussen/Williams chapter 2.2.
+
+        Returns:
+        --------
+        new_lc: astropy.table.Table
+            The new light curve
+        """
+        if type(obj) is Table:
+            obj_table = obj
+            obj_name = obj.meta['name']
+        elif type(obj) in [str, np.str_]:
+            obj_table = self.dataset.data[obj]
+            obj_name = str(obj)
+        else:
+            print('obj: type %s not recognised in produce_new_lc()!' % type(obj))
+            # TODO: actually throw an error
+
+        if cadence is None:
+            cadence_dict = self.extract_cadence(obj)
+        else:
+            if add_measurement_noise:
+                print('warning: GP sampling does NOT include measurement noise, since sampling is performed on a different cadence!')
+                add_measurement_noise = False
+            if type(cadence) in [str, np.str_]:
+                cadence_dict = self.extract_cadence(cadence)
+            elif type(cadence) is dict:
+                cadence_dict = cadence
+            else:
+                print('cadence: type %s not recognised in produce_new_lc()!' % type(cadence))
+                # TODO: actually throw an error
+
+        # Either train a new set of GP on the stencil obj, or pull from metadata
+        if obj_name in self.meta['trained_gp'].keys():
+            print('fetching')
+            all_g = self.meta['trained_gp'][obj_name]
+        else:
+            print('training')
+            all_g = {}
+            for f in self.dataset.filter_set:
+                obj_f = obj_table[obj_table['filter'] == f]
+                x = np.array(obj_f['mjd'])
+                y = np.array(obj_f['flux'])
+                yerr = np.array(obj_f['flux_error'])
+                g = self.train_filter(x, y, yerr)
+                all_g[f] = g
+            if savegp:
+                self.meta['trained_gp'][obj_name] = all_g
+
+        # Produce new LC based on the set of GP
+        if samplez and 'z_err' in obj_table.meta.keys():
+            newz = obj_table.meta['z'] + obj_table.meta['z_err'] * self.rng.randn()
+        else:
+            newz = obj_table.meta['z']
+        new_lc_meta = obj_table.meta.copy()
+        modified_meta = {'name': name, 'z': newz, 'stencil': obj_name,
+                         'augment_algo': self.augmentation_method}
+        new_lc_meta.update(modified_meta)
+        new_lc = Table(names=['mjd', 'filter', 'flux', 'flux_error'],
+                       dtype=['f', 'U', 'f', 'f'], meta=new_lc_meta)
+        for f in self.dataset.filter_set:
+            obj_f = obj_table[obj_table['filter'] == f]
+            y = obj_f['flux']
+            yerr = obj_f['flux_error']
+            flux, fluxerr = self.sample_cadence_filter(
+                                all_g[f], cadence_dict[f], y, yerr,
+                                add_measurement_noise=add_measurement_noise)
+            filter_col = [str(f)] * len(cadence_dict[f])
+            dummy_table = Table((cadence_dict[f], filter_col, flux, fluxerr),
+                                names=['mjd', 'filter', 'flux', 'flux_error'],
+                                dtype=['f', 'U', 'f', 'f'])
+            new_lc = vstack([new_lc, dummy_table])
+
+        new_lc.sort('mjd')  # Sort by cadence, for cosmetics
+        return new_lc
+
+    def extract_cadence(self, obj):
+        """Given a light curve, we extract the cadence in a format that we can
+        insert into produce_lc and sample_cadence_filter.
+
+        Parameters:
+        -----------
+        obj : str or astropy.table.Table
+            (Name of) the object
+
+        Returns:
+        --------
+        cadence : dict of type {str:numpy.array}
+            The cadence, in the format {filter1:mjd1, filter2:mjd2, ...}
+        """
+        if type(obj) in [str, np.str_]:
+            table = self.dataset.data[obj]
+        elif type(obj) is Table:
+            table = obj
+        else:
+            print('obj: type %s not recognised in extract_cadence()!' % type(obj))
+        cadence = {flt: np.array(table[table['filter'] == flt]['mjd']) for flt in self.dataset.filter_set}
+        return cadence
+
+    def augment(self, numbers, return_names=False, **kwargs):
+        """High-level wrapper of GP augmentation: The dataset will be
+        augmented to the numbers by type.
+
+        Parameters:
+        ----------
+        numbers : dict of type int:int
+            The numbers to which the data set will be augmented, by type. Keys
+            are the types, values are the numbers of light curves pertaining to
+            a type after augmentation. Types that do not appear in this dict
+            will not be touched.
+        return_names : bool
+            If True, we return a list of names of the objects that have been
+            added into the data set
+        kwargs :
+            Additional arguments that will be handed verbatim to
+            `produce_new_lc`. Interesting choices include `savegp=False` and
+            `samplez=True`.
+
+        Returns:
+        --------
+        newobjects : list of str
+            The new object names that have been created by augmentation.
+        """
+        dataset_types = self.dataset.get_types()
+
+        types = np.unique(dataset_types['Type'])
+
+        newnumbers = dict()
+        newobjects = []
+        for t in types:
+            thistype_oldnumbers = len(dataset_types['Type'][dataset_types['Type'] == t])
+            newnumbers[t] = numbers[t] - thistype_oldnumbers
+            thistype_stencils = [dataset_types['Object'][i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.stencils and dataset_types['Type'][i] == t]
+            thistype_stencil_weights = [self.stencil_weights[i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.stencils and dataset_types['Type'][i] == t]
+
+            if newnumbers[t] < 0:
+                print('There are already %d objects of type %d in the original data set, cannot augment to %d!' % (thistype_oldnumbers, t, numbers[t]))
+                continue
+            elif newnumbers[t] == 0:
+                continue
+            else:
+                for i in range(newnumbers[t]):
+                    # Pick random stencil
+                    thisstencil = self.rng.choice(thistype_stencils, p=thistype_stencil_weights / np.sum(thistype_stencil_weights))
+                    new_name = 'augm_t%d_%d_' % (t, i) + thisstencil  # + '.DAT'
+                    new_lightcurve = self.produce_new_lc(obj=thisstencil, name=new_name, **kwargs)  # ,cadence=cadence)
+                    self.dataset.insert_lightcurve(new_lightcurve)
+                    newobjects = np.append(newobjects, new_name)
+        return newobjects
+
+    @property
+    def dataset(self):
+        """Return the original dataset.
+
+        Returns
+        -------
+        Dataset object (sndata class)
+            Dataset to augment.
+        """
+        return self._dataset
+
+    @property
+    def aug_method(self):
+        """Return the augmentation method.
+
+        Returns
+        -------
+        str
+            Name of the augmentation method.
+        """
+        return self._aug_method
+
+    @property
+    def original_object_names(self):
+        """Return the names of the events in the original dataset.
+
+        Returns
+        -------
+        list-like
+            Name of the events in the original dataset.
+        """
+        return self._original_object_names
+
+    @property
+    def objs_number_to_aug(self):
+        """Return the number and which events used to augment.
+
+        Returns
+        -------
+        objs_number_to_aug: dict
+            The events to augment and how many of each in the form of:
+                event: number of times to augment that event.
+        """
+        return self._objs_number_to_aug
+
+    @objs_number_to_aug.setter
+    def objs_number_to_aug(self, value):
+        """Set the number and which events used to augment.
+
+        Parameters
+        ----------
+        value: {`None`, 'all', dict}, optional
+            Specify which events to augment and by how much. If `None`, the
+            dataset it not augmented. If `all`, all the events are augmented
+            10 times. If a dictionary is provided, it should be in the form of:
+                event: number of times to augment that event.
+        """
+        self.objs_number_to_aug = self._standardise_objs_number_to_aug(self,
+                                                                       value)
+
+    def _standardise_objs_number_to_aug(self, objs_number_to_aug):
+        """Standardise the number and which events to augment.
+
+        The events to augment can be specified in several different ways. This
+        function standardises them all into a dictionary.
+
+        Parameters
+        ----------
+        objs_number_to_aug: {`None`, 'all', dict}, optional
+            Specify which events to augment and by how much. If `None`, the
+            dataset it not augmented. If `all`, all the events are augmented
+            10 times. If a dictionary is provided, it should be in the form of:
+                event: number of times to augment that event.
+
+        Returns
+        -------
+        objs_number_to_aug: dict
+            The events used to augment and how many of each in the form of:
+                event: number of times to augment that event.
+
+        Raises
+        ------
+        ValueError
+            If the events to augment do not exist in the original dataset.
+        TypeError
+            If `objs_number_to_aug` is not `None`, `all` or a dictionary
+            because the function is only built to deal with these input types.
+        """
+        if objs_number_to_aug is None:
+            objs_number_to_aug = {}
+        elif objs_number_to_aug == 'all':  # use all events
+            ori_obj_names = self.original_object_names
+            objs_number_to_aug = {obj: 10 for obj in ori_obj_names}
+        elif type(objs_number_to_aug) == dict:
+            objs_to_aug = np.array(list(objs_number_to_aug.keys()))
+            ori_obj_names = self.original_object_names
+            # Verify all the events to augment exist in the original dataset
+            is_in_ori_obj_names = np.in1d(objs_to_aug, ori_obj_names)
+            if np.sum(~is_in_ori_obj_names) != 0:
+                raise ValueError('The events specified in `objs_number_to_aug`'
+                                 ' must exist in the original dataset.')
+        else:
+            raise TypeError('`objs_number_to_aug` specifies which events to '
+                            'augment and by how much. If `None`, the dataset '
+                            'it not augmented. If `all`, all the events are '
+                            'augmented 10 times. If a dictionary is provided, '
+                            'it should be in the form of: \n event: number of '
+                            'times to augment that event.')
+        return objs_number_to_aug
+
+    @property
+    def objects_to_aug(self):
+        """Return the name of the events to augment.
+
+        Returns
+        -------
+        list-like
+            The id of the events used to augment.
+        """
+        objs_number_to_aug = self.objects_to_aug
+        return np.array(list(objs_number_to_aug.keys()))
+
+    @property
+    def random_seed(self):
+        """Return the random state used to augment.
+
+        Returns
+        -------
+        numpy.random.mtrand.RandomState
+            Random state generator used to augment.
+        """
+        return self._rs
+
+    @random_seed.setter
+    def random_seed(self, value):
+        """Set the seed to the random state used to augment.
+
+        Parameters
+        ----------
+        value: int, optional
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        """
+        self._rs = np.random.RandomState(value)  # initialise the random state
+        self._random_seed = value
+
+
 class GPRobAugment(SNAugment):
     """Derived class that encapsulates data augmentation via Gaussian Processes.
     """
@@ -333,7 +740,7 @@ class GPRobAugment(SNAugment):
         self.dataset = dataset
         self.meta = {}
         self.meta['trained_gp'] = {}
-        self.algorithm = 'GP augmentation'
+        self.augmentation_method = 'GP augmentation'
         if stencils is None:
             self.stencils = dataset.object_names.copy()
         else:
@@ -532,7 +939,7 @@ class GPRobAugment(SNAugment):
             newz = obj_table.meta['z']
         new_lc_meta = obj_table.meta.copy()
         modified_meta = {'name': name, 'z': newz, 'stencil': obj_name,
-                         'augment_algo': self.algorithm}
+                         'augment_algo': self.augmentation_method}
         new_lc_meta.update(modified_meta)
         new_lc = Table(names=['mjd', 'filter', 'flux', 'flux_error'],
                        dtype=['f', 'U', 'f', 'f'], meta=new_lc_meta)
