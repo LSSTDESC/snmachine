@@ -302,7 +302,7 @@ class NNAugment(SNAugment):
         return X_resampled, y_resampled
 
 
-class GPAugment(SNAugment):
+class GPRobAugment(SNAugment):
     """Derived class that encapsulates data augmentation via Gaussian Processes.
     """
 
