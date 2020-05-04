@@ -1,5 +1,5 @@
 """
-Module handling the data augmentation of supernova data sets
+Module handling the data augmentation of a snmachine dataset.
 """
 
 import george
@@ -16,29 +16,26 @@ from snmachine import snfeatures
 
 
 class SNAugment:
-    """
-    Skeletal base class outlining the structure for the augmentation of a
-    sndata instance. Classes that encapsulate a specific data augmentation
-    procedure should be derived from this class.
+    """Base class outlining the structure for the augmentation of a sndata
+    instance. Classes that encapsulate a specific data augmentation procedure
+    are derived from this class.
     """
 
-    def __init__(self, d):
-        """
-        Class constructor.
+    def __init__(self, dataset):
+        """Class constructor.
 
-        Parameters: (why would you call this constructor in the first place?)
+        Parameters:
         ----------
-        d : sndata object
-            the supernova data set we want to augment
-
+        dataset : Dataset object (sndata class)
+            Dataset.
         """
-        self.dataset = d
+        self.dataset = dataset
         # This can contain any metadata that the augmentation
         # process produces, and we want to keep track of.
         self.meta = {}
         self.algorithm = None
         # This is a list of object names that were in the data set prior to augmenting.
-        self.original = d.object_names.copy()
+        self.original_object_names = dataset.object_names.copy()
 
     def augment(self):
         pass
@@ -59,7 +56,8 @@ class SNAugment:
             us to do.
         """
         if obj is None:
-            obj = list(set(self.dataset.object_names()) - set(self.original))
+            obj = list(set(self.dataset.object_names())
+                       - set(self.original_object_names))
 
         for o in obj:
             assert(o in self.dataset.object_names)
@@ -118,19 +116,22 @@ class SNAugment:
 
         # Consistency check: is the specified filter actually in the dataset?
         if peak_filter not in self.dataset.filter_set:
-            raise RuntimeError('Filter %s not amongst the filters in the dataset!')
+            raise RuntimeError('Filter %s not amongst the filters in the'
+                               'dataset!')
 
         # Consistency check: if we want to return salt2-fitted redshifts, do we actually have features?
-        if which_redshifts is 'headerfill' and all([(isinstance(z, float)) & (z >= 0) for z in self.dataset.get_redshift()]):
+        if which_redshifts == 'headerfill' and all([(isinstance(z, float)) & (z >= 0) for z in self.dataset.get_redshift()]):
             # Corner case: if 'headerfill' this check should only complain if there are actually invalid z values to fill in
             which_redshifts = 'header'
         if not fit_salt2 and which_redshifts in ['salt2', 'headerfill']:
-            print("We need SALT2 features in order to return fitted redshifts! Setting which_redshifts to 'header'.")
+            print('We need SALT2 features in order to return fitted redshifts!'
+                  'Setting which_redshifts to "header".')
             which_redshifts = 'header'
 
         # Consistency check: to return features, we need to have features
         if return_features and not fit_salt2 and salt2feats is None:
-            print("We need SALT2 features to return features - either provide some or compute them! Setting return_features to False.")
+            print('We need SALT2 features to return features - either provide'
+                  'some or compute them! Setting return_features to False.')
             return_features = False
 
         # Fitting new features
@@ -148,7 +149,8 @@ class SNAugment:
                 model = tf.fit_sn(self.dataset.data[self.dataset.object_names[i]], salt2feats)
                 model = model[model['filter'] == peak_filter]
                 if len(model) > 0:
-                    peaklogflux = np.append(peaklogflux, np.log10(np.nanmax(model['flux'])))
+                    peaklogflux = np.append(peaklogflux,
+                                            np.log10(np.nanmax(model['flux'])))
                 else:
                     # Band is missing: do something better than this
                     peaklogflux = np.append(peaklogflux, -42)
@@ -158,17 +160,18 @@ class SNAugment:
                 model = self.dataset.data[o]
                 model = model[model['filter'] == peak_filter]
                 if len(model) > 0:
-                    peaklogflux = np.append(peaklogflux, np.log10(np.nanmax(model['flux'])))
+                    peaklogflux = np.append(peaklogflux,
+                                            np.log10(np.nanmax(model['flux'])))
                 else:
                     # Band is missing: do something better
                     peaklogflux = np.append(peaklogflux, -42)
 
         # Extracting redshifts
-        if which_redshifts is 'header':
+        if which_redshifts == 'header':
             z = self.dataset.get_redshift()
-        elif which_redshifts is 'salt2':
+        elif which_redshifts == 'salt2':
             z = [float(salt2feats[salt2feats['Object'] == o]['[Ia]z']) for o in self.dataset.object_names]
-        elif which_redshifts is 'headerfill':
+        elif which_redshifts == 'headerfill':
             z = self.dataset.get_redshift().astype(float)
             for i in range(len(z)):
                 if not isinstance(z[i], float) or z[i] < 0:
@@ -213,10 +216,11 @@ class SNAugment:
             proxy_features = retval
         # Logistic regression on proxy_features
         is_in_training_set = [1 if o in train_names else 0 for o in self.dataset.object_names]
-        if algo is 'logistic':
+        if algo == 'logistic':
             regr = LogisticRegression()
-        elif algo is 'network':
-            regr = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_size=(2,))
+        elif algo == 'network':
+            regr = MLPClassifier(solver='lbfgs', alpha=1e-5,
+                                 hidden_layer_size=(2,))
         regr.fit(proxy_features, is_in_training_set)
         propensity_scores = regr.predict_proba(proxy_features)
         if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
@@ -224,7 +228,8 @@ class SNAugment:
         else:
             return propensity_scores[:, 0]
 
-    def divide_into_propensity_percentiles(self, train_names, nclasses, **kwargs):
+    def divide_into_propensity_percentiles(self, train_names, nclasses,
+                                           **kwargs):
         """Wherein we fit the propensity scores and divide into
         equal-percentile classes from lowest to hightest.
 
@@ -325,14 +330,14 @@ class GPAugment(SNAugment):
     """Derived class that encapsulates data augmentation via Gaussian Processes.
     """
 
-    def __init__(self, d, stencils=None, cadence_stencils=None,
+    def __init__(self, dataset, stencils=None, cadence_stencils=None,
                  stencil_weights=None, cadence_stencil_weights=None):
         """Class constructor.
 
         Parameters:
         ----------
-        d : `sndata` object
-            The supernova data set we want to augment
+        dataset : Dataset object (sndata class)
+            Dataset.
         stencils : list of strings
             If the stencils argument is given (as a list of object names that
             are in the data set), then the augmentation step will take these
@@ -349,16 +354,16 @@ class GPAugment(SNAugment):
             Like stencil_weights, but for the cadence stencils.
         """
 
-        self.dataset = d
+        self.dataset = dataset
         self.meta = {}
         self.meta['trained_gp'] = {}
         self.algorithm = 'GP augmentation'
         if stencils is None:
-            self.stencils = d.object_names.copy()
+            self.stencils = dataset.object_names.copy()
         else:
             self.stencils = stencils
         if cadence_stencils is None:
-            self.cadence_stencils = d.object_names.copy()
+            self.cadence_stencils = dataset.object_names.copy()
         else:
             self.cadence_stencils = cadence_stencils
 
@@ -379,7 +384,7 @@ class GPAugment(SNAugment):
         self.rng = np.random.RandomState()
         self.random_seed = self.rng.get_state()
 
-        self.original = d.object_names.copy()
+        self.original_object_names = dataset.object_names.copy()
 
     def train_filter(self, x, y, yerr, initheta=[100, 20]):
         """Train one Gaussian process on the data from one band. We use the
@@ -585,10 +590,8 @@ class GPAugment(SNAugment):
         """
         if type(obj) in [str, np.str_]:
             table = self.dataset.data[obj]
-            objname = obj
         elif type(obj) is Table:
             table = obj
-            objname = table.meta['name']
         else:
             print('obj: type %s not recognised in extract_cadence()!' % type(obj))
         cadence = {flt: np.array(table[table['filter'] == flt]['mjd']) for flt in self.dataset.filter_set}
