@@ -3,6 +3,7 @@ Module containing Dataset classes. These read in data from various sources and
 turn the light curves into astropy tables that can be read by the rest of the
 code.
 """
+
 from __future__ import division # To be compatible with python 2
 
 import math
