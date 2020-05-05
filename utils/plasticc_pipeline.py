@@ -155,8 +155,19 @@ def get_directories(analyses_directory, analysis_name):
     -------
     directories : dict
         Dictionary containing the mapping of folders inside of `analysis_name`.
+
+    Raises
+    ------
+    ValueError
+        If the folders of the required analysis do not exist.
     """
     analysis_directory = os.path.join(analyses_directory, analysis_name)
+    exists_path = os.path.exists(analysis_directory)
+    if ~exists_path:
+        raise ValueError('There are no folders created for this analysis. '
+                         'Please create some. You can use '
+                         '`plasticc_pipeline.create_folder_structure`.')
+
     features_directory = os.path.join(analysis_directory, 'wavelet_features')
     classifications_directory = os.path.join(analysis_directory,
                                              'classifications')
