@@ -163,10 +163,11 @@ def get_directories(analyses_directory, analysis_name):
     """
     analysis_directory = os.path.join(analyses_directory, analysis_name)
     exists_path = os.path.exists(analysis_directory)
-    if ~exists_path:
-        raise ValueError('There are no folders created for this analysis. '
-                         'Please create some. You can use '
-                         '`plasticc_pipeline.create_folder_structure`.')
+    if not exists_path:
+        raise ValueError('There are no folders created in {}. You can create '
+                         'new folders for this analysis using '
+                         '`plasticc_pipeline.create_folder_structure`.'
+                         ''.format(analysis_directory))
 
     features_directory = os.path.join(analysis_directory, 'wavelet_features')
     classifications_directory = os.path.join(analysis_directory,
