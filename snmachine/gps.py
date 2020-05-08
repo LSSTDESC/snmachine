@@ -66,7 +66,20 @@ def compute_gps(dataset, number_gp, t_min, t_max, output_root=None,
                 GaPP or george.
           - do_subtract_background : Bool, default = False
                 Whether to estimate a new background subtracting the current.
+
+    Raises
+    ------
+    ValueError
+        The Gaussian Processes Regression must be evaluated beyond the minimum
+        and maximum time in the dataset. This requires `t_min` and `t_max` to
+        be smaller and greater than the minimum and maximum observations of
+        `dataset`, respectively.
     """
+    if is_dataset_in_t_range(dataset, t_min=t_min, t_max=t_max) is False:
+        raise ValueError('There are events in the dataset with observations '
+                         'beyond `t_min` and `t_max`. Increase the time range '
+                         'so they can be fully captured by the Gaussian '
+                         'Process Regression.')
     print('Performing Gaussian process regression.')
     initial_time = time.time()
 
@@ -79,7 +92,35 @@ def compute_gps(dataset, number_gp, t_min, t_max, output_root=None,
         _compute_gps_parallel(dataset, number_gp, t_min, t_max, output_root,
                               number_processes, gp_dim, **kwargs)
 
-    print('Time taken for Gaussian process regression: {:.2f}s.'.format(time.time()-initial_time))
+    print('Time taken for Gaussian process regression: {:.2f}s.'
+          ''.format(time.time()-initial_time))
+
+
+def is_dataset_in_t_range(dataset, t_min, t_max):
+    """Check if all the events in the dataset are inside a specific time range.
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    t_min : float
+        Minimum of the considerend time range.
+    t_max : float
+        Maximum of the considerend time range.
+
+    Returns
+    -------
+    bool
+        True if all the events in the dataset are inside the specific time
+        range. False otherwise.
+    """
+    for obj in dataset.object_names:
+        obj_data = dataset.data[obj]
+        t_min_obj = np.min(obj_data['mjd'])
+        t_max_obj = np.max(obj_data['mjd'])
+        if (t_min_obj < t_min) or (t_max_obj > t_max):
+            return False
+    return True
 
 
 def read_gp_files_into_models(dataset, path_saved_gp_files):
