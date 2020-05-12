@@ -861,6 +861,5 @@ def print_time_difference(initial_time, final_time):
     final_time : float
         Time at which the time interval ends.
     """
-    time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time),
-                                              unit='s')
-    print('This has taken {}\n'.format(time_spent_on_this_task))
+    time_spent = pd.to_timedelta(int(final_time-initial_time), unit='s')
+    print('Time spent: {}.'.format(time_spent))
