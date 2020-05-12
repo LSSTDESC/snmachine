@@ -138,6 +138,7 @@ def read_gp_files_into_models(dataset, path_saved_gp_files):
         Path for the Gaussian Process curve files.
     """
     print('Restarting from stored Gaussian Processes...')
+    time_start_reading = time.time()
     for obj in dataset.object_names:
         obj_saved_gps_file = os.path.join(path_saved_gp_files, 'gp_'+obj)
         try:
@@ -148,6 +149,7 @@ def read_gp_files_into_models(dataset, path_saved_gp_files):
             print('IOError, file ', obj_saved_gps_file, 'does not exist.')
         dataset.models[obj] = obj_saved_gps
     print('Models fitted with the Gaussian Processes values.')
+    print_time_difference(time_start_reading, time.time())
 
 
 def _compute_gps_single_core(dataset, number_gp, t_min, t_max, output_root,
@@ -847,3 +849,18 @@ def predict_2d_gp(gp_predict, gp_times, gp_wavelengths):
         else:  # add more entries to the table
             obj_gps = vstack((obj_gps, obj_gp_pb))
     return obj_gps
+
+
+def print_time_difference(initial_time, final_time):
+    """Print the time interval.
+
+    Parameters
+    ----------
+    initial_time : float
+        Time at which the time interval starts.
+    final_time : float
+        Time at which the time interval ends.
+    """
+    time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time),
+                                              unit='s')
+    print('This has taken {}\n'.format(time_spent_on_this_task))
