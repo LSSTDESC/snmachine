@@ -1,6 +1,7 @@
 """
 Module for feature extraction on supernova light curves.
 """
+
 from __future__ import division, print_function
 import numpy as np
 from . import parametric_models
@@ -1384,7 +1385,6 @@ class WaveletFeatures(Features):
             A similar numpy array storing the (assuming Gaussian) error on each coefficient.
         """
         print ('Restarting from stored wavelets...')
-        initial_time = time.time()
         nfilts=len(d.filter_set)
         wavout=np.zeros([len(d.object_names), self.number_gp*2*self.mlev*nfilts]) #This is just a very big array holding coefficients in memory
         wavout_err=np.zeros([len(d.object_names), self.number_gp*2*self.mlev*nfilts])
@@ -1408,9 +1408,7 @@ class WaveletFeatures(Features):
 
             except IOError:
                 print ('IOError, file ',fname, 'does not exist.')
-        final_time = time.time()
-        time_spent = pd.to_timedelta(int(final_time-initial_time), unit='s')
-        print('Time spent: {}.'.format(time_spent))
+
         return wavout, wavout_err
 
 
