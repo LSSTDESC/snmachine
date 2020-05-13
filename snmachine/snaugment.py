@@ -2,6 +2,7 @@
 Module handling the data augmentation of a snmachine dataset.
 """
 
+import copy
 import os
 import pickle
 import time
@@ -314,7 +315,7 @@ class GPAugment(SNAugment):
     """
 
     def __init__(self, dataset, path_saved_gps, objs_number_to_aug=None,
-                 choose_z=None, z_table=None,
+                 choose_z=None, z_table=None, max_duration=None,
                  cosmology=FlatLambdaCDM(**{"H0": 70, "Om0": 0.3,
                                             "Tcmb0": 2.725}),
                  random_seed=None, **kwargs):
@@ -342,8 +343,13 @@ class GPAugment(SNAugment):
             generate the photometric redshift and respective error for the
             augmented events. If `None`, this table is generated from the
             events in the original dataset.
-        cosmology: #TODO
-            3
+        max_duration: {None, float}, optional
+            Maximum duration of the lightcurve. If `None`, it is set to the
+            maximum lenght of an event in `dataset`.
+        cosmology: {None, astropy.cosmology.core.something}
+            Cosmology from `astropy` with the cosmologic parameters already
+            defined. If `None`, it assumes Flat LambdaCDM with parameters
+            `H0 = 70`, `Om0 = 0.3` and `T_cmb0 = 2.725`.
         random_seed: int, optional
             Random seed used. Saving this seed allows reproducible results.
             If given, it must be between 0 and 2**32 - 1.
@@ -358,7 +364,8 @@ class GPAugment(SNAugment):
         self._objs_number_to_aug = objs_number_to_aug
         self._z_table = z_table
         self._path_saved_gps = path_saved_gps
-        self._cosmology = cosmology  # TODO: add as property
+        self._cosmology = cosmology
+        self._max_duration = max_duration
 
     def augment(self):
         """Augment the dataset.
@@ -373,10 +380,46 @@ class GPAugment(SNAugment):
             aug_objs_data += new_aug_objs_data
             aug_objs_metadata += new_aug_objs_metadata
 
-        self.add_augment_objs_to_dataset(aug_objs_data, aug_objs_metadata) # TODO create this function
+        self._add_augment_objs_to_dataset(aug_objs_data, aug_objs_metadata)
 
         time_spent = pd.to_timedelta(int(time.time()-initial_time), unit='s')
         print('Time spent augmenting: {}.'.format(time_spent))
+
+    def _add_augment_objs_to_dataset(self, aug_objs_data, aug_objs_metadata):
+        """Add the new events to the dataset.
+
+        There are two new datasets created:
+            - aug_dataset: original + augmented events
+            - only_new_dataset: augmented events
+
+        Parameters
+        ----------
+        aug_objs_data: list of pandas.DataFrame
+            List containing the observations of each augmentation of each
+            event.
+        aug_objs_metadata: list of pandas.DataFrame
+            Ordered list containing the metadata of each augmentation of each
+            event.
+        """
+        aug_dataset = copy.deepcopy(self.dataset)
+
+        metadata = self.dataset.metadata
+        new_entries = pd.concat(aug_objs_metadata, axis=1).T
+        aug_metadata = pd.concat([metadata, new_entries])
+        aug_dataset.metadata = aug_metadata
+
+        aug_dataset.object_names = aug_metadata.object_id
+
+        for obj_data in aug_objs_data:
+            obj = obj_data['object_id'].iloc[0]
+            obj_data = self.trim_obj(obj_data, self.max_duration)
+            aug_dataset.data[obj] = Table.from_pandas(obj_data)
+            aug_dataset.set_inner_metadata(obj)
+        self.aug_dataset = aug_dataset
+
+        only_new_dataset = copy.deepcopy(aug_dataset)
+        only_new_dataset.update_dataset(new_entries.object_id)
+        self.only_new_dataset = only_new_dataset
 
     def augment_obj(self, obj):
         """Create the specified number of augmentations of the event.
@@ -558,6 +601,108 @@ class GPAugment(SNAugment):
                                  'be positive and they were not after 100 '
                                  'iterations so something is wrong.')
         return z_photo, z_photo_error
+
+    @property
+    def dataset(self):
+        """Return the original dataset.
+
+        Returns
+        -------
+        Dataset object (sndata class)
+            Dataset to augment.
+        """
+        self.dataset = self._dataset
+
+    @property
+    def max_duration(self):
+        """Return the maximum duration any lightcurve can have.
+
+        All the events in the original dataset must be shorter than this value.
+
+        Returns
+        -------
+        float
+            Maximum duration any lightcurve can have.
+
+        Raises
+        ------
+        ValueError
+            If any event in the original dataset is longer than the maximum
+            duration any lightcurve can have.
+        """
+        if self.dataset.get_max_length() < self._max_duration:
+            raise ValueError('All the events in the original dataset must be '
+                             'shorter than the required maximum duration any '
+                             'lightcurve. At the moment the maximum duration '
+                             'of an event is {:.0f} days.'
+                             ''.format(self.dataset.get_max_length()))
+        else:
+            self.max_duration = self._max_duration
+
+    @staticmethod
+    def trim_obj(obj_data, max_duration):
+        """Remove the event edges so it is shorter than a threshold.
+
+        Remove at least 5 days each time. The observations removed are the
+        first or the last, depending on which ones have the mean flux closer
+        to zero.
+
+        Parameters
+        ----------
+        obj_data: pandas.DataFrame
+            Observations of an event.
+        max_duration: float
+            Maximum duration of the lightcurve.
+
+        Returns
+        -------
+        obj_data: pandas.DataFrame
+            Trimmed observations of an event.
+        """
+        obj_duration = np.max(obj_data['mjd'])
+        while obj_duration > max_duration:
+            diff_duration = max_duration - obj_duration
+            number_days_remove = np.max([5., diff_duration/3])  # >= 5 days
+
+            index_initial_obs = obj_data['mjd'] < number_days_remove
+            mean_initial_flux = np.mean(obj_data['flux'][index_initial_obs])
+
+            index_final_obs = obj_data['mjd'] < (obj_duration
+                                                 - number_days_remove)
+            mean_final_flux = np.mean(obj_data['flux'][index_final_obs])
+
+            if np.abs(mean_initial_flux) > np.abs(mean_final_flux):
+                obj_data = obj_data[~index_final_obs] # remove end
+            else:  # remove beginning
+                obj_data = obj_data[~index_initial_obs]
+                obj_data['mjd'] -= np.min(obj_data['mjd'])
+            obj_duration = np.max(obj_data['mjd'])
+        return obj_data
+
+    @property
+    def cosmology(self):
+        """Return the names of the events in the original dataset.
+
+        Returns
+        -------
+        astropy.cosmology.core.something
+            Cosmology from `astropy` with the cosmologic parameters already
+            defined.
+
+        Raises
+        ------
+        TypeError
+            If the form of the cosmology inputed does not allow the
+            computation of the distance modulus.
+        """
+        try:
+            self._cosmology.distmod(z=1)
+            return self._cosmology
+        except TypeError:
+            raise TypeError('The cosmology must be given as '
+                            '`astropy.cosmology.core.something`. It must be '
+                            'possible to compute the distance modulus at '
+                            'redshift 1 by calling `cosmology.distmod(z=1)`.')
 
     def compute_new_wavelength(self, z_ori, z_new, obj_data):
         """Compute the new observations wavelenght at the original redshift.
