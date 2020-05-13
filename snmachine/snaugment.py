@@ -19,7 +19,7 @@ from imblearn.combine import SMOTEENN, SMOTETomek
 from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
-from snmachine import snfeatures
+from snmachine import gps, snfeatures
 
 
 # Functions to choose spectroscopic redshift for `GPAugment`.
@@ -374,7 +374,8 @@ class GPAugment(SNAugment):
             Random seed used. Saving this seed allows reproducible results.
             If given, it must be between 0 and 2**32 - 1.
         **kwargs: dict, optional
-            Optional keywords to pass arguments into `choose_z`.
+            Optional keywords to pass arguments into `choose_z` and into
+            `snamchine.gps.compute_gps`.
         """
         self._dataset = dataset
         self._aug_method = 'GP augmentation'
@@ -623,6 +624,36 @@ class GPAugment(SNAugment):
                                  'iterations so something is wrong.')
         return z_photo, z_photo_error
 
+    def fit_gps(self, path_to_save_gps):
+        """Fit Gaussian Processes to the augmented events.
+
+        Parameters
+        ----------
+        path_to_save_gps: str
+            Path where to save the new Gaussian Processes outputs.
+        """
+        # Confirm the data was augmented and the path to save the GPs exist
+        self._is_dataset_augmented()
+        self._exists_path()
+
+        gps.compute_gps(self.only_new_dataset, **self._kwargs)
+
+    def _is_dataset_augmented(self):
+        """Check if the dataset was already augmented.
+
+        Raises
+        ------
+        AttributeError
+            If the dataset has not been augmented yet and therefore the
+            attribute `self.only_new_dataset` does not exist.
+        """
+        try:
+            self.only_new_dataset
+        except AttributeError:
+            raise AttributeError('The original dataset must be augmented '
+                                 'before Gaussian Processes can be fitted to '
+                                 'the augmented events.')
+
     @property
     def dataset(self):
         """Return the original dataset.
@@ -841,6 +872,25 @@ class GPAugment(SNAugment):
                              - z_table['hostgal_specz'])
         return z_table
 
+    @staticmethod
+    def _exists_path(path_to_test):
+        """Check if the inputed path exists.
+
+        Parameters
+        ----------
+        path_to_test: str
+            Path to test the existence.
+
+        Raises
+        ------
+        ValueError
+            If the provided path does not exist.
+        """
+        exists_path = os.path.exists(path_to_test)
+        if not exists_path:
+            raise ValueError('The path {} does not exist. Provide a valid path'
+                             '.'.format(path_to_test))
+
     @property
     def path_saved_gps(self):
         """Return the path to the Gaussian Process files.
@@ -849,18 +899,9 @@ class GPAugment(SNAugment):
         -------
         str
             Path to the Gaussian Process files.
-
-        Raises
-        ------
-        ValueError
-            If the provided path does not exist.
         """
-        exists_path = os.path.exists(self._path_saved_gps)
-        if not exists_path:
-            raise ValueError('The path {} does not exist. Provide a valid path'
-                             '.'.format(self._path_saved_gps))
-        else:
-            return self._path_saved_gps
+        self._exists_path(self._path_saved_gps)
+        return self._path_saved_gps
 
     @property
     def objs_number_to_aug(self):
