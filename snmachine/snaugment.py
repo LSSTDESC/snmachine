@@ -752,17 +752,6 @@ class GPAugment(SNAugment):
         return wavelength_new
 
     @property
-    def dataset(self):
-        """Return the original dataset.
-
-        Returns
-        -------
-        Dataset object (sndata class)
-            Dataset to augment.
-        """
-        return self._dataset
-
-    @property
     def aug_method(self):
         """Return the augmentation method.
 
