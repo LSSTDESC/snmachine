@@ -1,6 +1,8 @@
 """
-Machine learning pipeline for the PLAsTiCC competition using snmachine codebase.
+Machine learning pipeline for the PLAsTiCC competition using snmachine
+codebase.
 """
+
 import multiprocessing
 import os
 import subprocess
@@ -33,7 +35,7 @@ warnings.filterwarnings("ignore")
 
 
 def get_git_revision_short_hash():
-    """ Helper function to obtain current version control hash value
+    """Helper function to obtain current version control hash value
 
     Returns
     -------
@@ -52,13 +54,13 @@ def get_git_revision_short_hash():
 
 
 def get_timestamp():
-    """ Helper function to obtain latest modified time of the configuration file
+    """Helper function to obtain latest modified time of the configuration file
 
     Returns
     -------
     timestamp : str
-        Short representation of last modified time for the configuration file used.
-        'YYYY-MM-DD-HOURMINUTE'
+        Short representation of last modified time for the configuration file
+        used: 'YYYY-MM-DD-HOURMINUTE'
 
     Examples
     --------
@@ -72,7 +74,7 @@ def get_timestamp():
 
 
 def create_folder_structure(analyses_directory, analysis_name):
-    """ Make directories that will be used for analysis
+    """Make directories that will be used for analysis
 
     Parameters
     ----------
@@ -89,15 +91,16 @@ def create_folder_structure(analyses_directory, analysis_name):
     >>> ...
     >>> analysis_directory = params.get("analysis_directory", None)
     >>> analysis_name = params.get("analysis_name", None)
-    >>> directories = create_folder_structure(analysis_directory, analysis_name)
+    >>> directories = create_folder_structure(analysis_directory,
+                                              analysis_name)
     >>> print(directories.get("analysis_directory", None))
-
     """
-
     analysis_directory = os.path.join(analyses_directory, analysis_name)
     features_directory = os.path.join(analysis_directory, 'wavelet_features')
-    classifications_directory = os.path.join(analysis_directory, 'classifications')
-    intermediate_files_directory = os.path.join(analysis_directory, 'intermediate_files')
+    classifications_directory = os.path.join(analysis_directory,
+                                             'classifications')
+    intermediate_files_directory = os.path.join(analysis_directory,
+                                                'intermediate_files')
     plots_directory = os.path.join(analysis_directory, 'plots')
 
     directories = {
@@ -136,9 +139,10 @@ def create_folder_structure(analyses_directory, analysis_name):
 
 
 def get_directories(analyses_directory, analysis_name):
-    """Returns the folder directories inside of a given analysis.
+    """Return the folder directories inside of a given analysis.
 
-    # TODO [Add a link to the place where we have an explanation of the folder structure]
+    # TODO [Add a link to the place where we have an explanation of the folder
+    # structure]
 
     Parameters
     ----------
@@ -151,11 +155,25 @@ def get_directories(analyses_directory, analysis_name):
     -------
     directories : dict
         Dictionary containing the mapping of folders inside of `analysis_name`.
+
+    Raises
+    ------
+    ValueError
+        If the folders of the required analysis do not exist.
     """
     analysis_directory = os.path.join(analyses_directory, analysis_name)
+    exists_path = os.path.exists(analysis_directory)
+    if not exists_path:
+        raise ValueError('There are no folders created in {}. You can create '
+                         'new folders for this analysis using '
+                         '`plasticc_pipeline.create_folder_structure`.'
+                         ''.format(analysis_directory))
+
     features_directory = os.path.join(analysis_directory, 'wavelet_features')
-    classifications_directory = os.path.join(analysis_directory, 'classifications')
-    intermediate_files_directory = os.path.join(analysis_directory, 'intermediate_files')
+    classifications_directory = os.path.join(analysis_directory,
+                                             'classifications')
+    intermediate_files_directory = os.path.join(analysis_directory,
+                                                'intermediate_files')
     plots_directory = os.path.join(analysis_directory, 'plots')
 
     directories = {"analysis_directory": analysis_directory,
@@ -168,7 +186,7 @@ def get_directories(analyses_directory, analysis_name):
 
 
 def load_configuration_file(path_to_configuration_file):
-    """ Load from disk the configuration file that is to be used
+    """Load from disk the configuration file that is to be used
 
     Parameters
     ----------
@@ -233,7 +251,6 @@ def save_configuration_file(params, analysis_directory):
     number_of_principal_components: 10
     timestamp: 2019-05-21-1204
     """
-
     git_hash = {"git_hash": get_git_revision_short_hash()}
     timestamp = {"timestamp": get_timestamp()}
 
@@ -241,7 +258,7 @@ def save_configuration_file(params, analysis_directory):
     params.update(timestamp)
 
     with open(os.path.join(analysis_directory, "logs.yml"), 'a+') as config:
-            yaml.dump(params, config, default_flow_style=False)
+        yaml.dump(params, config, default_flow_style=False)
 
 
 def load_training_data(data_path):
@@ -265,20 +282,23 @@ def load_training_data(data_path):
     >>> print(training_data)
     <snmachine.sndata.PlasticcData object at 0x7f8dc9dd4e10>
     """
-
     try:
         if data_path.lower().endswith((".pickle", ".pkl", ".p", ".pckl")):
             with open(data_path, 'rb') as input:
                 print("Opening from binary pickle")
                 training_data = pickle.load(input)
-                print("Dataset loaded from pickle file as: {}".format(training_data))
+                print("Dataset loaded from pickle file as: {}".format(
+                    training_data))
         else:
             folder_path, train_data_file_name = os.path.split(data_path)
-            meta_data_file_name = "_metadata.".join(train_data_file_name.split("."))
+            metadata_file_name = "_metadata.".join(train_data_file_name.split(
+                "."))
 
             print("Opening from CSV")
-            training_data = sndata.PlasticcData(folder=folder_path, data_file=train_data_file_name,
-                                                metadata_file=meta_data_file_name, cut_non_detections=False)
+            training_data = sndata.PlasticcData(folder=folder_path,
+                                                data_file=train_data_file_name,
+                                                metadata_file=metadata_file_name,
+                                                cut_non_detections=False)
             print("Dataset loaded from csv file as: {}".format(training_data))
             print("Saving {} object to pickle binary".format(training_data))
 
@@ -297,8 +317,7 @@ def reduce_size_of_training_data(training_data, directories, subset_size, seed=1
     # TODO: Incorpate further doctrings and finish examples. Tarek: Catarina and I need to
     # discuss this further. There is some overlap between this and
     # sndata.PlasticcData.update_data() and it would be good to comebine this.
-    """
-    Load from disk the training data one will use for this analysis
+    """Load from disk the training data one will use for this analysis
 
     Parameters
     ----------
@@ -321,9 +340,7 @@ def reduce_size_of_training_data(training_data, directories, subset_size, seed=1
     --------
     >>> ...
     >>> new_training_data = reduce_size_of_training_data(training_data, directories, 1000)
-
     """
-
     analysis_directory = directories.get("analysis_directory", None)
     print(F"ANALYSIS DIR: {analysis_directory}")
     subset_file = os.path.join(str(analysis_directory), "subset.list")
@@ -341,11 +358,12 @@ def reduce_size_of_training_data(training_data, directories, subset_size, seed=1
 
     # Erase the data we are not using
     training_data.data = {objects: training_data.data[objects] for objects in training_data.object_names}
-    print("Dataset reduced to {} objects".format(training_data.object_names.shape[0]))
+    print("Dataset reduced to {} objects".format(
+        training_data.object_names.shape[0]))
 
 
 def wavelet_decomposition(training_data, number_gp, **kwargs):
-    """ Wrapper function for `snmachine.snfeatures.WaveletFeatures`. This
+    """Wrapper function for `snmachine.snfeatures.WaveletFeatures`. This
     performs a wavelet decomposition on training data evaluated at 'number_gp'
     points on a light curve
 
@@ -383,7 +401,6 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
                                                                      save_output='all',
                                                                      output_root=directories.get("intermediate_files_directory"))
     >>> print()
-
     """
     wavelet_object = snfeatures.WaveletFeatures(number_gp=number_gp)
     print("WAV = {}\n".format(wavelet_object.wav))
@@ -395,7 +412,7 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
 
 def combine_all_features(reduced_wavelet_features, dataframe):
     # TODO: Improve docstrings.
-    """ Combine snmachine wavelet features with PLASTICC features. The
+    """Combine snmachine wavelet features with PLASTICC features. The
     user should define a dataframe they would like to merge.
 
     Parameters
@@ -460,7 +477,6 @@ def _to_pandas(features):
     >>> print(type(features))
     <class 'pandas.core.frame.DataFrame'>
     """
-
     if isinstance(features, np.ndarray):
         features = pd.DataFrame(features, index=training_data.object_names)
     else:
@@ -469,7 +485,9 @@ def _to_pandas(features):
     return features
 
 
-def create_classifier(combined_features, training_data, directories, augmentation_method=None, random_state=42, number_comps=''):
+def create_classifier(combined_features, training_data, directories,
+                      augmentation_method=None, random_state=42,
+                      number_comps=''):
     # TODO: Improve docstrings.
     """ Creation of an optimised Random Forest classifier.
 
@@ -496,7 +514,6 @@ def create_classifier(combined_features, training_data, directories, augmentatio
         n_estimators=700, n_jobs=-1, oob_score=True, random_state=42,
         verbose=0, warm_start=False), array([[ 1.]]))
     """
-
     labels = training_data.labels.values
 
     X = combined_features
@@ -506,7 +523,9 @@ def create_classifier(combined_features, training_data, directories, augmentatio
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
 
-    classifer = RandomForestClassifier(n_estimators=700, criterion='entropy', oob_score=True, n_jobs=-1, random_state=random_state)
+    classifer = RandomForestClassifier(n_estimators=700, criterion='entropy',
+                                       oob_score=True, n_jobs=-1,
+                                       random_state=random_state)
 
     if augmentation_method in snaugment.NNAugment.methods():
         classifer = make_pipeline(eval(augmentation_method)(sampling_strategy='not majority'), classifer)
@@ -519,13 +538,18 @@ def create_classifier(combined_features, training_data, directories, augmentatio
     print(classification_report_imbalanced(y_test, classifer.predict(X_test)))
 
     y_preds = classifer.predict(X_test)
-    confusion_matrix, figure = plot_confusion_matrix(y_test, y_preds, 'Validation data', target_names, normalize=True)
+    confusion_matrix, figure = plot_confusion_matrix(y_test, y_preds,
+                                                     'Validation data',
+                                                     target_names,
+                                                     normalize=True)
 
     timestamp = get_timestamp()
-    with open(os.path.join(directories.get("classifications_directory"), F'classifer_{number_comps}_{augmentation_method}.pkl'), 'wb') as clf:
+    with open(os.path.join(directories.get("classifications_directory"),
+                           F'classifer_{number_comps}_{augmentation_method}.pkl'), 'wb') as clf:
         pickle.dump(classifer, clf)
 
-    figure.savefig(os.path.join(directories.get("plots_directory"), F'confusion_matrix_{number_comps}_{augmentation_method}.pdf'))
+    figure.savefig(os.path.join(directories.get("plots_directory"),
+                                F'confusion_matrix_{number_comps}_{augmentation_method}.pdf'))
 
     return classifer, confusion_matrix
 
