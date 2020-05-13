@@ -22,6 +22,26 @@ from sklearn.neural_network import MLPClassifier
 from snmachine import snfeatures
 
 
+# Functions to choose spectroscopic redshift for `GPAugment`.
+# They are inputed as the parameter `choose_z` and their arguments as `*kwargs`
+def choose_new_z_spec(z_ori, pb_wavelengths, i=0):
+    '''Choose a new spec-z for the event based on the original spec-z'''
+
+    z_min = max(10**(-6), (1 + z_ori) * (2 - pb_wavelengths['lsstg']
+                                         / pb_wavelengths['lsstu']) - 1)
+    z_max = ((1 + z_ori)
+             * (2 - pb_wavelengths['lsstz']/pb_wavelengths['lssty']) - 1)
+    log_z_star = np.random.uniform(low=np.log(z_min), high=np.log(z_max))
+    z_new = - np.exp(log_z_star) + z_min + z_max
+
+    if z_new <= 0 and i <= 100:
+        z_new = choose_new_z_spec(z_ori, pb_wavelengths, i=i+1)
+    elif z_new <= 0:
+        raise ValueError('The new redshift needs to be positive and it was not'
+                         ' after 100 iterations')
+    return z_new
+
+
 class SNAugment:
     """Base class outlining the structure for the augmentation of a sndata
     instance. Classes that encapsulate a specific data augmentation procedure
@@ -356,7 +376,6 @@ class GPAugment(SNAugment):
         **kwargs: dict, optional
             Optional keywords to pass arguments into `choose_z`.
         """
-        # TODO: error handling of `choose_z`
         self._dataset = dataset
         self._aug_method = 'GP augmentation'
         self._random_seed = random_seed
@@ -366,6 +385,8 @@ class GPAugment(SNAugment):
         self._path_saved_gps = path_saved_gps
         self._cosmology = cosmology
         self._max_duration = max_duration
+        self._kwargs = dict(kwargs, pb_wavelengths=self.dataset.pb_wavelengths)
+        self.choose_z = choose_z
 
     def augment(self):
         """Augment the dataset.
@@ -549,7 +570,7 @@ class GPAugment(SNAugment):
         aug_obj_metadata['augmented'] = True
         aug_obj_metadata['original_event'] = aug_obj.split('_')[0]
 
-        z_spec = self.choose_z(obj_metadata['hostgal_specz'], self.kwargs)  # TODO: does this kwargs work?
+        z_spec = self.choose_z(obj_metadata['hostgal_specz'], **self._kwargs)
         z_photo, z_photo_error = self.compute_new_z_photo(z_spec)
         aug_obj_metadata['hostgal_specz'] = z_spec
         aug_obj_metadata['hostgal_photoz'] = z_photo
