@@ -130,8 +130,10 @@ def test_templates_leastsq(load_example_data):
 
         if sncosmo.__version__ < '1.5.0':
             gof_truth = [6.19486141,  18.22896966,   6.11967201,   1.06182221]
-        else:
+        elif sncosmo.__version__ < '2.0.0':
             gof_truth = [6.15794175,  18.22484842,   6.47569171,   2.2642403]
+        else:
+            gof_truth = [ 5.02820836, 17.2957761 ,  7.386472  ,  2.89795602]
         np.testing.assert_allclose(gof, gof_truth, rtol=rtol)
 
     for nproc in parallel_cores:
