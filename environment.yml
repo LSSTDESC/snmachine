@@ -18,6 +18,7 @@ dependencies:
   - pandas>=0.23.0
   - extinction>=0.3.0
   - imbalanced-learn>=0.4.3
+  - pip
 
   - pip:
     - emcee>=2.1.0
