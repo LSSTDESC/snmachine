@@ -2,6 +2,11 @@
 Module for parametric models for use in snfeatures module
 """
 from __future__ import print_function
+
+
+__all__ = []
+
+
 import numpy as np
 
 class NewlingModel:

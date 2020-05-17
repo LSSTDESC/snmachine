@@ -1,7 +1,7 @@
 """
 Module for extracting and saving GPs
 """
-
+__all__ = []
 import os
 import pickle
 import time

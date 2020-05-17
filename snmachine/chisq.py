@@ -5,6 +5,7 @@ The X^2 related functions work only for 1 object. If you want to calculate them 
 to loop through.
 """
 
+__all__ = []
 import numpy as np
 import pandas as pd
 

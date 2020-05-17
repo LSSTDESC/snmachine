@@ -1,8 +1,11 @@
 """
 Utility script for making nice t-SNE plots (https://lvdmaaten.github.io/tsne/)
 """
-
 from __future__ import division
+
+__all__ = []
+
+
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from sklearn.manifold import TSNE
