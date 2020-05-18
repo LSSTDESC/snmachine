@@ -3,7 +3,9 @@ Module containing Dataset classes. These read in data from various sources and
 turn the light curves into astropy tables that can be read by the rest of the
 code.
 """
-from __future__ import division # To be compatible with python 2
+from __future__ import division  # To be compatible with python 2
+
+__all__ = []
 
 import math
 import os
@@ -1639,7 +1641,12 @@ class SDSS_Simulations(EmptyDataset):
         zpsys=['ab']*len(mjd)
 
         # form astropy table
-        tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr], names=('mjd', 'filter', 'flux', 'flux_error', 'zp', 'zpsys', 'mag', 'mag_error'), meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype, 'initial_observation_time':start_mjd, 'peak flux':peak_flux , 'data type':dtype })
+        tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr],
+                    names=('mjd', 'filter', 'flux', 'flux_error', 'zp',
+                           'zpsys', 'mag', 'mag_error'),
+                    meta={'snid': snid,'z':z, 'z_err':z_err, 'type':sntype,
+                          'initial_observation_time':start_mjd,
+                          'peak flux':peak_flux , 'data type':dtype })
 
         return tab
 
