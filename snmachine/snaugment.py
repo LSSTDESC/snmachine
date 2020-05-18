@@ -615,11 +615,11 @@ class GPAugment(SNAugment):
             `z_photo_error` are not positive.
         """
         z_table = self.z_table
-        rd_z_triple = z_table.sample(self._rs)  # TODO: is it correctly implemented?
-        z_diff = rd_z_triple['z_diff']
+        rd_z_triple = z_table.sample(random_state=self._rs)
+        z_diff = float(rd_z_triple['z_diff'])
         z_photo = z_spec + self._rs.choice([-1, 1]) * z_diff
-        z_photo_error = (rd_z_triple['hostgal_photoz_err']
-                         * self._rs.normal(1, .05))
+        z_photo_error = float(rd_z_triple['hostgal_photoz_err']
+                              * self._rs.normal(1, .05))
 
         is_z_pos = (z_photo > 0) & (z_photo_error > 0)
         number_max_iter = 100  # # of tries to get an appropriate result
