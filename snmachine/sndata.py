@@ -3,7 +3,6 @@ Module containing Dataset classes. These read in data from various sources and
 turn the light curves into astropy tables that can be read by the rest of the
 code.
 """
-
 from __future__ import division  # To be compatible with python 2
 
 __all__ = []
@@ -551,6 +550,9 @@ class PlasticcData(EmptyDataset):
         self.set_metadata(folder, metadata_file)
         if mix is True:
             self.mix()
+        # Set the central wavelength of each passband
+        self.pb_wavelengths = {'lsstu': 3685, 'lsstg': 4802, 'lsstr': 6231,
+                               'lssti': 7542, 'lsstz': 8690, 'lssty': 9736}
 
     def set_data(self, folder, data_file, cut_non_detections=False):
         """Reads in simulated data and saves it.
