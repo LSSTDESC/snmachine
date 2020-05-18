@@ -15,6 +15,7 @@ import scipy.optimize as op
 from astropy.table import Table, vstack
 from astropy.cosmology import FlatLambdaCDM
 from collections import Counter
+from functools import partial  # TODO: erase when old sndata is deprecated
 from imblearn.combine import SMOTEENN, SMOTETomek
 from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
 from sklearn.linear_model import LogisticRegression
@@ -385,7 +386,7 @@ class GPAugment(SNAugment):
         self.z_table = z_table
         self._path_saved_gps = path_saved_gps
         self._cosmology = cosmology
-        self._max_duration = max_duration
+        self.max_duration = max_duration
         self._kwargs = dict(kwargs, pb_wavelengths=self.dataset.pb_wavelengths)
         self.choose_z = choose_z
 
@@ -554,6 +555,11 @@ class GPAugment(SNAugment):
                                          'used_gp_'+obj+'.pckl')
         with open(path_saved_obj_gp, 'rb') as input:
             gp_predict = pickle.load(input)
+        try:  # old format - TODO: deprecate the old sndata format
+            obj_flux = self.dataset.data[obj]['flux']
+            gp_predict = partial(gp_predict.predict, obj_flux)
+        except AttributeError:
+            pass
         return gp_predict
 
     def create_aug_obj_metadata(self, aug_obj, obj_metadata):
@@ -643,9 +649,10 @@ class GPAugment(SNAugment):
         """
         # Confirm the data was augmented and the path to save the GPs exist
         self._is_dataset_augmented()
-        self._exists_path()
+        self._exists_path(path_to_save_gps)
 
-        gps.compute_gps(self.only_new_dataset, **self._kwargs)
+        gps.compute_gps(self.only_new_dataset, output_root=path_to_save_gps,
+                        **self._kwargs)
 
     def _is_dataset_augmented(self):
         """Check if the dataset was already augmented.
@@ -684,6 +691,18 @@ class GPAugment(SNAugment):
         -------
         float
             Maximum duration any lightcurve can have.
+        """
+        return self._max_duration
+
+    @max_duration.setter
+    def max_duration(self, value):
+        """Set the maximum duration any lightcurve can have.
+
+        Parameters
+        ----------
+        value: {None, float}, optional
+            Maximum duration of the lightcurve. If `None`, it is set to the
+            maximum lenght of an event in `dataset`.
 
         Raises
         ------
@@ -691,14 +710,18 @@ class GPAugment(SNAugment):
             If any event in the original dataset is longer than the maximum
             duration any lightcurve can have.
         """
-        if self.dataset.get_max_length() < self._max_duration:
+        max_duration_ori = self.dataset.get_max_length()
+        if value is None:
+            duration = max_duration_ori
+        elif max_duration_ori < value:
             raise ValueError('All the events in the original dataset must be '
                              'shorter than the required maximum duration any '
                              'lightcurve. At the moment the maximum duration '
                              'of an event is {:.0f} days.'
-                             ''.format(self.dataset.get_max_length()))
+                             ''.format(max_duration_ori))
         else:
-            return self._max_duration
+            duration = value
+        self._max_duration = duration
 
     @staticmethod
     def trim_obj(obj_data, max_duration):
@@ -733,7 +756,7 @@ class GPAugment(SNAugment):
             mean_final_flux = np.mean(obj_data['flux'][index_final_obs])
 
             if np.abs(mean_initial_flux) > np.abs(mean_final_flux):
-                obj_data = obj_data[~index_final_obs] # remove end
+                obj_data = obj_data[~index_final_obs]  # remove end
             else:  # remove beginning
                 obj_data = obj_data[~index_initial_obs]
                 obj_data['mjd'] -= np.min(obj_data['mjd'])
