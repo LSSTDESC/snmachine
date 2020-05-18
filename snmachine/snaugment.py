@@ -639,7 +639,7 @@ class GPAugment(SNAugment):
                                  'iterations so something is wrong.')
         return z_photo, z_photo_error
 
-    def fit_gps(self, path_to_save_gps):
+    def fit_gps(self, path_to_save_gps, **kwargs):
         """Fit Gaussian Processes to the augmented events.
 
         Parameters
@@ -650,6 +650,8 @@ class GPAugment(SNAugment):
         # Confirm the data was augmented and the path to save the GPs exist
         self._is_dataset_augmented()
         self._exists_path(path_to_save_gps)
+
+        self._kwargs.update(kwargs)  # add more arguments
 
         gps.compute_gps(self.only_new_dataset, output_root=path_to_save_gps,
                         **self._kwargs)
