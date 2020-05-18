@@ -391,12 +391,21 @@ class GPAugment(SNAugment):
 
     def augment(self):
         """Augment the dataset.
+
+        Returns
+        -------
+        str, optional
+            If there are no events choosen to augment, a message is returned
+            with that information.
         """
         print('Augmenting the dataset...')
         initial_time = time.time()
 
         aug_objs_data = []
         aug_objs_metadata = []
+        if np.size(self.objects_to_aug) == 0:
+            return ('No events were choosen to augment, so no augmentation '
+                    'was performed.')
         for obj in self.objects_to_aug:
             new_aug_objs_data, new_aug_objs_metadata = self.augment_obj(obj)
             aug_objs_data += new_aug_objs_data
