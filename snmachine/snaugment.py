@@ -2,6 +2,7 @@
 Module handling the data augmentation of supernova data sets
 """
 
+__all__ = []
 import george
 import numpy as np
 import scipy.optimize as op
