@@ -2,6 +2,8 @@
 Module handling the data augmentation of a snmachine dataset.
 """
 
+__all__ = []
+
 import copy
 import os
 import pickle
