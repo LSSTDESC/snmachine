@@ -2,8 +2,6 @@
 Module handling the data augmentation of a snmachine dataset.
 """
 
-__all__ = []
-
 import copy
 import os
 import pickle
@@ -225,7 +223,7 @@ class SNAugment:
             regr = LogisticRegression()
         elif algo == 'network':
             regr = MLPClassifier(solver='lbfgs', alpha=1e-5,
-                                 hidden_layer_size=(2,))
+                                 hidden_layer_sizes=(2,))
         regr.fit(proxy_features, is_in_training_set)
         propensity_scores = regr.predict_proba(proxy_features)
         if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
