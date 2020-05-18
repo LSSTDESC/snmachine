@@ -379,10 +379,10 @@ class GPAugment(SNAugment):
         """
         self._dataset = dataset
         self._aug_method = 'GP augmentation'
-        self._random_seed = random_seed
+        self.random_seed = random_seed
         self._original_object_names = self.dataset.object_names.copy()
-        self._objs_number_to_aug = objs_number_to_aug
-        self._z_table = z_table
+        self.objs_number_to_aug = objs_number_to_aug
+        self.z_table = z_table
         self._path_saved_gps = path_saved_gps
         self._cosmology = cosmology
         self._max_duration = max_duration
@@ -663,7 +663,7 @@ class GPAugment(SNAugment):
         Dataset object (sndata class)
             Dataset to augment.
         """
-        self.dataset = self._dataset
+        return self._dataset
 
     @property
     def max_duration(self):
@@ -689,7 +689,7 @@ class GPAugment(SNAugment):
                              'of an event is {:.0f} days.'
                              ''.format(self.dataset.get_max_length()))
         else:
-            self.max_duration = self._max_duration
+            return self._max_duration
 
     @staticmethod
     def trim_obj(obj_data, max_duration):
@@ -839,7 +839,7 @@ class GPAugment(SNAugment):
                                  - z_table['hostgal_specz'])
         else:
             z_table = self._standardise_z_table(value)
-        self.z_table = z_table
+        self._z_table = z_table
 
     @staticmethod
     def _standardise_z_table(z_table):
@@ -927,8 +927,7 @@ class GPAugment(SNAugment):
             10 times. If a dictionary is provided, it should be in the form of:
                 event: number of times to augment that event.
         """
-        self.objs_number_to_aug = self._standardise_objs_number_to_aug(self,
-                                                                       value)
+        self._objs_number_to_aug = self._standardise_objs_number_to_aug(value)
 
     def _standardise_objs_number_to_aug(self, objs_number_to_aug):
         """Standardise the number and which events to augment.
@@ -989,7 +988,7 @@ class GPAugment(SNAugment):
         list-like
             The id of the events used to augment.
         """
-        objs_number_to_aug = self.objects_to_aug
+        objs_number_to_aug = self.objs_number_to_aug
         return np.array(list(objs_number_to_aug.keys()))
 
     @property
