@@ -438,6 +438,9 @@ class GPAugment(SNAugment):
         metadata = self.dataset.metadata
         new_entries = pd.concat(aug_objs_metadata, axis=1).T
         aug_metadata = pd.concat([metadata, new_entries])
+        # Flag the original events as non augmented
+        augmented_col = aug_metadata.augmented
+        aug_metadata.augmented[augmented_col.isna()] = False
         aug_dataset.metadata = aug_metadata
 
         aug_dataset.object_names = aug_metadata.object_id
