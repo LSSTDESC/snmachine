@@ -593,7 +593,7 @@ class GPAugment(SNAugment):
         aug_obj_metadata['hostgal_photoz_err'] = z_photo_error
         return aug_obj_metadata
 
-    def compute_new_z_photo(self, z_spec, i=0):
+    def compute_new_z_photo(self, z_spec):
         """Compute a new photometric redshift and error.
 
         The new values are randomly withdrawn from a redshift table containing
@@ -617,26 +617,25 @@ class GPAugment(SNAugment):
         Raises
         ------
         ValueError
-            If after a specified number of iterations any of `z_photo` or
-            `z_photo_error` are not positive.
+            If none of the generated `z_photo` or `z_photo_error` are positive.
         """
         z_table = self.z_table
-        rd_z_triple = z_table.sample(random_state=self._rs)
-        z_diff = float(rd_z_triple['z_diff'])
-        z_photo = z_spec + self._rs.choice([-1, 1]) * z_diff
-        z_photo_error = float(rd_z_triple['hostgal_photoz_err']
-                              * self._rs.normal(1, .05))
+        number_tries = 100  # # of tries to get positive z values
+        rd_zs_triple = z_table.sample(random_state=self._rs, n=number_tries)
+        zs_diff = rd_zs_triple['z_diff']
+        zs_photo = z_spec + (self._rs.choice([-1, 1], size=number_tries)
+                             * zs_diff)
+        zs_photo_error = (rd_zs_triple['hostgal_photoz_err']
+                          * self._rs.normal(1, .05, size=number_tries))
 
-        is_z_pos = (z_photo > 0) & (z_photo_error > 0)
-        number_max_iter = 100  # # of tries to get an appropriate result
-        if not is_z_pos:
-            if i <= number_max_iter:
-                z_photo, z_photo_error = self.compute_new_z_photo(z_spec,
-                                                                  i=i+1)
-            else:
-                raise ValueError('The new redshift and respective error must '
-                                 'be positive and they were not after 100 '
-                                 'iterations so something is wrong.')
+        are_zs_pos = (zs_photo > 0) & (zs_photo_error > 0)
+        try:  # choose the first appropriate value
+            z_photo = zs_photo[are_zs_pos][0]
+            z_photo_error = zs_photo_error[are_zs_pos][0]
+        except (KeyError, IndexError):
+            raise ValueError('The new redshift and respective error must be '
+                             'positive and they were not after 100 tries so '
+                             'something is wrong.')
         return z_photo, z_photo_error
 
     def fit_gps(self, path_to_save_gps, **kwargs):
