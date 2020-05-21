@@ -364,9 +364,9 @@ class GPAugment(SNAugment):
         max_duration: {None, float}, optional
             Maximum duration of the lightcurve. If `None`, it is set to the
             maximum lenght of an event in `dataset`.
-        cosmology: {None, astropy.cosmology.core.something}
+        cosmology: astropy.cosmology.core.something, optional
             Cosmology from `astropy` with the cosmologic parameters already
-            defined. If `None`, it assumes Flat LambdaCDM with parameters
+            defined. By default it assumes Flat LambdaCDM with parameters
             `H0 = 70`, `Om0 = 0.3` and `T_cmb0 = 2.725`.
         random_seed: int, optional
             Random seed used. Saving this seed allows reproducible results.
