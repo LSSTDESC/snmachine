@@ -25,7 +25,7 @@ from snmachine import gps, snfeatures
 
 # Functions to choose spectroscopic redshift for `GPAugment`.
 # They are inputed as the parameter `choose_z` and their arguments as `*kwargs`
-def choose_new_z_spec(z_ori, pb_wavelengths, i=0):
+def choose_new_z_spec(z_ori, pb_wavelengths):
     '''Choose a new spec-z for the event based on the original spec-z'''
 
     z_min = max(10**(-6), (1 + z_ori) * (2 - pb_wavelengths['lsstg']
@@ -35,11 +35,8 @@ def choose_new_z_spec(z_ori, pb_wavelengths, i=0):
     log_z_star = np.random.uniform(low=np.log(z_min), high=np.log(z_max))
     z_new = - np.exp(log_z_star) + z_min + z_max
 
-    if z_new <= 0 and i <= 100:
-        z_new = choose_new_z_spec(z_ori, pb_wavelengths, i=i+1)
-    elif z_new <= 0:
-        raise ValueError('The new redshift needs to be positive and it was not'
-                         ' after 100 iterations')
+    assert (z_new > z_min) and (z_new < z_max)
+
     return z_new
 
 
