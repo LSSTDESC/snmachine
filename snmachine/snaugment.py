@@ -766,7 +766,7 @@ class GPAugment(SNAugment):
 
     @property
     def cosmology(self):
-        """Return the names of the events in the original dataset.
+        """Return the cosmology.
 
         Returns
         -------
