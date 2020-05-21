@@ -1052,7 +1052,7 @@ class GPAugment(SNAugment):
         self._random_seed = value
 
 
-class GPRobAugment(SNAugment):
+class SimpleGPAugment(SNAugment):
     """Derived class that encapsulates data augmentation via Gaussian Processes.
     """
 
