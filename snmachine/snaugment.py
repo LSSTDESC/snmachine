@@ -364,7 +364,7 @@ class GPAugment(SNAugment):
         max_duration: {None, float}, optional
             Maximum duration of the lightcurve. If `None`, it is set to the
             maximum lenght of an event in `dataset`.
-        cosmology: astropy.cosmology.core.something, optional
+        cosmology: astropy.cosmology.core.COSMOLOGY, optional
             Cosmology from `astropy` with the cosmologic parameters already
             defined. By default it assumes Flat LambdaCDM with parameters
             `H0 = 70`, `Om0 = 0.3` and `T_cmb0 = 2.725`.
@@ -770,7 +770,7 @@ class GPAugment(SNAugment):
 
         Returns
         -------
-        astropy.cosmology.core.something
+        astropy.cosmology.core.COSMOLOGY
             Cosmology from `astropy` with the cosmologic parameters already
             defined.
 
@@ -785,7 +785,7 @@ class GPAugment(SNAugment):
             return self._cosmology
         except TypeError:
             raise TypeError('The cosmology must be given as '
-                            '`astropy.cosmology.core.something`. It must be '
+                            '`astropy.cosmology.core.COSMOLOGY`. It must be '
                             'possible to compute the distance modulus at '
                             'redshift 1 by calling `cosmology.distmod(z=1)`.')
 
