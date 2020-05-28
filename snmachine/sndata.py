@@ -550,6 +550,9 @@ class PlasticcData(EmptyDataset):
         self.set_metadata(folder, metadata_file)
         if mix is True:
             self.mix()
+        # Set the central wavelength of each passband
+        self.pb_wavelengths = {'lsstu': 3685, 'lsstg': 4802, 'lsstr': 6231,
+                               'lssti': 7542, 'lsstz': 8690, 'lssty': 9736}
 
     def set_data(self, folder, data_file, cut_non_detections=False):
         """Reads in simulated data and saves it.
