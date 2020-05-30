@@ -1,7 +1,6 @@
 """
 Module for feature extraction on supernova light curves.
 """
-from __future__ import division, print_function
 
 __all__ = []
 # 'get_MAP', 'Features', 'TemplateFeatures', 'ParametricFeatures',
@@ -1223,7 +1222,10 @@ class WaveletFeatures(Features):
             self.mlev=pywt.swt_max_level(self.number_gp)
 
 
-    def extract_features(self, d, initheta=[500, 20], save_output=False, output_root='features', number_processes=24, restart='none', gp_algo='george', xmin=None, xmax=None, recompute_pca=True, pca_path=None):
+    def extract_features(self, d, initheta=[500, 20], save_output=False,
+                         output_root='features', number_processes=24,
+                         restart='none', gp_algo='george', xmin=None,
+                         xmax=None, recompute_pca=True, pca_path=None):
         """
         Applies a wavelet transform followed by PCA dimensionality reduction to extract wavelet coefficients as features.
 
