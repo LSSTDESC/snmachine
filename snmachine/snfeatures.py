@@ -68,12 +68,6 @@ try:
 except ImportError:
     has_george = False
 
-try:
-    from gapp import dgp
-    has_gapp = True
-except ImportError:
-    has_gapp = False
-
 from .gps import compute_gps
 
 
