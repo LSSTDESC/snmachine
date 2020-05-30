@@ -22,6 +22,7 @@ import scipy.optimize as op
 import sncosmo
 
 from . import parametric_models
+from .gps import compute_gps
 from astropy.table import Table, vstack, hstack, join
 from functools import partial
 from iminuit import Minuit, describe
@@ -67,8 +68,6 @@ try:
     has_george = True
 except ImportError:
     has_george = False
-
-from .gps import compute_gps
 
 
 def _run_leastsq(obj, d, model, n_attempts, seed=-1):
