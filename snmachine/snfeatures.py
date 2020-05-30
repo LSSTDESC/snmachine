@@ -7,35 +7,26 @@ __all__ = []
 #           'WaveletFeatures']
 
 import os
-import pickle
 import subprocess
 import sys
 import time
 import traceback
 
-import george
 import numpy as np
 import pandas as pd
 import pywt
-import scipy
-import scipy.optimize as op
 import sncosmo
 
 from . import parametric_models
 from .gps import compute_gps
 from astropy.table import Table, vstack, hstack, join
 from functools import partial
-from iminuit import Minuit, describe
+from iminuit import Minuit
 from multiprocessing import Pool
-from scipy import interpolate
-from scipy import stats
 from scipy.interpolate import interp1d
-from snmachine import analysis
-from snmachine import chisq as cs
 
 try:
     import pymultinest
-    from pymultinest.analyse import Analyzer
     has_multinest = True
     print('Module pymultinest found')
 except (ImportError, SystemExit) as exception:
@@ -62,12 +53,6 @@ try:
     has_emcee = True
 except ImportError:
     has_emcee = False
-
-try:
-    import george
-    has_george = True
-except ImportError:
-    has_george = False
 
 
 def _run_leastsq(obj, d, model, n_attempts, seed=-1):
