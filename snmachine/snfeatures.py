@@ -6,22 +6,31 @@ __all__ = []
 # 'get_MAP', 'Features', 'TemplateFeatures', 'ParametricFeatures',
 #           'WaveletFeatures']
 
-import numpy as np
-from . import parametric_models
-import sys, pywt, time, subprocess, os, sncosmo
-from scipy.interpolate import interp1d
-import george
-from astropy.table import Table, vstack, hstack, join
-from multiprocessing import Pool
-from functools import partial
-from scipy import stats
-import scipy.optimize as op
-from iminuit import Minuit, describe
-import traceback
+import os
 import pickle
+import subprocess
+import sys
+import time
+import traceback
+
+import george
+import numpy as np
 import pandas as pd
-from scipy import interpolate
+import pywt
 import scipy
+import scipy.optimize as op
+import sncosmo
+
+from . import parametric_models
+from astropy.table import Table, vstack, hstack, join
+from functools import partial
+from iminuit import Minuit, describe
+from multiprocessing import Pool
+from scipy import interpolate
+from scipy import stats
+from scipy.interpolate import interp1d
+from snmachine import analysis
+from snmachine import chisq as cs
 
 try:
     import pymultinest
