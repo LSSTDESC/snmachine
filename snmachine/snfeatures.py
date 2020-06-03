@@ -613,15 +613,6 @@ class Features:
         # not implemented and then it is overwritten or erase it
         pass
 
-    @staticmethod
-    def convert_astropy_array(self, tab):
-        # TODO: CAT: I get this can be useful but it is not used anywhere.
-        """Convenience function to convert an astropy table (floats only) into
-        a numpy array.
-        """
-        out_array = np.array([tab[c] for c in tab.columns]).T
-        return out_array
-
 
 class TemplateFeatures(Features):
     """Calls sncosmo to fit a variety of templates to the data. The number of
