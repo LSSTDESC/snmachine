@@ -149,7 +149,7 @@ def read_gp_files_into_models(dataset, path_saved_gp_files):
             obj_saved_gps = Table.read(obj_saved_gps_file, format='fits',
                                        character_as_bytes=False)
         except FileNotFoundError:
-            print('The file {} does not exists'.format(obj_saved_gps_file))
+            print('The file {} does not exist.'.format(obj_saved_gps_file))
         dataset.models[obj] = obj_saved_gps
     print('Models fitted with the Gaussian Processes values.')
     print_time_difference(time_start_reading, time.time())
