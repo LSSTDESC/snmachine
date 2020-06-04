@@ -1220,8 +1220,8 @@ class WaveletFeatures(Features):
     the feature space using PCA.
     """
 
-    def __init__(self, wavelet='sym2', number_gp=100, **kwargs):
-        """ Initialises the pywt wavelet object and sets the maximum depth for
+    def __init__(self, wavelet_name='sym2', number_gp=100, **kwargs):
+        """Initialises the pywt wavelet object and sets the maximum depth for
         deconstruction.
 
         Parameters
@@ -1237,21 +1237,93 @@ class WaveletFeatures(Features):
         """
         Features.__init__(self)
 
-        self.wav = pywt.Wavelet(wavelet)
-        # Number of points to use on the Gaussian process curve
-        self.number_gp = number_gp
-        self.wavelet_list = pywt.wavelist()  # All possible families
+    def compute_wavelet_decomp(self, dataset, wavelet_name='sym2',
+                               number_decomp_levels='max', output_root=None):
+        """Assumes the GPs have already been computed and are stored in
+        `dataset.models` or in a specific path.
+        """
+        self._filter_set = dataset.filter_set
+        self._extract_number_gp(dataset)
+        self._is_wavelet_name_valid(wavelet_name)
+        self.number_decomp_levels = number_decomp_levels
 
-        if wavelet not in self.wavelet_list:
-            print('Wavelet not recognised in pywt')
+        for i in range(len(dataset.object_names)):
+            obj = dataset.object_names[i]
+            obj_gps = dataset.models[obj].to_pandas()
+            self._compute_obj_wavelet_decomp(obj_gps)
+
+    def _compute_obj_wavelet_decomp(self, obj_gps):
+        """stationary wavelet transform"""
+        for pb in self.filter_set:
+            obj_pb = obj_gps[obj_gps == pb]
+            self._compute_pb_wavelet_decomp(obj_pb)
+
+    def _compute_pb_wavelet_decomp(self, obj_pb):
+        pb_flux = obj_pb['flux']
+        pywt.swt(pb_flux, wavelet=self.wavelet_name, level=self.number_decomp_levels)
+
+    def _extract_number_gp(self, dataset):
+        """Extract the number of points the Gaussian Process was evaluated at.
+
+        It assumes all the events and passbands were evaluated in the same
+        number of points as supposed. It extracts the number of the points
+        from the first passband of the first event.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to augment.
+        """
+        obj = dataset.object_names[0]
+        obj_gps = dataset.models[obj].to_pandas()
+        self.number_gp = np.sum(obj_gps == self.filter_set[0])
+
+    def compute_eigendecomp():
+        3
+
+    def project_to_space():
+        3
+
+    def reconstruct_lc():
+        3
+
+    def compute_reconstruct_error():
+        3
+
+    @property
+    def filter_set(self):
+        """Return passbands the events could be observed on.
+
+        Returns
+        -------
+        list-like
+            Passbands in which the events could be observed on.
+        """
+        return self._filter_set
+
+    def _is_wavelet_name_valid(self, wavelet_name):
+        """Check the wavelet name is valid.
+
+        The available families can be checked using `pywt.wavelist()` or going
+        to https://pywavelets.readthedocs.io/en/latest/ref/wavelets.html .
+        """
+        try:
+            self._wavelet_name = pywt.Wavelet(wavelet_name)
+        except ValueError:
+            print('Unknown wavelet name {}. Check `pywt.wavelist()` for the '
+                  'list of available builtin wavelets.'.format(wavelet_name))
             sys.exit()
 
-        # If the user does not specify a level of depth for the wavelet,
-        # automatically calculate it
-        if 'level' in kwargs:
-            self.mlev = kwargs['level']
-        else:
-            self.mlev = pywt.swt_max_level(self.number_gp)
+    @property
+    def wavelet_name(self):
+        """Return name of the wavelets used.
+
+        Returns
+        -------
+        str
+            Name of the wavelets used.
+        """
+        return self._wavelet_name
 
     def extract_features(self, d, initheta=[500, 20], save_output=False,
                          output_root='features', number_processes=24,
