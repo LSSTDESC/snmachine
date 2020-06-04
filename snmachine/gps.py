@@ -855,15 +855,16 @@ def predict_2d_gp(gp_predict, gp_times, gp_wavelengths):
             obj_gps = vstack((obj_gps, obj_gp_pb))
     return obj_gps
 
-    def print_time_difference(initial_time, final_time):
-        """Print the time interval.
 
-        Parameters
-        ----------
-        initial_time : float
-            Time at which the time interval starts.
-        final_time : float
-            Time at which the time interval ends.
-        """
-        time_spent = pd.to_timedelta(int(final_time-initial_time), unit='s')
-        print('Time spent: {}.'.format(time_spent))
+def print_time_difference(initial_time, final_time):
+    """Print the time interval.
+
+    Parameters
+    ----------
+    initial_time : float
+        Time at which the time interval starts.
+    final_time : float
+        Time at which the time interval ends.
+    """
+    time_spent = pd.to_timedelta(int(final_time-initial_time), unit='s')
+    print('Time spent: {}.'.format(time_spent))
