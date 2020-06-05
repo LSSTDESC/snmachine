@@ -146,9 +146,10 @@ def read_gp_files_into_models(dataset, path_saved_gp_files):
         try:
             obj_saved_gps = Table.read(obj_saved_gps_file, format='ascii')
         except UnicodeDecodeError:
-            obj_saved_gps = Table.read(obj_saved_gps_file, format='fits')
-        except IOError:
-            print('IOError, file ', obj_saved_gps_file, 'does not exist.')
+            obj_saved_gps = Table.read(obj_saved_gps_file, format='fits',
+                                       character_as_bytes=False)
+        except FileNotFoundError:
+            print('The file {} does not exist.'.format(obj_saved_gps_file))
         dataset.models[obj] = obj_saved_gps
     print('Models fitted with the Gaussian Processes values.')
     print_time_difference(time_start_reading, time.time())
@@ -398,7 +399,7 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
         obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
                            obj_gp_pb_array[:, 2], [pb]*number_gp],
                           names=['mjd', 'flux', 'flux_error', 'filter'])
-        if len(obj_gps) == 0:  # this is the first passband so we initialize the table
+        if len(obj_gps) == 0:  # initialize the table for 1st passband
             obj_gps = obj_gp_pb
         else:
             obj_gps = vstack((obj_gps, obj_gp_pb))
@@ -406,8 +407,10 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
     if output_root is not None:
         obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits',
                       overwrite=True)
-        path_save_gps = os.path.join(output_root, 'used_gp_dict_'+obj+'.pckl')
-        path_save_kernels = os.path.join(output_root, 'used_kernels_dict_'+obj+'.pckl')
+        path_save_gps = os.path.join(output_root, 'used_gp_dict_{}.pckl'
+                                     ''.format(obj))
+        path_save_kernels = os.path.join(output_root, 'used_kernels_dict_{}.'
+                                         'pckl'.format(obj))
         with open(path_save_gps, 'wb') as f:
             pickle.dump(used_gp_dict, f, pickle.HIGHEST_PROTOCOL)
         with open(path_save_kernels, 'wb') as f:
