@@ -1243,8 +1243,8 @@ class WaveletFeatures(Features):
         `dataset.models` or in a specific path.
         """
         self._filter_set = dataset.filter_set
-        self._extract_number_gp(dataset)
-        self._is_wavelet_name_valid(wavelet_name)
+        self._number_gp = self._extract_number_gp(dataset)
+        self._is_wavelet_valid(wavelet_name)
         self.number_decomp_levels = number_decomp_levels
 
         for i in range(len(dataset.object_names)):
@@ -1254,29 +1254,12 @@ class WaveletFeatures(Features):
 
     def _compute_obj_wavelet_decomp(self, obj_gps):
         """stationary wavelet transform"""
+        coeffs = {}
         for pb in self.filter_set:
             obj_pb = obj_gps[obj_gps == pb]
-            self._compute_pb_wavelet_decomp(obj_pb)
-
-    def _compute_pb_wavelet_decomp(self, obj_pb):
-        pb_flux = obj_pb['flux']
-        pywt.swt(pb_flux, wavelet=self.wavelet_name, level=self.number_decomp_levels)
-
-    def _extract_number_gp(self, dataset):
-        """Extract the number of points the Gaussian Process was evaluated at.
-
-        It assumes all the events and passbands were evaluated in the same
-        number of points as supposed. It extracts the number of the points
-        from the first passband of the first event.
-
-        Parameters
-        ----------
-        dataset : Dataset object (sndata class)
-            Dataset to augment.
-        """
-        obj = dataset.object_names[0]
-        obj_gps = dataset.models[obj].to_pandas()
-        self.number_gp = np.sum(obj_gps == self.filter_set[0])
+            coeffs[pb] = pywt.swt(obj_pb['flux'], wavelet=self.wavelet_name,
+                                  level=self.number_decomp_levels)
+        return coeffs
 
     def compute_eigendecomp():
         3
@@ -1301,8 +1284,8 @@ class WaveletFeatures(Features):
         """
         return self._filter_set
 
-    def _is_wavelet_name_valid(self, wavelet_name):
-        """Check the wavelet name is valid.
+    def _is_wavelet_valid(self, wavelet_name):
+        """Check if the wavelet is valid.
 
         The available families can be checked using `pywt.wavelist()` or going
         to https://pywavelets.readthedocs.io/en/latest/ref/wavelets.html .
@@ -1324,6 +1307,66 @@ class WaveletFeatures(Features):
             Name of the wavelets used.
         """
         return self._wavelet_name
+
+    @property
+    def number_gp(self):
+        """Return the number of points the Gaussian Process was evaluated at.
+
+        Returns
+        -------
+        int
+            Number of points the Gaussian Process was evaluated at.
+        """
+        return self._number_gp
+
+    def _extract_number_gp(self, dataset):
+        """Extract the number of points the Gaussian Process was evaluated at.
+
+        It assumes all the events and passbands were evaluated in the same
+        number of points as supposed. It extracts the number of the points
+        from the first passband of the first event.
+
+        Parameters
+        ----------
+        int
+            Number of points the Gaussian Process was evaluated at.
+        """
+        obj = dataset.object_names[0]
+        obj_gps = dataset.models[obj].to_pandas()
+        return np.sum(obj_gps == self.filter_set[0])
+
+    @property
+    def number_decomp_levels(self):
+        """Return the number of decomposition steps to perform.
+
+        Returns
+        -------
+        dict
+            The number of decomposition steps to perform.
+        """
+        return self._number_decomp_levels
+
+    @number_decomp_levels.setter
+    def number_decomp_levels(self, value):
+        """Set the number of decomposition steps to perform.
+
+        Parameters
+        ----------
+        value: {`max`, int}, optional
+            The number of decomposition steps to perform.
+        """
+        max_number_levels = pywt.swt_max_level(self.number_gp)
+        if value == 'max':
+            number_levels = max_number_levels
+        elif 1 <= value <= max_number_levels:
+            number_levels = value
+        else:
+            raise ValueError('This dataset can only be decomposed into a '
+                             'positive number of levels smaller or equal to {}'
+                             '.'.format(max_number_levels))
+        print('Each passband will be decomposed in {} levels.'
+              ''.format(number_levels))
+        self._number_decomp_levels = number_levels
 
     def extract_features(self, d, initheta=[500, 20], save_output=False,
                          output_root='features', number_processes=24,
