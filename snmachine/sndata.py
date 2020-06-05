@@ -585,10 +585,11 @@ class PlasticcData(EmptyDataset):
 
         number_invalid_objs = 0  # Some objects may have empty data
         number_objs = len(data[self.id_col].unique())
+        object_names = []
 
         for i, id in enumerate(data[self.id_col].unique()):
             self.print_progress(i+1, number_objs)  # +1 because the order starts at 0 in python
-            self.object_names.append(str(id))
+            object_names.append(str(id))
             obj_lc = data.query('{0} == {1}'.format(self.id_col, id))
             lc = self.get_obj_lc_table_starting_from_mjd_zero(pandas_lc=obj_lc)
             if len(lc[self.mjd_col] > 0):
@@ -596,8 +597,9 @@ class PlasticcData(EmptyDataset):
             else:
                 number_invalid_objs += 1
         if number_invalid_objs > 0:
-            print('{} objects were invalid and not added to the dataset.'.format(number_invalid_objs))
-        self.object_names = np.array(self.object_names, dtype='str')
+            print('{} objects were invalid and not added to the dataset.'
+                  ''.format(number_invalid_objs))
+        self.object_names = object_names
         print('{} objects read into memory.'.format(len(self.data)))
         self.print_time_difference(time_start_reading, time.time())
 
@@ -703,6 +705,25 @@ class PlasticcData(EmptyDataset):
             labels = None
         return labels
 
+    @property
+    def object_names(self):
+        """Returns the name of the objects to work with.
+
+        Not always this corresponds to the whole dataset.
+        """
+        return self._object_names
+
+    @object_names.setter
+    def object_names(self, value):
+        """Set the name of the objects to work with.
+
+        Parameters
+        ----------
+        value: list-like
+            Name of the objects to work with.
+        """
+        self._object_names = np.array(value, dtype='str')
+
     @staticmethod
     def print_time_difference(initial_time, final_time):
         """Print the a time interval.
@@ -750,10 +771,12 @@ class PlasticcData(EmptyDataset):
             All the objects in `new_objs` need to already exist in the dataset.
         """
         if np.sum(~np.in1d(new_objs, self.object_names)) != 0:
-            raise ValueError("All the objects in `new_objs` need to exist in the original dataset.")
+            raise ValueError('All the objects in `new_objs` need to exist in '
+                             'the original dataset.')
 
         self.object_names = new_objs
-        self.data = {objects: self.data[objects] for objects in self.object_names}
+        self.data = {objects: self.data[objects] for objects in
+                     self.object_names}
 
         current_objs = self.metadata.object_id.astype(str)
         is_new_obj = np.in1d(current_objs, new_objs)
@@ -766,7 +789,7 @@ class PlasticcData(EmptyDataset):
         df: pandas.dataframe
             Dataframe of lightcurve observations
         """
-        df.rename({'passband':'filter'}, axis='columns', inplace=True)
+        df.rename({'passband': 'filter'}, axis='columns', inplace=True)
         filter_replace = {0: 'lsstu', 1: 'lsstg', 2: 'lsstr', 3: 'lssti',
                           4: 'lsstz', 5: 'lssty'}
         df['filter'].replace(to_replace=filter_replace, inplace=True)
