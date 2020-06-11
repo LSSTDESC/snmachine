@@ -7,6 +7,7 @@ __all__ = []
 #           'WaveletFeatures']
 
 import os
+import pickle
 import subprocess
 import sys
 import time
@@ -18,12 +19,12 @@ import pywt
 import sncosmo
 
 from . import parametric_models
-from .gps import compute_gps
 from astropy.table import Table, vstack, hstack, join
 from functools import partial
 from iminuit import Minuit
 from multiprocessing import Pool
 from scipy.interpolate import interp1d
+from snmachine import gps
 
 try:
     import pymultinest
@@ -612,6 +613,25 @@ class Features:
         # TODO: CAT: Why do we have this empty method? Either we write that is
         # not implemented and then it is overwritten or erase it
         pass
+
+    @staticmethod
+    def _exists_path(path_to_test):
+        """Check if the inputed path exists.
+
+        Parameters
+        ----------
+        path_to_test: str
+            Path to test the existence.
+
+        Raises
+        ------
+        ValueError
+            If the provided path does not exist.
+        """
+        exists_path = os.path.exists(path_to_test)
+        if not exists_path:
+            raise ValueError('The path {} does not exist. Provide a valid path'
+                             '.'.format(path_to_test))
 
 
 class TemplateFeatures(Features):
@@ -1238,31 +1258,218 @@ class WaveletFeatures(Features):
         Features.__init__(self)
 
     def compute_wavelet_decomp(self, dataset, wavelet_name='sym2',
-                               number_decomp_levels='max', output_root=None):
-        """Assumes the GPs have already been computed and are stored in
-        `dataset.models` or in a specific path.
+                               number_decomp_levels='max', output_root=None,
+                               path_saved_gp_files=None):
+        """Computes the wavelet decomposition of the dataset events.
+
+        The function assumes the Gaussian Processes fit of the events has been
+        done and that the estimated flux at regular intervals is saved in
+        `dataset.models` or in the path provided on `path_saved_gp_files`.
         """
         self._filter_set = dataset.filter_set
         self._number_gp = self._extract_number_gp(dataset)
         self._is_wavelet_valid(wavelet_name)
         self.number_decomp_levels = number_decomp_levels
+        self.output_root = output_root
 
-        for i in range(len(dataset.object_names)):
-            obj = dataset.object_names[i]
+        self._read_gps_into_models(dataset, path_saved_gp_files)
+
+        objs = dataset.object_names
+        for i in range(len(objs)):
+            obj = objs[i]
             obj_gps = dataset.models[obj].to_pandas()
-            self._compute_obj_wavelet_decomp(obj_gps)
+            coeffs = self._compute_obj_wavelet_decomp(obj_gps)
+
+            if self.output_root is not None:
+                self._save_obj_wavelet_decomp(obj, coeffs)
 
     def _compute_obj_wavelet_decomp(self, obj_gps):
-        """stationary wavelet transform"""
+        """Stationary wavelet transform of each passband of the event.
+
+        Parameters
+        ----------
+        obj_gps : pandas.DataFrame
+            Table with evaluated Gaussian process curve and errors at each
+            passband.
+
+        Returns
+        -------
+        coeffs : dict
+            Coefficients of the wavelet decompostion per passband of `obj`.
+        """
         coeffs = {}
         for pb in self.filter_set:
-            obj_pb = obj_gps[obj_gps == pb]
+            obj_pb = obj_gps[obj_gps['filter'] == pb]
             coeffs[pb] = pywt.swt(obj_pb['flux'], wavelet=self.wavelet_name,
                                   level=self.number_decomp_levels)
         return coeffs
 
-    def compute_eigendecomp():
-        3
+    def _save_obj_wavelet_decomp(self, obj, coeffs):
+        """Save the wavelet decomposition of the event.
+
+        Parameters
+        ----------
+        obj : str
+            Name of the event whose wavelet decomposition belong.
+        coeffs : dict
+            Coefficients of the wavelet decompostion per passband of `obj`.
+        """
+        path_save_wavelet_decomp = os.path.join(self.output_root,
+                                                'wavelet_dict_{}.pckl'
+                                                ''.format(obj))
+        with open(path_save_wavelet_decomp, 'wb') as f:
+            pickle.dump(coeffs, f, pickle.HIGHEST_PROTOCOL)
+
+    @staticmethod
+    def create_readable_table(coeffs):
+        """Create readable table from `pywt` coefficients.
+
+        Parameters
+        ----------
+        coeffs : list
+            List of approximation and details coefficients pairs in the same
+            order as `pywt.swt` function:
+                [(cAn, cDn), ..., (cA2, cD2), (cA1, cD1)]
+            where n equals the number of decomposition levels.
+
+        Returns
+        -------
+        table : pandas.DataFrame
+            Table with the name of each column denoting the decomposition
+            level and type.
+        """
+        table = pd.DataFrame()
+        number_levels = np.shape(coeffs)[0]
+        for level in np.arange(number_levels):
+            table['cA{}'.format(number_levels-level)] = coeffs[level][0]
+            table['cD{}'.format(number_levels-level)] = coeffs[level][1]
+        return table
+
+    def compute_eigendecomp(self, dataset, normalise_var=False,
+                            path_save_eigendecomp=None):
+        """Compute eigendecomposition of the feature space.
+
+        The eigendecomposition is performed using Singular Value Decomposition
+        (SVD). The input data is always centered before applying the SVD. The
+        features' values can also be scaled if `normalise_var` is set to
+        `True`.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+        normalise_var : bool, optional
+            If True, the feature space is scaled so that each feature has unit
+            variance.
+        """
+        feature_space = self._load_feature_space(dataset)
+        # Center the feature_space to perform eigendecomposition
+        feature_space_new, means, scales = self._preprocess_matrix(
+            feature_space, normalise_var=normalise_var)
+
+        # Row ith has the eigenvector corresponding to the ith eigenvalue
+        # (eigenvectors in descending order of eigenvalue)
+        u, singular_vals, eigenvecs = np.linalg.svd(feature_space_new,
+                                                    full_matrices=False)
+
+        number_objs = np.shape(feature_space)[0]
+        eigenvals = singular_vals**2 / (number_objs-1)
+
+        if path_save_eigendecomp is not None:
+            path_save = path_save_eigendecomp
+            np.save(os.path.join(path_save, 'means.npy'), means)
+            np.save(os.path.join(path_save, 'scales.npy'), scales)
+            np.save(os.path.join(path_save, 'eigenvalues.npy'), eigenvals)
+            np.save(os.path.join(path_save, 'eigenvectors.npy'), eigenvecs)
+
+    @staticmethod
+    def load_pca(path_save_eigendecomp, number_comps=None):
+        """Load the principal component analysis of the feature space.
+
+        Load the means and scales needed to transform a matrix onto the same
+        space as the matrix used to calculate the eigendecomposition.
+        Load the first `number_comps` eigenvalues to transform any new data
+        onto a lower-dimensional space.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+        number_comps : {None, int}, optional
+            If `None`, all eigenvectors are returned. Otherwise, only the
+            first `number_comps` are returned.
+
+        Returns
+        -------
+        means : array
+            Mean of each feature across all the samples. Shape (# features, ).
+        scales : {None, array}
+            If `normalise_var` is false, `scales` is not used. Otherwise, it
+            is the value used to rescale `matrix` so that the variance of each
+            feature is unitaty. Shape (# features, ).
+        eigenvecs : array
+            First `number_comps` eigenvectors of the original feature space.
+            Each row corresponds to a eigenvector and they are in descending
+            order of eigenvalue.
+        """
+        means = np.load(os.path.join(path_save_eigendecomp, 'means.npy'))
+        scales = np.load(os.path.join(path_save_eigendecomp, 'scales.npy'))
+        eigenvecs = np.load(os.path.join(path_save_eigendecomp,
+                            'eigenvectors.npy'))
+
+        if number_comps is not None:
+            eigenvecs = eigenvecs[:number_comps, :]
+        return means, scales, eigenvecs
+
+    def _load_feature_space(self, dataset):
+        """Load the wavelet feature space.
+
+        The wavelet coefficients of the events in the dataset were previously
+        calculated. This function loads then to memory and format them into a
+        large table where each column corresponds to a wavelet coefficient in a
+        specific passband.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+
+        Returns
+        -------
+        feature_space : array
+            Table of shape (# events, # wavelet features).
+            Row `i` has the wavelet features of the event
+            `dataset.object_names[i]`.
+            The wavelet features are ordered as a flat version of `pywt.swt`
+            function:
+                [cAn, cDn, ..., cA2, cD2, cA1, cD1]
+            where n equals the number of decomposition levels.
+        """
+        objs = dataset.object_names
+        filter_set = self.filter_set
+        feature_space = []
+        for i in range(len(objs)):
+            obj = objs[i]
+            path_saved_wavelet_decomp = os.path.join(self.output_root,
+                                                     'wavelet_dict_{}.pckl'
+                                                     ''.format(obj))
+            with open(path_saved_wavelet_decomp, 'rb') as input:
+                obj_coeffs = pickle.load(input)
+
+            if i == 0:  # all events/passbands have the same number of levels
+                number_levels = np.shape(obj_coeffs[filter_set[0]])[0]
+
+            coeffs_list = []
+            for pb in filter_set:
+                pb_coeffs = obj_coeffs[pb]
+                for level in np.arange(number_levels):
+                    level_coeffs = pb_coeffs[level]
+                    coeffs_list.append(level_coeffs[0])  # cA
+                    coeffs_list.append(level_coeffs[1])  # cD
+            coeffs_list = np.array(coeffs_list).flatten()
+            feature_space.append(coeffs_list)
+        feature_space = np.array(feature_space)  # change list -> array
+        return feature_space
 
     def project_to_space():
         3
@@ -1272,6 +1479,82 @@ class WaveletFeatures(Features):
 
     def compute_reconstruct_error():
         3
+
+    @staticmethod
+    def _preprocess_matrix(matrix, normalise_var=False):
+        """Centers the matrix and normalises its variance if chosen.
+
+        This step is needed to compute the Singular Value Decomposition,
+        Eigendecomposition or computing covariance.
+
+        Parameters
+        -----------
+        matrix : array
+            Matrix of shape (# samples, # features).
+        normalise_var: bool, optional
+            If True, `matrix` is scaled so that each feature has unit variance.
+
+        Returns
+        -------
+        matrix_new : array
+            Centered matrix of shape (# samples, # features). If
+            `normalise_var` is true, `matrix_new` has unit variance across the
+            features.
+        means : array
+            Mean of each feature across all the samples. Shape (# features, ).
+        scales : {None, array}
+            If `normalise_var` is false, `scales` is not used. Otherwise, it
+            is the value used to rescale `matrix` so that the variance of each
+            feature is unitaty. Shape (# features, ).
+
+        Notes
+        -----
+        Let :math:`X` be the initial matrix with shape (# events, # features)
+        and :math:`X_{new}` the output matrix.
+
+        .. math::  X_{\mathrm{new}} = (X - mean(X))
+
+        If `normalise_var` is true, :math:`X` is further rescaled to have
+        unit variance.
+        The option of scaling the variance has been retained for consistency
+        with previous methods and various ML resources which suggest this may
+        help in balancing cases where the variances of different features vary
+        a lot. In a few tests we have done with specific datasets, we have not
+        seen the suggested benefits.
+        """
+        means = np.mean(matrix, axis=0)  # mean of each feature
+        matrix_new = matrix - means
+
+        scales = None
+        if normalise_var:  # L2 normalization
+            scales = np.sqrt(np.sum(matrix_new**2, axis=0))
+            matrix_new /= scales
+
+        return matrix_new, means, scales
+
+    @staticmethod
+    def _read_gps_into_models(dataset, path_saved_gp_files):
+        """Read the saved files into the dataset models.
+
+        If the models already exist, nothing is done.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset.
+        path_saved_gp_files : {None, str}
+            Path for the Gaussian Process curve files.
+        """
+        if len(dataset.models) != 0:
+            pass
+        elif path_saved_gp_files is not None:
+            gps.read_gp_files_into_models(dataset, path_saved_gp_files)
+        else:
+            raise AttributeError('The Gaussian Processes fit of the events '
+                                 'must have been done and that the estimated '
+                                 'flux at regular intervals is saved in '
+                                 '`dataset.models` or in the path provided on '
+                                 '`path_saved_gp_files`.')
 
     @property
     def filter_set(self):
@@ -1323,11 +1606,16 @@ class WaveletFeatures(Features):
         """Extract the number of points the Gaussian Process was evaluated at.
 
         It assumes all the events and passbands were evaluated in the same
-        number of points as supposed. It extracts the number of the points
+        number of points, as supposed. It extracts the number of the points
         from the first passband of the first event.
 
         Parameters
         ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+
+        Returns
+        -------
         int
             Number of points the Gaussian Process was evaluated at.
         """
@@ -1352,7 +1640,7 @@ class WaveletFeatures(Features):
 
         Parameters
         ----------
-        value: {`max`, int}, optional
+        value : {`max`, int}, optional
             The number of decomposition steps to perform.
         """
         max_number_levels = pywt.swt_max_level(self.number_gp)
@@ -1367,6 +1655,30 @@ class WaveletFeatures(Features):
         print('Each passband will be decomposed in {} levels.'
               ''.format(number_levels))
         self._number_decomp_levels = number_levels
+
+    @property
+    def output_root(self):
+        """Return the path to the output files.
+
+        Returns
+        -------
+        {None, str}
+            Path to the output files.
+        """
+        return self._output_root
+
+    @output_root.setter
+    def output_root(self, value):
+        """Set the path to the output files.
+
+        Parameters
+        ----------
+        value : {None, str}, optional
+            Path to the output files.
+        """
+        if value is not None:
+            self._exists_path(value)
+        self._output_root = value
 
     def extract_features(self, d, initheta=[500, 20], save_output=False,
                          output_root='features', number_processes=24,
@@ -1420,7 +1732,7 @@ class WaveletFeatures(Features):
             if restart == 'gp':
                 self.restart_from_gp(d, output_root)
             else:
-                compute_gps(d, self.number_gp, xmin, xmax, initheta,
+                gps.compute_gps(d, self.number_gp, xmin, xmax, initheta,
                             output_root, number_processes, gp_algo=gp_algo,
                             save_output=save_output)
 
