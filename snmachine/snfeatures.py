@@ -24,7 +24,7 @@ from functools import partial
 from iminuit import Minuit
 from multiprocessing import Pool
 from scipy.interpolate import interp1d
-from snmachine import gps
+from snmachine import gps, chisq
 
 try:
     import pymultinest
@@ -1631,11 +1631,14 @@ class WaveletFeatures(Features):
                                                      scales)
         return reconstruct_space
 
-    def reconstruct_real_space(self, dataset, feature_space, wavelet_name='sym2'):
+    def reconstruct_real_space(self, dataset, feature_space,
+                               wavelet_name='sym2'):
         """Reconstruct the observations in real space from the feature space.
 
         Parameters
         ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
         feature_space : array
             Table of shape (# events, # features).
             Row `i` has the wavelet features of the event
@@ -1644,6 +1647,8 @@ class WaveletFeatures(Features):
             function:
                 [cAn, cDn, ..., cA2, cD2, cA1, cD1]
             where n equals the number of decomposition levels.
+        wavelet_name : str
+            Name of the wavelets used.
         """
         self._filter_set = dataset.filter_set
         self._number_gp = self._extract_number_gp(dataset)
@@ -1658,10 +1663,119 @@ class WaveletFeatures(Features):
         for i in range(len(objs)):
             obj = objs[i]
             obj_gps = dataset.models[obj].to_pandas()
-            coeffs = self._compute_obj_wavelet_decomp(obj_gps)
+            obj_coeffs_list = feature_space[i]
+            obj_gps_reconstruct = self.reconstruct_obj_real_space(
+                obj_gps, obj_coeffs_list)
+            dataset.models[obj] = obj_gps_reconstruct
 
-    def compute_reconstruct_error():
-        3
+    def reconstruct_obj_real_space(self, obj_gps, coeffs_list):
+        """Reconstructs the flux using the wavelet decomposition.
+
+        Parameters
+        ----------
+        obj_gps : pandas.DataFrame
+            Table with evaluated Gaussian process curve and errors at each
+            passband.
+        coeffs_list : array
+            Wavelet features of the event ordered as a flat version of
+            `pywt.swt` function:
+                [cAn, cDn, ..., cA2, cD2, cA1, cD1]
+            where n equals the number of decomposition levels.
+            Shape (1, # features).
+
+        Returns
+        -------
+        obj_gps : pandas.DataFrame
+            Table with evaluated Gaussian process curve, errors and the
+            reconstructed flux (`flux_reconstruct`) at each passband.
+        """
+        obj_coeffs = self._reshape_coeffs(coeffs_list)
+        obj_gps['flux_reconstruct'] = None  # initialize the column
+        for pb in self.filter_set:
+            is_pb_obs = obj_gps['filter'] == pb
+            pb_coeffs = obj_coeffs[pb]
+            pb_flux_reconstruct = pywt.iswt(pb_coeffs, self.wavelet_name)
+            obj_gps['flux_reconstruct'][is_pb_obs] = pb_flux_reconstruct
+        return obj_gps
+
+    def _reshape_coeffs(self, coeffs_list):
+        """Reshape the coefficients list into a differentiated table.
+
+        Parameters
+        ----------
+        coeffs_list : array
+            Wavelet features of the event ordered as a flat version of
+            `pywt.swt` function:
+                [cAn, cDn, ..., cA2, cD2, cA1, cD1]
+            where n equals the number of decomposition levels.
+            Shape (1, # features).
+
+        Returns
+        -------
+        coeffs : dict
+            Coefficients of the wavelet decompostion per passband of the event.
+            The coefficients of each passband are the list of approximation
+            and details coefficients pairs in the same order as `pywt.swt`
+            function:
+                [(cAn, cDn), ..., (cA2, cD2), (cA1, cD1)]
+            where n equals the number of decomposition levels.
+        """
+        coeffs = {}
+        number_pbs = len(self.filter_set)
+        coeffs_list = np.split(np.array(coeffs_list), number_pbs)
+        for i in number_pbs:
+            pb = self.filter_set[i]
+            new_coeff_format = []
+            pb_coeffs_list = np.split(coeffs_list[i],
+                                      self.number_decomp_levels)
+            for level in np.arange(self.number_decomp_levels):
+                level_coeffs_list = np.split(pb_coeffs_list[level], 2)
+                new_coeff_format.append(level_coeffs_list)
+            coeffs[pb] = new_coeff_format
+        return coeffs
+
+    def compute_reconstruct_error(self, dataset, **kwargs):
+        """X^2/datapoints between original and reconstructed observations.
+
+        The original observations are the points at which the Gaussian Process
+        (GP) was evaluated. The uncertainty is then the GP uncertainty at
+        those points.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+
+        Returns
+        -------
+        chisq_over_datapoints : pandas.DataFrame
+            Table with the X^2/datapoints per object.
+        """
+        objs = dataset.object_names
+        chisq_over_datapoints = np.zeros(len(objs))
+        for i in range(len(objs)):
+            obj = objs[i]
+            obj_gps = dataset.models[obj]
+            try:
+                obj_reconstruct = np.copy(obj_gps)
+            except KeyError:
+                obj_coeffs_list = kwargs['feature_space'][i]
+                obj_reconstruct = self.reconstruct_obj_real_space(
+                    obj_gps, obj_coeffs_list)
+            except KeyError:
+                raise KeyError('If the reconstructed flux was not saved into '
+                               'the dataset models, the reconstructed feature '
+                               'space must be given as `**kwargs` with the '
+                               'name `feature_space`.')
+            obj_reconstruct['flux'] = obj_gps['flux_reconstruct']
+            chisq_over_datapoints[i] = (
+                chisq.compute_overall_chisq_over_datapoints(obj_gps,
+                                                            obj_reconstruct))
+        chisq_over_datapoints = pd.DataFrame(data=chisq_over_datapoints,
+                                             index=objs,
+                                             columns=['chisq_over_datapoints'])
+        chisq_over_datapoints.index.rename('object_id', inplace=True)
+        return chisq_over_datapoints
 
     @staticmethod
     def _postprocess_matrix(matrix, means, scales):
@@ -1813,6 +1927,11 @@ class WaveletFeatures(Features):
 
         The available families can be checked using `pywt.wavelist()` or going
         to https://pywavelets.readthedocs.io/en/latest/ref/wavelets.html .
+
+        Parameters
+        ----------
+        wavelet_name : str
+            Name of the wavelets used.
         """
         try:
             self._wavelet_name = pywt.Wavelet(wavelet_name)
