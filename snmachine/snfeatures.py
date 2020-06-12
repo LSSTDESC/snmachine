@@ -896,6 +896,48 @@ class TemplateFeatures(Features):
                                   name='lsst'+band)
             sncosmo.registry.register(bp, force=True)
 
+    def goodness_of_fit(self, d):
+        """
+        Test (for any feature set) how well the reconstruction from the
+        features fits each of the objects in the dataset.
+
+        Parameters
+        ----------
+        d : Dataset
+            Dataset object.
+
+        Returns
+        -------
+        astropy.table.Table
+            Table with the reduced Chi2 for each object
+        """
+        if len(d.models) == 0:
+            print('Call Dataset.set_models first.')
+            return None
+        filts = np.unique(d.data[d.object_names[0]]['filter'])
+        filts = np.array(filts).tolist()
+        rcs = Table(names=['Object']+filts,
+                    dtype=['U32']+['float64']*len(filts))  # Reduced chi2
+        for obj in d.object_names:
+            # Go through each filter
+            chi2 = []
+            lc = d.data[obj]
+            mod = d.models[obj]
+            for filt in filts:
+                lc_filt = lc[lc['filter'] == filt]
+                m = mod[mod['filter'] == filt]
+                x = lc_filt['mjd']
+                y = lc_filt['flux']
+                e = lc_filt['flux_error']
+                xmod = m['mjd']
+                ymod = m['flux']
+                # Interpolate
+                fit = interp1d(xmod, ymod)
+                yfit = fit(x)
+                chi2.append(sum((yfit-y)**2/e**2)/(len(x)-1))
+            rcs.add_row([obj]+chi2)
+        return rcs
+
 
 class ParametricFeatures(Features):
     """Fits a few options of generalised, parametric models to the data.
@@ -1234,6 +1276,48 @@ class ParametricFeatures(Features):
             chi2 = np.sum((y-ynew)*(y-ynew)/yerr/yerr)
             return -chi2/2.
 
+    def goodness_of_fit(self, d):
+        """
+        Test (for any feature set) how well the reconstruction from the
+        features fits each of the objects in the dataset.
+
+        Parameters
+        ----------
+        d : Dataset
+            Dataset object.
+
+        Returns
+        -------
+        astropy.table.Table
+            Table with the reduced Chi2 for each object
+        """
+        if len(d.models) == 0:
+            print('Call Dataset.set_models first.')
+            return None
+        filts = np.unique(d.data[d.object_names[0]]['filter'])
+        filts = np.array(filts).tolist()
+        rcs = Table(names=['Object']+filts,
+                    dtype=['U32']+['float64']*len(filts))  # Reduced chi2
+        for obj in d.object_names:
+            # Go through each filter
+            chi2 = []
+            lc = d.data[obj]
+            mod = d.models[obj]
+            for filt in filts:
+                lc_filt = lc[lc['filter'] == filt]
+                m = mod[mod['filter'] == filt]
+                x = lc_filt['mjd']
+                y = lc_filt['flux']
+                e = lc_filt['flux_error']
+                xmod = m['mjd']
+                ymod = m['flux']
+                # Interpolate
+                fit = interp1d(xmod, ymod)
+                yfit = fit(x)
+                chi2.append(sum((yfit-y)**2/e**2)/(len(x)-1))
+            rcs.add_row([obj]+chi2)
+        return rcs
+
 
 class WaveletFeatures(Features):
     """Uses wavelets to decompose the data and then reduces dimensionality of
@@ -1547,8 +1631,34 @@ class WaveletFeatures(Features):
                                                      scales)
         return reconstruct_space
 
-    def reconstruct_obs(self, feature_space):
-        3
+    def reconstruct_real_space(self, dataset, feature_space, wavelet_name='sym2'):
+        """Reconstruct the observations in real space from the feature space.
+
+        Parameters
+        ----------
+        feature_space : array
+            Table of shape (# events, # features).
+            Row `i` has the wavelet features of the event
+            `dataset.object_names[i]`.
+            The wavelet features are ordered as a flat version of `pywt.swt`
+            function:
+                [cAn, cDn, ..., cA2, cD2, cA1, cD1]
+            where n equals the number of decomposition levels.
+        """
+        self._filter_set = dataset.filter_set
+        self._number_gp = self._extract_number_gp(dataset)
+        self._is_wavelet_valid(wavelet_name)
+
+        # Feature space has dimensions:
+        #  # passbands * # levels * 2 * # gp evaluations
+        denominator = 2 * self.number_gp * len(self.filter_set)
+        self.number_decomp_levels = np.shape(feature_space)[1] / denominator
+
+        objs = dataset.object_names
+        for i in range(len(objs)):
+            obj = objs[i]
+            obj_gps = dataset.models[obj].to_pandas()
+            coeffs = self._compute_obj_wavelet_decomp(obj_gps)
 
     def compute_reconstruct_error():
         3
