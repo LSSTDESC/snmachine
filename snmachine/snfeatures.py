@@ -605,14 +605,10 @@ class Features:
         self.p_limit = 0.05
 
     def extract_features(self):
-        # TODO: CAT: Why do we have this empty method? Either we write that is
-        # not implemented and then it is overwritten or erase it
-        pass
+        raise NotImplementedError('This method has not been implemented yet.')
 
     def fit_sn(self):
-        # TODO: CAT: Why do we have this empty method? Either we write that is
-        # not implemented and then it is overwritten or erase it
-        pass
+        raise NotImplementedError('This method has not been implemented yet.')
 
     @staticmethod
     def _exists_path(path_to_test):
@@ -1324,7 +1320,7 @@ class WaveletFeatures(Features):
     the feature space using PCA.
     """
 
-    def __init__(self, wavelet_name='sym2', number_gp=100, **kwargs):
+    def __init__(self, wavelet_name='sym2', **kwargs):
         """Initialises the pywt wavelet object and sets the maximum depth for
         deconstruction.
 
@@ -1351,12 +1347,11 @@ class WaveletFeatures(Features):
         `dataset.models` or in the path provided on `path_saved_gp_files`.
         """
         self._filter_set = dataset.filter_set
+        self._read_gps_into_models(dataset, path_saved_gp_files)
         self._number_gp = self._extract_number_gp(dataset)
         self._is_wavelet_valid(wavelet_name)
         self.number_decomp_levels = number_decomp_levels
         self.output_root = output_root
-
-        self._read_gps_into_models(dataset, path_saved_gp_files)
 
         objs = dataset.object_names
         for i in range(len(objs)):
@@ -1980,7 +1975,10 @@ class WaveletFeatures(Features):
             Number of points the Gaussian Process was evaluated at.
         """
         obj = dataset.object_names[0]
-        obj_gps = dataset.models[obj].to_pandas()
+        try:
+            obj_gps = dataset.models[obj].to_pandas()
+        except KeyError:
+            raise AttributeError('The Gaussian processes have not been')
         return np.sum(obj_gps == self.filter_set[0])
 
     @property
