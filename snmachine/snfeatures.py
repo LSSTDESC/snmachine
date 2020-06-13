@@ -1510,9 +1510,13 @@ class WaveletFeatures(Features):
             order of eigenvalue.
         """
         means = np.load(os.path.join(path_save_eigendecomp, 'means.npy'))
-        scales = np.load(os.path.join(path_save_eigendecomp, 'scales.npy'))
+        scales = np.load(os.path.join(path_save_eigendecomp, 'scales.npy'),
+                         allow_pickle=True)
         eigenvecs = np.load(os.path.join(path_save_eigendecomp,
                             'eigenvectors.npy'))
+
+        if np.shape(scales) == ():  # the saved output has a weird format
+            scales = None
 
         if number_comps is not None:
             eigenvecs = eigenvecs[:number_comps, :]
@@ -1817,7 +1821,7 @@ class WaveletFeatures(Features):
         if scales is not None:
             matrix_new *= scales
 
-        return matrix_new, means, scales
+        return matrix_new
 
     @staticmethod
     def _preprocess_matrix(matrix, means, scales):
@@ -1846,7 +1850,7 @@ class WaveletFeatures(Features):
         if scales is not None:
             matrix_new /= scales
 
-        return matrix_new, means, scales
+        return matrix_new
 
     @staticmethod
     def _center_matrix(matrix, normalise_var=False):
