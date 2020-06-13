@@ -1901,10 +1901,9 @@ class WaveletFeatures(Features):
             gps.read_gp_files_into_models(dataset, path_saved_gp_files)
         else:
             raise AttributeError('The Gaussian Processes fit of the events '
-                                 'must have been done and that the estimated '
-                                 'flux at regular intervals is saved in '
-                                 '`dataset.models` or in the path provided on '
-                                 '`path_saved_gp_files`.')
+                                 'must have been done and it must be either '
+                                 'saved in `dataset.models` or in the path '
+                                 'provided on `path_saved_gp_files`.')
 
     @property
     def filter_set(self):
@@ -1979,7 +1978,7 @@ class WaveletFeatures(Features):
             obj_gps = dataset.models[obj].to_pandas()
         except KeyError:
             raise AttributeError('The Gaussian processes have not been')
-        return np.sum(obj_gps == self.filter_set[0])
+        return np.sum(obj_gps['filter'] == self.filter_set[0])
 
     @property
     def number_decomp_levels(self):
