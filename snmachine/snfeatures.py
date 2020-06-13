@@ -19,7 +19,7 @@ import pywt
 import sncosmo
 
 from . import parametric_models
-from astropy.table import Table, vstack, hstack, join
+from astropy.table import Table, vstack, join
 from functools import partial
 from iminuit import Minuit
 from multiprocessing import Pool
