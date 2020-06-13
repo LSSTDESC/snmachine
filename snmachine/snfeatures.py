@@ -1320,7 +1320,7 @@ class WaveletFeatures(Features):
     the feature space using PCA.
     """
 
-    def __init__(self, wavelet_name='sym2', **kwargs):
+    def __init__(self, output_root=None, wavelet_name='sym2', **kwargs):
         """Initialises the pywt wavelet object and sets the maximum depth for
         deconstruction.
 
@@ -1336,9 +1336,10 @@ class WaveletFeatures(Features):
             the Gaussian process curve.
         """
         Features.__init__(self)
+        self.output_root = output_root
 
     def compute_wavelet_decomp(self, dataset, wavelet_name='sym2',
-                               number_decomp_levels='max', output_root=None,
+                               number_decomp_levels='max',
                                path_saved_gp_files=None):
         """Computes the wavelet decomposition of the dataset events.
 
@@ -1351,7 +1352,6 @@ class WaveletFeatures(Features):
         self._number_gp = self._extract_number_gp(dataset)
         self._is_wavelet_valid(wavelet_name)
         self.number_decomp_levels = number_decomp_levels
-        self.output_root = output_root
 
         objs = dataset.object_names
         for i in range(len(objs)):
@@ -1425,7 +1425,7 @@ class WaveletFeatures(Features):
         return table
 
     def compute_eigendecomp(self, dataset, normalise_var=False,
-                            path_save_eigendecomp=None):
+                            path_save_eigendecomp='output_root'):
         """Compute eigendecomposition of the feature space.
 
         The eigendecomposition is performed using Singular Value Decomposition
@@ -1440,7 +1440,26 @@ class WaveletFeatures(Features):
         normalise_var : bool, optional
             If True, the feature space is scaled so that each feature has unit
             variance.
+        path_save_eigendecomp : {'output_root', str}, optional
+            Path where the eigendecomposition is saved. By default, it is
+            saved in `self.output_root`, the same place as the wavelet
+            features were saved.
+
+        Raises
+        ------
+        ValueError
+            The eigendecomposition must be saved, hence a valid path must be
+            provided.
         """
+        if path_save_eigendecomp == 'output_root':
+            path_save_eigendecomp = self.output_root
+        elif path_save_eigendecomp is None:
+            raise ValueError('A valid path to save the eigendecomposotion must'
+                             ' be provided. At the moment, `None` was provided'
+                             ' instead.')
+        self._exists_path(path_save_eigendecomp)
+
+        self._filter_set = dataset.filter_set
         feature_space = self._load_feature_space(dataset)
         # Center the feature_space to perform eigendecomposition
         feature_space_new, means, scales = self._center_matrix(
@@ -1454,12 +1473,11 @@ class WaveletFeatures(Features):
         number_objs = np.shape(feature_space)[0]
         eigenvals = singular_vals**2 / (number_objs-1)
 
-        if path_save_eigendecomp is not None:
-            path_save = path_save_eigendecomp
-            np.save(os.path.join(path_save, 'means.npy'), means)
-            np.save(os.path.join(path_save, 'scales.npy'), scales)
-            np.save(os.path.join(path_save, 'eigenvalues.npy'), eigenvals)
-            np.save(os.path.join(path_save, 'eigenvectors.npy'), eigenvecs)
+        path_save = path_save_eigendecomp
+        np.save(os.path.join(path_save, 'means.npy'), means)
+        np.save(os.path.join(path_save, 'scales.npy'), scales)
+        np.save(os.path.join(path_save, 'eigenvalues.npy'), eigenvals)
+        np.save(os.path.join(path_save, 'eigenvectors.npy'), eigenvecs)
 
     @staticmethod
     def load_pca(path_save_eigendecomp, number_comps=None):
