@@ -1460,7 +1460,7 @@ class WaveletFeatures(Features):
         self._exists_path(path_save_eigendecomp)
 
         self._filter_set = dataset.filter_set
-        feature_space = self._load_feature_space(dataset)
+        feature_space = self.load_feature_space(dataset)
         # Center the feature_space to perform eigendecomposition
         feature_space_new, means, scales = self._center_matrix(
             feature_space, normalise_var=normalise_var)
@@ -1522,7 +1522,7 @@ class WaveletFeatures(Features):
             eigenvecs = eigenvecs[:number_comps, :]
         return means, scales, eigenvecs
 
-    def _load_feature_space(self, dataset):
+    def load_feature_space(self, dataset):
         """Load the wavelet feature space.
 
         The wavelet coefficients of the events in the dataset were previously
