@@ -1320,20 +1320,13 @@ class WaveletFeatures(Features):
     the feature space using PCA.
     """
 
-    def __init__(self, output_root=None, wavelet_name='sym2', **kwargs):
-        """Initialises the pywt wavelet object and sets the maximum depth for
-        deconstruction.
-
+    def __init__(self, output_root=None, **kwargs):
+        """
         Parameters
         ----------
-        wavelet : str, optional
-            String for which wavelet family to use.
-        number_gp : int, optional
-            Number of points on the Gaussian process curve
-        level : int, optional
-            The maximum depth for wavelet deconstruction. If not provided,
-            will use the maximum depth possible given the number of points in
-            the Gaussian process curve.
+        output_root : str, optional
+            Path where the wavelet features are saved. The eigendecomposition
+            is also saved there by default.
         """
         Features.__init__(self)
         self.output_root = output_root
@@ -1637,7 +1630,7 @@ class WaveletFeatures(Features):
         coeffs = {}
         for pb in self.filter_set:
             obj_pb = obj_gps[obj_gps['filter'] == pb]
-            coeffs[pb] = pywt.swt(obj_pb['flux'], wavelet=self.wavelet_name,
+            coeffs[pb] = pywt.swt(obj_pb['flux'], wavelet=self.wavelet,
                                   level=self.number_decomp_levels)
         return coeffs
 
@@ -1656,6 +1649,87 @@ class WaveletFeatures(Features):
                                                 ''.format(obj))
         with open(path_save_wavelet_decomp, 'wb') as f:
             pickle.dump(coeffs, f, pickle.HIGHEST_PROTOCOL)
+
+    @staticmethod
+    def _center_matrix(matrix, normalise_var=False):
+        """Centers the matrix and normalises its variance if chosen.
+
+        This step is needed to compute the Singular Value Decomposition,
+        Eigendecomposition or computing covariance.
+
+        Parameters
+        -----------
+        matrix : array
+            Matrix of shape (# samples, # features).
+        normalise_var: bool, optional
+            If True, `matrix` is scaled so that each feature has unit variance.
+
+        Returns
+        -------
+        matrix_new : array
+            Centered matrix of shape (# samples, # features). If
+            `normalise_var` is true, `matrix_new` has unit variance across the
+            features.
+        means : array
+            Mean of each feature across all the samples. Shape (# features, ).
+        scales : {None, array}
+            If `normalise_var` is false, `scales` is not used. Otherwise, it
+            is the value used to rescale `matrix` so that the variance of each
+            feature is unitaty. Shape (# features, ).
+
+        Notes
+        -----
+        Let :math:`X` be the initial matrix with shape (# events, # features)
+        and :math:`X_{new}` the output matrix.
+
+        .. math::  X_{\mathrm{new}} = (X - mean(X))
+
+        If `normalise_var` is true, :math:`X` is further rescaled to have
+        unit variance.
+        The option of scaling the variance has been retained for consistency
+        with previous methods and various ML resources which suggest this may
+        help in balancing cases where the variances of different features vary
+        a lot. In a few tests we have done with specific datasets, we have not
+        seen the suggested benefits.
+        """
+        means = np.mean(matrix, axis=0)  # mean of each feature
+        matrix_new = matrix - means
+
+        scales = None
+        if normalise_var:  # L2 normalization
+            scales = np.sqrt(np.sum(matrix_new**2, axis=0))
+            matrix_new /= scales
+
+        return matrix_new, means, scales
+
+    @staticmethod
+    def _preprocess_matrix(matrix, means, scales):
+        """Subtract the features' mean and scales their variance.
+
+        Change the matrix to be in the same feature space the
+        eigendecomposition was calculated.
+
+        Parameters
+        -----------
+        matrix : array
+            Matrix of shape (# samples, # features).
+        means : array
+            Mean of each feature across all the samples. Shape (# features, ).
+        scales : {None, array}
+            If `normalise_var` is false, `scales` is not used. Otherwise, it
+            is the value used to rescale `matrix` so that the variance of each
+            feature is unitaty. Shape (# features, ).
+
+        Returns
+        -------
+        matrix_new : array
+            Preprocessed matrix of shape (# samples, # features).
+        """
+        matrix_new = matrix - means
+        if scales is not None:
+            matrix_new /= scales
+
+        return matrix_new
 
     @staticmethod
     def create_readable_table(coeffs):
@@ -1682,42 +1756,61 @@ class WaveletFeatures(Features):
             table['cD{}'.format(number_levels-level)] = coeffs[level][1]
         return table
 
-    def reconstruct_feature_space(self, red_space, path_saved_eigendecomp,
-                                  number_comps):
-        """Reconstruct the original feature space from the reduced one.
+    def compute_reconstruct_error(self, dataset, **kwargs):
+        """X^2/datapoints between original and reconstructed observations.
+
+        The original observations are the points at which the Gaussian Process
+        (GP) was evaluated. The uncertainty is then the GP uncertainty at
+        those points.
 
         Parameters
         ----------
-        red_space : array
-            Projection of the events onto a lower dimensional space of size
-            `number_comps`. It is then the reduced feature space.
-            Shape (# events, `number_comps`).
-        path_saved_eigendecomp : str
-            Path where the eigendecomposition is saved.
-        number_comps : {None, int}
-            If `None`, the same feature space is returned. Otherwise, a
-            reduced feature space with `number_comps` features is returned.
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
 
         Returns
         -------
-        reconstruct_space : array
-            Reconstructed features in the original feature space. This matrix
-            has a lower rank than the original features matrix because there
-            is some loss in the dimensionality reduction.
-            Shape (# events, # features).
-            Row `i` has the wavelet features of the event
-            `dataset.object_names[i]`.
-            The wavelet features are ordered as a flat version of `pywt.swt`
-            function:
-                [cAn, cDn, ..., cA2, cD2, cA1, cD1]
-            where n equals the number of decomposition levels.
+        chisq_over_datapoints : pandas.DataFrame
+            Table with the X^2/datapoints per object.
+
+        Raises
+        ------
+        KeyError
+            If the reconstructed flux was not saved into the dataset models,
+            the reconstructed feature space and wavelet name must be given as
+            `**kwargs` with the names `feature_space` and `wavelet_name`,
+            respectively.
         """
-        means, scales, eigenvecs = self.load_pca(path_saved_eigendecomp,
-                                                 number_comps)
-        reconstruct_space = red_space @ eigenvecs
-        reconstruct_space = self._postprocess_matrix(reconstruct_space, means,
-                                                     scales)
-        return reconstruct_space
+        objs = dataset.object_names
+        try:
+            dataset.models[objs[0]]['flux_reconstruct']
+        except KeyError:
+            try:
+                kwargs['feature_space']
+                kwargs['wavelet_name']
+            except KeyError:
+                raise KeyError('If the reconstructed flux was not saved into '
+                               'the dataset models, the reconstructed feature '
+                               'space and wavelet name must be given as '
+                               '`**kwargs` with the names `feature_space` and '
+                               '`wavelet_name`, respectively.')
+            self.reconstruct_real_space(dataset, **kwargs)
+
+        chisq_over_datapoints = np.zeros(len(objs))
+        for i in range(len(objs)):
+            obj = objs[i]
+            obj_gps = dataset.models[obj].to_pandas()
+            obj_reconstruct = obj_gps.copy()
+            obj_reconstruct['flux'] = obj_reconstruct['flux_reconstruct']
+
+            chisq_over_datapoints[i] = (
+                chisq.compute_overall_chisq_over_datapoints(obj_gps,
+                                                            obj_reconstruct))
+        chisq_over_datapoints = pd.DataFrame(data=chisq_over_datapoints,
+                                             index=objs,
+                                             columns=['chisq_over_datapoints'])
+        chisq_over_datapoints.index.rename('object_id', inplace=True)
+        return chisq_over_datapoints
 
     def reconstruct_real_space(self, dataset, feature_space, wavelet_name,
                                path_saved_gp_files=None):
@@ -1791,7 +1884,7 @@ class WaveletFeatures(Features):
         for pb in self.filter_set:
             is_pb_obs = obj_gps['filter'] == pb
             pb_coeffs = obj_coeffs[pb]
-            pb_flux_reconstruct = pywt.iswt(pb_coeffs, self.wavelet_name)
+            pb_flux_reconstruct = pywt.iswt(pb_coeffs, self.wavelet)
             obj_gps['flux_reconstruct'][is_pb_obs] = pb_flux_reconstruct
         return obj_gps
 
@@ -1831,61 +1924,42 @@ class WaveletFeatures(Features):
             coeffs[pb] = new_coeff_format
         return coeffs
 
-    def compute_reconstruct_error(self, dataset, **kwargs):
-        """X^2/datapoints between original and reconstructed observations.
-
-        The original observations are the points at which the Gaussian Process
-        (GP) was evaluated. The uncertainty is then the GP uncertainty at
-        those points.
+    def reconstruct_feature_space(self, red_space, path_saved_eigendecomp,
+                                  number_comps):
+        """Reconstruct the original feature space from the reduced one.
 
         Parameters
         ----------
-        dataset : Dataset object (sndata class)
-            Dataset to work with.
+        red_space : array
+            Projection of the events onto a lower dimensional space of size
+            `number_comps`. It is then the reduced feature space.
+            Shape (# events, `number_comps`).
+        path_saved_eigendecomp : str
+            Path where the eigendecomposition is saved.
+        number_comps : {None, int}
+            If `None`, the same feature space is returned. Otherwise, a
+            reduced feature space with `number_comps` features is returned.
 
         Returns
         -------
-        chisq_over_datapoints : pandas.DataFrame
-            Table with the X^2/datapoints per object.
-
-        Raises
-        ------
-        KeyError
-            If the reconstructed flux was not saved into the dataset models,
-            the reconstructed feature space and wavelet name must be given as
-            `**kwargs` with the names `feature_space` and `wavelet_name`,
-            respectively.
+        reconstruct_space : array
+            Reconstructed features in the original feature space. This matrix
+            has a lower rank than the original features matrix because there
+            is some loss in the dimensionality reduction.
+            Shape (# events, # features).
+            Row `i` has the wavelet features of the event
+            `dataset.object_names[i]`.
+            The wavelet features are ordered as a flat version of `pywt.swt`
+            function:
+                [cAn, cDn, ..., cA2, cD2, cA1, cD1]
+            where n equals the number of decomposition levels.
         """
-        objs = dataset.object_names
-        try:
-            dataset.models[objs[0]]['flux_reconstruct']
-        except KeyError:
-            try:
-                kwargs['feature_space']
-                kwargs['wavelet_name']
-            except KeyError:
-                raise KeyError('If the reconstructed flux was not saved into '
-                               'the dataset models, the reconstructed feature '
-                               'space and wavelet name must be given as '
-                               '`**kwargs` with the names `feature_space` and '
-                               '`wavelet_name`, respectively.')
-            self.reconstruct_real_space(dataset, **kwargs)
-
-        chisq_over_datapoints = np.zeros(len(objs))
-        for i in range(len(objs)):
-            obj = objs[i]
-            obj_gps = dataset.models[obj].to_pandas()
-            obj_reconstruct = obj_gps.copy()
-            obj_reconstruct['flux'] = obj_reconstruct['flux_reconstruct']
-
-            chisq_over_datapoints[i] = (
-                chisq.compute_overall_chisq_over_datapoints(obj_gps,
-                                                            obj_reconstruct))
-        chisq_over_datapoints = pd.DataFrame(data=chisq_over_datapoints,
-                                             index=objs,
-                                             columns=['chisq_over_datapoints'])
-        chisq_over_datapoints.index.rename('object_id', inplace=True)
-        return chisq_over_datapoints
+        means, scales, eigenvecs = self.load_pca(path_saved_eigendecomp,
+                                                 number_comps)
+        reconstruct_space = red_space @ eigenvecs
+        reconstruct_space = self._postprocess_matrix(reconstruct_space, means,
+                                                     scales)
+        return reconstruct_space
 
     @staticmethod
     def _postprocess_matrix(matrix, means, scales):
@@ -1915,87 +1989,6 @@ class WaveletFeatures(Features):
             matrix_new *= scales
 
         return matrix_new
-
-    @staticmethod
-    def _preprocess_matrix(matrix, means, scales):
-        """Subtract the features' mean and scales their variance.
-
-        Change the matrix to be in the same feature space the
-        eigendecomposition was calculated.
-
-        Parameters
-        -----------
-        matrix : array
-            Matrix of shape (# samples, # features).
-        means : array
-            Mean of each feature across all the samples. Shape (# features, ).
-        scales : {None, array}
-            If `normalise_var` is false, `scales` is not used. Otherwise, it
-            is the value used to rescale `matrix` so that the variance of each
-            feature is unitaty. Shape (# features, ).
-
-        Returns
-        -------
-        matrix_new : array
-            Preprocessed matrix of shape (# samples, # features).
-        """
-        matrix_new = matrix - means
-        if scales is not None:
-            matrix_new /= scales
-
-        return matrix_new
-
-    @staticmethod
-    def _center_matrix(matrix, normalise_var=False):
-        """Centers the matrix and normalises its variance if chosen.
-
-        This step is needed to compute the Singular Value Decomposition,
-        Eigendecomposition or computing covariance.
-
-        Parameters
-        -----------
-        matrix : array
-            Matrix of shape (# samples, # features).
-        normalise_var: bool, optional
-            If True, `matrix` is scaled so that each feature has unit variance.
-
-        Returns
-        -------
-        matrix_new : array
-            Centered matrix of shape (# samples, # features). If
-            `normalise_var` is true, `matrix_new` has unit variance across the
-            features.
-        means : array
-            Mean of each feature across all the samples. Shape (# features, ).
-        scales : {None, array}
-            If `normalise_var` is false, `scales` is not used. Otherwise, it
-            is the value used to rescale `matrix` so that the variance of each
-            feature is unitaty. Shape (# features, ).
-
-        Notes
-        -----
-        Let :math:`X` be the initial matrix with shape (# events, # features)
-        and :math:`X_{new}` the output matrix.
-
-        .. math::  X_{\mathrm{new}} = (X - mean(X))
-
-        If `normalise_var` is true, :math:`X` is further rescaled to have
-        unit variance.
-        The option of scaling the variance has been retained for consistency
-        with previous methods and various ML resources which suggest this may
-        help in balancing cases where the variances of different features vary
-        a lot. In a few tests we have done with specific datasets, we have not
-        seen the suggested benefits.
-        """
-        means = np.mean(matrix, axis=0)  # mean of each feature
-        matrix_new = matrix - means
-
-        scales = None
-        if normalise_var:  # L2 normalization
-            scales = np.sqrt(np.sum(matrix_new**2, axis=0))
-            matrix_new /= scales
-
-        return matrix_new, means, scales
 
     @staticmethod
     def _read_gps_into_models(dataset, path_saved_gp_files):
@@ -2050,14 +2043,14 @@ class WaveletFeatures(Features):
             Name of the wavelets used.
         """
         try:
-            self._wavelet_name = pywt.Wavelet(wavelet_name)
+            self._wavelet = pywt.Wavelet(wavelet_name)
         except ValueError:
             raise ValueError('Unknown wavelet name {}. Check `pywt.wavelist()`'
                              ' for the list of available builtin wavelets.'
                              ''.format(wavelet_name))
 
     @property
-    def wavelet_name(self):
+    def wavelet(self):
         """Return name of the wavelets used.
 
         Returns
@@ -2065,7 +2058,7 @@ class WaveletFeatures(Features):
         str
             Name of the wavelets used.
         """
-        return self._wavelet_name
+        return self._wavelet
 
     @property
     def number_gp(self):
