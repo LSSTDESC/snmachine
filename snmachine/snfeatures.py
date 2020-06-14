@@ -1338,6 +1338,66 @@ class WaveletFeatures(Features):
         Features.__init__(self)
         self.output_root = output_root
 
+    def compute_red_features(self, dataset, number_comps,
+                             path_saved_eigendecomp=None, **kwargs):
+        """Compute the reduced wavelet features.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+        number_comps : int
+            Dimension of the reduced wavelet space; Number of components to
+            keep from the eigendecomposition.
+        path_save_eigendecomp : {'output_root', str}, optional
+            Path where the eigendecomposition is saved. By default, it is
+            saved in `self.output_root`, the same place as the wavelet
+            features were saved.
+        **kwargs : dict, optional
+            wavelet_name : {'sym2, str}, optional
+                Name of the wavelets used.
+            number_decomp_levels : {`max`, int}, optional
+                The number of decomposition steps to perform.
+            path_saved_gp_files : {None, str}, optional
+                Path for the Gaussian Process curve files.
+            normalise_var : bool, optional
+                If True, the feature space is scaled so that each feature has
+                unit variance. By default it is False.
+            path_save_eigendecomp : {'output_root', str}, optional
+                Path where the eigendecomposition is saved. By default, it is
+                saved in `self.output_root`, the same place as the wavelet
+                features were saved.
+
+        Returns
+        -------
+        red_features : array
+            Projection of the events onto a lower dimensional space of size
+            `number_comps`. It is then the reduced feature space.
+            Shape (# events, `number_comps`).
+        """
+        kwargs_wavelet_decomp = kwargs.copy()
+        kwargs_wavelet_decomp.pop('normalise_var', None)
+        kwargs_wavelet_decomp.pop('path_save_eigendecomp', None)
+        self.compute_wavelet_decomp(dataset, **kwargs_wavelet_decomp)
+        feature_space = self.load_feature_space(dataset)
+
+        if path_saved_eigendecomp is None:
+            kwargs_eigendecomp = kwargs.copy()
+            kwargs_eigendecomp.pop('wavelet_name', None)
+            kwargs_eigendecomp.pop('number_decomp_levels', None)
+            kwargs_eigendecomp.pop('path_saved_gp_files', None)
+            self.compute_eigendecomp(dataset, **kwargs_eigendecomp)
+
+            path_saved_eigendecomp = kwargs.get('path_save_eigendecomp',
+                                                self.output_root)
+        means, scales, eigenvecs = self.load_pca(path_saved_eigendecomp,
+                                                 number_comps)
+
+        red_features = self.project_to_space(feature_space,
+                                             path_saved_eigendecomp,
+                                             number_comps)
+        return red_features
+
     def compute_wavelet_decomp(self, dataset, wavelet_name='sym2',
                                number_decomp_levels='max',
                                path_saved_gp_files=None):
@@ -1346,6 +1406,17 @@ class WaveletFeatures(Features):
         The function assumes the Gaussian Processes fit of the events has been
         done and that the estimated flux at regular intervals is saved in
         `dataset.models` or in the path provided on `path_saved_gp_files`.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+        wavelet_name : {'sym2', str}, optional
+            Name of the wavelets used.
+        number_decomp_levels : {`max`, int}, optional
+            The number of decomposition steps to perform.
+        path_saved_gp_files : {None, str}, optional
+            Path for the Gaussian Process curve files.
         """
         self._filter_set = dataset.filter_set
         self._read_gps_into_models(dataset, path_saved_gp_files)
@@ -1361,6 +1432,193 @@ class WaveletFeatures(Features):
 
             if self.output_root is not None:
                 self._save_obj_wavelet_decomp(obj, coeffs)
+
+    def load_feature_space(self, dataset):
+        """Load the wavelet feature space.
+
+        The wavelet coefficients of the events in the dataset were previously
+        calculated. This function loads then to memory and format them into a
+        large table where each column corresponds to a wavelet coefficient in a
+        specific passband.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+
+        Returns
+        -------
+        feature_space : array
+            Table of shape (# events, # wavelet features).
+            Row `i` has the wavelet features of the event
+            `dataset.object_names[i]`.
+            The wavelet features are ordered as a flat version of `pywt.swt`
+            function:
+                [cAn, cDn, ..., cA2, cD2, cA1, cD1]
+            where n equals the number of decomposition levels.
+        """
+        objs = dataset.object_names
+        filter_set = self.filter_set
+        feature_space = []
+        for i in range(len(objs)):
+            obj = objs[i]
+            path_saved_wavelet_decomp = os.path.join(self.output_root,
+                                                     'wavelet_dict_{}.pckl'
+                                                     ''.format(obj))
+            with open(path_saved_wavelet_decomp, 'rb') as input:
+                obj_coeffs = pickle.load(input)
+
+            if i == 0:  # all events/passbands have the same number of levels
+                number_levels = np.shape(obj_coeffs[filter_set[0]])[0]
+
+            coeffs_list = []
+            for pb in filter_set:
+                pb_coeffs = obj_coeffs[pb]
+                for level in np.arange(number_levels):
+                    level_coeffs = pb_coeffs[level]
+                    coeffs_list.append(level_coeffs[0])  # cA
+                    coeffs_list.append(level_coeffs[1])  # cD
+            coeffs_list = np.array(coeffs_list).flatten()
+            feature_space.append(coeffs_list)
+        feature_space = np.array(feature_space)  # change list -> array
+        return feature_space
+
+    def compute_eigendecomp(self, dataset, normalise_var=False,
+                            path_save_eigendecomp='output_root'):
+        """Compute eigendecomposition of the feature space.
+
+        The eigendecomposition is performed using Singular Value Decomposition
+        (SVD). The input data is always centered before applying the SVD. The
+        features' values can also be scaled if `normalise_var` is set to
+        `True`.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+        normalise_var : bool, optional
+            If True, the feature space is scaled so that each feature has unit
+            variance. By default it is False.
+        path_save_eigendecomp : {'output_root', str}, optional
+            Path where the eigendecomposition is saved. By default, it is
+            saved in `self.output_root`, the same place as the wavelet
+            features were saved.
+
+        Raises
+        ------
+        ValueError
+            The eigendecomposition must be saved, hence a valid path must be
+            provided.
+        """
+        if path_save_eigendecomp == 'output_root':
+            path_save_eigendecomp = self.output_root
+        elif path_save_eigendecomp is None:
+            raise ValueError('A valid path to save the eigendecomposotion must'
+                             ' be provided. At the moment, `None` was provided'
+                             ' instead.')
+        self._exists_path(path_save_eigendecomp)
+
+        self._filter_set = dataset.filter_set
+        feature_space = self.load_feature_space(dataset)
+        # Center the feature_space to perform eigendecomposition
+        feature_space_new, means, scales = self._center_matrix(
+            feature_space, normalise_var=normalise_var)
+
+        # Row ith has the eigenvector corresponding to the ith eigenvalue
+        # (eigenvectors in descending order of eigenvalue)
+        u, singular_vals, eigenvecs = np.linalg.svd(feature_space_new,
+                                                    full_matrices=False)
+
+        number_objs = np.shape(feature_space)[0]
+        eigenvals = singular_vals**2 / (number_objs-1)
+
+        path_save = path_save_eigendecomp
+        np.save(os.path.join(path_save, 'means.npy'), means)
+        np.save(os.path.join(path_save, 'scales.npy'), scales)
+        np.save(os.path.join(path_save, 'eigenvalues.npy'), eigenvals)
+        np.save(os.path.join(path_save, 'eigenvectors.npy'), eigenvecs)
+
+    @staticmethod
+    def load_pca(path_saved_eigendecomp, number_comps=None):
+        """Load the principal component analysis of the feature space.
+
+        Load the means and scales needed to transform a matrix onto the same
+        space as the matrix used to calculate the eigendecomposition.
+        Load the first `number_comps` eigenvalues to transform any new data
+        onto a lower-dimensional space.
+
+        Parameters
+        ----------
+        path_saved_eigendecomp : str
+            Path where the eigendecomposition is saved.
+        number_comps : {None, int}, optional
+            If `None`, all eigenvectors are returned. Otherwise, only the
+            first `number_comps` are returned.
+
+        Returns
+        -------
+        means : array
+            Mean of each feature across all the samples. Shape (# features, ).
+        scales : {None, array}
+            If `normalise_var` is false, `scales` is not used. Otherwise, it
+            is the value used to rescale `matrix` so that the variance of each
+            feature is unitaty. Shape (# features, ).
+        eigenvecs : array
+            First `number_comps` eigenvectors of the original feature space.
+            Each row corresponds to a eigenvector and they are in descending
+            order of eigenvalue.
+        """
+        means = np.load(os.path.join(path_saved_eigendecomp, 'means.npy'))
+        scales = np.load(os.path.join(path_saved_eigendecomp, 'scales.npy'),
+                         allow_pickle=True)
+        eigenvecs = np.load(os.path.join(path_saved_eigendecomp,
+                            'eigenvectors.npy'))
+
+        if np.shape(scales) == ():  # the saved output has a weird format
+            scales = None
+
+        if number_comps is not None:
+            eigenvecs = eigenvecs[:number_comps, :]
+        return means, scales, eigenvecs
+
+    def project_to_space(self, feature_space, path_saved_eigendecomp,
+                         number_comps):
+        """Project dataset onto a previously calculated feature space.
+
+        The feature space correspond to the wavelet decomposition of the
+        events to use. It has not been centered/ scaled yet.
+
+        Parameters
+        ----------
+        feature_space : array
+            Table of shape (# events, # features).
+            Row `i` has the wavelet features of the event
+            `dataset.object_names[i]`.
+            The wavelet features are ordered as a flat version of `pywt.swt`
+            function:
+                [cAn, cDn, ..., cA2, cD2, cA1, cD1]
+            where n equals the number of decomposition levels.
+        path_saved_eigendecomp : str
+            Path where the eigendecomposition is saved.
+        number_comps : {None, int}
+            If `None`, the same feature space is returned. Otherwise, a
+            reduced feature space with `number_comps` features is returned.
+
+        Returns
+        -------
+        red_space : array
+            Projection of the events onto a lower dimensional space of size
+            `number_comps`. It is then the reduced feature space.
+            Shape (# events, `number_comps`).
+        """
+        means, scales, eigenvecs = self.load_pca(path_saved_eigendecomp,
+                                                 number_comps)
+
+        feature_space_new = self._preprocess_matrix(feature_space, means,
+                                                    scales)
+
+        red_space = feature_space_new @ eigenvecs.T
+        return red_space
 
     def _compute_obj_wavelet_decomp(self, obj_gps):
         """Stationary wavelet transform of each passband of the event.
@@ -1424,194 +1682,7 @@ class WaveletFeatures(Features):
             table['cD{}'.format(number_levels-level)] = coeffs[level][1]
         return table
 
-    def compute_eigendecomp(self, dataset, normalise_var=False,
-                            path_save_eigendecomp='output_root'):
-        """Compute eigendecomposition of the feature space.
-
-        The eigendecomposition is performed using Singular Value Decomposition
-        (SVD). The input data is always centered before applying the SVD. The
-        features' values can also be scaled if `normalise_var` is set to
-        `True`.
-
-        Parameters
-        ----------
-        dataset : Dataset object (sndata class)
-            Dataset to work with.
-        normalise_var : bool, optional
-            If True, the feature space is scaled so that each feature has unit
-            variance.
-        path_save_eigendecomp : {'output_root', str}, optional
-            Path where the eigendecomposition is saved. By default, it is
-            saved in `self.output_root`, the same place as the wavelet
-            features were saved.
-
-        Raises
-        ------
-        ValueError
-            The eigendecomposition must be saved, hence a valid path must be
-            provided.
-        """
-        if path_save_eigendecomp == 'output_root':
-            path_save_eigendecomp = self.output_root
-        elif path_save_eigendecomp is None:
-            raise ValueError('A valid path to save the eigendecomposotion must'
-                             ' be provided. At the moment, `None` was provided'
-                             ' instead.')
-        self._exists_path(path_save_eigendecomp)
-
-        self._filter_set = dataset.filter_set
-        feature_space = self.load_feature_space(dataset)
-        # Center the feature_space to perform eigendecomposition
-        feature_space_new, means, scales = self._center_matrix(
-            feature_space, normalise_var=normalise_var)
-
-        # Row ith has the eigenvector corresponding to the ith eigenvalue
-        # (eigenvectors in descending order of eigenvalue)
-        u, singular_vals, eigenvecs = np.linalg.svd(feature_space_new,
-                                                    full_matrices=False)
-
-        number_objs = np.shape(feature_space)[0]
-        eigenvals = singular_vals**2 / (number_objs-1)
-
-        path_save = path_save_eigendecomp
-        np.save(os.path.join(path_save, 'means.npy'), means)
-        np.save(os.path.join(path_save, 'scales.npy'), scales)
-        np.save(os.path.join(path_save, 'eigenvalues.npy'), eigenvals)
-        np.save(os.path.join(path_save, 'eigenvectors.npy'), eigenvecs)
-
-    @staticmethod
-    def load_pca(path_save_eigendecomp, number_comps=None):
-        """Load the principal component analysis of the feature space.
-
-        Load the means and scales needed to transform a matrix onto the same
-        space as the matrix used to calculate the eigendecomposition.
-        Load the first `number_comps` eigenvalues to transform any new data
-        onto a lower-dimensional space.
-
-        Parameters
-        ----------
-        path_save_eigendecomp : str
-            Path where the eigendecomposition is saved.
-        number_comps : {None, int}, optional
-            If `None`, all eigenvectors are returned. Otherwise, only the
-            first `number_comps` are returned.
-
-        Returns
-        -------
-        means : array
-            Mean of each feature across all the samples. Shape (# features, ).
-        scales : {None, array}
-            If `normalise_var` is false, `scales` is not used. Otherwise, it
-            is the value used to rescale `matrix` so that the variance of each
-            feature is unitaty. Shape (# features, ).
-        eigenvecs : array
-            First `number_comps` eigenvectors of the original feature space.
-            Each row corresponds to a eigenvector and they are in descending
-            order of eigenvalue.
-        """
-        means = np.load(os.path.join(path_save_eigendecomp, 'means.npy'))
-        scales = np.load(os.path.join(path_save_eigendecomp, 'scales.npy'),
-                         allow_pickle=True)
-        eigenvecs = np.load(os.path.join(path_save_eigendecomp,
-                            'eigenvectors.npy'))
-
-        if np.shape(scales) == ():  # the saved output has a weird format
-            scales = None
-
-        if number_comps is not None:
-            eigenvecs = eigenvecs[:number_comps, :]
-        return means, scales, eigenvecs
-
-    def load_feature_space(self, dataset):
-        """Load the wavelet feature space.
-
-        The wavelet coefficients of the events in the dataset were previously
-        calculated. This function loads then to memory and format them into a
-        large table where each column corresponds to a wavelet coefficient in a
-        specific passband.
-
-        Parameters
-        ----------
-        dataset : Dataset object (sndata class)
-            Dataset to work with.
-
-        Returns
-        -------
-        feature_space : array
-            Table of shape (# events, # wavelet features).
-            Row `i` has the wavelet features of the event
-            `dataset.object_names[i]`.
-            The wavelet features are ordered as a flat version of `pywt.swt`
-            function:
-                [cAn, cDn, ..., cA2, cD2, cA1, cD1]
-            where n equals the number of decomposition levels.
-        """
-        objs = dataset.object_names
-        filter_set = self.filter_set
-        feature_space = []
-        for i in range(len(objs)):
-            obj = objs[i]
-            path_saved_wavelet_decomp = os.path.join(self.output_root,
-                                                     'wavelet_dict_{}.pckl'
-                                                     ''.format(obj))
-            with open(path_saved_wavelet_decomp, 'rb') as input:
-                obj_coeffs = pickle.load(input)
-
-            if i == 0:  # all events/passbands have the same number of levels
-                number_levels = np.shape(obj_coeffs[filter_set[0]])[0]
-
-            coeffs_list = []
-            for pb in filter_set:
-                pb_coeffs = obj_coeffs[pb]
-                for level in np.arange(number_levels):
-                    level_coeffs = pb_coeffs[level]
-                    coeffs_list.append(level_coeffs[0])  # cA
-                    coeffs_list.append(level_coeffs[1])  # cD
-            coeffs_list = np.array(coeffs_list).flatten()
-            feature_space.append(coeffs_list)
-        feature_space = np.array(feature_space)  # change list -> array
-        return feature_space
-
-    def project_to_space(self, feature_space, path_save_eigendecomp,
-                         number_comps):
-        """Project dataset onto a previously calculated feature space.
-
-        The feature space correspond to the wavelet decomposition of the
-        events to use. It has not been centered/ scaled yet.
-
-        Parameters
-        ----------
-        feature_space : array
-            Table of shape (# events, # features).
-            Row `i` has the wavelet features of the event
-            `dataset.object_names[i]`.
-            The wavelet features are ordered as a flat version of `pywt.swt`
-            function:
-                [cAn, cDn, ..., cA2, cD2, cA1, cD1]
-            where n equals the number of decomposition levels.
-        path_save_eigendecomp : str
-            Path where the eigendecomposition is saved.
-        number_comps : {None, int}
-            If `None`, the same feature space is returned. Otherwise, a
-            reduced feature space with `number_comps` features is returned.
-
-        Returns
-        -------
-        red_space : array
-            Projection of the events onto a lower dimensional space of size
-            `number_comps`. It is then the reduced feature space.
-            Shape (# events, `number_comps`).
-        """
-        means, scales, eigenvecs = self.load_pca(path_save_eigendecomp,
-                                                 number_comps)
-
-        feature_space_new = self._preprocess_matrix(feature_space, means,
-                                                    scales)
-
-        red_space = feature_space_new @ eigenvecs.T
-        return red_space
-
-    def reconstruct_feature_space(self, red_space, path_save_eigendecomp,
+    def reconstruct_feature_space(self, red_space, path_saved_eigendecomp,
                                   number_comps):
         """Reconstruct the original feature space from the reduced one.
 
@@ -1621,7 +1692,7 @@ class WaveletFeatures(Features):
             Projection of the events onto a lower dimensional space of size
             `number_comps`. It is then the reduced feature space.
             Shape (# events, `number_comps`).
-        path_save_eigendecomp : str
+        path_saved_eigendecomp : str
             Path where the eigendecomposition is saved.
         number_comps : {None, int}
             If `None`, the same feature space is returned. Otherwise, a
@@ -1641,7 +1712,7 @@ class WaveletFeatures(Features):
                 [cAn, cDn, ..., cA2, cD2, cA1, cD1]
             where n equals the number of decomposition levels.
         """
-        means, scales, eigenvecs = self.load_pca(path_save_eigendecomp,
+        means, scales, eigenvecs = self.load_pca(path_saved_eigendecomp,
                                                  number_comps)
         reconstruct_space = red_space @ eigenvecs
         reconstruct_space = self._postprocess_matrix(reconstruct_space, means,
@@ -2066,16 +2137,16 @@ class WaveletFeatures(Features):
         """
         max_number_levels = pywt.swt_max_level(self.number_gp)
         if value == 'max':
-            number_levels = max_number_levels
+            number_levels = int(max_number_levels)
         elif 1 <= value <= max_number_levels:
-            number_levels = value
+            number_levels = int(value)
         else:
             raise ValueError('This dataset can only be decomposed into a '
                              'positive number of levels smaller or equal to {}'
                              '.'.format(max_number_levels))
         print('Each passband is decomposed in {} levels.'
               ''.format(number_levels))
-        self._number_decomp_levels = int(number_levels)
+        self._number_decomp_levels = number_levels
 
     @property
     def output_root(self):
