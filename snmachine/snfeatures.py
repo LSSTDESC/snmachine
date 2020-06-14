@@ -1681,11 +1681,11 @@ class WaveletFeatures(Features):
             obj = objs[i]
             obj_gps = dataset.models[obj].to_pandas()
             obj_coeffs_list = feature_space[i]
-            obj_gps_reconstruct = self.reconstruct_obj_real_space(
+            obj_gps_reconstruct = self._reconstruct_obj_real_space(
                 obj_gps, obj_coeffs_list)
             dataset.models[obj] = obj_gps_reconstruct
 
-    def reconstruct_obj_real_space(self, obj_gps, coeffs_list):
+    def _reconstruct_obj_real_space(self, obj_gps, coeffs_list):
         """Reconstructs the flux using the wavelet decomposition.
 
         Parameters
@@ -1740,7 +1740,7 @@ class WaveletFeatures(Features):
         coeffs = {}
         number_pbs = len(self.filter_set)
         coeffs_list = np.split(np.array(coeffs_list), number_pbs)
-        for i in number_pbs:
+        for i in np.arange(number_pbs):
             pb = self.filter_set[i]
             new_coeff_format = []
             pb_coeffs_list = np.split(coeffs_list[i],
@@ -1767,24 +1767,37 @@ class WaveletFeatures(Features):
         -------
         chisq_over_datapoints : pandas.DataFrame
             Table with the X^2/datapoints per object.
+
+        Raises
+        ------
+        KeyError
+            If the reconstructed flux was not saved into the dataset models,
+            the reconstructed feature space and wavelet name must be given as
+            `**kwargs` with the names `feature_space` and `wavelet_name`,
+            respectively.
         """
         objs = dataset.object_names
+        try:
+            dataset.models[objs[0]]['flux_reconstruct']
+        except KeyError:
+            try:
+                feature_space = kwargs['feature_space']
+                wavelet_name = kwargs['wavelet_name']
+            except KeyError:
+                raise KeyError('If the reconstructed flux was not saved into '
+                               'the dataset models, the reconstructed feature '
+                               'space and wavelet name must be given as '
+                               '`**kwargs` with the names `feature_space` and '
+                               '`wavelet_name`, respectively.')
+            self.reconstruct_real_space(dataset, feature_space, wavelet_name)
+
         chisq_over_datapoints = np.zeros(len(objs))
         for i in range(len(objs)):
             obj = objs[i]
             obj_gps = dataset.models[obj]
-            try:
-                obj_reconstruct = np.copy(obj_gps)
-            except KeyError:
-                obj_coeffs_list = kwargs['feature_space'][i]
-                obj_reconstruct = self.reconstruct_obj_real_space(
-                    obj_gps, obj_coeffs_list)
-            except KeyError:
-                raise KeyError('If the reconstructed flux was not saved into '
-                               'the dataset models, the reconstructed feature '
-                               'space must be given as `**kwargs` with the '
-                               'name `feature_space`.')
-            obj_reconstruct['flux'] = obj_gps['flux_reconstruct']
+            obj_reconstruct = obj_gps.copy()
+            obj_reconstruct['flux'] = obj_reconstruct['flux_reconstruct']
+
             chisq_over_datapoints[i] = (
                 chisq.compute_overall_chisq_over_datapoints(obj_gps,
                                                             obj_reconstruct))
@@ -1916,6 +1929,13 @@ class WaveletFeatures(Features):
             Dataset.
         path_saved_gp_files : {None, str}
             Path for the Gaussian Process curve files.
+
+        Raises
+        ------
+        AttributeError
+            The Gaussian Processes fit of the events must have been done and
+            it must be either saved in `dataset.models` or in the path
+            provided on `path_saved_gp_files`.
         """
         if len(dataset.models) != 0:
             pass
@@ -1952,9 +1972,9 @@ class WaveletFeatures(Features):
         try:
             self._wavelet_name = pywt.Wavelet(wavelet_name)
         except ValueError:
-            print('Unknown wavelet name {}. Check `pywt.wavelist()` for the '
-                  'list of available builtin wavelets.'.format(wavelet_name))
-            sys.exit()
+            raise ValueError('Unknown wavelet name {}. Check `pywt.wavelist()`'
+                             ' for the list of available builtin wavelets.'
+                             ''.format(wavelet_name))
 
     @property
     def wavelet_name(self):
@@ -1994,12 +2014,18 @@ class WaveletFeatures(Features):
         -------
         int
             Number of points the Gaussian Process was evaluated at.
+
+        Raises
+        ------
+        AttributeError
+            The Gaussian processes have not been saved into `dataset.models`.'
         """
         obj = dataset.object_names[0]
         try:
             obj_gps = dataset.models[obj].to_pandas()
         except KeyError:
-            raise AttributeError('The Gaussian processes have not been')
+            raise AttributeError('The Gaussian processes have not been saved '
+                                 'into `dataset.models`.')
         return np.sum(obj_gps['filter'] == self.filter_set[0])
 
     @property
@@ -2021,6 +2047,13 @@ class WaveletFeatures(Features):
         ----------
         value : {`max`, int}, optional
             The number of decomposition steps to perform.
+
+        Raises
+        ------
+        ValueError
+            The number of decomposition levels must be a positive number
+            smaller or equal to the maximum number of decomposition levels
+            allowed by the data.
         """
         max_number_levels = pywt.swt_max_level(self.number_gp)
         if value == 'max':
@@ -2031,9 +2064,9 @@ class WaveletFeatures(Features):
             raise ValueError('This dataset can only be decomposed into a '
                              'positive number of levels smaller or equal to {}'
                              '.'.format(max_number_levels))
-        print('Each passband will be decomposed in {} levels.'
+        print('Each passband is decomposed in {} levels.'
               ''.format(number_levels))
-        self._number_decomp_levels = number_levels
+        self._number_decomp_levels = int(number_levels)
 
     @property
     def output_root(self):
