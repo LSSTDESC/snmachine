@@ -1648,8 +1648,8 @@ class WaveletFeatures(Features):
                                                      scales)
         return reconstruct_space
 
-    def reconstruct_real_space(self, dataset, feature_space,
-                               wavelet_name='sym2'):
+    def reconstruct_real_space(self, dataset, feature_space, wavelet_name,
+                               path_saved_gp_files=None):
         """Reconstruct the observations in real space from the feature space.
 
         Parameters
@@ -1666,7 +1666,16 @@ class WaveletFeatures(Features):
             where n equals the number of decomposition levels.
         wavelet_name : str
             Name of the wavelets used.
+        path_saved_gp_files : {None, str}, optional
+            Path for the Gaussian Process curve files.
         """
+        objs = dataset.object_names
+
+        try:
+            dataset.models[objs[0]]
+        except KeyError:
+            self._read_gps_into_models(dataset, path_saved_gp_files)
+
         self._filter_set = dataset.filter_set
         self._number_gp = self._extract_number_gp(dataset)
         self._is_wavelet_valid(wavelet_name)
@@ -1676,14 +1685,14 @@ class WaveletFeatures(Features):
         denominator = 2 * self.number_gp * len(self.filter_set)
         self.number_decomp_levels = np.shape(feature_space)[1] / denominator
 
-        objs = dataset.object_names
         for i in range(len(objs)):
             obj = objs[i]
             obj_gps = dataset.models[obj].to_pandas()
             obj_coeffs_list = feature_space[i]
             obj_gps_reconstruct = self._reconstruct_obj_real_space(
                 obj_gps, obj_coeffs_list)
-            dataset.models[obj] = obj_gps_reconstruct
+            # Write back to Astropy Table for consistency
+            dataset.models[obj] = Table().from_pandas(obj_gps_reconstruct)
 
     def _reconstruct_obj_real_space(self, obj_gps, coeffs_list):
         """Reconstructs the flux using the wavelet decomposition.
@@ -1707,7 +1716,7 @@ class WaveletFeatures(Features):
             reconstructed flux (`flux_reconstruct`) at each passband.
         """
         obj_coeffs = self._reshape_coeffs(coeffs_list)
-        obj_gps['flux_reconstruct'] = None  # initialize the column
+        obj_gps['flux_reconstruct'] = -666.  # initialize the column
         for pb in self.filter_set:
             is_pb_obs = obj_gps['filter'] == pb
             pb_coeffs = obj_coeffs[pb]
@@ -1781,20 +1790,20 @@ class WaveletFeatures(Features):
             dataset.models[objs[0]]['flux_reconstruct']
         except KeyError:
             try:
-                feature_space = kwargs['feature_space']
-                wavelet_name = kwargs['wavelet_name']
+                kwargs['feature_space']
+                kwargs['wavelet_name']
             except KeyError:
                 raise KeyError('If the reconstructed flux was not saved into '
                                'the dataset models, the reconstructed feature '
                                'space and wavelet name must be given as '
                                '`**kwargs` with the names `feature_space` and '
                                '`wavelet_name`, respectively.')
-            self.reconstruct_real_space(dataset, feature_space, wavelet_name)
+            self.reconstruct_real_space(dataset, **kwargs)
 
         chisq_over_datapoints = np.zeros(len(objs))
         for i in range(len(objs)):
             obj = objs[i]
-            obj_gps = dataset.models[obj]
+            obj_gps = dataset.models[obj].to_pandas()
             obj_reconstruct = obj_gps.copy()
             obj_reconstruct['flux'] = obj_reconstruct['flux_reconstruct']
 
