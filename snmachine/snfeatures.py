@@ -1348,11 +1348,15 @@ class WaveletFeatures(Features):
             Projection of events onto a lower dimensional feature space.
             Shape (# events, `number_comps`), where `number_comps` is the
             # dimensions of lower dimensional feature space.
-        lc : astropy.table.Table
+        lc_gps : astropy.table.Table
             Gaussian Process estimated light curve: Time, flux and flux error
             predictions in each passband of the event.
+        wavelet_name : str
+            Name of the wavelets used.
         path_saved_eigendecomp : str
             Path where the eigendecomposition is saved.
+        filter_set : list
+            List of the filters in the order they were put in the features.
 
         Returns
         -------
@@ -2107,7 +2111,7 @@ class WaveletFeatures(Features):
 
     @property
     def wavelet(self):
-        """Return name of the wavelets used.
+        """Return the wavelets used.
 
         Returns
         -------
