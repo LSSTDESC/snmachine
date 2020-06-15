@@ -237,3 +237,23 @@ def test_wavelet_pipeline(dataset=ex_data):
                          [2130.78606385, -2179.82902228,  1536.07763539]])
 
     assert np.allclose(red_features, true_red)
+
+
+@pytest.mark.wavelets
+def test_reconstruction(dataset=ex_data):
+    path_saved_gp_files = '.'
+    output_root = path_saved_gp_files
+    compute_gps(dataset, path_saved_gp_files)
+
+    wavelet_name = 'sym2'
+    number_comps = 5
+    wf = snfeatures.WaveletFeatures(output_root)
+    red_features = wf.compute_red_features(
+        dataset, number_comps, **{'path_saved_gp_files': path_saved_gp_files,
+                                  'wavelet_name': wavelet_name})
+    rec_space = wf.reconstruct_feature_space(red_features, '.', number_comps)
+
+    reconstruct_error = wf.compute_reconstruct_error(
+        dataset, **{'feature_space': rec_space, 'wavelet_name': wavelet_name})
+
+    assert np.allclose(reconstruct_error.chisq_over_datapoints, 0)
