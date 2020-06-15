@@ -227,16 +227,16 @@ def test_wavelet_pipeline(dataset=ex_data):
 
     number_comps = 3
     wf = snfeatures.WaveletFeatures(output_root='.')
-    red_features = wf.compute_red_features(
+    reduced_features = wf.compute_reduced_features(
         dataset, number_comps, **{'path_saved_gp_files': path_saved_gp_files})
 
-    true_red = np.array([[-8207.05949144,  140.50960821,    94.07240438],
-                         [1789.04336137,  -426.96616221, -1389.04208587],
-                         [1819.48086379,  -733.65719381,  -893.23425132],
-                         [2467.74920243,  3199.94277009,   652.12629742],
-                         [2130.78606385, -2179.82902228,  1536.07763539]])
+    true_reduced = np.array([[-8207.05949144,  140.50960821,    94.07240438],
+                             [1789.04336137,  -426.96616221, -1389.04208587],
+                             [1819.48086379,  -733.65719381,  -893.23425132],
+                             [2467.74920243,  3199.94277009,   652.12629742],
+                             [2130.78606385, -2179.82902228,  1536.07763539]])
 
-    assert np.allclose(red_features, true_red)
+    assert np.allclose(reduced_features, true_reduced)
 
 
 @pytest.mark.wavelets
@@ -248,10 +248,11 @@ def test_reconstruction(dataset=ex_data):
     wavelet_name = 'sym2'
     number_comps = 5
     wf = snfeatures.WaveletFeatures(output_root)
-    red_features = wf.compute_red_features(
+    reduced_features = wf.compute_reduced_features(
         dataset, number_comps, **{'path_saved_gp_files': path_saved_gp_files,
                                   'wavelet_name': wavelet_name})
-    rec_space = wf.reconstruct_feature_space(red_features, '.', number_comps)
+    rec_space = wf.reconstruct_feature_space(reduced_features, '.',
+                                             number_comps)
 
     reconstruct_error = wf.compute_reconstruct_error(
         dataset, **{'feature_space': rec_space, 'wavelet_name': wavelet_name})

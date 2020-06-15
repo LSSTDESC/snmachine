@@ -1335,8 +1335,8 @@ class WaveletFeatures(Features):
         Features.__init__(self)
         self.output_root = output_root
 
-    def compute_red_features(self, dataset, number_comps,
-                             path_saved_eigendecomp=None, **kwargs):
+    def compute_reduced_features(self, dataset, number_comps,
+                                 path_saved_eigendecomp=None, **kwargs):
         """Compute the reduced wavelet features.
 
         Parameters
@@ -1367,7 +1367,7 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        red_features : array
+        reduced_features : array
             Projection of the events onto a lower dimensional space of size
             `number_comps`. It is then the reduced feature space.
             Shape (# events, `number_comps`).
@@ -1390,10 +1390,10 @@ class WaveletFeatures(Features):
         means, scales, eigenvecs = self.load_pca(path_saved_eigendecomp,
                                                  number_comps)
 
-        red_features = self.project_to_space(feature_space,
-                                             path_saved_eigendecomp,
-                                             number_comps)
-        return red_features
+        reduced_features = self.project_to_space(feature_space,
+                                                 path_saved_eigendecomp,
+                                                 number_comps)
+        return reduced_features
 
     def compute_wavelet_decomp(self, dataset, wavelet_name='sym2',
                                number_decomp_levels='max',
@@ -1603,7 +1603,7 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        red_space : array
+        reduced_space : array
             Projection of the events onto a lower dimensional space of size
             `number_comps`. It is then the reduced feature space.
             Shape (# events, `number_comps`).
@@ -1614,8 +1614,8 @@ class WaveletFeatures(Features):
         feature_space_new = self._preprocess_matrix(feature_space, means,
                                                     scales)
 
-        red_space = feature_space_new @ eigenvecs.T
-        return red_space
+        reduced_space = feature_space_new @ eigenvecs.T
+        return reduced_space
 
     def _compute_obj_wavelet_decomp(self, obj_gps):
         """Stationary wavelet transform of each passband of the event.
@@ -1928,13 +1928,13 @@ class WaveletFeatures(Features):
             coeffs[pb] = new_coeff_format
         return coeffs
 
-    def reconstruct_feature_space(self, red_space, path_saved_eigendecomp,
+    def reconstruct_feature_space(self, reduced_space, path_saved_eigendecomp,
                                   number_comps):
         """Reconstruct the original feature space from the reduced one.
 
         Parameters
         ----------
-        red_space : array
+        reduced_space : array
             Projection of the events onto a lower dimensional space of size
             `number_comps`. It is then the reduced feature space.
             Shape (# events, `number_comps`).
@@ -1960,7 +1960,7 @@ class WaveletFeatures(Features):
         """
         means, scales, eigenvecs = self.load_pca(path_saved_eigendecomp,
                                                  number_comps)
-        reconstruct_space = red_space @ eigenvecs
+        reconstruct_space = reduced_space @ eigenvecs
         reconstruct_space = self._postprocess_matrix(reconstruct_space, means,
                                                      scales)
         return reconstruct_space
