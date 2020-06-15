@@ -893,7 +893,9 @@ class TemplateFeatures(Features):
             sncosmo.registry.register(bp, force=True)
 
     def goodness_of_fit(self, d):
-        """
+        """Legacy code - to be deprecated. Use
+        `compute_overall_chisq_over_datapoints` from `chisq.py`.
+
         Test (for any feature set) how well the reconstruction from the
         features fits each of the objects in the dataset.
 
@@ -1273,7 +1275,9 @@ class ParametricFeatures(Features):
             return -chi2/2.
 
     def goodness_of_fit(self, d):
-        """
+        """Legacy code - to be deprecated. Use
+        `compute_overall_chisq_over_datapoints` from `chisq.py`.
+
         Test (for any feature set) how well the reconstruction from the
         features fits each of the objects in the dataset.
 
