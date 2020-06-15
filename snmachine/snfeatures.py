@@ -1367,7 +1367,7 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        reduced_features : array
+        reduced_features : pandas.DataFrame
             Projection of the events onto a lower dimensional space of size
             `number_comps`. It is then the reduced feature space.
             Shape (# events, `number_comps`).
@@ -1445,7 +1445,7 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        feature_space : array
+        feature_space : pandas.DataFrame
             Table of shape (# events, # wavelet features).
             Row `i` has the wavelet features of the event
             `dataset.object_names[i]`.
@@ -1478,6 +1478,8 @@ class WaveletFeatures(Features):
             coeffs_list = np.array(coeffs_list).flatten()
             feature_space.append(coeffs_list)
         feature_space = np.array(feature_space)  # change list -> array
+        feature_space = pd.DataFrame(feature_space, index=objs)
+        feature_space.index.rename('object_id', inplace=True)
         return feature_space
 
     def compute_eigendecomp(self, dataset, normalise_var=False,
@@ -1587,7 +1589,7 @@ class WaveletFeatures(Features):
 
         Parameters
         ----------
-        feature_space : array
+        feature_space : pandas.DataFrame
             Table of shape (# events, # features).
             Row `i` has the wavelet features of the event
             `dataset.object_names[i]`.
@@ -1603,7 +1605,7 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        reduced_space : array
+        reduced_space : pandas.DataFrame
             Projection of the events onto a lower dimensional space of size
             `number_comps`. It is then the reduced feature space.
             Shape (# events, `number_comps`).
@@ -1670,7 +1672,7 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        matrix_new : array
+        matrix_new : pandas.DataFrame
             Centered matrix of shape (# samples, # features). If
             `normalise_var` is true, `matrix_new` has unit variance across the
             features.
@@ -1701,10 +1703,10 @@ class WaveletFeatures(Features):
 
         scales = None
         if normalise_var:  # L2 normalization
-            scales = np.sqrt(np.sum(matrix_new**2, axis=0))
+            scales = np.sqrt(np.sum(matrix_new**2, axis=0)).values
             matrix_new /= scales
 
-        return matrix_new, means, scales
+        return matrix_new, means.values, scales
 
     @staticmethod
     def _preprocess_matrix(matrix, means, scales):
@@ -1715,7 +1717,7 @@ class WaveletFeatures(Features):
 
         Parameters
         -----------
-        matrix : array
+        matrix : pandas.DataFrame
             Matrix of shape (# samples, # features).
         means : array
             Mean of each feature across all the samples. Shape (# features, ).
@@ -1824,7 +1826,7 @@ class WaveletFeatures(Features):
         ----------
         dataset : Dataset object (sndata class)
             Dataset to work with.
-        feature_space : array
+        feature_space : pandas.DataFrame
             Table of shape (# events, # features).
             Row `i` has the wavelet features of the event
             `dataset.object_names[i]`.
@@ -1856,7 +1858,7 @@ class WaveletFeatures(Features):
         for i in range(len(objs)):
             obj = objs[i]
             obj_gps = dataset.models[obj].to_pandas()
-            obj_coeffs_list = feature_space[i]
+            obj_coeffs_list = feature_space.loc[obj].values
             obj_gps_reconstruct = self._reconstruct_obj_real_space(
                 obj_gps, obj_coeffs_list)
             # Write back to Astropy Table for consistency
@@ -1934,7 +1936,7 @@ class WaveletFeatures(Features):
 
         Parameters
         ----------
-        reduced_space : array
+        reduced_space : pandas.DataFrame
             Projection of the events onto a lower dimensional space of size
             `number_comps`. It is then the reduced feature space.
             Shape (# events, `number_comps`).
@@ -1946,7 +1948,7 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        reconstruct_space : array
+        reconstruct_space : pandas.DataFrame
             Reconstructed features in the original feature space. This matrix
             has a lower rank than the original features matrix because there
             is some loss in the dimensionality reduction.
@@ -1974,7 +1976,7 @@ class WaveletFeatures(Features):
 
         Parameters
         -----------
-        matrix : array
+        matrix : pandas.DataFrame
             Matrix of shape (# samples, # features).
         means : array
             Mean of each feature across all the samples. Shape (# features, ).
@@ -1985,7 +1987,7 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        matrix_new : array
+        matrix_new : pandas.DataFrame
             Postprocessed matrix of shape (# samples, # features).
         """
         matrix_new = matrix + means
