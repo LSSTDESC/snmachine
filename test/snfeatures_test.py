@@ -3,6 +3,7 @@ Module to test the features in `snfeatures.py`.
 """
 
 import os
+import pickle
 import sys
 import subprocess
 
@@ -12,7 +13,7 @@ import pytest
 import sncosmo
 
 from astropy.table import join, Table
-from snmachine import sndata, snfeatures, tsne_plot, example_data
+from snmachine import gps, sndata, snfeatures, tsne_plot, example_data
 
 try:
     import pymultinest
@@ -39,6 +40,10 @@ precomp_features_path = os.path.join(example_data, 'output_spcc_no_z',
                                      'features', 'spcc_all_templates.dat')
 example_name = 'DES_SN013866.DAT'
 rtol = 0.25
+
+example_data_path = os.path.join(example_data, 'example_data_for_tests.pckl')
+with open(example_data_path, 'rb') as input:
+    ex_data = pickle.load(input)
 
 
 def setup_module(module):
@@ -233,3 +238,22 @@ def test_wavelet_pipeline(dataset=ex_data):
 
     assert np.allclose(red_features, true_red)
 
+
+@pytest.mark.wavelets
+def test_reconstruction(dataset=ex_data):
+    path_saved_gp_files = '.'
+    output_root = path_saved_gp_files
+    compute_gps(dataset, path_saved_gp_files)
+
+    wavelet_name = 'sym2'
+    number_comps = 5
+    wf = snfeatures.WaveletFeatures(output_root)
+    red_features = wf.compute_red_features(
+        dataset, number_comps, **{'path_saved_gp_files': path_saved_gp_files,
+                                  'wavelet_name': wavelet_name})
+    rec_space = wf.reconstruct_feature_space(red_features, '.', number_comps)
+
+    reconstruct_error = wf.compute_reconstruct_error(
+        dataset, **{'feature_space': rec_space, 'wavelet_name': wavelet_name})
+
+    assert np.allclose(reconstruct_error.chisq_over_datapoints, 0)
