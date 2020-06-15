@@ -1335,6 +1335,91 @@ class WaveletFeatures(Features):
         Features.__init__(self)
         self.output_root = output_root
 
+    def extract_features(self, dataset, number_gp, t_min, t_max,
+                         number_processes, gp_dim, number_comps,
+                         path_saved_eigendecomp=None, seed=1,
+                         **kwargs):
+        """Fit Gaussian Processes and compute the dimensionality reduced features.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+        number_gp : int
+            Number of points to evaluate the Gaussian Process Regression at.
+        t_min : float
+            Minimim time to evaluate the Gaussian Process Regression at.
+        t_max : float
+            Maximum time to evaluate the Gaussian Process Regression at.
+        output_root : {None, str}, optional
+            If None, don't save anything. If str, it is the output directory,
+            so save the flux and error estimates and used kernels there.
+        gp_dim : int, optional
+            The dimension of the Gaussian Process. If  `gp_dim` is 1, the
+            filters are fitted independently. If `gp_dim` is 2, the Matern
+            kernel is used with cross-information between the passbands.
+        number_comps : int
+            Dimension of the reduced wavelet space; Number of components to
+            keep from the eigendecomposition.
+        path_saved_eigendecomp : {None, str}, optional
+            Path where the eigendecomposition is saved. If None, the
+            eigendecomposition is calculated and saved in
+            `path_save_eigendecomp` (see kwargs bellow).
+        seed : int, optional
+            Seed to have reproducible results. By default, `seed=1`.
+        **kwargs : dict, optional
+            kernel_param : list-like, default = [500., 20.]
+                Initial values for kernel parameters. These should be roughly
+                the scale length in the y & x directions.
+            gp_algo: str, default = 'george'
+                Which gp package is used for the Gaussian Process Regression,
+                GaPP or george.
+            do_subtract_background : Bool, default = False
+                Whether to estimate a new background subtracting the current.
+            wavelet_name : {'sym2', str}, optional
+                Name of the wavelets used.
+            number_decomp_levels : {'max', int}, optional
+                The number of decomposition steps to perform.
+            path_saved_gp_files : {None, str}, optional
+                Path for the Gaussian Process curve files.
+            normalise_var : bool, optional
+                If True, the feature space is scaled so that each feature has
+                unit variance. By default it is False.
+            path_save_eigendecomp : {'output_root', str}, optional
+                Path where the eigendecomposition is saved. By default, it is
+                saved in `self.output_root`, the same place as the wavelet
+                features were saved.
+
+        Returns
+        -------
+        reduced_features : pandas.DataFrame
+            Projection of the events onto a lower dimensional space of size
+            `number_comps`. It is then the reduced feature space.
+            Shape (# events, `number_comps`).
+        """
+        np.random.seed(seed)
+
+        kwarg_gps = kwargs.copy()
+        kwarg_gps.pop('wavelet_name', None)
+        kwarg_gps.pop('number_decomp_levels', None)
+        kwarg_gps.pop('path_saved_gp_files', None)
+        kwarg_gps.pop('normalise_var', None)
+        kwarg_gps.pop('path_save_eigendecomp', None)
+        gps.compute_gps(dataset=dataset, number_gp=number_gp, t_min=t_min,
+                        t_max=t_max, output_root=self.output_root,
+                        number_processes=number_processes, gp_dim=gp_dim,
+                        **kwarg_gps)
+
+        kwargs_features = kwargs.copy()
+        kwargs_features.pop('kernel_param', None)
+        kwargs_features.pop('gp_algo', None)
+        kwargs_features.pop('do_subtract_background', None)
+        reduced_features = self.compute_reduced_features(
+            dataset=dataset, number_comps=number_comps,
+            path_saved_eigendecomp=path_saved_eigendecomp,
+            **kwargs_features)
+        return reduced_features
+
     def fit_sn(self, lc, features, lc_gps, wavelet_name,
                path_saved_eigendecomp, filter_set):
         """Reconstruct the observations in real space from reduced features.
@@ -1402,14 +1487,14 @@ class WaveletFeatures(Features):
         number_comps : int
             Dimension of the reduced wavelet space; Number of components to
             keep from the eigendecomposition.
-        path_save_eigendecomp : {'output_root', str}, optional
-            Path where the eigendecomposition is saved. By default, it is
-            saved in `self.output_root`, the same place as the wavelet
-            features were saved.
+        path_saved_eigendecomp : {None, str}, optional
+            Path where the eigendecomposition is saved. If None, the
+            eigendecomposition is calculated and saved in
+            `path_save_eigendecomp` (see kwargs bellow).
         **kwargs : dict, optional
-            wavelet_name : {'sym2, str}, optional
+            wavelet_name : {'sym2', str}, optional
                 Name of the wavelets used.
-            number_decomp_levels : {`max`, int}, optional
+            number_decomp_levels : {'max', int}, optional
                 The number of decomposition steps to perform.
             path_saved_gp_files : {None, str}, optional
                 Path for the Gaussian Process curve files.
