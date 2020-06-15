@@ -1335,6 +1335,58 @@ class WaveletFeatures(Features):
         Features.__init__(self)
         self.output_root = output_root
 
+    def fit_sn(self, lc, features, lc_gps, wavelet_name,
+               path_saved_eigendecomp, filter_set):
+        """Reconstruct the observations in real space from reduced features.
+
+        Parameters
+        ----------
+        lc : astropy.table.Table
+            Light curve: Time, flux and flux error observations in each
+            passband of the event.
+        features : pandas.DataFrame
+            Projection of events onto a lower dimensional feature space.
+            Shape (# events, `number_comps`), where `number_comps` is the
+            # dimensions of lower dimensional feature space.
+        lc : astropy.table.Table
+            Gaussian Process estimated light curve: Time, flux and flux error
+            predictions in each passband of the event.
+        path_saved_eigendecomp : str
+            Path where the eigendecomposition is saved.
+
+        Returns
+        -------
+        astropy.table.Table
+            Reconstructed light curve: Time, flux and flux error in each
+            passband of the event. The times correspond to the uniform
+            time-grid set to fit the Gaussian process curve. The flux and
+            respective error are reconstructed from the low-dimension wavelet
+            features.
+        """
+        # Make the names consisten with the rest of the WaveletFeatures class
+        obj_data = lc
+        obj = obj_data.meta['name']
+        reduced_features = features
+        obj_gps = lc_gps.to_pandas()
+
+        self._filter_set = filter_set
+        self._number_gp = int(sum(obj_gps['filter'] == obj_gps['filter'][0]))
+        self._is_wavelet_valid(wavelet_name)
+
+        rec_space = self.reconstruct_feature_space(reduced_features, '.')
+        # Feature space has dimensions:
+        #  # passbands * # levels * 2 * # gp evaluations
+        denominator = 2 * self.number_gp * len(self.filter_set)
+        self.number_decomp_levels = np.shape(rec_space)[1] / denominator
+
+        obj_coeffs_list = rec_space.loc[obj].values
+        obj_gps_reconstruct = self._reconstruct_obj_real_space(
+            obj_gps, obj_coeffs_list)
+        obj_gps_reconstruct['flux'] = obj_gps_reconstruct['flux_reconstruct']
+        obj_gps_reconstruct.drop(columns=['flux_reconstruct'], inplace=True)
+
+        return Table().from_pandas(obj_gps_reconstruct)
+
     def compute_reduced_features(self, dataset, number_comps,
                                  path_saved_eigendecomp=None, **kwargs):
         """Compute the reduced wavelet features.
@@ -1930,8 +1982,7 @@ class WaveletFeatures(Features):
             coeffs[pb] = new_coeff_format
         return coeffs
 
-    def reconstruct_feature_space(self, reduced_space, path_saved_eigendecomp,
-                                  number_comps):
+    def reconstruct_feature_space(self, reduced_space, path_saved_eigendecomp):
         """Reconstruct the original feature space from the reduced one.
 
         Parameters
@@ -1942,9 +1993,6 @@ class WaveletFeatures(Features):
             Shape (# events, `number_comps`).
         path_saved_eigendecomp : str
             Path where the eigendecomposition is saved.
-        number_comps : {None, int}
-            If `None`, the same feature space is returned. Otherwise, a
-            reduced feature space with `number_comps` features is returned.
 
         Returns
         -------
@@ -1960,6 +2008,7 @@ class WaveletFeatures(Features):
                 [cAn, cDn, ..., cA2, cD2, cA1, cD1]
             where n equals the number of decomposition levels.
         """
+        number_comps = np.shape(reduced_space)[1]
         means, scales, eigenvecs = self.load_pca(path_saved_eigendecomp,
                                                  number_comps)
         reconstruct_space = reduced_space @ eigenvecs
