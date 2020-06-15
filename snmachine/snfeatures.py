@@ -2048,6 +2048,7 @@ class WaveletFeatures(Features):
         """
         try:
             self._wavelet = pywt.Wavelet(wavelet_name)
+            print('The wavelet used is {}.'.format(wavelet_name))
         except ValueError:
             raise ValueError('Unknown wavelet name {}. Check `pywt.wavelist()`'
                              ' for the list of available builtin wavelets.'
