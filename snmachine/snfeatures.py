@@ -1533,8 +1533,6 @@ class WaveletFeatures(Features):
 
             path_saved_eigendecomp = kwargs.get('path_save_eigendecomp',
                                                 self.output_root)
-        means, scales, eigenvecs = self.load_pca(path_saved_eigendecomp,
-                                                 number_comps)
 
         reduced_features = self.project_to_space(feature_space,
                                                  path_saved_eigendecomp,
