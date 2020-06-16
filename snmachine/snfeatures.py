@@ -1691,9 +1691,10 @@ class WaveletFeatures(Features):
         ----------
         path_saved_eigendecomp : str
             Path where the eigendecomposition is saved.
-        number_comps : {None, int}, optional
-            If `None`, all eigenvectors are returned. Otherwise, only the
-            first `number_comps` are returned.
+        number_comps : {None, 'all', int}, optional
+            If None, returns the enough eingenvectors for the explained
+            variance be >= 95%. If 'all, all eigenvectors are returned.
+            Otherwise, only the first `number_comps` are returned.
 
         Returns
         -------
@@ -1717,12 +1718,26 @@ class WaveletFeatures(Features):
         if np.shape(scales) == ():  # the saved output has a weird format
             scales = None
 
-        if number_comps is not None:
+        if number_comps is None:
+            tol = .95  # Explain at least 95% of the variance
+            eigenvals = np.load(os.path.join(path_saved_eigendecomp,
+                                'eigenvalues.npy'))
+            eigenvals_cumsum = np.cumsum(eigenvals/sum(eigenvals))
+            index_greater_tol = np.where(eigenvals_cumsum >= tol)
+            first_index = index_greater_tol[0][0]
+            # +1 because it is inclusive that index
+            number_comps = first_index + 1
             eigenvecs = eigenvecs[:number_comps, :]
+        elif number_comps != 'all':  # a number was given
+            eigenvecs = eigenvecs[:number_comps, :]
+        else:
+            number_comps = np.shape(eigenvecs)[0]
+        print('Dimensionality reduced feature space with {} components.'
+              ''.format(number_comps))
         return means, scales, eigenvecs
 
     def project_to_space(self, feature_space, path_saved_eigendecomp,
-                         number_comps):
+                         number_comps=None):
         """Project dataset onto a previously calculated feature space.
 
         The feature space correspond to the wavelet decomposition of the
@@ -1740,9 +1755,10 @@ class WaveletFeatures(Features):
             where n equals the number of decomposition levels.
         path_saved_eigendecomp : str
             Path where the eigendecomposition is saved.
-        number_comps : {None, int}
-            If `None`, the same feature space is returned. Otherwise, a
-            reduced feature space with `number_comps` features is returned.
+        number_comps : {None, 'all', int}, optional
+            If None, returns the enough eingenvectors for the explained
+            variance be >= 95%. If 'all, all eigenvectors are returned.
+            Otherwise, only the first `number_comps` are returned.
 
         Returns
         -------
