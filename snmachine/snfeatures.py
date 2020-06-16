@@ -1681,7 +1681,7 @@ class WaveletFeatures(Features):
                                                     full_matrices=False)
 
         number_objs = np.shape(feature_space)[0]
-        eigenvals = singular_vals**2 / (number_objs-1)
+        eigenvals = singular_vals**2 / (number_objs-1)  # by definition
 
         path_save = path_save_eigendecomp
         np.save(os.path.join(path_save, 'means.npy'), means)
