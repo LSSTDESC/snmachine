@@ -1398,6 +1398,8 @@ class WaveletFeatures(Features):
             Shape (# events, `number_comps`).
         """
         np.random.seed(seed)
+        print('Extracting features of the dataset.')
+        initial_time = time.time()
 
         kwarg_gps = kwargs.copy()
         kwarg_gps.pop('wavelet_name', None)
@@ -1418,6 +1420,9 @@ class WaveletFeatures(Features):
             dataset=dataset, number_comps=number_comps,
             path_saved_eigendecomp=path_saved_eigendecomp,
             **kwargs_features)
+
+        print('Time taken to extract features: {:.2f}s.'
+              ''.format(time.time()-initial_time))
         return reduced_features
 
     def fit_sn(self, lc, features, lc_gps, wavelet_name,
@@ -1562,6 +1567,9 @@ class WaveletFeatures(Features):
         self._is_wavelet_valid(wavelet_name)
         self.number_decomp_levels = number_decomp_levels
 
+        print('Performing wavelet decomposition.')
+        initial_time = time.time()
+
         objs = dataset.object_names
         for i in range(len(objs)):
             obj = objs[i]
@@ -1570,6 +1578,8 @@ class WaveletFeatures(Features):
 
             if self.output_root is not None:
                 self._save_obj_wavelet_decomp(obj, coeffs)
+        print('Time taken for wavelet decomposition: {:.2f}s.'
+              ''.format(time.time()-initial_time))
 
     def load_feature_space(self, dataset):
         """Load the wavelet feature space.
@@ -1658,6 +1668,9 @@ class WaveletFeatures(Features):
                              ' instead.')
         self._exists_path(path_save_eigendecomp)
 
+        print('Performing eigendecomposition.')
+        initial_time = time.time()
+
         self._filter_set = dataset.filter_set
         feature_space = self.load_feature_space(dataset)
         # Center the feature_space to perform eigendecomposition
@@ -1677,6 +1690,9 @@ class WaveletFeatures(Features):
         np.save(os.path.join(path_save, 'scales.npy'), scales)
         np.save(os.path.join(path_save, 'eigenvalues.npy'), eigenvals)
         np.save(os.path.join(path_save, 'eigenvectors.npy'), eigenvecs)
+
+        print('Time taken for eigendecomposition: {:.2f}s.'
+              ''.format(time.time()-initial_time))
 
     @staticmethod
     def load_pca(path_saved_eigendecomp, number_comps=None):
