@@ -216,7 +216,7 @@ def test_tsne(load_full_testdata):
 
 
 def compute_gps(dataset, path_saved_gp_files):
-    gps.compute_gps(ex_data, number_gp=100, t_min=0, t_max=880,
+    gps.compute_gps(dataset, number_gp=100, t_min=0, t_max=880,
                     output_root='.')
 
 
