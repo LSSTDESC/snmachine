@@ -251,8 +251,7 @@ def test_reconstruction(dataset=ex_data):
     reduced_features = wf.compute_reduced_features(
         dataset, number_comps, **{'path_saved_gp_files': path_saved_gp_files,
                                   'wavelet_name': wavelet_name})
-    rec_space = wf.reconstruct_feature_space(reduced_features, '.',
-                                             number_comps)
+    rec_space = wf.reconstruct_feature_space(reduced_features, '.')
 
     reconstruct_error = wf.compute_reconstruct_error(
         dataset, **{'feature_space': rec_space, 'wavelet_name': wavelet_name})

@@ -2048,7 +2048,7 @@ class WaveletFeatures(Features):
             is_pb_obs = obj_gps['filter'] == pb
             pb_coeffs = obj_coeffs[pb]
             pb_flux_reconstruct = pywt.iswt(pb_coeffs, self.wavelet)
-            obj_gps['flux_reconstruct'][is_pb_obs] = pb_flux_reconstruct
+            obj_gps.loc[is_pb_obs, 'flux_reconstruct'] = pb_flux_reconstruct
         return obj_gps
 
     def _reshape_coeffs(self, coeffs_list):
