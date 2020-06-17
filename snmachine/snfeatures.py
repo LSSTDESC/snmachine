@@ -1483,7 +1483,7 @@ class WaveletFeatures(Features):
 
     def compute_reduced_features(self, dataset, number_comps,
                                  path_saved_eigendecomp=None, **kwargs):
-        """Compute the reduced wavelet features.
+        """Compute the dimensionality reduced wavelet features.
 
         Parameters
         ----------
@@ -1603,6 +1603,7 @@ class WaveletFeatures(Features):
                 [cAn, cDn, ..., cA2, cD2, cA1, cD1]
             where n equals the number of decomposition levels.
         """
+        self._filter_set = dataset.filter_set
         objs = dataset.object_names
         filter_set = self.filter_set
         feature_space = []
@@ -1907,6 +1908,33 @@ class WaveletFeatures(Features):
             matrix_new /= scales
 
         return matrix_new
+
+    @staticmethod
+    def save_reduced_features(reduced_features,
+                              path_save_reduced_features='output_root',
+                              file_name=None):
+        """Save dimensionality reduced wavelet features.
+
+        Parameters
+        ----------
+        reduced_features : pandas.DataFrame
+            Projection of the events onto a lower dimensional space of size
+            `number_comps`. It is then the reduced feature space.
+            Shape (# events, `number_comps`).
+        path_save_reduced_features : {'output_root', str}, optional
+            Path where the dimensionality reduced wavelet features is saved.
+            By default, it is saved in `self.output_root`, the same place as
+            the wavelet features were saved.
+        file_name : {None, str}, optional
+            Name of the dimensionality reduced wavelet features file. By
+            default (None), it is `reduced_features_{# components}.pckl`.
+        """
+        if file_name is None:
+            number_comps = np.shape(reduced_features)[1]
+            file_name = 'reduced_features_{}.pckl'.format(number_comps)
+        path_save_file = os.path.join(path_save_reduced_features, file_name)
+        with open(path_save_file, 'wb') as f:
+            pickle.dump(reduced_features, f, pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
     def create_readable_table(coeffs):
