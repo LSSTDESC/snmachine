@@ -1961,7 +1961,7 @@ class WaveletFeatures(Features):
             table['cD{}'.format(number_levels-level)] = coeffs[level][1]
         return table
 
-    def compute_reconstruct_error(self, dataset, **kwargs):
+    def compute_reconstruct_error(self, dataset, true_obs=False, **kwargs):
         """X^2/datapoints between original and reconstructed observations.
 
         The original observations are the points at which the Gaussian Process
@@ -1972,6 +1972,9 @@ class WaveletFeatures(Features):
         ----------
         dataset : Dataset object (sndata class)
             Dataset to work with.
+        true_obs : bool, optional
+            If the reconstructed error is in relation with the original
+            observations (True) or with the GP estimates (False, default).
 
         Returns
         -------
@@ -2008,8 +2011,13 @@ class WaveletFeatures(Features):
             obj_reconstruct = obj_gps.copy()
             obj_reconstruct['flux'] = obj_reconstruct['flux_reconstruct']
 
+            if true_obs:  # compare with true observations
+                obj_data = dataset.data[obj].to_pandas()
+                obj_true = obj_data
+            else:  # compare with estimated observations
+                obj_true = obj_gps
             chisq_over_datapoints[i] = (
-                chisq.compute_overall_chisq_over_datapoints(obj_gps,
+                chisq.compute_overall_chisq_over_datapoints(obj_true,
                                                             obj_reconstruct))
         chisq_over_datapoints = pd.DataFrame(data=chisq_over_datapoints,
                                              index=objs,
