@@ -8,7 +8,7 @@ import tarfile
 
 
 PACKAGENAME = 'snmachine'
-__FALLBACK_VERSION__ = '1.5'
+__FALLBACK_VERSION__ = '1.6'
 
 class ExtractExampleData(install):
     """Post-installation data extraction."""
