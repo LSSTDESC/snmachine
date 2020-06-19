@@ -410,9 +410,12 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
     kernel_id : str
         The id of the kernel chosen. This can then be used as a feature.
     """
-    possible_kernel_ids = ['kernel 0', 'kernel 1', 'kernel 2', 'kernel 3', 'kernel 4']
-    possible_kernel_names = ['ExpSquared', 'ExpSquared', 'ExpSquared', 'ExpSquared+ExpSine2', 'ExpSquared+ExpSine2']
-    possible_kernel_params = [[kernel_param[0]**2, kernel_param[1]**2, None, None, None, None, None],
+    possible_kernel_ids = ['kernel 0', 'kernel 1', 'kernel 2', 'kernel 3',
+                           'kernel 4']
+    possible_kernel_names = ['ExpSquared', 'ExpSquared', 'ExpSquared',
+                             'ExpSquared+ExpSine2', 'ExpSquared+ExpSine2']
+    possible_kernel_params = [[kernel_param[0]**2, kernel_param[1]**2, None,
+                               None, None, None, None],
                               [400., 200., None, None, None, None, None],
                               [400., 20., None, None, None, None, None],
                               [400., 20., 2., 4., 4., 6., 6.],
@@ -421,9 +424,11 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
     i = 0  # initializing the while loop
     all_obj_gp = number_diff_kernels*['']  # initializing
     all_gp_instances = number_diff_kernels*['']  # initializing
-    all_chisq_over_datapoints = np.zeros(number_diff_kernels) + 666  # just a random number > 1 to initialize
+    # just a random number > 1 to initialize
+    all_chisq_over_datapoints = np.zeros(number_diff_kernels) + 666
     threshold_chisq_over_datapoints = 2  # because that is a good number
-    while i < number_diff_kernels and all_chisq_over_datapoints[i-1] > threshold_chisq_over_datapoints :
+    while ((i < number_diff_kernels) and
+           (all_chisq_over_datapoints[i-1] > threshold_chisq_over_datapoints)):
         obj_gp, gp_instance = fit_gp(kernel_name=possible_kernel_names[i],
                                      kernel_param=possible_kernel_params[i],
                                      obj_data=obj_data, gp_times=gp_times)
@@ -434,9 +439,13 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
         all_gp_instances[i] = gp_instance
         all_chisq_over_datapoints[i] = chisq_over_datapoints
         i += 1
-        if i == number_diff_kernels and chisq_over_datapoints > threshold_chisq_over_datapoints:  # all kernels/parameters are bad for this object
-            obj_gp, gp_instance, chisq_over_datapoints, kernel_id = _choose_less_bad_kernel(all_obj_gp, all_gp_instances, all_chisq_over_datapoints,
-                                                                                            possible_kernel_ids)
+        if ((i == number_diff_kernels) and
+            (chisq_over_datapoints > threshold_chisq_over_datapoints)):
+            # All kernels/parameters are bad for this object
+            output = _choose_less_bad_kernel(all_obj_gp, all_gp_instances,
+                                             all_chisq_over_datapoints,
+                                             possible_kernel_ids)
+            obj_gp, gp_instance, chisq_over_datapoints, kernel_id = output
     return obj_gp, gp_instance, kernel_id
 
 
@@ -467,12 +476,13 @@ def _choose_less_bad_kernel(all_obj_gp, all_gp_instances,
     less_bad_chisq_over_datapoints : float
         The X^2/number of datapoints given by the Gaussian Process `gp`.
     """
-    index_min_chisq_over_datapoints = np.argmin(all_chisq_over_datapoints)
-    less_bad_obj_gp = all_obj_gp[index_min_chisq_over_datapoints]
-    less_bad_gp_instance = all_gp_instances[index_min_chisq_over_datapoints]
-    less_bad_chisq_over_datapoints = all_chisq_over_datapoints[index_min_chisq_over_datapoints]
-    less_bad_kernel = possible_kernel_ids[index_min_chisq_over_datapoints]
-    return less_bad_obj_gp, less_bad_gp_instance, less_bad_chisq_over_datapoints, less_bad_kernel
+    index_min = np.argmin(all_chisq_over_datapoints)
+    less_bad_obj_gp = all_obj_gp[index_min]
+    less_bad_gp_instance = all_gp_instances[index_min]
+    less_bad_chisq_over_datapoints = all_chisq_over_datapoints[index_min]
+    less_bad_kernel = possible_kernel_ids[index_min]
+    return (less_bad_obj_gp, less_bad_gp_instance,
+            less_bad_chisq_over_datapoints, less_bad_kernel)
 
 
 def fit_gp(kernel_name, kernel_param, obj_data, gp_times):
@@ -518,13 +528,16 @@ def fit_gp(kernel_name, kernel_param, obj_data, gp_times):
     results = op.minimize(neg_log_like, gp.get_parameter_vector(),
                           jac=grad_neg_log_like, method="L-BFGS-B", tol=1e-6)
 
-    if np.sum(np.isnan(results.x)) != 0:  # the minimiser reaches a local minimum
-        kernel_param[4] = kernel_param[4]+.1  # change a bit initial conditions so we don't go to that minima
+    if np.sum(np.isnan(results.x)) != 0:
+        # the minimiser reaches a local minimum
+        # change a bit initial conditions so we don't go to that minima
+        kernel_param[4] = kernel_param[4]+.1
         kernel = get_kernel(kernel_name, kernel_param)
         gp = george.GP(kernel)
         gp.compute(obj_times, obj_flux_error)
         results = op.minimize(neg_log_like, gp.get_parameter_vector(),
-                              jac=grad_neg_log_like, method="L-BFGS-B", tol=1e-6)
+                              jac=grad_neg_log_like, method="L-BFGS-B",
+                              tol=1e-6)
 
     gp.set_parameter_vector(results.x)
     gp_mean, gp_cov = gp.predict(obj_flux, gp_times)
@@ -559,12 +572,15 @@ def get_kernel(kernel_name, kernel_param):
         The only available kernels are 'ExpSquared' and 'ExpSquared+ExpSine2'.
     """
     if kernel_name not in ['ExpSquared', 'ExpSquared+ExpSine2']:
-        raise AttributeError("The only available kernels are 'ExpSquared' and 'ExpSquared+ExpSine2'.")
-    kExpSquared = kernel_param[0]*george.kernels.ExpSquaredKernel(metric=kernel_param[1])
+        raise AttributeError("The only available kernels are 'ExpSquared' and "
+                             "'ExpSquared+ExpSine2'.")
+    kExpSquared = kernel_param[0] * george.kernels.ExpSquaredKernel(
+        metric=kernel_param[1])
     if kernel_name == 'ExpSquared':
         kernel = kExpSquared
     elif kernel_name == 'ExpSquared+ExpSine2':
-        kExpSine2 = kernel_param[4]*george.kernels.ExpSine2Kernel(gamma=kernel_param[5], log_period=kernel_param[6])
+        kExpSine2 = kernel_param[4] * george.kernels.ExpSine2Kernel(
+            gamma=kernel_param[5], log_period=kernel_param[6])
         kernel = kExpSquared + kExpSine2
     return kernel
 
@@ -616,10 +632,12 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max,
     obj_gps['filter'] = np.vectorize(wavelengths_pb.get)(obj_gps['filter'])
 
     if output_root is not None:
-        obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits',
-                      overwrite=True)
-        path_save_gps = os.path.join(output_root, 'used_gp_'+obj+'.pckl')
-        path_save_kernels = os.path.join(output_root, 'used_kernels_'+obj+'.pckl')
+        obj_gps.write(os.path.join(output_root, 'gp_{}'.format(obj)),
+                      format='fits', overwrite=True)
+        path_save_gps = os.path.join(output_root, 'used_gp_{}.pckl'
+                                                  ''.format(obj))
+        path_save_kernels = os.path.join(output_root, 'used_kernels_{}.pckl'
+                                                      ''.format(obj))
         # Save the GP already conditioned on a specific set of observations
         with open(path_save_gps, 'wb') as f:
             pickle.dump(gp_predict, f, pickle.HIGHEST_PROTOCOL)
@@ -662,7 +680,8 @@ def preprocess_obs(obj_data, **kwargs):
     except KeyError:
         do_subtract_background = False
 
-    if do_subtract_background:  # estimate a background flux and remove it from the light curve.
+    if do_subtract_background:  # estimate a background flux and remove it
+        #                         from the light curve.
         preprocessed_obj_data = subtract_background(obj_data)
     else:  # do nothing
         preprocessed_obj_data = obj_data
