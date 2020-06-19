@@ -1371,9 +1371,6 @@ class WaveletFeatures(Features):
             kernel_param : list-like, default = [500., 20.]
                 Initial values for kernel parameters. These should be roughly
                 the scale length in the y & x directions.
-            gp_algo: str, default = 'george'
-                Which gp package is used for the Gaussian Process Regression,
-                GaPP or george.
             do_subtract_background : Bool, default = False
                 Whether to estimate a new background subtracting the current.
             wavelet_name : {'sym2', str}, optional
@@ -1414,7 +1411,6 @@ class WaveletFeatures(Features):
 
         kwargs_features = kwargs.copy()
         kwargs_features.pop('kernel_param', None)
-        kwargs_features.pop('gp_algo', None)
         kwargs_features.pop('do_subtract_background', None)
         reduced_features = self.compute_reduced_features(
             dataset=dataset, number_comps=number_comps,
