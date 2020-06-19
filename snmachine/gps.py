@@ -833,7 +833,7 @@ def predict_2d_gp(gp_predict, gp_times, gp_wavelengths):
 
     Returns
     -------
-    obj_gp : pandas.core.frame.DataFrame, optional
+    obj_gps : pandas.core.frame.DataFrame, optional
         Time, flux and flux error of the fitted Gaussian Process.
     """
     unique_wavelengths = np.unique(gp_wavelengths)
