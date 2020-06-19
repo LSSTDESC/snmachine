@@ -19,11 +19,6 @@ from functools import partial
 from multiprocessing import Pool
 from snmachine import chisq as cs
 
-try:
-    from gapp import dgp
-    has_gapp = True
-except ImportError:
-    has_gapp = False
 
 # Central passbands wavelengths
 pb_wavelengths = {"lsstu": 3685., "lsstg": 4802., "lsstr": 6231.,
@@ -63,9 +58,6 @@ def compute_gps(dataset, number_gp, t_min, t_max, output_root=None,
           - kernel_param : list-like, default = [500., 20.]
                 Initial values for kernel parameters. These should be roughly
                 the scale length in the y & x directions.
-          - gp_algo: str, default = 'george'
-                Which gp package is used for the Gaussian Process Regression,
-                GaPP or george.
           - do_subtract_background : Bool, default = False
                 Whether to estimate a new background subtracting the current.
 
@@ -182,9 +174,6 @@ def _compute_gps_single_core(dataset, number_gp, t_min, t_max, output_root,
           - kernel_param : list-like, default = [500., 20.]
                 Initial values for kernel parameters. These should be roughly
                 the scale length in the y & x directions.
-          - gp_algo: str, default = 'george'
-                Which gp package is used for the Gaussian Process Regression,
-                GaPP or george.
           - do_subtract_background : Bool, default = False
                 Whether to estimate a new background subtracting the current.
     """
@@ -230,9 +219,6 @@ def _compute_gps_parallel(dataset, number_gp, t_min, t_max, output_root,
           - kernel_param : list-like, default = [500., 20.]
                 Initial values for kernel parameters. These should be roughly
                 the scale length in the y & x directions.
-          - gp_algo: str, default = 'george'
-                Which gp package is used for the Gaussian Process Regression,
-                GaPP or george.
           - do_subtract_background : Bool, default = False
                 Whether to estimate a new background subtracting the current.
     """
@@ -287,9 +273,6 @@ def _compute_gp_all_passbands(obj, dataset, number_gp, t_min, t_max,
           - kernel_param : list-like, default = [500., 20.]
                 Initial values for kernel parameters. These should be roughly
                 the scale length in the y & x directions.
-          - gp_algo: str, default = 'george'
-                Which gp package is used for the Gaussian Process Regression,
-                GaPP or george.
           - do_subtract_background : Bool, default = False
                 Whether to estimate a new background subtracting the current.
 
@@ -339,9 +322,6 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
           - kernel_param : list-like, default = [500., 20.]
                 Initial values for kernel parameters. These should be roughly
                 the scale length in the y & x directions.
-          - gp_algo: str, default = 'george'
-                Which gp package is used for the Gaussian Process Regression,
-                GaPP or george.
 
     Returns
     -------
@@ -349,14 +329,6 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
         Table with evaluated Gaussian process curve and errors at each
         passband.
     """
-    try:
-        gp_algo = kwargs["gp_algo"]
-        if gp_algo == 'gapp' and not has_gapp:
-            print('No GP module gapp. Defaulting to george instead.')
-            gp_algo = 'george'
-    except KeyError:
-        gp_algo = 'george'
-
     try:
         kernel_param = kwargs["kernel_param"]
     except KeyError:
@@ -375,22 +347,16 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
     for pb in filter_set:
         used_kernels_dict[pb] = None  # inilialize None kernel to each passband
         if pb in unique_pbs:
-            obj_data_pb = obj_data.loc[obj_data.passband == pb]  # the observations in this passband
+            is_pb = obj_data.passband == pb  # observations in this passband
+            obj_data_pb = obj_data.loc[is_pb]
 
-            if gp_algo == 'gapp':
-                gp = dgp.DGaussianProcess(obj_data_pb.mjd, obj_data_pb.flux,
-                                          obj_data_pb.flux_error,
-                                          cXstar=(t_min, t_max, number_gp))
-                obj_gp_pb_array, theta = gp.gp(theta=kernel_param)
+            gp_obs, gp, chosen_kernel = fit_best_gp(kernel_param,
+                                                    obj_data_pb, gp_times)
 
-            elif gp_algo == 'george':
-                gp_obs, gp, chosen_kernel = fit_best_gp(kernel_param,
-                                                        obj_data_pb, gp_times)
-
-                mu, std = gp_obs.flux.values, gp_obs.flux_error.values
-                # stack the GP results in a array momentarily
-                obj_gp_pb_array = np.column_stack((gp_times, mu, std))
-                used_kernels_dict[pb] = chosen_kernel
+            mu, std = gp_obs.flux.values, gp_obs.flux_error.values
+            # stack the GP results in a array momentarily
+            obj_gp_pb_array = np.column_stack((gp_times, mu, std))
+            used_kernels_dict[pb] = chosen_kernel
             # Save the GP already conditioned on a specific set of observations
             gp_predict = partial(gp.predict, obj_data_pb.flux)
             used_gp_dict[pb] = gp_predict
