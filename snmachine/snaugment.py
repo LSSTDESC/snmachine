@@ -18,6 +18,7 @@ from collections import Counter
 from functools import partial  # TODO: erase when old sndata is deprecated
 from imblearn.combine import SMOTEENN, SMOTETomek
 from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
+from scipy.special import erf
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from snmachine import gps, snfeatures
@@ -443,10 +444,13 @@ class GPAugment(SNAugment):
         aug_dataset.object_names = aug_metadata.object_id
 
         for obj_data in aug_objs_data:
-            obj = obj_data['object_id'].iloc[0]
-            obj_data = self.trim_obj(obj_data, self.max_duration)
-            aug_dataset.data[obj] = Table.from_pandas(obj_data)
-            aug_dataset.set_inner_metadata(obj)
+            try:
+                obj = obj_data['object_id'].iloc[0]
+                aug_dataset.data[obj] = Table.from_pandas(obj_data)
+                aug_dataset.set_inner_metadata(obj)
+            except (IndexError, TypeError):
+                print(obj_data)
+                print('Failed attempt.')
         self.aug_dataset = aug_dataset
 
         only_new_dataset = copy.deepcopy(aug_dataset)
@@ -477,18 +481,92 @@ class GPAugment(SNAugment):
         z_obj = obj_metadata['hostgal_specz']
 
         number_aug = self.objs_number_to_aug[obj]  # # of new events
+        number_tries = 15  # # tries to generate an augmented event
         aug_objs_data = []
         aug_objs_metadata = []
         for i in np.arange(number_aug):
             aug_obj = '{}_aug{}'.format(obj, i)
-            aug_obj_metadata = self.create_aug_obj_metadata(aug_obj,
-                                                            obj_metadata)
-            aug_objs_metadata.append(aug_obj_metadata)
-
-            aug_obj_data = self.create_aug_obj_obs(aug_obj_metadata,
-                                                   obj_data, z_obj)
-            aug_objs_data.append(aug_obj_data)
+            j = 0
+            while j < number_tries:  # TODO: not efficient
+                aug_obj_metadata = self.create_aug_obj_metadata(aug_obj,
+                                                                obj_metadata)
+                aug_obj_data = self.create_aug_obj_obs(aug_obj_metadata,
+                                                       obj_data, z_obj)
+                if len(aug_obj_data) == 0:
+                    j += 1
+                else:
+                    j = number_tries  # finish the loop
+                    aug_objs_data.append(aug_obj_data)
+                    aug_objs_metadata.append(aug_obj_metadata)
         return aug_objs_data, aug_objs_metadata
+
+    def _choose_obs_times(self, aug_obj_metadata, obj_data, z_ori):
+        """TODO: avocado
+        """
+        z_aug = aug_obj_metadata['hostgal_specz']
+        # Figure out the target number of observations to have for the new
+        # lightcurve. #TODO: avocado
+        target_number_obs = self._choose_target_observation_count(
+            aug_obj_metadata)
+
+        aug_obj_data = obj_data.copy()
+        aug_obj_data['object_id'] = aug_obj_metadata['object_id']
+        aug_obj_data['ref_mjd'] = aug_obj_data['mjd'].copy()
+
+        # Adjust the observation times
+        z_scale = (1 + z_ori) / (1 + z_aug)
+        # Shift relative to an approximation of the peak flux time so that
+        # we generally keep the interesting part of the light curve in the
+        # frame.
+        ref_peak_time = obj_data['mjd'].iloc[
+            np.argmax(obj_data['flux'].values)]
+        aug_obj_data['mjd'] = ref_peak_time + z_scale**-1 * (
+            aug_obj_data['ref_mjd'] - ref_peak_time)
+
+        # TODO: avocado
+        max_time_shift = 30
+        aug_obj_data['mjd'] += self._rs.uniform(-max_time_shift,
+                                                max_time_shift)
+        is_not_seen = aug_obj_data['mjd'] < 0
+        aug_obj_data = aug_obj_data[~is_not_seen]  # before 0
+        aug_obj_data = self.trim_obj(aug_obj_data, self.max_duration)  # after
+
+        # Make sure that we have some observations left at this point. If not,
+        # return an empty observations list. TODO: avocado
+        if len(aug_obj_data) == 0:
+            print('obj {} failed.'.format(aug_obj_metadata['object_id']))
+            return None
+
+        # At high redshifts, we need to fill in the light curve to account for
+        # the fact that there is a lower observation density compared to lower
+        # redshifts. TODO: avocado
+        num_fill = int(target_number_obs * (z_scale**-1 - 1))
+        if num_fill > 0:
+            new_indices = self._rs.choice(aug_obj_data.index, num_fill,
+                                          replace=True)
+            new_rows = aug_obj_data.loc[new_indices]
+
+            # Choose new bands randomly.
+            obj_pbs = np.unique(aug_obj_data['filter'])
+            new_rows['filter'] = np.random.choice(obj_pbs, num_fill,
+                                                  replace=True)
+
+            aug_obj_data = pd.concat([aug_obj_data, new_rows])
+
+        # Drop back down to the target number of observations. Having too few
+        # observations is fine, but having too many is not. We always drop at
+        # least 10% of observations to get some shakeup of the light curve.
+        # TODO: avocado
+        drop_fraction = 0.1
+        number_drop = int(max(
+            len(aug_obj_data) - target_number_obs,
+            drop_fraction * len(aug_obj_data)))
+        drop_indices = np.random.choice(aug_obj_data.index, number_drop,
+                                        replace=False)
+        aug_obj_data = aug_obj_data.drop(drop_indices).copy()
+
+        aug_obj_data.reset_index(inplace=True, drop=True)
+        return aug_obj_data
 
     def create_aug_obj_obs(self, aug_obj_metadata, obj_data, z_ori):
         """Create observations for the augmented event.
@@ -513,14 +591,14 @@ class GPAugment(SNAugment):
         z_aug = aug_obj_metadata['hostgal_specz']
         ori_obj = str(obj_data['object_id'][0])
 
-        aug_obj_data = obj_data.copy()
-        aug_obj_data['object_id'] = aug_obj_metadata['object_id']
+        aug_obj_data = self._choose_obs_times(aug_obj_metadata, obj_data,
+                                              z_ori)
         aug_obj_data['wavelength_z_ori'] = self.compute_new_wavelength(
-            z_ori, z_aug, obj_data)
+            z_ori, z_aug, aug_obj_data)
         gp_predict = self.load_gp(ori_obj)
 
         # Predict the augmented observations seen at `z_ori`
-        pred_x_data = np.vstack([obj_data['mjd'],
+        pred_x_data = np.vstack([aug_obj_data['ref_mjd'],
                                  aug_obj_data['wavelength_z_ori']]).T
         flux_pred, flux_pred_var = gp_predict(pred_x_data, return_var=True)
         flux_pred_error = np.sqrt(flux_pred_var)
@@ -532,9 +610,19 @@ class GPAugment(SNAugment):
         aug_obj_data['flux'] = flux_pred * z_scale * dist_scale
         aug_obj_data['flux_error'] = flux_pred_error * z_scale * dist_scale
 
-        # Adjust the observation times
-        aug_obj_data['mjd'] = obj_data['mjd'] * z_scale**-1
-        return aug_obj_data
+        # Add in light curve noise. This is survey specific and must be
+        # implemented in subclasses.
+        aug_obj_data = self._simulate_light_curve_uncertainties(
+            aug_obj_data, aug_obj_metadata)
+
+        # Simulate detection
+        aug_obj_data, pass_detection = self._simulate_detection(
+            aug_obj_data, aug_obj_metadata)
+        # If our light curve passes detection thresholds, we're done!
+        if pass_detection:
+            return aug_obj_data
+
+        return []  # failed attempt
 
     def load_gp(self, obj):
         """Load the Gaussian Process predict object.
@@ -591,6 +679,18 @@ class GPAugment(SNAugment):
         aug_obj_metadata['hostgal_specz'] = z_spec
         aug_obj_metadata['hostgal_photoz'] = z_photo
         aug_obj_metadata['hostgal_photoz_err'] = z_photo_error
+
+        # Choose whether the new object will be in the DDF or not. TODO: avo
+        if obj_metadata["ddf"]:
+            # Most observations are WFD observations, so generate more of
+            # those. The DDF and WFD samples are effectively completely
+            # different, so this ratio doesn't really matter.
+            aug_obj_metadata["ddf"] = self._rs.rand() > 0.8
+        else:
+            # If the reference wasn't a DDF observation, can't simulate a DDF
+            # observation.
+            aug_obj_metadata["ddf"] = False
+
         return aug_obj_metadata
 
     def compute_new_z_photo(self, z_spec):
@@ -1050,6 +1150,138 @@ class GPAugment(SNAugment):
         """
         self._rs = np.random.RandomState(value)  # initialise the random state
         self._random_seed = value
+
+    # avocado functions
+    def _choose_target_observation_count(self, augmented_metadata):
+        """Choose the target number of observations for a new augmented light
+        curve.
+        We use a functional form that roughly maps out the number of
+        observations in the PLAsTiCC test dataset for each of the DDF and WFD
+        samples.
+        Parameters
+        ----------
+        augmented_metadata : dict
+            The augmented metadata
+        Returns
+        -------
+        target_number_obs : int
+            The target number of observations in the new light curve.
+        """
+        if augmented_metadata["ddf"]:
+            # I estimate the distribution of number of observations in the
+            # WFD regions with a mixture of 2 gaussian distributions.
+            gauss_choice = np.random.choice(2, p=[0.34393457, 0.65606543])
+            if gauss_choice == 0:
+                mean = 57.36015146
+                var = np.sqrt(271.58889272)
+            elif gauss_choice == 1:
+                mean = 92.7741619
+                var = np.sqrt(338.53085446)
+            target_number_obs = int(
+                np.clip(self._rs.normal(mean, var), 20, None))
+        else:  # WFD event -> at least 3 observations
+            target_number_obs = (
+                self._rs.normal(24.5006006, np.sqrt(72.5106613)))
+            target_number_obs = int(np.clip(target_number_obs, 3, None))
+        return target_number_obs
+
+    def _simulate_light_curve_uncertainties(self, aug_obj_data,
+                                            aug_obj_metadata):
+        """Simulate the observation-related noise and detections for a light
+        curve.
+        For the PLAsTiCC dataset, we estimate the measurement uncertainties for
+        each band with a lognormal distribution for both the WFD and DDF
+        surveys. Those measurement uncertainties are added to the simulated
+        observations.
+        Parameters
+        ----------
+        observations : pandas.DataFrame
+            The augmented observations that have been sampled from a Gaussian
+            Process. These observations have model flux uncertainties listed
+            that should be included in the final uncertainties.
+        augmented_metadata : dict
+            The augmented metadata
+        Returns
+        -------
+        observations : pandas.DataFrame
+            The observations with uncertainties added.
+        """
+        # Make a copy so that we don't modify the original array.
+        aug_obj_data = aug_obj_data.copy()
+
+        if len(aug_obj_data) == 0:
+            # No data, skip
+            return aug_obj_data
+
+        if aug_obj_metadata["ddf"]:
+            band_noises = {
+                "lsstu": (0.68, 0.26),
+                "lsstg": (0.25, 0.50),
+                "lsstr": (0.16, 0.36),
+                "lssti": (0.53, 0.27),
+                "lsstz": (0.88, 0.22),
+                "lssty": (1.76, 0.23),
+            }
+        else:
+            band_noises = {
+                "lsstu": (2.34, 0.43),
+                "lsstg": (0.94, 0.41),
+                "lsstr": (1.30, 0.41),
+                "lssti": (1.82, 0.42),
+                "lsstz": (2.56, 0.36),
+                "lssty": (3.33, 0.37),
+            }
+
+        # Calculate the new noise levels using a lognormal distribution for
+        # each band.
+        lognormal_parameters = []
+        for pb in aug_obj_data['filter']:
+            try:
+                lognormal_parameters.append(band_noises[pb])
+            except KeyError:
+                raise ValueError(
+                    'Noise properties of passband {} not known, add them in '
+                    'PlasticcAugmentor._simulate_light_curve_uncertainties.'
+                    ''.format(pb))
+        lognormal_parameters = np.array(lognormal_parameters)
+
+        add_stds = self._rs.lognormal(
+            lognormal_parameters[:, 0], lognormal_parameters[:, 1])
+
+        noise_add = self._rs.normal(loc=0.0, scale=add_stds)
+        aug_obj_data['flux'] += noise_add
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
+                                             + add_stds ** 2)
+        return aug_obj_data
+
+    def _simulate_detection(self, aug_obj_data, aug_obj_metadata):
+        """Simulate the detection process for a light curve.
+        We model the PLAsTiCC detection probabilities with an error function.
+        I'm not entirely sure why this isn't deterministic. The full light
+        curve is considered to be detected if there are at least 2 individual
+        detected observations.
+        Parameters
+        ==========
+        observations : pandas.DataFrame
+            The augmented observations that have been sampled from a Gaussian
+            Process.
+        augmented_metadata : dict
+            The augmented metadata
+        Returns
+        =======
+        observations : pandas.DataFrame
+            The observations with the detected flag set.
+        pass_detection : bool
+            Whether or not the full light curve passes the detection thresholds
+            used for the full sample.
+        """
+        s2n = np.abs(aug_obj_data["flux"]) / aug_obj_data["flux_error"]
+        prob_detected = (erf((s2n - 5.5) / 2) + 1) / 2.0
+        aug_obj_data["detected"] = self._rs.rand(len(s2n)) < prob_detected
+
+        pass_detection = np.sum(aug_obj_data["detected"]) >= 2
+
+        return aug_obj_data, pass_detection
 
 
 class SimpleGPAugment(SNAugment):
