@@ -619,7 +619,7 @@ class GPAugment(SNAugment):
         aug_obj_data, pass_detection = self._simulate_detection(
             aug_obj_data, aug_obj_metadata)
         # If our light curve passes detection thresholds, we're done!
-        if pass_detection:
+        if pass_detection and (len(aug_obj_data) >= 3):
             return aug_obj_data
 
         return []  # failed attempt
@@ -685,7 +685,8 @@ class GPAugment(SNAugment):
             # Most observations are WFD observations, so generate more of
             # those. The DDF and WFD samples are effectively completely
             # different, so this ratio doesn't really matter.
-            aug_obj_metadata["ddf"] = self._rs.rand() > 0.8
+            # aug_obj_metadata["ddf"] = True
+            aug_obj_metadata["ddf"] = self._rs.rand() > 0.99
         else:
             # If the reference wasn't a DDF observation, can't simulate a DDF
             # observation.
