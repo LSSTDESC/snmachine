@@ -385,7 +385,8 @@ class GPAugment(SNAugment):
         self._path_saved_gps = path_saved_gps
         self._cosmology = cosmology
         self.max_duration = max_duration
-        self._kwargs = dict(kwargs, pb_wavelengths=self.dataset.pb_wavelengths)
+        self._kwargs = dict(kwargs, pb_wavelengths=self.dataset.pb_wavelengths,
+                            random_state=self._rs)
         self.choose_z = choose_z
 
     def augment(self):
@@ -524,7 +525,7 @@ class GPAugment(SNAugment):
             aug_obj_data['ref_mjd'] - ref_peak_time)
 
         # TODO: avocado
-        max_time_shift = 30
+        max_time_shift = 100
         aug_obj_data['mjd'] += self._rs.uniform(-max_time_shift,
                                                 max_time_shift)
         is_not_seen = aug_obj_data['mjd'] < 0
@@ -548,8 +549,8 @@ class GPAugment(SNAugment):
 
             # Choose new bands randomly.
             obj_pbs = np.unique(aug_obj_data['filter'])
-            new_rows['filter'] = np.random.choice(obj_pbs, num_fill,
-                                                  replace=True)
+            new_rows['filter'] = self._rs.choice(obj_pbs, num_fill,
+                                                 replace=True)
 
             aug_obj_data = pd.concat([aug_obj_data, new_rows])
 
@@ -561,8 +562,8 @@ class GPAugment(SNAugment):
         number_drop = int(max(
             len(aug_obj_data) - target_number_obs,
             drop_fraction * len(aug_obj_data)))
-        drop_indices = np.random.choice(aug_obj_data.index, number_drop,
-                                        replace=False)
+        drop_indices = self._rs.choice(aug_obj_data.index, number_drop,
+                                       replace=False)
         aug_obj_data = aug_obj_data.drop(drop_indices).copy()
 
         aug_obj_data.reset_index(inplace=True, drop=True)
@@ -593,6 +594,8 @@ class GPAugment(SNAugment):
 
         aug_obj_data = self._choose_obs_times(aug_obj_metadata, obj_data,
                                               z_ori)
+        if aug_obj_data is None:
+            return []  # failed attempt
         aug_obj_data['wavelength_z_ori'] = self.compute_new_wavelength(
             z_ori, z_aug, aug_obj_data)
         gp_predict = self.load_gp(ori_obj)
@@ -1277,8 +1280,10 @@ class GPAugment(SNAugment):
             used for the full sample.
         """
         s2n = np.abs(aug_obj_data["flux"]) / aug_obj_data["flux_error"]
+        #print(f'sum s2n = {np.sum(s2n)}')
         prob_detected = (erf((s2n - 5.5) / 2) + 1) / 2.0
         aug_obj_data["detected"] = self._rs.rand(len(s2n)) < prob_detected
+        #print(f'sum dect = {np.sum(aug_obj_data["detected"])}')
 
         pass_detection = np.sum(aug_obj_data["detected"]) >= 2
 
