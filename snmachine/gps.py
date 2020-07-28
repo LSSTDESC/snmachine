@@ -1,6 +1,8 @@
 """
-Module for extracting and saving GPs
+Module for extracting and saving GPs.
 """
+
+__all__ = []
 
 import os
 import pickle
@@ -23,15 +25,9 @@ try:
 except ImportError:
     has_gapp = False
 
-
-band_central_wavelengths = {
-    "lsstu": 3671.0,
-    "lsstg": 4827.0,
-    "lsstr": 6223.0,
-    "lssti": 7546.0,
-    "lsstz": 8691.0,
-    "lssty": 9710.0,
-}
+# Central passbands wavelengths
+pb_wavelengths = {"lsstu": 3685., "lsstg": 4802., "lsstr": 6231.,
+                  "lssti": 7542., "lsstz": 8690., "lssty": 9736.}
 
 
 def compute_gps(dataset, number_gp, t_min, t_max, output_root=None,
@@ -72,7 +68,20 @@ def compute_gps(dataset, number_gp, t_min, t_max, output_root=None,
                 GaPP or george.
           - do_subtract_background : Bool, default = False
                 Whether to estimate a new background subtracting the current.
+
+    Raises
+    ------
+    ValueError
+        The Gaussian Processes Regression must be evaluated beyond the minimum
+        and maximum time in the dataset. This requires `t_min` and `t_max` to
+        be smaller and greater than the minimum and maximum observations of
+        `dataset`, respectively.
     """
+    if is_dataset_in_t_range(dataset, t_min=t_min, t_max=t_max) is False:
+        raise ValueError('There are events in the dataset with observations '
+                         'beyond `t_min` and `t_max`. Increase the time range '
+                         'so they can be fully captured by the Gaussian '
+                         'Process Regression.')
     print('Performing Gaussian process regression.')
     initial_time = time.time()
 
@@ -85,7 +94,35 @@ def compute_gps(dataset, number_gp, t_min, t_max, output_root=None,
         _compute_gps_parallel(dataset, number_gp, t_min, t_max, output_root,
                               number_processes, gp_dim, **kwargs)
 
-    print('Time taken for Gaussian process regression: {:.2f}s.'.format(time.time()-initial_time))
+    print('Time taken for Gaussian process regression: {:.2f}s.'
+          ''.format(time.time()-initial_time))
+
+
+def is_dataset_in_t_range(dataset, t_min, t_max):
+    """Check if all the events in the dataset are inside a specific time range.
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    t_min : float
+        Minimum of the considerend time range.
+    t_max : float
+        Maximum of the considerend time range.
+
+    Returns
+    -------
+    bool
+        True if all the events in the dataset are inside the specific time
+        range. False otherwise.
+    """
+    for obj in dataset.object_names:
+        obj_data = dataset.data[obj]
+        t_min_obj = np.min(obj_data['mjd'])
+        t_max_obj = np.max(obj_data['mjd'])
+        if (t_min_obj < t_min) or (t_max_obj > t_max):
+            return False
+    return True
 
 
 def read_gp_files_into_models(dataset, path_saved_gp_files):
@@ -103,17 +140,19 @@ def read_gp_files_into_models(dataset, path_saved_gp_files):
         Path for the Gaussian Process curve files.
     """
     print('Restarting from stored Gaussian Processes...')
+    time_start_reading = time.time()
     for obj in dataset.object_names:
-            obj_saved_gps_file = os.path.join(path_saved_gp_files, 'gp_'+obj)
-            try:
-                obj_saved_gps = Table.read(obj_saved_gps_file, format='ascii')
-            except:
-                try:
-                    obj_saved_gps = Table.read(obj_saved_gps_file, format='fits')
-                except IOError:
-                    print('IOError, file ', obj_saved_gps_file, 'does not exist.')
-            dataset.models[obj] = obj_saved_gps
+        obj_saved_gps_file = os.path.join(path_saved_gp_files, 'gp_'+obj)
+        try:
+            obj_saved_gps = Table.read(obj_saved_gps_file, format='ascii')
+        except UnicodeDecodeError:
+            obj_saved_gps = Table.read(obj_saved_gps_file, format='fits',
+                                       character_as_bytes=False)
+        except FileNotFoundError:
+            print('The file {} does not exist.'.format(obj_saved_gps_file))
+        dataset.models[obj] = obj_saved_gps
     print('Models fitted with the Gaussian Processes values.')
+    print_time_difference(time_start_reading, time.time())
 
 
 def _compute_gps_single_core(dataset, number_gp, t_min, t_max, output_root,
@@ -325,7 +364,7 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
 
     obj_data = dataset.data[obj]  # object's lightcurve
     obj_data = cs.rename_passband_column(obj_data.to_pandas())
-    unique_passbands = np.unique(obj_data.passband)
+    unique_pbs = np.unique(obj_data.passband)
     gp_times = np.linspace(t_min, t_max, number_gp)
 
     # Store the output in another astropy table
@@ -335,7 +374,7 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
     filter_set = np.asarray(dataset.filter_set)
     for pb in filter_set:
         used_kernels_dict[pb] = None  # inilialize None kernel to each passband
-        if pb in unique_passbands:
+        if pb in unique_pbs:
             obj_data_pb = obj_data.loc[obj_data.passband == pb]  # the observations in this passband
 
             if gp_algo == 'gapp':
@@ -349,15 +388,18 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
                                                         obj_data_pb, gp_times)
 
                 mu, std = gp_obs.flux.values, gp_obs.flux_error.values
-                obj_gp_pb_array = np.column_stack((gp_times, mu, std))  # stack the GP results in a array momentarily
+                # stack the GP results in a array momentarily
+                obj_gp_pb_array = np.column_stack((gp_times, mu, std))
                 used_kernels_dict[pb] = chosen_kernel
-            used_gp_dict[pb] = gp
+            # Save the GP already conditioned on a specific set of observations
+            gp_predict = partial(gp.predict, obj_data_pb.flux)
+            used_gp_dict[pb] = gp_predict
         else:
             obj_gp_pb_array = np.zeros([number_gp, 3])
         obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
                            obj_gp_pb_array[:, 2], [pb]*number_gp],
                           names=['mjd', 'flux', 'flux_error', 'filter'])
-        if len(obj_gps) == 0:  # this is the first passband so we initialize the table
+        if len(obj_gps) == 0:  # initialize the table for 1st passband
             obj_gps = obj_gp_pb
         else:
             obj_gps = vstack((obj_gps, obj_gp_pb))
@@ -365,8 +407,10 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
     if output_root is not None:
         obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits',
                       overwrite=True)
-        path_save_gps = os.path.join(output_root, 'used_gp_dict_'+obj+'.pckl')
-        path_save_kernels = os.path.join(output_root, 'used_kernels_dict_'+obj+'.pckl')
+        path_save_gps = os.path.join(output_root, 'used_gp_dict_{}.pckl'
+                                     ''.format(obj))
+        path_save_kernels = os.path.join(output_root, 'used_kernels_dict_{}.'
+                                         'pckl'.format(obj))
         with open(path_save_gps, 'wb') as f:
             pickle.dump(used_gp_dict, f, pickle.HIGHEST_PROTOCOL)
         with open(path_save_kernels, 'wb') as f:
@@ -395,7 +439,7 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
     -------
     gp_obs : pandas.core.frame.DataFrame
         Time, flux and flux error of the fitted Gaussian Process.
-    gp : george.gp.GP
+    gp_instance : george.gp.GP
         The GP instance that was used to fit the object.
     kernel_id : str
         The id of the kernel chosen. This can then be used as a feature.
@@ -430,7 +474,8 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
     return obj_gp, gp_instance, kernel_id
 
 
-def _choose_less_bad_kernel(all_obj_gp, all_gp_instances, all_chisq_over_datapoints, possible_kernel_ids):
+def _choose_less_bad_kernel(all_obj_gp, all_gp_instances,
+                            all_chisq_over_datapoints, possible_kernel_ids):
     """If all kernels give a bad reduced X^2, choose the less bad of them.
 
     Parameters
@@ -477,7 +522,7 @@ def fit_gp(kernel_name, kernel_param, obj_data, gp_times):
         scale length in the y & x directions.
     obj_data : pandas.core.frame.DataFrame
         Time, flux and flux error of the data (specific filter of an object).
-    gp_times :
+    gp_times : numpy.ndarray
         Times to evaluate the Gaussian Process at.
 
     Returns
@@ -592,17 +637,138 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max,
         Table with evaluated Gaussian process curve and errors at each
         passband.
     """
+    obj_data = dataset.data[obj]  # object's lightcurve
+    gp_times = np.linspace(t_min, t_max, number_gp)
+    filter_set = np.asarray(dataset.filter_set)
+
+    kernel, gp_predict = fit_2d_gp(obj_data, return_kernel=True)
+    gp_wavelengths = np.vectorize(pb_wavelengths.get)(filter_set)
+    obj_gps = predict_2d_gp(gp_predict, gp_times, gp_wavelengths)
+
+    # Map the wavelenghts to the original passband denominations
+    wavelengths_pb = {v: k for k, v in pb_wavelengths.items()}
+    obj_gps['filter'] = np.vectorize(wavelengths_pb.get)(obj_gps['filter'])
+
+    if output_root is not None:
+        obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits',
+                      overwrite=True)
+        path_save_gps = os.path.join(output_root, 'used_gp_'+obj+'.pckl')
+        path_save_kernels = os.path.join(output_root, 'used_kernels_'+obj+'.pckl')
+        # Save the GP already conditioned on a specific set of observations
+        with open(path_save_gps, 'wb') as f:
+            pickle.dump(gp_predict, f, pickle.HIGHEST_PROTOCOL)
+        with open(path_save_kernels, 'wb') as f:
+            pickle.dump(kernel, f, pickle.HIGHEST_PROTOCOL)
+
+    return obj_gps
+
+
+def preprocess_obs(obj_data, **kwargs):
+    """Apply preprocessing to the observations.
+
+    This function is intended to be used to transform the raw observations
+    table into one that can actually be used for classification. For now,
+    all that this step does is apply background subtraction.
+
+    Parameters
+    ----------
+    obj_data : pandas.core.frame.DataFrame or astropy.table.Table
+        Time, flux, flux error and passbands of the object.
+    kwargs : dict
+        Additional keyword arguments that are ignored at the moment. We allow
+        additional keyword arguments so that the various functions that
+        call this one can be called with the same arguments.
+
+    Returns
+    -------
+    preprocessed_obj_data : pandas.core.frame.DataFrame
+        Modified version of the observations on `obj_data` after preprocessing
+        that can be used for further analyses.
+    """
+    try:  # transform into a pandas DataFrame
+        obj_data = obj_data.to_pandas()
+    except AttributeError:  # is it already a pandas DataFrame
+        pass
+    obj_data = cs.rename_passband_column(obj_data)
+
+    try:
+        do_subtract_background = kwargs["do_subtract_background"]
+    except KeyError:
+        do_subtract_background = False
+
+    if do_subtract_background:  # estimate a background flux and remove it from the light curve.
+        preprocessed_obj_data = subtract_background(obj_data)
+    else:  # do nothing
+        preprocessed_obj_data = obj_data
+
+    return preprocessed_obj_data
+
+
+def subtract_background(obj_data):
+    """Subtract the background flux levels from each band independently.
+
+    The background levels are estimated using a biweight location estimator.
+    This estimator will calculate a robust estimate of the background level
+    for objects that have short-lived light curves, and it will return
+    something like the median flux level for periodic or continuous light
+    curves.
+
+    Parameters
+    ----------
+    obj_data : pandas.core.frame.DataFrame
+        Time, flux, flux error and passbands of the object.
+
+    Returns
+    -------
+    obj_subtracted_obs_data : pandas.core.frame.DataFrame
+        Modified version of the observations on `obj_data` with the background
+        level flux removed.
+    """
+    obj_subtracted_obs_data = obj_data.copy()
+    unique_pbs = np.unique(obj_data.passband)
+
+    for pb in unique_pbs:
+        is_pb = obj_data.passband == pb
+        obj_data_pb = obj_data.loc[is_pb]  # the observations in this passband
+
+        # Use a biweight location to estimate the background
+        ref_flux = biweight_location(obj_data_pb["flux"])
+
+        obj_subtracted_obs_data.loc[is_pb, "flux"] -= ref_flux
+    return obj_subtracted_obs_data
+
+
+def fit_2d_gp(obj_data, return_kernel=False, **kwargs):
+    """Fit a 2D Gaussian process.
+
+    If required, predict the GP at evenly spaced points along a light curve.
+
+    Parameters
+    ----------
+    obj_data : pandas.core.frame.DataFrame or astropy.table.Table
+        Time, flux and flux error of the data (specific filter of an object).
+    return_kernel : Bool, default = False
+        Whether to return the used kernel.
+    kwargs : dict
+        Additional keyword arguments that are ignored at the moment. We allow
+        additional keyword arguments so that the various functions that
+        call this one can be called with the same arguments.
+
+    Returns
+    -------
+    kernel: george.gp.GP.kernel, optional
+        The kernel used to fit the GP.
+    gp_predict : functools.partial of george.gp.GP
+        The GP instance that was used to fit the object.
+    """
     guess_length_scale = 20.0  # a parameter of the Matern32Kernel
 
-    obj_data = dataset.data[obj]  # object's lightcurve
-    obj_data = cs.rename_passband_column(obj_data.to_pandas())
     obj_data = preprocess_obs(obj_data, **kwargs)  # preprocess obs
-    gp_times = np.linspace(t_min, t_max, number_gp)
 
     obj_times = obj_data.mjd
     obj_flux = obj_data.flux
     obj_flux_error = obj_data.flux_error
-    obj_wavelengths = obj_data['passband'].map(band_central_wavelengths)
+    obj_wavelengths = obj_data['passband'].map(pb_wavelengths)
 
     def neg_log_like(p):  # Objective function: negative log-likelihood
         gp.set_parameter_vector(p)
@@ -639,105 +805,66 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max,
     if results.success:
         gp.set_parameter_vector(results.x)
     else:
-        # Fit failed. Print out a warning, and use the initial guesses for
-        # fit parameters.
+        # Fit failed. Print out a warning, and use the initial guesses for fit
+        # parameters.
+        obj = obj_data['object_id'][0]
         print("GP fit failed for {}! Using guessed GP parameters.".format(obj))
         gp.set_parameter_vector(default_gp_param)
 
-    # Predict the Gaussian process band-by-band.
+    gp_predict = partial(gp.predict, obj_flux)
+
+    if return_kernel:
+        return kernel, gp_predict
+    else:
+        return gp_predict
+
+
+def predict_2d_gp(gp_predict, gp_times, gp_wavelengths):
+    """Outputs the predictions of a Gaussian Process.
+
+    Parameters
+    ----------
+    gp_predict : functools.partial of george.gp.GP
+        The GP instance that was used to fit the object.
+    gp_times : numpy.ndarray
+        Times to evaluate the Gaussian Process at.
+    gp_wavelengths : numpy.ndarray
+        Wavelengths to evaluate the Gaussian Process at.
+
+    Returns
+    -------
+    obj_gps : pandas.core.frame.DataFrame, optional
+        Time, flux and flux error of the fitted Gaussian Process.
+    """
+    unique_wavelengths = np.unique(gp_wavelengths)
+    number_gp = len(gp_times)
     obj_gps = []
-    filter_set = np.asarray(dataset.filter_set)
-    for pb in filter_set:
-        wavelengths = np.ones(len(gp_times)) * band_central_wavelengths[pb]
-        pred_x_data = np.vstack([gp_times, wavelengths]).T
-        pb_pred, pb_pred_var = gp.predict(obj_flux, pred_x_data, return_var=True)
+    for wavelength in unique_wavelengths:
+        gp_wavelengths = np.ones(number_gp) * wavelength
+        pred_x_data = np.vstack([gp_times, gp_wavelengths]).T
+        pb_pred, pb_pred_var = gp_predict(pred_x_data, return_var=True)
+        # stack the GP results in a array momentarily
         obj_gp_pb_array = np.column_stack((gp_times, pb_pred,
-                                           np.sqrt(pb_pred_var)))  # stack the GP results in a array momentarily
+                                           np.sqrt(pb_pred_var)))
         obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
-                           obj_gp_pb_array[:, 2], [pb]*number_gp],
+                           obj_gp_pb_array[:, 2], [wavelength]*number_gp],
                           names=['mjd', 'flux', 'flux_error', 'filter'])
-        if len(obj_gps) == 0:  # this is the first passband so we initialize the table
+        if len(obj_gps) == 0:  # initialize the table for 1st passband
             obj_gps = obj_gp_pb
         else:  # add more entries to the table
             obj_gps = vstack((obj_gps, obj_gp_pb))
-
-    if output_root is not None:
-        obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits',
-                      overwrite=True)
-        path_save_gps = os.path.join(output_root, 'used_gp_'+obj+'.pckl')
-        path_save_kernels = os.path.join(output_root, 'used_kernels_'+obj+'.pckl')
-        with open(path_save_gps, 'wb') as f:
-            pickle.dump(gp, f, pickle.HIGHEST_PROTOCOL)
-        with open(path_save_kernels, 'wb') as f:
-            pickle.dump(kernel, f, pickle.HIGHEST_PROTOCOL)
-
     return obj_gps
 
 
-def preprocess_obs(obj_data, **kwargs):
-    """Apply preprocessing to the observations.
-
-    This function is intended to be used to transform the raw observations
-    table into one that can actually be used for classification. For now,
-    all that this step does is apply background subtraction.
+def print_time_difference(initial_time, final_time):
+    """Print the time interval.
 
     Parameters
     ----------
-    obj_data : pandas.core.frame.DataFrame
-        Time, flux, flux error and passbands of the object.
-    kwargs : dict
-        Additional keyword arguments that are ignored at the moment. We allow
-        additional keyword arguments so that the various functions that
-        call this one can be called with the same arguments.
-
-    Returns
-    -------
-    preprocessed_obj_data : pandas.core.frame.DataFrame
-        Modified version of the observations on `obj_data` after preprocessing
-        that can be used for further analyses.
+    initial_time : float
+        Time at which the time interval starts.
+    final_time : float
+        Time at which the time interval ends.
     """
-    try:
-        do_subtract_background = kwargs["do_subtract_background"]
-    except KeyError:
-        do_subtract_background = False
-
-    if do_subtract_background:  # estimate a background flux and remove it from the light curve.
-        preprocessed_obj_data = subtract_background(obj_data)
-    else:  # do nothing
-        preprocessed_obj_data = obj_data
-
-    return preprocessed_obj_data
-
-
-def subtract_background(obj_data):
-    """Subtract the background flux levels from each band independently.
-
-    The background levels are estimated using a biweight location estimator.
-    This estimator will calculate a robust estimate of the background level
-    for objects that have short-lived light curves, and it will return
-    something like the median flux level for periodic or continuous light
-    curves.
-
-    Parameters
-    ----------
-    obj_data : pandas.core.frame.DataFrame
-        Time, flux, flux error and passbands of the object.
-
-    Returns
-    -------
-    obj_subtracted_obs_data : pandas.core.frame.DataFrame
-        Modified version of the observations on `obj_data` with the background
-        level flux removed.
-    """
-    obj_subtracted_obs_data = obj_data.copy()
-    unique_passbands = np.unique(obj_data.passband)
-
-    for pb in unique_passbands:
-        is_pb = obj_data.passband == pb
-        obj_data_pb = obj_data.loc[is_pb]  # the observations in this passband
-
-        # Use a biweight location to estimate the background
-        ref_flux = biweight_location(obj_data_pb["flux"])
-
-        obj_subtracted_obs_data.loc[is_pb, "flux"] -= ref_flux
-    return obj_subtracted_obs_data
+    time_spent = pd.to_timedelta(int(final_time-initial_time), unit='s')
+    print('Time spent: {}.'.format(time_spent))
