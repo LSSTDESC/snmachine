@@ -516,18 +516,12 @@ class GPAugment(SNAugment):
 
         # Adjust the observation times
         z_scale = (1 + z_ori) / (1 + z_aug)
-        # Shift relative to an approximation of the peak flux time so that
-        # we generally keep the interesting part of the light curve in the
-        # frame.
-        ref_peak_time = obj_data['mjd'].iloc[
-            np.argmax(obj_data['flux'].values)]
-        aug_obj_data['mjd'] = ref_peak_time + z_scale**-1 * (
-            aug_obj_data['ref_mjd'] - ref_peak_time)
+        # Shift such that the time of the maximum flux is invariant. Generally,
+        # the interesting part of the LC remains inside the viewing windows.
+        time_peak = obj_data['mjd'].iloc[np.argmax(obj_data['flux'].values)]
+        aug_obj_data['mjd'] = time_peak + z_scale**-1 * (
+            aug_obj_data['ref_mjd'] - time_peak)
 
-        # TODO: avocado
-        max_time_shift = 100
-        aug_obj_data['mjd'] += self._rs.uniform(-max_time_shift,
-                                                max_time_shift)
         is_not_seen = aug_obj_data['mjd'] < 0
         aug_obj_data = aug_obj_data[~is_not_seen]  # before 0
         aug_obj_data = self.trim_obj(aug_obj_data, self.max_duration)  # after
@@ -565,6 +559,10 @@ class GPAugment(SNAugment):
         drop_indices = self._rs.choice(aug_obj_data.index, number_drop,
                                        replace=False)
         aug_obj_data = aug_obj_data.drop(drop_indices).copy()
+
+        # First observation at t=0 because all test set LCs have their first
+        # observation at t=0, which makes the augmentation more representative
+        aug_obj_data['mjd'] -= np.min(aug_obj_data['mjd'])
 
         aug_obj_data.reset_index(inplace=True, drop=True)
         return aug_obj_data
