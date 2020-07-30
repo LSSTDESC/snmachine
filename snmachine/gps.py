@@ -645,10 +645,6 @@ def _compute_gp_all_passbands_2D(obj, dataset, number_gp, t_min, t_max,
     gp_wavelengths = np.vectorize(pb_wavelengths.get)(filter_set)
     obj_gps = predict_2d_gp(gp_predict, gp_times, gp_wavelengths)
 
-    # Map the wavelenghts to the original passband denominations
-    wavelengths_pb = {v: k for k, v in pb_wavelengths.items()}
-    obj_gps['filter'] = np.vectorize(wavelengths_pb.get)(obj_gps['filter'])
-
     if output_root is not None:
         obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits',
                       overwrite=True)
@@ -853,6 +849,10 @@ def predict_2d_gp(gp_predict, gp_times, gp_wavelengths):
             obj_gps = obj_gp_pb
         else:  # add more entries to the table
             obj_gps = vstack((obj_gps, obj_gp_pb))
+
+    # Map the wavelenghts to the original passband denominations
+    wavelengths_pb = {v: k for k, v in pb_wavelengths.items()}
+    obj_gps['filter'] = np.vectorize(wavelengths_pb.get)(obj_gps['filter'])
     return obj_gps
 
 
