@@ -24,6 +24,7 @@ from functools import partial
 from iminuit import Minuit
 from multiprocessing import Pool
 from scipy.interpolate import interp1d
+from scipy.signal import find_peaks
 from snmachine import gps, chisq
 
 try:
@@ -54,6 +55,11 @@ try:
     has_emcee = True
 except ImportError:
     has_emcee = False
+
+# Central passbands wavelengths
+pb_wavelengths = {"lsstu": 3685., "lsstg": 4802., "lsstr": 6231.,
+                  "lssti": 7542., "lsstz": 8690., "lssty": 9736.}
+wavelengths_pb = {v: k for k, v in pb_wavelengths.items()}  # inverted map
 
 
 def _run_leastsq(obj, d, model, n_attempts, seed=-1):
@@ -1335,7 +1341,7 @@ class WaveletFeatures(Features):
         Features.__init__(self)
         self.output_root = output_root
 
-    def extract_features(self, dataset, number_gp, t_min, t_max,
+    def extract_features(self, dataset, number_gp, t_min, t_max, output_root,
                          number_processes, gp_dim, number_comps,
                          path_saved_eigendecomp=None, seed=1,
                          **kwargs):
@@ -1354,6 +1360,9 @@ class WaveletFeatures(Features):
         output_root : {None, str}, optional
             If None, don't save anything. If str, it is the output directory,
             so save the flux and error estimates and used kernels there.
+        number_processes : int, optional
+            Number of processors to use for parallelisation (shared memory
+            only).
         gp_dim : int, optional
             The dimension of the Gaussian Process. If  `gp_dim` is 1, the
             filters are fitted independently. If `gp_dim` is 2, the Matern
@@ -1374,7 +1383,7 @@ class WaveletFeatures(Features):
             gp_algo: str, default = 'george'
                 Which gp package is used for the Gaussian Process Regression,
                 GaPP or george.
-            do_subtract_background : Bool, default = False
+            do_subtract_background : bool, default = False
                 Whether to estimate a new background subtracting the current.
             wavelet_name : {'sym2', str}, optional
                 Name of the wavelets used.
@@ -1909,8 +1918,7 @@ class WaveletFeatures(Features):
 
         return matrix_new
 
-    @staticmethod
-    def save_reduced_features(reduced_features,
+    def save_reduced_features(self, reduced_features,
                               path_save_reduced_features='output_root',
                               file_name=None):
         """Save dimensionality reduced wavelet features.
@@ -1932,6 +1940,9 @@ class WaveletFeatures(Features):
         if file_name is None:
             number_comps = np.shape(reduced_features)[1]
             file_name = 'reduced_features_{}.pckl'.format(number_comps)
+        if path_save_reduced_features == 'output_root':
+            path_save_reduced_features = self.output_root
+
         path_save_file = os.path.join(path_save_reduced_features, file_name)
         with open(path_save_file, 'wb') as f:
             pickle.dump(reduced_features, f, pickle.HIGHEST_PROTOCOL)
@@ -2302,7 +2313,7 @@ class WaveletFeatures(Features):
         Raises
         ------
         AttributeError
-            The Gaussian processes have not been saved into `dataset.models`.'
+            The Gaussian processes have not been saved into `dataset.models`.
         """
         obj = dataset.object_names[0]
         try:
@@ -2375,3 +2386,758 @@ class WaveletFeatures(Features):
         if value is not None:
             self._exists_path(value)
         self._output_root = value
+
+
+class AvocadoFeatures(Features):
+    """Class adapted from `avocado` augmentation [1]_.
+
+    References
+    ----------
+    .. [1] Boone, Kyle. "Avocado: Photometric classification of astronomical
+    transients with gaussian process augmentation." The Astronomical Journal
+    158.6 (2019): 257."""
+
+    def __init__(self, output_root=None, **kwargs):
+        """
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to augment.
+        output_root : str, optional
+            Path where the wavelet features are saved. The eigendecomposition
+            is also saved there by default.
+        """
+        Features.__init__(self)
+        self.output_root = output_root
+
+    def extract_features(self, dataset, number_gp, t_min, t_max, output_root,
+                         number_processes, gp_dim, seed=1,
+                         **kwargs):
+        """Fit Gaussian Processes and compute the avocado features.
+
+        The features extracted can be directly used for classification.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to work with.
+        number_gp : int
+            Number of points to evaluate the Gaussian Process Regression at.
+        t_min : float
+            Minimim time to evaluate the Gaussian Process Regression at.
+        t_max : float
+            Maximum time to evaluate the Gaussian Process Regression at.
+        output_root : {None, str}, optional
+            If None, don't save anything. If str, it is the output directory,
+            so save the flux and error estimates and used kernels there.
+        number_processes : int, optional
+            Number of processors to use for parallelisation (shared memory
+            only).
+        gp_dim : int, optional
+            The dimension of the Gaussian Process. If  `gp_dim` is 1, the
+            filters are fitted independently. If `gp_dim` is 2, the Matern
+            kernel is used with cross-information between the passbands.
+        seed : int, optional
+            Seed to have reproducible results. By default, `seed=1`.
+        **kwargs : dict, optional
+            kernel_param : list-like, default = [500., 20.]
+                Initial values for kernel parameters. These should be roughly
+                the scale length in the y & x directions.
+            gp_algo: str, default = 'george'
+                Which gp package is used for the Gaussian Process Regression,
+                GaPP or george.
+            do_subtract_background : bool, default = False
+                Whether to estimate a new background subtracting the current.
+
+        Returns
+        -------
+        classification_features : pandas.DataFrame
+            The processed features that can be fed to a classifier.
+        """
+        np.random.seed(seed)
+        print('Extracting features of the dataset.')
+        initial_time = time.time()
+
+        kwarg_gps = kwargs.copy()
+        gps.compute_gps(dataset=dataset, number_gp=number_gp, t_min=t_min,
+                        t_max=t_max, output_root=self.output_root,
+                        number_processes=number_processes, gp_dim=gp_dim,
+                        **kwarg_gps)
+
+        raw_features = self.compute_raw_features(dataset)
+        classification_features = self.compute_classification_features(
+            raw_features)
+
+        self.save_avo_features(classification_features)
+
+        print('Time taken to extract features: {:.2f}s.'
+              ''.format(time.time()-initial_time))
+        return classification_features
+
+    def fit_sn(self, lc_gps):
+        """Plot the Gaussian Process estimated light curve.
+
+        avocado features do not change the models used to fit the objects, so
+        this function returns the Gaussian Process estimated light curve.
+
+        Parameters
+        ----------
+        lc_gps : astropy.table.Table
+            Gaussian Process estimated light curve: Time, flux and flux error
+            predictions in each passband of the event.
+
+        Returns
+        -------
+        lc_gps : astropy.table.Table
+            Gaussian Process estimated light curve: Time, flux and flux error
+            predictions in each passband of the event.
+        """
+        return lc_gps
+
+    def compute_raw_features(self, dataset):
+        """Compute raw features from the dataset.
+
+        The raw features are later used to compute the features that will be
+        used for classification. The raw features are saved as
+        `self.raw_features`.
+        From [1]_:
+            "Featurizing is slow, so the idea here is to extract a lot of
+            different things, and then in `select_features` these features are
+            postprocessed to select the ones that are actually fed into the
+            classifier. This allows for rapid iteration of training on
+            different feature sets. Note that the features produced by this
+            method are often unsuitable for classification, and may include
+            data leaks. Make sure that you understand what features can be
+            used for real classification before making any changes.
+            This class implements a featurizer that is tuned to the PLAsTiCC
+            dataset."
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to compute the raw features.
+
+        Returns
+        -------
+        raw_features : pandas.DataFrame
+            The computed raw features of the entire dataset.
+
+        Notes
+        -----
+        Function adapted from `avocado` augmentation [2]_ ([1]_).
+
+        References
+        ----------
+        .. [1] Boone, Kyle.
+        https://avocado-classifier.readthedocs.io/en/latest/
+        .. [2] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        self.filter_set = dataset.filter_set
+        list_raw_features = []
+        objs = dataset.object_names
+        metadata = dataset.metadata
+        for obj in objs:
+            obj_data = dataset.data[obj].to_pandas()
+            obj_gps = dataset.models[obj].to_pandas()
+            obj_metadata = metadata.loc[obj]
+            obj_features = self._compute_obj_raw_features(obj_data, obj_gps,
+                                                          obj_metadata)
+            list_raw_features.append(obj_features.values())
+
+        # The features' keys are the same for every obj.
+        keys = obj_features.keys()
+
+        raw_features = pd.DataFrame(list_raw_features, index=objs,
+                                    columns=keys)
+        raw_features.index.name = 'object_id'
+        self.raw_features = raw_features
+        return raw_features
+
+    def _compute_obj_raw_features(self, obj_data, obj_gps, obj_metadata):
+        """Compute the raw features for an object.
+
+        Parameters
+        ----------
+        obj_data : pandas.DataFrame
+            Time, flux, flux error and passbands of the object.
+        obj_gps : pandas.DataFrame
+            Table with evaluated Gaussian process curve and errors at each
+            passband.
+        obj_metadata : pandas.DataFrame
+            Metadata of the event.
+
+        Returns
+        -------
+        features : pandas.DataFrame
+            The computed raw features of the event provided.
+
+        Notes
+        -----
+        Function adapted from `avocado` augmentation [1]_ ([2]_).
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        .. [2] Boone, Kyle.
+        https://avocado-classifier.readthedocs.io/en/latest/
+        """
+        features = dict()
+        pad = 250
+        plasticc_start_time = np.min(obj_gps['mjd'])
+        plasticc_end_time = np.max(obj_gps['mjd'])
+
+        obj = obj_metadata['object_id']
+
+        # Load the GP to make more predictions
+        gp_params, gp_predict = self._load_gp(obj, return_gp_params=True)
+
+        # Fit the GP and produce an output model
+        gp_start_time = plasticc_start_time - pad
+        gp_end_time = plasticc_end_time + pad
+        gp_times = np.arange(gp_start_time, gp_end_time + 1)
+
+        filter_set = np.asarray(self.filter_set)
+        gp_wavelengths = np.vectorize(pb_wavelengths.get)(filter_set)
+        obj_gps_new = gps.predict_2d_gp(gp_predict, gp_times,
+                                        gp_wavelengths).to_pandas()
+
+        times = obj_data['mjd']
+        fluxes = obj_data['flux']
+        flux_errors = obj_data['flux_error']
+        s2ns = fluxes / flux_errors
+
+        # Features from the metadata
+        features["host_specz"] = obj_metadata["hostgal_specz"]
+        features["host_photoz"] = obj_metadata["hostgal_photoz"]
+        features["host_photoz_error"] = obj_metadata["hostgal_photoz_err"]
+        features["ra"] = obj_metadata["ra"]
+        features["decl"] = obj_metadata["decl"]
+        features["mwebv"] = obj_metadata["mwebv"]
+        features["ddf"] = obj_metadata["ddf"]
+
+        # Count how many observations there are
+        features["count"] = len(fluxes)
+
+        # Features from GP fit parameters
+        for i, fit_param in enumerate(gp_params):
+            features[f"gp_fit_{i}"] = fit_param
+
+        # Maximum and minimum fluxes and times of maximum.
+        pbs = self.filter_set
+        max_fluxes = pd.DataFrame(columns=pbs, dtype=float)
+        min_fluxes = pd.DataFrame(columns=pbs, dtype=float)
+        time_max_flux = pd.DataFrame(columns=pbs, dtype=float)
+        for pb in pbs:
+            is_pb = obj_gps_new['filter'] == pb
+            obj_pb = obj_gps_new[is_pb].reset_index()
+            max_fluxes.loc[obj, pb] = np.max(obj_pb['flux'])
+            min_fluxes.loc[obj, pb] = np.min(obj_pb['flux'])
+
+            index_max = np.argmax(obj_pb['flux'])
+            time_max_flux.loc[obj, pb] = obj_pb.loc[index_max, 'mjd']
+        med_time_max = np.median(time_max_flux)
+        max_dts = time_max_flux - med_time_max
+
+        features["max_time"] = med_time_max
+        for pb in pbs:
+            features[f"max_flux_{pb}"] = max_fluxes.loc[:, pb][0]
+            features[f"max_dt_{pb}"] = max_dts.loc[:, pb][0]
+            features[f"min_flux_{pb}"] = min_fluxes.loc[:, pb][0]
+
+        for pb in pbs:
+            is_pb = obj_gps_new['filter'] == pb
+            obj_pb = obj_gps_new[is_pb].reset_index()
+            obj_flux = obj_pb['flux'].values
+
+            # Calculate the positive and negative integrals of the lightcurve,
+            # normalized to the respective peak fluxes. This gives a measure
+            # of the "width" of the lightcurve, even for non-bursty objects.
+            positive_width = (np.sum(np.clip(obj_flux, 0, None))
+                              / max_fluxes.loc[:, pb][0])
+            negative_width = (np.sum(np.clip(obj_flux, None, 0))
+                              / min_fluxes.loc[:, pb][0])
+            features[f"positive_width_{pb}"] = positive_width
+            features[f"negative_width_{pb}"] = negative_width
+
+            # Calculate the total absolute differences of the lightcurve. For
+            # supernovae, they typically go up and down a single time. Periodic
+            # objects will have many more ups and downs.
+            abs_diff = np.sum(np.abs(obj_flux[1:] - obj_flux[:-1]))
+            features[f"abs_diff_{pb}"] = abs_diff
+
+            # Find times to fractions of the peak amplitude
+            fractions = [0.8, 0.5, 0.2]
+            forward_times = self._compute_time_to_fractions(obj_flux,
+                                                            fractions)
+            backward_times = self._compute_time_to_fractions(obj_flux,
+                                                             fractions,
+                                                             forward=False)
+            for fraction, forward_time, backward_time in zip(fractions,
+                                                             forward_times,
+                                                             backward_times):
+                features["time_fwd_max_{:.1f}_{}".format(
+                    fraction, pb)] = forward_time
+                features["time_bwd_max_{:.1f}_{}".format(
+                    fraction, pb)] = backward_time
+
+        # Count the number of data points with significant positive/negative
+        # fluxes
+        thresholds = [-20, -10, -5, -3, 3, 5, 10, 20]
+        for threshold in thresholds:
+            if threshold < 0:
+                count = np.sum(s2ns < threshold)
+            else:
+                count = np.sum(s2ns > threshold)
+            features[f"count_s2n_{threshold}"] = count
+
+        # Count the fraction of data points that are "background", i.e. less
+        # than a 3 sigma detection of something.
+        features["frac_background"] = np.sum(np.abs(s2ns) < 3) / len(s2ns)
+
+        for pb in pbs:
+            is_pb = obj_gps_new['filter'] == pb
+            obj_pb = obj_gps_new[is_pb].reset_index()
+            obj_flux = obj_pb['flux'].values
+            obj_flux_error = obj_pb['flux_error'].values
+
+            # Sum up the total signal-to-noise in each band
+            total_band_s2n = np.sqrt(np.sum((obj_flux / obj_flux_error) ** 2))
+            features[f"total_s2n_{pb}"] = total_band_s2n
+
+            # Calculate percentiles of the data in each band.
+            for percentile in (10, 30, 50, 70, 90):
+                try:
+                    val = np.percentile(obj_flux, percentile)
+                except IndexError:
+                    val = np.nan
+                features[f"percentile_{pb}_{percentile}"] = val
+
+        # Count the time delay between the first and last significant fluxes
+        thresholds = [5, 10, 20]
+        for threshold in thresholds:
+            significant_times = times[np.abs(s2ns) > threshold]
+            if len(significant_times) < 2:
+                dt = -1
+            else:
+                dt = np.max(significant_times) - np.min(significant_times)
+            features[f"time_width_s2n_{threshold}"] = dt
+
+        # Count how many data points are within a certain number of days of
+        # maximum light. This provides some estimate of the robustness of the
+        # determination of maximum light and rise/fall times.
+        time_bins = [
+            (-5, 5, "center"),
+            (-20, -5, "rise_20"),
+            (-50, -20, "rise_50"),
+            (-100, -50, "rise_100"),
+            (-200, -100, "rise_200"),
+            (-300, -200, "rise_300"),
+            (-400, -300, "rise_400"),
+            (-500, -400, "rise_500"),
+            (-600, -500, "rise_600"),
+            (-700, -600, "rise_700"),
+            (-800, -700, "rise_800"),
+            (5, 20, "fall_20"),
+            (20, 50, "fall_50"),
+            (50, 100, "fall_100"),
+            (100, 200, "fall_200"),
+            (200, 300, "fall_300"),
+            (300, 400, "fall_400"),
+            (400, 500, "fall_500"),
+            (500, 600, "fall_600"),
+            (600, 700, "fall_700"),
+            (700, 800, "fall_800"),
+        ]
+
+        diff_times = times - med_time_max
+        for start, end, label in time_bins:
+            is_in_bin = (diff_times > start) & (diff_times < end)
+
+            # Count how many observations there are in the time bin
+            count = np.sum(is_in_bin)
+            features[f"count_max_{label}"] = count
+
+            if count == 0:
+                bin_mean_fluxes = np.nan
+                bin_std_fluxes = np.nan
+            else:
+                # Measure the GP flux level relative to the peak flux. We do
+                # this by taking the median flux in each band and comparing it
+                # to the peak flux.
+                time_start = med_time_max + start
+                time_end = med_time_max + end
+                is_in_bin_gp = ((obj_gps_new['mjd'] >= time_start)
+                                & (obj_gps_new['mjd'] < time_end))
+                scale_gp_fluxes = []
+                for pb in pbs:
+                    is_pb = obj_gps_new['filter'] == pb
+                    obj_pb = obj_gps_new[is_pb & is_in_bin_gp].reset_index()
+                    obj_flux = obj_pb['flux'].values
+                    scale_gp_fluxes.append(obj_flux / max_fluxes[pb].values[0])
+                bin_mean_fluxes = np.mean(scale_gp_fluxes)
+                bin_std_fluxes = np.std(scale_gp_fluxes)
+
+            features[f"mean_max_{label}"] = bin_mean_fluxes
+            features[f"std_max_{label}"] = bin_std_fluxes
+
+        # Do peak detection on the GP output
+        for positive in (True, False):
+            for band_idx, pb in enumerate(pbs):
+                is_pb = obj_gps_new['filter'] == pb
+                obj_pb = obj_gps_new[is_pb].reset_index()
+                obj_flux = obj_pb['flux'].values
+                if positive:
+                    band_flux = obj_flux
+                    base_name = f"peaks_pos_{pb}"
+                else:
+                    band_flux = - obj_flux
+                    base_name = f"peaks_neg_{pb}"
+                peaks, properties = find_peaks(
+                    band_flux, height=np.max(np.abs(band_flux) / 5.0))
+                num_peaks = len(peaks)
+
+                features[f"{base_name}_count"] = num_peaks
+
+                sort_heights = np.sort(properties["peak_heights"])[::-1]
+                # Measure the fractional height of the other peaks.
+                for i in range(1, 3):
+                    if num_peaks > i:
+                        rel_height = sort_heights[i] / sort_heights[0]
+                    else:
+                        rel_height = np.nan
+                    features[f"{base_name}_frac_{i + 1}"] = rel_height
+
+        return features
+
+    def compute_classification_features(self, raw_features=None):
+        """Compute the features used for classification from raw features.
+
+        This method should take a DataFrame or dictionary of raw features,
+        produced by `compute_raw_features`, and output a list of processed
+        features that can be fed to a classifier.
+        The classification features are saved as
+        `self.classification_features`.
+
+        Parameters
+        ----------
+        raw_features : pandas.DataFrame or dict, optional
+            The raw features extracted using `compute_raw_features`.
+
+        Returns
+        -------
+        features : pandas.DataFrame or dict
+            The processed features that can be fed to a classifier.
+
+        Raises
+        ------
+        AttributeError
+            The raw features must be provided as input or have been saved in
+            `self.raw_features`.
+
+        Notes
+        -----
+        Function adapted from `avocado` augmentation [1]_ ([2]_).
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        .. [2] Boone, Kyle.
+        https://avocado-classifier.readthedocs.io/en/latest/
+        """
+        if raw_features is None:
+            try:
+                raw_features = self.raw_features
+            except AttributeError:
+                raise AttributeError('The raw features must be provided as '
+                                     'input or have been saved in '
+                                     '`self.raw_features`.')
+        rf = raw_features
+
+        # Make a new dict or pandas DataFrame for the features. Everything is
+        # agnostic about whether raw_features is a dict or a pandas DataFrame
+        # and the output will be the same as the input.
+        features = type(rf)()
+
+        # Keys that we want to use directly for classification.
+        copy_keys = ["host_photoz", "host_photoz_error"]
+
+        for copy_key in copy_keys:
+            features[copy_key] = rf[copy_key]
+
+        features["length_scale"] = rf["gp_fit_1"]
+
+        max_flux = rf["max_flux_lssti"]
+        max_mag = -2.5 * np.log10(np.abs(max_flux))
+
+        features["max_mag"] = max_mag
+
+        features["pos_flux_ratio"] = rf["max_flux_lssti"] / (
+            rf["max_flux_lssti"] - rf["min_flux_lssti"]
+        )
+        features["max_flux_ratio_red"] = np.abs(rf["max_flux_lssty"]) / (
+            np.abs(rf["max_flux_lssty"]) + np.abs(rf["max_flux_lssti"])
+        )
+        features["max_flux_ratio_blue"] = np.abs(rf["max_flux_lsstg"]) / (
+            np.abs(rf["max_flux_lssti"]) + np.abs(rf["max_flux_lsstg"])
+        )
+
+        features["min_flux_ratio_red"] = np.abs(rf["min_flux_lssty"]) / (
+            np.abs(rf["min_flux_lssty"]) + np.abs(rf["min_flux_lssti"])
+        )
+        features["min_flux_ratio_blue"] = np.abs(rf["min_flux_lsstg"]) / (
+            np.abs(rf["min_flux_lssti"]) + np.abs(rf["min_flux_lsstg"])
+        )
+
+        features["max_dt"] = rf["max_dt_lssty"] - rf["max_dt_lsstg"]
+
+        features["positive_width"] = rf["positive_width_lssti"]
+        features["negative_width"] = rf["negative_width_lssti"]
+
+        features["time_fwd_max_0.5"] = rf["time_fwd_max_0.5_lssti"]
+        features["time_fwd_max_0.2"] = rf["time_fwd_max_0.2_lssti"]
+
+        features["time_fwd_max_0.5_ratio_red"] = (
+            rf["time_fwd_max_0.5_lssty"] / (rf["time_fwd_max_0.5_lssty"]
+                                            + rf["time_fwd_max_0.5_lssti"]))
+        features["time_fwd_max_0.5_ratio_blue"] = (
+            rf["time_fwd_max_0.5_lsstg"] / (rf["time_fwd_max_0.5_lsstg"]
+                                            + rf["time_fwd_max_0.5_lssti"]))
+        features["time_fwd_max_0.2_ratio_red"] = (
+            rf["time_fwd_max_0.2_lssty"] / (rf["time_fwd_max_0.2_lssty"]
+                                            + rf["time_fwd_max_0.2_lssti"]))
+        features["time_fwd_max_0.2_ratio_blue"] = (
+            rf["time_fwd_max_0.2_lsstg"] / (rf["time_fwd_max_0.2_lsstg"]
+                                            + rf["time_fwd_max_0.2_lssti"]))
+
+        features["time_bwd_max_0.5"] = rf["time_bwd_max_0.5_lssti"]
+        features["time_bwd_max_0.2"] = rf["time_bwd_max_0.2_lssti"]
+
+        features["time_bwd_max_0.5_ratio_red"] = (
+            rf["time_bwd_max_0.5_lssty"] / (rf["time_bwd_max_0.5_lssty"]
+                                            + rf["time_bwd_max_0.5_lssti"]))
+        features["time_bwd_max_0.5_ratio_blue"] = (
+            rf["time_bwd_max_0.5_lsstg"] / (rf["time_bwd_max_0.5_lsstg"]
+                                            + rf["time_bwd_max_0.5_lssti"]))
+        features["time_bwd_max_0.2_ratio_red"] = (
+            rf["time_bwd_max_0.2_lssty"] / (rf["time_bwd_max_0.2_lssty"]
+                                            + rf["time_bwd_max_0.2_lssti"]))
+        features["time_bwd_max_0.2_ratio_blue"] = (
+            rf["time_bwd_max_0.2_lsstg"] / (rf["time_bwd_max_0.2_lsstg"]
+                                            + rf["time_bwd_max_0.2_lssti"]))
+
+        features["frac_s2n_5"] = rf["count_s2n_5"] / rf["count"]
+        features["frac_s2n_-5"] = rf["count_s2n_-5"] / rf["count"]
+        features["frac_background"] = rf["frac_background"]
+
+        features["time_width_s2n_5"] = rf["time_width_s2n_5"]
+
+        features["count_max_center"] = rf["count_max_center"]
+        features["count_max_rise_20"] = (
+            rf["count_max_rise_20"] + features["count_max_center"]
+        )
+        features["count_max_rise_50"] = (
+            rf["count_max_rise_50"] + features["count_max_rise_20"]
+        )
+        features["count_max_rise_100"] = (
+            rf["count_max_rise_100"] + features["count_max_rise_50"]
+        )
+        features["count_max_fall_20"] = (
+            rf["count_max_fall_20"] + features["count_max_center"]
+        )
+        features["count_max_fall_50"] = (
+            rf["count_max_fall_50"] + features["count_max_fall_20"]
+        )
+        features["count_max_fall_100"] = (
+            rf["count_max_fall_100"] + features["count_max_fall_50"]
+        )
+
+        all_peak_pos_frac_2 = [rf["peaks_pos_lsstu_frac_2"],
+                               rf["peaks_pos_lsstg_frac_2"],
+                               rf["peaks_pos_lsstr_frac_2"],
+                               rf["peaks_pos_lssti_frac_2"],
+                               rf["peaks_pos_lsstz_frac_2"],
+                               rf["peaks_pos_lssty_frac_2"]]
+
+        with np.warnings.catch_warnings():
+            np.warnings.filterwarnings("ignore", r"All-NaN slice encountered")
+            features["peak_frac_2"] = np.nanmedian(all_peak_pos_frac_2, axis=0)
+
+        features["total_s2n"] = np.sqrt(rf["total_s2n_lsstu"] ** 2
+                                        + rf["total_s2n_lsstg"] ** 2
+                                        + rf["total_s2n_lsstr"] ** 2
+                                        + rf["total_s2n_lssti"] ** 2
+                                        + rf["total_s2n_lsstz"] ** 2
+                                        + rf["total_s2n_lssty"] ** 2)
+
+        all_frac_percentiles = []
+        for percentile in (10, 30, 50, 70, 90):
+            frac_percentiles = []
+            for pb in self.filter_set:
+                percentile_flux = rf[f"percentile_{pb}_{percentile}"]
+                max_flux = rf[f"max_flux_{pb}"]
+                min_flux = rf[f"min_flux_{pb}"]
+                frac_percentiles.append(
+                    (percentile_flux - min_flux) / (max_flux - min_flux)
+                )
+            all_frac_percentiles.append(np.nanmedian(frac_percentiles, axis=0))
+
+        features["percentile_diff_10_50"] = (all_frac_percentiles[0]
+                                             - all_frac_percentiles[2])
+        features["percentile_diff_30_50"] = (all_frac_percentiles[1]
+                                             - all_frac_percentiles[2])
+        features["percentile_diff_70_50"] = (all_frac_percentiles[3]
+                                             - all_frac_percentiles[2])
+        features["percentile_diff_90_50"] = (all_frac_percentiles[4]
+                                             - all_frac_percentiles[2])
+
+        self.classification_features = features
+        return features
+
+    def _load_gp(self, obj, return_gp_params=False):
+        """Load the Gaussian Process predict object.
+
+        Parameters
+        ----------
+        obj : str
+            Name of the original event.
+        return_gp_params : bool, optional (False)
+            Whether to return the used GP fit parameters.
+
+        Returns
+        -------
+        gp_params : numpy.ndarray, optional
+            The resulting GP fit parameters.
+        gp_predict: functools.partial with bound method GP.predict
+            Function to predict the Gaussian Process flux and uncertainty at
+            any time and wavelength.
+        """
+        # The name format of the saved Gaussian Processes is hard coded
+        path_saved_obj_gp = os.path.join(self.path_saved_gps,
+                                         f'used_gp_{obj}.pckl')
+        with open(path_saved_obj_gp, 'rb') as input:
+            gp_predict = pickle.load(input)
+        if return_gp_params:
+            path_saved_obj_gp_params = os.path.join(self.path_saved_gps,
+                                                    f'used_params_{obj}.pckl')
+            with open(path_saved_obj_gp_params, 'rb') as input:
+                gp_params = pickle.load(input)
+            return gp_params, gp_predict
+        else:
+            return gp_predict
+
+    @staticmethod
+    def _exists_path(path_to_test):
+        """Check if the inputed path exists.
+
+        Parameters
+        ----------
+        path_to_test: str
+            Path to test the existence.
+
+        Raises
+        ------
+        ValueError
+            If the provided path does not exist.
+        """
+        exists_path = os.path.exists(path_to_test)
+        if not exists_path:
+            raise ValueError('The path {} does not exist. Provide a valid path'
+                             '.'.format(path_to_test))
+
+    @staticmethod
+    def _compute_time_to_fractions(fluxes, fractions, forward=True):
+        """Compute the time to decline to a fraction of maximum flux.
+
+        Find the time for a lightcurve to decline to specific fractions of
+        maximum flux.
+
+        Parameters
+        ----------
+        fluxes : numpy.array
+            A list of the fluxes predicted by the Gaussian Processes.
+        fractions : list
+            A decreasing list of the fractions of maximum light that will be
+            computed (eg: [0.8, 0.5, 0.2]).
+        forward : bool, optional (True)
+            If True (default), look forward in time. Otherwise, look backward.
+
+        Returns
+        -------
+        times : numpy.array
+            A list of times for the lightcurve to decline to each of the given
+            fractions of maximum flux.
+
+        Notes
+        -----
+        Function adapted from `avocado` augmentation [1]_ ([2]_).
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        .. [1] Boone, Kyle.
+        https://avocado-classifier.readthedocs.io/en/latest/
+        """
+        max_time = np.argmax(fluxes)
+        max_flux = fluxes[max_time]
+
+        times = np.zeros(len(fractions))
+        times[:] = np.nan
+
+        frac_idx = 0
+
+        # Start at maximum light, and move along the spectrum. Add every
+        # threshold crossed to the list. If a given threshold is not crossed,
+        # return a large number for that time.
+        offset = 0
+        while True:
+            offset += 1
+            if forward:
+                new_time = max_time + offset
+                if new_time >= fluxes.shape:
+                    break
+            else:
+                new_time = max_time - offset
+                if new_time < 0:
+                    break
+
+            test_flux = fluxes[new_time]
+            while test_flux < max_flux * fractions[frac_idx]:
+                times[frac_idx] = offset
+                frac_idx += 1
+                if frac_idx == len(fractions):
+                    break
+
+            if frac_idx == len(fractions):
+                break
+        return times
+
+    def save_avo_features(self, features, path_save_features='output_root',
+                          file_name=None):
+        """Save the processed avocado features that can be fed to a classifier.
+
+        Parameters
+        ----------
+        features : pandas.DataFrame
+            The processed features that can be fed to a classifier.
+        path_save_reduced_features : {'output_root', str}, optional
+            Path where the avocado features is saved. By default, it is saved
+            in `self.output_root`.
+        file_name : {None, str}, optional
+            Name of the dimensionality reduced wavelet features file. By
+            default (None), it is `avocado_features.pckl`.
+        """
+        if file_name is None:
+            file_name = 'avocado_features.pckl'
+        if path_save_features == 'output_root':
+            path_save_features = self.output_root
+
+        path_save_file = os.path.join(path_save_features, file_name)
+        features.to_pickle(path_save_file)
