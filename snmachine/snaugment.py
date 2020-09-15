@@ -267,6 +267,44 @@ class SNAugment:
         else:
             return classes
 
+    @property
+    def dataset(self):
+        """Return the original dataset.
+
+        Returns
+        -------
+        Dataset object (sndata class)
+            Dataset to augment.
+        """
+        return self._dataset
+
+    @property
+    def random_seed(self):
+        """Return the random state used to augment.
+
+        Returns
+        -------
+        int
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        """
+        return self._random_seed
+
+    @random_seed.setter
+    def random_seed(self, value):
+            """Set the seed to the random state used to augment.
+
+            It also initilizes the random state generator used to augment.
+
+            Parameters
+            ----------
+            value: int, optional
+                Random seed used. Saving this seed allows reproducible results.
+                If given, it must be between 0 and 2**32 - 1.
+            """
+            self._rs = np.random.RandomState(value)  # initialise the random state
+            self._random_seed = value
+
 
 class NNAugment(SNAugment):
     """
@@ -274,10 +312,15 @@ class NNAugment(SNAugment):
     inspired algorithms such as SMOTE, ADASYN etc.
     """
 
-    def __init__(self, X, y, method):
-        self.X = X
-        self.y = y
-        self.method = method
+    def __init__(self, dataset, features, method, random_seed=None,
+                 output_root=None, **kwargs):
+        self._dataset = dataset
+        self.aug_method = method
+        self.random_seed = random_seed
+        self.features = features
+        self.output_root = output_root
+        self._kwargs = kwargs
+
     # TODO : allow for inheritance from SNAugment's constructor
     # def __init__(self, data, method):
     #         super().__init__(data)
@@ -301,31 +344,125 @@ class NNAugment(SNAugment):
 
 
     """
-    _METHODS = [
-        'SMOTE',
-        'ADASYN',
-        'SVMSMOTE',
-        'SMOTEENN',
-        'SMOTETomek'
-    ]
+    _METHODS = ['SMOTE', 'ADASYN', 'SVMSMOTE', 'SMOTEENN', 'SMOTETomek']
+
+    def augment(self):
+        """Augment the dataset."""
+        print('Augmenting the dataset...')
+        initial_time = time.time()
+
+        method = self.aug_method
+        labels = np.array(self.dataset.labels, dtype=str)
+        features = self._join_features()
+        self._ori_columns = features.columns
+
+        print(f"Before resampling: {sorted(Counter(labels).items())}")
+        try:
+            sampling_strategy = self._kwargs['sampling_strategy']
+        except KeyError:
+            sampling_strategy = 'auto'
+        sm = eval(method)(random_state=self._rs,
+                          sampling_strategy=sampling_strategy)
+        aug_features, aug_labels = sm.fit_resample(features, labels)
+        print(f"After resampling: {sorted(Counter(aug_labels).items())}")
+
+        self._create_aug_metadata(aug_features, aug_labels)
+        self._save_aug_feature_space()
+
+        time_spent = pd.to_timedelta(int(time.time()-initial_time), unit='s')
+        print('Time spent augmenting: {}.'.format(time_spent))
+
+    def _save_aug_feature_space(self):
+        output_root = self.output_root
+        if output_root is not None:
+            path_save_features = os.path.join(output_root,
+                                              'aug_feature_space.pckl')
+            with open(path_save_features, 'wb') as f:
+                pickle.dump(self.aug_features, f, pickle.HIGHEST_PROTOCOL)
+
+    def reconstruct_real_space(self):
+        """Go to real space to generate augmented light curves."""
+        # TODO: do it
+        aug_dataset = copy.deepcopy(self.dataset)
+        aug_dataset.metadata = self.aug_metadata
+        aug_dataset.object_names = self.aug_metadata.object_id
+        # objs = aug_dataset.object_names
+        self.aug_dataset = aug_dataset
+
+    def _create_aug_metadata(self, aug_features, aug_labels):
+        """d"""
+        self.aug_labels = aug_labels
+        aug_features = self._format_features(aug_features)
+
+        metadata = self.dataset.metadata
+        all_cols = metadata.columns
+        cols = all_cols.drop(['hostgal_photoz', 'hostgal_photoz_err', 'target',
+                              'object_id'])
+        aug_metadata = pd.DataFrame(aug_features[['hostgal_photoz',
+                                                  'hostgal_photoz_err']])
+        aug_metadata[cols] = metadata[cols]
+        aug_metadata['target'] = aug_labels
+        aug_metadata['object_id'] = aug_metadata.index
+        aug_metadata = aug_metadata[all_cols]
+        self.aug_metadata = aug_metadata
+        self.aug_features = aug_features.drop(columns=['hostgal_photoz',
+                                                       'hostgal_photoz_err'])
+
+    def _join_features(self):
+        """Join redshift features to the wavelet features."""
+        features = self.features.copy()
+        metadata = self.dataset.metadata
+        photoz = metadata.hostgal_photoz.values.astype(float)
+        photoz_err = metadata.hostgal_photoz_err.values.astype(float)
+        features['hostgal_photoz'] = photoz
+        features['hostgal_photoz_err'] = photoz_err
+        return features
+
+    def _format_features(self, aug_features):
+        """Format the new features into a Dataframe."""
+        ori_features = self.features
+        ori_index = ori_features.index
+
+        aug_features = pd.DataFrame(aug_features)
+        aug_features['object_id'] = None
+        aug_features['object_id'][:len(ori_index)] = ori_index
+        aug_objs_ids = [f'aug_{j}' for j in np.arange(0, (len(aug_features)
+                                                          - len(ori_index)))]
+        aug_features['object_id'][len(ori_index):] = aug_objs_ids
+        aug_features.set_index('object_id', inplace=True)
+        aug_features.columns = self._ori_columns
+        return aug_features
 
     @classmethod
     def methods(cls):
         return cls._METHODS
 
-    @staticmethod
-    def augment(X, y, method):
+    @property
+    def aug_method(self):
+        """Return the augmentation method.
 
-        print(NNAugment.methods())
+        Returns
+        -------
+        str
+            Name of the augmentation method.
+        """
+        return self._aug_method
+
+    @aug_method.setter
+    def aug_method(self, method):
+        """Set the augmentation method.
+
+        Parameters
+        ----------
+        method : str
+            Name of the augmentation method.
+        """
         if method not in NNAugment.methods():
-            raise ValueError(F"{method} not a possible augmentation method in `snmachine`")
-
-        print(F"Before resampling: {sorted(Counter(y).items())}")
-
-        X_resampled, y_resampled = eval(method)().fit_resample(X, y)
-        print(F"After resampling: {sorted(Counter(y_resampled).items())}")
-
-        return X_resampled, y_resampled
+            error_message = ('{} is not a possible augmentation method in '
+                             '`snmachine`.'.format(method))
+            raise ValueError(error_message)
+        else:
+            self._aug_method = method
 
 
 class GPAugment(SNAugment):
@@ -687,7 +824,8 @@ class GPAugment(SNAugment):
             # those. The DDF and WFD samples are effectively completely
             # different, so this ratio doesn't really matter.
             # aug_obj_metadata["ddf"] = True
-            aug_obj_metadata["ddf"] = self._rs.rand() > 0.99
+            rd_value = self._rs.rand()
+            aug_obj_metadata["ddf"] = rd_value > 0.99  # .99
         else:
             # If the reference wasn't a DDF observation, can't simulate a DDF
             # observation.
@@ -772,17 +910,6 @@ class GPAugment(SNAugment):
             raise AttributeError('The original dataset must be augmented '
                                  'before Gaussian Processes can be fitted to '
                                  'the augmented events.')
-
-    @property
-    def dataset(self):
-        """Return the original dataset.
-
-        Returns
-        -------
-        Dataset object (sndata class)
-            Dataset to augment.
-        """
-        return self._dataset
 
     @property
     def max_duration(self):
@@ -1125,33 +1252,6 @@ class GPAugment(SNAugment):
         """
         objs_number_to_aug = self.objs_number_to_aug
         return np.array(list(objs_number_to_aug.keys()))
-
-    @property
-    def random_seed(self):
-        """Return the random state used to augment.
-
-        Returns
-        -------
-        int
-            Random seed used. Saving this seed allows reproducible results.
-            If given, it must be between 0 and 2**32 - 1.
-        """
-        return self._random_seed
-
-    @random_seed.setter
-    def random_seed(self, value):
-        """Set the seed to the random state used to augment.
-
-        It also initilizes the random state generator used to augment.
-
-        Parameters
-        ----------
-        value: int, optional
-            Random seed used. Saving this seed allows reproducible results.
-            If given, it must be between 0 and 2**32 - 1.
-        """
-        self._rs = np.random.RandomState(value)  # initialise the random state
-        self._random_seed = value
 
     # avocado functions
     def _choose_target_observation_count(self, augmented_metadata):
