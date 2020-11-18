@@ -619,7 +619,7 @@ class GPAugment(SNAugment):
         z_obj = obj_metadata['hostgal_specz']
 
         number_aug = self.objs_number_to_aug[obj]  # # of new events
-        number_tries = 15  # # tries to generate an augmented event
+        number_tries = 10  # # tries to generate an augmented event
         aug_objs_data = []
         aug_objs_metadata = []
         for i in np.arange(number_aug):
@@ -638,7 +638,8 @@ class GPAugment(SNAugment):
                     aug_objs_metadata.append(aug_obj_metadata)
         return aug_objs_data, aug_objs_metadata
 
-    def _choose_obs_times(self, aug_obj_metadata, obj_data, z_ori):
+    def _choose_obs_times(self, aug_obj_metadata, obj_data, z_ori,
+                          max_time_shift=0):
         """TODO: avocado
         """
         z_aug = aug_obj_metadata['hostgal_specz']
@@ -658,6 +659,8 @@ class GPAugment(SNAugment):
         time_peak = obj_data['mjd'].iloc[np.argmax(obj_data['flux'].values)]
         aug_obj_data['mjd'] = time_peak + z_scale**-1 * (
             aug_obj_data['ref_mjd'] - time_peak)
+        #aug_obj_data['mjd'] += self._rs.uniform(-max_time_shift,
+        #                                        max_time_shift)
 
         is_not_seen = aug_obj_data['mjd'] < 0
         aug_obj_data = aug_obj_data[~is_not_seen]  # before 0
@@ -743,8 +746,8 @@ class GPAugment(SNAugment):
 
         # Redshift flux values
         z_scale = (1 + z_ori) / (1 + z_aug)
-        dist_scale = (self.cosmology.distmod(z_ori)
-                      / self.cosmology.distmod(z_aug))**2
+        dist_scale = (self.cosmology.luminosity_distance(z_ori)
+                      / self.cosmology.luminosity_distance(z_aug))**2
         aug_obj_data['flux'] = flux_pred * z_scale * dist_scale
         aug_obj_data['flux_error'] = flux_pred_error * z_scale * dist_scale
 
@@ -823,7 +826,7 @@ class GPAugment(SNAugment):
             # Most observations are WFD observations, so generate more of
             # those. The DDF and WFD samples are effectively completely
             # different, so this ratio doesn't really matter.
-            # aug_obj_metadata["ddf"] = True
+            #aug_obj_metadata["ddf"] = True
             rd_value = self._rs.rand()
             aug_obj_metadata["ddf"] = rd_value > 0.99  # .99
         else:
@@ -943,7 +946,7 @@ class GPAugment(SNAugment):
         max_duration_ori = self.dataset.get_max_length()
         if value is None:
             duration = max_duration_ori
-        elif max_duration_ori < value:
+        elif max_duration_ori > value:
             raise ValueError('All the events in the original dataset must be '
                              'shorter than the required maximum duration any '
                              'lightcurve. At the moment the maximum duration '
@@ -1272,7 +1275,7 @@ class GPAugment(SNAugment):
         if augmented_metadata["ddf"]:
             # I estimate the distribution of number of observations in the
             # WFD regions with a mixture of 2 gaussian distributions.
-            gauss_choice = np.random.choice(2, p=[0.34393457, 0.65606543])
+            gauss_choice = self._rs.choice(2, p=[0.34393457, 0.65606543])
             if gauss_choice == 0:
                 mean = 57.36015146
                 var = np.sqrt(271.58889272)
