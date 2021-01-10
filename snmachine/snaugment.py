@@ -1274,7 +1274,7 @@ class GPAugment(SNAugment):
         """
         if augmented_metadata["ddf"]:
             # I estimate the distribution of number of observations in the
-            # WFD regions with a mixture of 2 gaussian distributions.
+            # DDF regions with a mixture of 2 gaussian distributions.
             gauss_choice = self._rs.choice(2, p=[0.34393457, 0.65606543])
             if gauss_choice == 0:
                 mean = 57.36015146
