@@ -18,6 +18,7 @@ import numpy as np
 
 import sklearn.neighbors._base
 sys.modules['sklearn.neighbors.base'] = sklearn.neighbors._base
+sys.modules['sklearn.utils.safe_indexing'] = sklearn.utils._safe_indexing
 
 from astropy.table import Table, join, unique
 from functools import partial
