@@ -3,7 +3,7 @@ Utility module mostly wrapping sklearn functionality and providing utility funct
 """
 from __future__ import division
 
-__all__ = [] #'roc', 
+__all__ = []  # 'roc',
 
 
 from past.builtins import basestring
@@ -18,7 +18,6 @@ import numpy as np
 
 from astropy.table import Table, join, unique
 from functools import partial
-from imblearn.metrics import classification_report_imbalanced
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import make_pipeline
 from multiprocessing import Pool
