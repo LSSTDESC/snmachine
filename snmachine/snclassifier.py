@@ -18,7 +18,7 @@ import numpy as np
 
 from astropy.table import Table, join, unique
 from functools import partial
-from imblearn.over_sampling import SMOTE
+#from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import make_pipeline
 from multiprocessing import Pool
 from scipy.integrate import trapz
