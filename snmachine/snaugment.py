@@ -659,8 +659,8 @@ class GPAugment(SNAugment):
         time_peak = obj_data['mjd'].iloc[np.argmax(obj_data['flux'].values)]
         aug_obj_data['mjd'] = time_peak + z_scale**-1 * (
             aug_obj_data['ref_mjd'] - time_peak)
-        #aug_obj_data['mjd'] += self._rs.uniform(-max_time_shift,
-        #                                        max_time_shift)
+        aug_obj_data['mjd'] += self._rs.uniform(-max_time_shift,
+                                                max_time_shift)
 
         is_not_seen = aug_obj_data['mjd'] < 0
         aug_obj_data = aug_obj_data[~is_not_seen]  # before 0
@@ -677,6 +677,10 @@ class GPAugment(SNAugment):
         # redshifts. TODO: avocado
         num_fill = int(target_number_obs * (z_scale**-1 - 1))
         if num_fill > 0:
+            # At the most, create 50% more data; It prevents aug. events with
+            # many observations that provide no extra information
+            if num_fill > len(obj_data)/2:
+                num_fill = int(len(obj_data)/2)
             new_indices = self._rs.choice(aug_obj_data.index, num_fill,
                                           replace=True)
             new_rows = aug_obj_data.loc[new_indices]
@@ -687,6 +691,9 @@ class GPAugment(SNAugment):
                                                  replace=True)
 
             aug_obj_data = pd.concat([aug_obj_data, new_rows])
+            # reorder observations in chronological order
+            aug_obj_data.sort_values(by=['mjd'], ignore_index=True,
+                                     inplace=True)
 
         # Drop back down to the target number of observations. Having too few
         # observations is fine, but having too many is not. We always drop at
@@ -827,6 +834,7 @@ class GPAugment(SNAugment):
             # those. The DDF and WFD samples are effectively completely
             # different, so this ratio doesn't really matter.
             #aug_obj_metadata["ddf"] = True
+            #aug_obj_metadata["ddf"] = False
             rd_value = self._rs.rand()
             aug_obj_metadata["ddf"] = rd_value > 0.99  # .99
         else:
@@ -1284,10 +1292,11 @@ class GPAugment(SNAugment):
                 var = np.sqrt(338.53085446)
             target_number_obs = int(
                 np.clip(self._rs.normal(mean, var), 20, None))
-        else:  # WFD event -> at least 3 observations
+        else:  # WFD event
             target_number_obs = (
                 self._rs.normal(24.5006006, np.sqrt(72.5106613)))
             target_number_obs = int(np.clip(target_number_obs, 3, None))
+
         return target_number_obs
 
     def _simulate_light_curve_uncertainties(self, aug_obj_data,
