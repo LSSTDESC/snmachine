@@ -300,8 +300,7 @@ def load_dataset(data_path):
             print("Opening from CSV")
             dataset = sndata.PlasticcData(folder=folder_path,
                                           data_file=data_file_name,
-                                          metadata_file=metadata_file_name,
-                                          cut_non_detections=False)
+                                          metadata_file=metadata_file_name)
             print("Dataset loaded from csv file as: {}".format(dataset))
             print("Saving {} object to pickle binary".format(dataset))
 
