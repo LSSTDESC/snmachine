@@ -4,10 +4,10 @@ The goal of this guide is to help users contribute to `snmachine` as quickly and
 
 # Table of contents
 1. [Creating an Issue](#issues)
-* [Submitting a Pull Request](#prs)
-* [Code Style](#style)
-* [Running Tests Locally](#testing)
-* [Package Versioning](#version)
+2. [Submitting a Pull Request](#prs)
+3. [Code Style](#style)
+4. [Running Tests Locally](#testing)
+5. [Package Versioning](#version)
 
 <a name="issues"></a>
 ## Creating an Issue
@@ -30,12 +30,12 @@ For feature requests or enhancement suggestions, please file a [Feature Request 
 A detailed explanation of what idea is being proposed should be put in the body
 of the issue. The title can be appended with `[RFC]` to signify a "Request for
 Comments" is desired on how best to incorporate said feature or to discuss at
-length `[RFD]` may be used instead as a marker for "Request for Discussion"
+length `[RFD]` may be used instead as a marker for "Request for Discussion".
 
 ### General
 
 If the issue is general, perhaps just a question, or minor fix required, a plain
-issue would be appropriate. These can be opened with a [normal issue](https://github.com/LSSTDESC/snmachine/issues/new)
+issue would be appropriate. These can be opened with a [normal issue](https://github.com/LSSTDESC/snmachine/issues/new).
 
 <a name="prs"></a>
 ## Submitting a Pull Request
@@ -64,11 +64,11 @@ Please ensure your branch is up-to-date with `dev` branch by rebasing your chang
 <a name="style"></a>
 ## Code Style
 
-Much of our code style follows the convention defined in [PEP8](https://pep8.org/), with the exception in some cases of [`E501`](https://lintlyci.github.io/Flake8Rules/rules/E501.html)
+Much of our code style follows the convention defined in [PEP8](https://pep8.org/), with the exception, in some cases, of [`E501`](https://lintlyci.github.io/Flake8Rules/rules/E501.html).
 
 In addition, codebase guidelines outlined in the [LSST Developer Guide](https://developer.lsst.io/python/style.html)
 and in the [LSST DESC Coding Guidelines](https://confluence.slac.stanford.edu/display/LSSTDESC/Interim+LSST+DESC+Paper+Tracking?preview=/217813295/244908471/LSST%20DESC%20Coding%20Guidelines%20v1.1.pdf)
-document
+document.
 
 #### Import Conventions
 
