@@ -69,7 +69,7 @@ def plot_lc(lc, show_legend=True):
     for j in range(len(filts)):
         inds = np.where(lc['filter'] == filts[j])[0]
         if 'flux_error' in lc.keys():
-            t = lc['mjd'][inds],
+            t = lc['mjd'][inds]
             F, F_err = lc['flux'][inds], lc['flux_error'][inds]
             error = True
         else:
