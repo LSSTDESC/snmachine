@@ -50,7 +50,7 @@ def plot_lc(lc, show_legend=True):
     ----------
     lc : astropy.table.Table
         Light curve
-    show_legend : boolean, optional
+    show_legend : bool, optional
         Default True. If True shows the legend of the plot.
 
     """
@@ -544,7 +544,7 @@ class PlasticcData(EmptyDataset):
     metadata_file: str
         Filename of the pandas dataframe containing the metadata for the light
         curves.
-    mix : boolean, optional
+    mix : bool, optional
         Default False. If True, randomly permutes the objects when they are
         read in.
     """
@@ -620,12 +620,12 @@ class PlasticcData(EmptyDataset):
         Parameters
         ----------
         pandas_lc: Pandas DataFrame
-            Single object multi-band lightcurve.
+            Single object multi-band light curve.
 
         Returns
         -------
         lc: astropy.table.table
-            New single object lightcurve.
+            New single object light curve.
         """
         lc = Table.from_pandas(pandas_lc)
         lc[self.mjd_col] -= lc[self.mjd_col].min()
@@ -795,18 +795,88 @@ class PlasticcData(EmptyDataset):
         is_new_obj = np.in1d(current_objs, new_objs)
         self.metadata = self.metadata[is_new_obj]
 
-    def remap_filters(self, df):  # maybe not in snmachine (raise issue/channel)
-        """Function to remap integer filters to the corresponding lsst filters and
-        also to set filter name syntax to what snmachine already recognizes
+    def remap_filters(self, df):
+        """Remap LSST filters.
 
+        Function to remap integer filters to the corresponding LSST filters and
+        also to set filter name syntax to what snmachine already recognizes.
+
+        Parameters
+        ----------
         df: pandas.dataframe
-            Dataframe of lightcurve observations
+            Dataframe of light curve observations.
         """
         df.rename({'passband': 'filter'}, axis='columns', inplace=True)
         filter_replace = {0: 'lsstu', 1: 'lsstg', 2: 'lsstr', 3: 'lssti',
                           4: 'lsstz', 5: 'lssty'}
         df['filter'].replace(to_replace=filter_replace, inplace=True)
         return df
+
+    def remove_gaps(self, max_gap_length, verbose=False):
+        """Remove the first gap longer than the given threshold.
+
+        To remove all the gaps longer than `max_gap_length`, this function
+        must be called a few times.
+
+        Parameters
+        ----------
+        max_gap_length: float
+            Maximum duration of the gap to allowed in the light curves.
+        verbose: bool, optional
+            Default False. If True prints the ID of the longest event and its
+            length.
+        """
+        obj_names = self.object_names
+        time_transient = np.zeros(len(obj_names))
+        for i in range(len(obj_names)):
+            obj_data = self.data[obj_names[i]]
+            obs_time = obj_data['mjd']
+
+            # time gaps between consecutive observations
+            time_diff = obs_time[1:] - obs_time[:-1]
+
+            if np.max(time_diff) > max_gap_length:
+                index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
+                time_last_obs_before = obs_time[index_gap]
+                obs_time_detected = obs_time[obj_data['detected'] == 1]
+
+                # number of detections before and after the gap
+                number_detections_before = np.sum(
+                    obs_time_detected <= time_last_obs_before)
+                number_detections_after = np.sum(
+                    obs_time_detected > time_last_obs_before)
+
+                # more detections before the gap
+                if number_detections_before > number_detections_after:
+                    is_obs_transient = obs_time <= time_last_obs_before
+
+                # more detections after the gap
+                elif number_detections_before < number_detections_after:
+                    is_obs_transient = obs_time > time_last_obs_before
+
+                # same number of detections on before and after the gap
+                else:
+                    number_obs_before = np.sum(
+                        obs_time <= time_last_obs_before)
+                    number_obs_after = np.sum(
+                        obs_time > time_last_obs_before)
+                    # more observation before the gap
+                    if number_obs_before >= number_obs_after:
+                        is_obs_transient = obs_time <= time_last_obs_before
+                    # more observation after the gap
+                    else:
+                        is_obs_transient = obs_time > time_last_obs_before
+                obs_transient = obj_data[is_obs_transient]
+
+                # introduce uniformity: all transients start at time 0
+                obs_transient['mjd'] -= min(obs_transient['mjd'])
+
+                self.data[obj_names[i]] = obs_transient
+            time_transient[i] = obj_data['mjd'][-1] - obj_data['mjd'][0]
+        if verbose:
+            print(f'The longest event is '
+                  f'{obj_names[np.argmax(time_transient)]} '
+                  f'and its length is {np.max(time_transient):.2f} days.')
 
 
 class Dataset(EmptyDataset):
