@@ -33,8 +33,8 @@ from snmachine import chisq as cs
 colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
            'sdssi': '#d35c00', 'sdssz': 'k', 'desg': '#007718',
            'desr': '#b30100', 'desi': '#d35c00', 'desz': 'k',
-           'lsstu': '#9a0eea', 'lsstg': '#75bbfd', 'lsstr': '#76ff7b',
-           'lssti': '#fdde6c', 'lsstz': '#f97306', 'lssty': '#e50000'}
+           'lsstu': '#984ea3', 'lsstg': '#377eb8', 'lsstr': '#4daf4a',
+           'lssti': '#e3c530', 'lsstz': '#ff7f00', 'lssty': '#e41a1c'}
 
 sntypes = {1: 'Ia', 2: 'II', 21: 'IIn', 22: 'IIP', 23: 'IIL',
            3: 'Ibc', 32: 'Ib', 33: 'Ic', 66: 'other'}
@@ -42,7 +42,7 @@ markers = {'desg': '^', 'desr': 'o', 'desi': 's', 'desz': '*'}
 labels = {'desg': 'g', 'desr': 'r', 'desi': 'i', 'desz': 'z'}
 
 
-def plot_lc(lc):
+def plot_lc(lc, show_legend=True):
     """
     External function to plot light curves.
 
@@ -50,13 +50,16 @@ def plot_lc(lc):
     ----------
     lc : astropy.table.Table
         Light curve
+    show_legend : boolean, optional
+        Default True. If True shows the legend of the plot.
 
     """
     """
         @param fname The filename of the supernova (relative to data_root)
     """
 
-    # This selects the filters from the possible set that this object has measurements in and maintains the order
+    # This selects the filters from the possible set that this object has
+    # measurements in and maintains the order
     filts = np.unique(lc['filter'])
 
     # Keep track of the min and max values on the plot for resizing axes
@@ -64,9 +67,10 @@ def plot_lc(lc):
     max_x = -np.inf
     lines = []
     for j in range(len(filts)):
-        inds = np.where(lc['filter']==filts[j])[0]
+        inds = np.where(lc['filter'] == filts[j])[0]
         if 'flux_error' in lc.keys():
-            t, F, F_err = lc['mjd'][inds], lc['flux'][inds], lc['flux_error'][inds]
+            t = lc['mjd'][inds],
+            F, F_err = lc['flux'][inds], lc['flux_error'][inds]
             error = True
         else:
             t, F = lc['mjd'][inds], lc['flux'][inds]
@@ -78,12 +82,13 @@ def plot_lc(lc):
         else:
             mkr = 'o'
         if error:
-            l = plt.errorbar(tdelt, F, yerr=F_err,  marker=mkr,
-                             linestyle='none', color=colours[filts[j]],
-                             markersize=4)
+            lc_plot = plt.errorbar(tdelt, F, yerr=F_err, marker=mkr,
+                                   linestyle='none', color=colours[filts[j]],
+                                   markersize=4)
         else:
-            l = plt.plot(tdelt, F, lw=2, marker=mkr, color=colours[filts[j]])
-        lines.append(l)
+            lc_plot = plt.plot(tdelt, F, lw=2, marker=mkr,
+                               color=colours[filts[j]])
+        lines.append(lc_plot)
         if tdelt.min() < min_x:
             min_x = tdelt.min()
         if tdelt.max() > max_x:
@@ -91,15 +96,21 @@ def plot_lc(lc):
 
     ext = 0.05*(max_x-min_x)
     plt.xlim([min_x-ext, max_x+ext])
-    plt.xlabel('Time (days)',  fontsize=16)
-    plt.ylabel('Flux',  fontsize=16)
+    plt.xlabel('Time (days)', fontsize=16)
+    plt.ylabel('Flux', fontsize=16)
 
-    plt.legend(lines, filts, numpoints=1,loc='best')
+    if show_legend:
+        if len(lines) >= 6:
+            number_columns = 2
+        else:
+            number_columns = 2
+        plt.legend(lines, filts, ncol=number_columns, numpoints=1, loc='best')
 
 
 class EmptyDataset:
     """
-    Empty data set, to fill up with light curves (of format astropy.table.Table) in your memory.
+    Empty data set, to fill up with light curves
+    (of format astropy.table.Table) in your memory.
     """
 
     def __init__(self, folder=None, survey_name=None, filter_set=[]):
@@ -536,17 +547,13 @@ class PlasticcData(EmptyDataset):
     mix : boolean, optional
         Default False. If True, randomly permutes the objects when they are
         read in.
-    cut_non_detections : boolean, optional
-        Default False. If True, cuts out non detections, retaining only
-        detections.
     """
 
-    def __init__(self, folder, data_file, metadata_file, mix=False,
-                 cut_non_detections=False):
+    def __init__(self, folder, data_file, metadata_file, mix=False):
         super().__init__(folder, survey_name='lsst',
                          filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti',
                                      'lsstz', 'lssty'])
-        self.set_data(folder, data_file, cut_non_detections)
+        self.set_data(folder, data_file)
         self.set_metadata(folder, metadata_file)
         if mix is True:
             self.mix()
@@ -554,7 +561,7 @@ class PlasticcData(EmptyDataset):
         self.pb_wavelengths = {'lsstu': 3685, 'lsstg': 4802, 'lsstr': 6231,
                                'lssti': 7542, 'lsstz': 8690, 'lssty': 9736}
 
-    def set_data(self, folder, data_file, cut_non_detections=False):
+    def set_data(self, folder, data_file):
         """Reads in simulated data and saves it.
 
         The data is saved into the `data` method from EmptyDataset.
@@ -565,22 +572,22 @@ class PlasticcData(EmptyDataset):
             Folder where simulations are located.
         data_file : str or list-like
             .csv file of object light curves.
-        cut_non_detections : boolean, optional
-            Default False. If True, cuts out non detections, retaining only
-            detections.
         """
         print('Reading data...')
         time_start_reading = time.time()
         data = pd.read_csv(folder + '/' + data_file, sep=',')
-        if cut_non_detections:
-            data = data.loc[data.detected == 1]  # Update dataframe with only detected points
         data = self.remap_filters(df=data)
-        data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)  # snmachine and PLAsTiCC uses a different denomination
+
+        # snmachine and PLAsTiCC use a different denomination
+        data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)
+        data.rename({'detected_bool': 'detected'}, axis='columns',
+                    inplace=True)
+
         # Abstract column names from dataset
         for col in data.columns:
-            if re.search('mjd', col):  # catches the column that has `mjd` in its name
+            if re.search('mjd', col):  # catches the column that includes `mjd`
                 self.mjd_col = col
-            if re.search('id', col):  # catches the column that has `id` in its name
+            if re.search('id', col):  # catches the column that includes `id`
                 self.id_col = col
 
         number_invalid_objs = 0  # Some objects may have empty data
@@ -588,7 +595,8 @@ class PlasticcData(EmptyDataset):
         object_names = []
 
         for i, id in enumerate(data[self.id_col].unique()):
-            self.print_progress(i+1, number_objs)  # +1 because the order starts at 0 in python
+            self.print_progress(i+1, number_objs)  # +1 because the order
+                                                   # starts at 0 in python
             object_names.append(str(id))
             obj_lc = data.query('{0} == {1}'.format(self.id_col, id))
             lc = self.get_obj_lc_table_starting_from_mjd_zero(pandas_lc=obj_lc)
@@ -627,7 +635,8 @@ class PlasticcData(EmptyDataset):
         """Reads in simulated metadata and saves it.
 
         The data is saved into the `metadata` method from EmptyDataset and
-        into a dictonary associated with each `data` method (`.data[obj].meta`).
+        into a dictonary associated with each `data` method
+        (`.data[obj].meta`).
 
         Parameters
         ----------
@@ -641,13 +650,15 @@ class PlasticcData(EmptyDataset):
         metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',',
                                   index_col=self.id_col)
         metadata_pd.index = metadata_pd.index.astype(str)
-        metadata_pd['object_id'] = metadata_pd.index  # it is useful to be able to call this column by name
+        # add `object_id` column because it is useful to call it
+        metadata_pd['object_id'] = metadata_pd.index
         self.metadata = metadata_pd
 
-        # Everything bellow is to conform with `snmachine`
+        # Everything bellow is to conform with older versions of `snmachine`
         number_objs = len(self.object_names)
         for i, obj in enumerate(self.object_names):
-            self.print_progress(i+1, number_objs)  # +1 because the order starts at 0 in python
+            self.print_progress(i+1, number_objs)  # +1 because the order
+                                                   # starts at 0 in python
             self.set_inner_metadata(obj)
         print('Finished getting the metadata for {} objects.'.format(number_objs))
         self.print_time_difference(time_start_reading, time.time())
@@ -663,7 +674,9 @@ class PlasticcData(EmptyDataset):
         obj : str
             Name of the object we are working with.
         """
-        metadata = self.metadata.drop(columns=['object_id'])  # I don't want this duplicated
+        # remove duplicated entry
+        metadata = self.metadata.drop(columns=['object_id'])
+
         metadata_entry = metadata.loc[obj]
         columns = metadata_entry.keys()
         self.data[obj].meta['name'] = obj  # the name is the object id
