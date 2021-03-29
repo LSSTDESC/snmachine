@@ -1030,7 +1030,7 @@ class GPAugment(SNAugment):
                             'redshift 1 by calling `cosmology.distmod(z=1)`.')
 
     def compute_new_wavelength(self, z_ori, z_new, obj_data):
-        """Compute the new observations wavelenght at the original redshift.
+        """Compute the new observations wavelength at the original redshift.
 
         The observation flux is measured at specific wavelengths. This
         function calculates the wavelength of the new event as seen by an
@@ -1268,13 +1268,17 @@ class GPAugment(SNAugment):
     def _choose_target_observation_count(self, augmented_metadata):
         """Choose the target number of observations for a new augmented light
         curve.
+        TODO: avocado
+
         We use a functional form that roughly maps out the number of
         observations in the PLAsTiCC test dataset for each of the DDF and WFD
         samples.
+
         Parameters
         ----------
         augmented_metadata : dict
             The augmented metadata
+
         Returns
         -------
         target_number_obs : int
@@ -1302,11 +1306,13 @@ class GPAugment(SNAugment):
     def _simulate_light_curve_uncertainties(self, aug_obj_data,
                                             aug_obj_metadata):
         """Simulate the observation-related noise and detections for a light
-        curve.
+        curve. TODO: avocado
+
         For the PLAsTiCC dataset, we estimate the measurement uncertainties for
         each band with a lognormal distribution for both the WFD and DDF
         surveys. Those measurement uncertainties are added to the simulated
         observations.
+
         Parameters
         ----------
         observations : pandas.DataFrame
@@ -1315,6 +1321,7 @@ class GPAugment(SNAugment):
             that should be included in the final uncertainties.
         augmented_metadata : dict
             The augmented metadata
+
         Returns
         -------
         observations : pandas.DataFrame
@@ -1374,6 +1381,7 @@ class GPAugment(SNAugment):
         I'm not entirely sure why this isn't deterministic. The full light
         curve is considered to be detected if there are at least 2 individual
         detected observations.
+
         Parameters
         ==========
         observations : pandas.DataFrame
@@ -1381,6 +1389,7 @@ class GPAugment(SNAugment):
             Process.
         augmented_metadata : dict
             The augmented metadata
+
         Returns
         =======
         observations : pandas.DataFrame
@@ -1389,6 +1398,7 @@ class GPAugment(SNAugment):
             Whether or not the full light curve passes the detection thresholds
             used for the full sample.
         """
+        # TODO: avocado
         s2n = np.abs(aug_obj_data["flux"]) / aug_obj_data["flux_error"]
         #print(f'sum s2n = {np.sum(s2n)}')
         prob_detected = (erf((s2n - 5.5) / 2) + 1) / 2.0
