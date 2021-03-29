@@ -5,12 +5,25 @@ Module handling the data augmentation of a snmachine dataset.
 import copy
 import os
 import pickle
+import sys
 import time
 
 import george
 import numpy as np
 import pandas as pd
 import scipy.optimize as op
+
+# Solve imblearn problems introduced with sklearn version 0.24
+import sklearn
+import sklearn.neighbors, sklearn.utils, sklearn.ensemble
+from sklearn.utils._testing import ignore_warnings
+sys.modules['sklearn.neighbors.base'] = sklearn.neighbors._base
+sys.modules['sklearn.utils.safe_indexing'] = sklearn.utils._safe_indexing
+sys.modules['sklearn.utils.testing'] = sklearn.utils._testing
+sys.modules['sklearn.ensemble.bagging'] = sklearn.ensemble._bagging
+sys.modules['sklearn.ensemble.base'] = sklearn.ensemble._base
+sys.modules['sklearn.ensemble.forest'] = sklearn.ensemble._forest
+sys.modules['sklearn.metrics.classification'] = sklearn.metrics._classification
 
 from astropy.table import Table, vstack
 from astropy.cosmology import FlatLambdaCDM
