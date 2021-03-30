@@ -794,6 +794,9 @@ class PlasticcData(EmptyDataset):
         current_objs = self.metadata.object_id.astype(str)
         is_new_obj = np.in1d(current_objs, new_objs)
         self.metadata = self.metadata[is_new_obj]
+        
+        # Reorder the object names to match the metadata
+        self.object_names = self.metadata['object_id']
 
     def remap_filters(self, df):
         """Remap LSST filters.
