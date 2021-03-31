@@ -496,33 +496,33 @@ class GPAugment(SNAugment):
             Dataset to augment.
         path_saved_gps: str
             Path to the Gaussian Process files.
-        objs_number_to_aug: {`None`, 'all', dict}, optional
+        objs_number_to_aug : {`None`, 'all', dict}, optional
             Specify which events to augment and by how much. If `None`, the
             dataset it not augmented. If `all`, all the events are augmented
             10 times. If a dictionary is provided, it should be in the form of:
                 event: number of times to augment that event.
-        choose_z: {None, function}, optional
+        choose_z : {None, function}, optional
             Function used to choose the new true redshift of the augmented
             events. If `None`, the new events have the same redshift as the
             original event. If a function is provided, arguments can be
             included as `**kwargs`.
-        z_table: {None, pandas.DataFrame}, optional
-            Dataset of the spectroscopic and photometric redshift and
+        z_table : {None, pandas.DataFrame}, optional
+            Dataset of the spectroscopic and photometric redshift, and
             photometric redshift error of events. This table is used to
             generate the photometric redshift and respective error for the
             augmented events. If `None`, this table is generated from the
             events in the original dataset.
-        max_duration: {None, float}, optional
-            Maximum duration of the lightcurve. If `None`, it is set to the
-            maximum lenght of an event in `dataset`.
-        cosmology: astropy.cosmology.core.COSMOLOGY, optional
+        max_duration : {None, float}, optional
+            Maximum duration of the augmented light curves. If `None`, it is
+            set to the length of the longest event in `dataset`.
+        cosmology : astropy.cosmology.core.COSMOLOGY, optional
             Cosmology from `astropy` with the cosmologic parameters already
             defined. By default it assumes Flat LambdaCDM with parameters
             `H0 = 70`, `Om0 = 0.3` and `T_cmb0 = 2.725`.
-        random_seed: int, optional
+        random_seed : int, optional
             Random seed used. Saving this seed allows reproducible results.
             If given, it must be between 0 and 2**32 - 1.
-        **kwargs: dict, optional
+        **kwargs : dict, optional
             Optional keywords to pass arguments into `choose_z` and into
             `snamchine.gps.compute_gps`.
         """
@@ -1191,7 +1191,7 @@ class GPAugment(SNAugment):
 
     @property
     def objs_number_to_aug(self):
-        """Return the number and which events used to augment.
+        """Return which events to augment and by how much.
 
         Returns
         -------
@@ -1203,7 +1203,7 @@ class GPAugment(SNAugment):
 
     @objs_number_to_aug.setter
     def objs_number_to_aug(self, value):
-        """Set the number and which events used to augment.
+        """Set which events to augment and by how much.
 
         Parameters
         ----------
