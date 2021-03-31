@@ -39,17 +39,74 @@ from snmachine import gps, snfeatures
 
 # Functions to choose spectroscopic redshift for `GPAugment`.
 # They are inputed as the parameter `choose_z` and their arguments as `*kwargs`
-def choose_new_z_spec(z_ori, pb_wavelengths):
-    '''Choose a new spec-z for the event based on the original spec-z'''
+def choose_z_wfd(z_ori, pb_wavelengths, random_state):
+    """Choose the new spectroscopic redshift for an WFD augmented event.
 
-    z_min = max(10**(-6), (1 + z_ori) * (2 - pb_wavelengths['lsstg']
-                                         / pb_wavelengths['lsstu']) - 1)
-    z_max = ((1 + z_ori)
-             * (2 - pb_wavelengths['lsstz']/pb_wavelengths['lssty']) - 1)
-    log_z_star = np.random.uniform(low=np.log(z_min), high=np.log(z_max))
+    The new spectroscopic redshift is based on the redhsift of the original
+    event.
+    This target distribution of the redshift is class-agnostic and modeled
+    after the PLAsTiCC supernovae simulated in the Wide-Fast-Deep Survey.
+
+    Parameters
+    ----------
+    z_ori: float
+        Redshift of the original event.
+    pb_wavelengths: dict
+        Mapping between the passbands name and central wavelength.
+    random_state : numpy.random.mtrand.RandomState
+        Container for the slow Mersenne Twister pseudo-random number generator.
+        It allows reproducible results.
+
+    Returns
+    -------
+    z_new: float
+        Redshift of the new event.
+    """
+    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
+                                         / pb_wavelengths['lssty'])**(-1) - 1)
+    z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg']
+                            / pb_wavelengths['lsstu'])**(-1) - 1)
+
+    log_z_star = random_state.triangular(left=np.log(z_min),
+                                         mode=np.log(z_min),
+                                         right=np.log(z_max))
     z_new = - np.exp(log_z_star) + z_min + z_max
 
-    assert (z_new > z_min) and (z_new < z_max)
+    return z_new
+
+
+def choose_z_ddf(z_ori, pb_wavelengths, random_state):
+    """Choose the new spectroscopic redshift for an DDF augmented event.
+
+    The new spectroscopic redshift is based on the redhsift of the original
+    event.
+    This target distribution of the redshift is class-agnostic and modeled
+    after the PLAsTiCC supernovae simulated in the Deep Drilling Field Survey.
+
+    Parameters
+    ----------
+    z_ori: float
+        Redshift of the original event.
+    pb_wavelengths: dict
+        Mapping between the passbands name and central wavelength.
+    random_state : numpy.random.mtrand.RandomState
+        Container for the slow Mersenne Twister pseudo-random number generator.
+        It allows reproducible results.
+
+    Returns
+    -------
+    z_new: float
+        Redshift of the new event.
+    """
+    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
+                                         / pb_wavelengths['lssty'])**(-1) - 1)
+    z_max = 1.4*((1 + z_ori) * (2 - pb_wavelengths['lsstg']
+                                / pb_wavelengths['lsstu'])**(-1) - 1)
+
+    log_z_star = random_state.triangular(left=np.log(z_min),
+                                         mode=np.log(z_min),
+                                         right=np.log(z_max))
+    z_new = - np.exp(log_z_star) + z_min + z_max
 
     return z_new
 
@@ -305,18 +362,19 @@ class SNAugment:
 
     @random_seed.setter
     def random_seed(self, value):
-            """Set the seed to the random state used to augment.
+        """Set the seed to the random state used to augment.
 
-            It also initilizes the random state generator used to augment.
+        It also initilizes the random state generator used to augment.
 
-            Parameters
-            ----------
-            value: int, optional
-                Random seed used. Saving this seed allows reproducible results.
-                If given, it must be between 0 and 2**32 - 1.
-            """
-            self._rs = np.random.RandomState(value)  # initialise the random state
-            self._random_seed = value
+        Parameters
+        ----------
+        value: int, optional
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        """
+        # Initialise the random state
+        self._rs = np.random.RandomState(value)
+        self._random_seed = value
 
 
 class NNAugment(SNAugment):
@@ -884,8 +942,9 @@ class GPAugment(SNAugment):
             If none of the generated `z_photo` or `z_photo_error` are positive.
         """
         z_table = self.z_table
-        number_tries = 100  # # of tries to get positive z values
-        rd_zs_triple = z_table.sample(random_state=self._rs, n=number_tries)
+        number_tries = 100  # number of tries to get positive z values
+        rd_zs_triple = z_table.sample(random_state=self._rs, n=number_tries,
+                                      replace=True)
         zs_diff = rd_zs_triple['z_diff']
         zs_photo = z_spec + (self._rs.choice([-1, 1], size=number_tries)
                              * zs_diff)
@@ -937,32 +996,32 @@ class GPAugment(SNAugment):
 
     @property
     def max_duration(self):
-        """Return the maximum duration any lightcurve can have.
+        """Return the maximum duration any light curve can have.
 
         All the events in the original dataset must be shorter than this value.
 
         Returns
         -------
         float
-            Maximum duration any lightcurve can have.
+            Maximum duration any light curve can have.
         """
         return self._max_duration
 
     @max_duration.setter
     def max_duration(self, value):
-        """Set the maximum duration any lightcurve can have.
+        """Set the maximum duration any light curve can have.
 
         Parameters
         ----------
         value: {None, float}, optional
-            Maximum duration of the lightcurve. If `None`, it is set to the
+            Maximum duration of the light curve. If `None`, it is set to the
             maximum lenght of an event in `dataset`.
 
         Raises
         ------
         ValueError
             If any event in the original dataset is longer than the maximum
-            duration any lightcurve can have.
+            duration any light curve can have.
         """
         max_duration_ori = self.dataset.get_max_length()
         if value is None:
@@ -970,7 +1029,7 @@ class GPAugment(SNAugment):
         elif max_duration_ori > value:
             raise ValueError('All the events in the original dataset must be '
                              'shorter than the required maximum duration any '
-                             'lightcurve. At the moment the maximum duration '
+                             'light curve. At the moment the maximum duration '
                              'of an event is {:.0f} days.'
                              ''.format(max_duration_ori))
         else:
@@ -990,7 +1049,7 @@ class GPAugment(SNAugment):
         obj_data: pandas.DataFrame
             Observations of an event.
         max_duration: float
-            Maximum duration of the lightcurve.
+            Maximum duration of the light curve.
 
         Returns
         -------
