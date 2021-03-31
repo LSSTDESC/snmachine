@@ -49,9 +49,9 @@ def choose_z_wfd(z_ori, pb_wavelengths, random_state):
 
     Parameters
     ----------
-    z_ori: float
+    z_ori : float
         Redshift of the original event.
-    pb_wavelengths: dict
+    pb_wavelengths : dict
         Mapping between the passbands name and central wavelength.
     random_state : numpy.random.mtrand.RandomState
         Container for the slow Mersenne Twister pseudo-random number generator.
@@ -59,7 +59,7 @@ def choose_z_wfd(z_ori, pb_wavelengths, random_state):
 
     Returns
     -------
-    z_new: float
+    z_new : float
         Redshift of the new event.
     """
     z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
@@ -85,9 +85,9 @@ def choose_z_ddf(z_ori, pb_wavelengths, random_state):
 
     Parameters
     ----------
-    z_ori: float
+    z_ori : float
         Redshift of the original event.
-    pb_wavelengths: dict
+    pb_wavelengths : dict
         Mapping between the passbands name and central wavelength.
     random_state : numpy.random.mtrand.RandomState
         Container for the slow Mersenne Twister pseudo-random number generator.
@@ -709,77 +709,104 @@ class GPAugment(SNAugment):
                     aug_objs_metadata.append(aug_obj_metadata)
         return aug_objs_data, aug_objs_metadata
 
-    def _choose_obs_times(self, aug_obj_metadata, obj_data, z_ori,
-                          max_time_shift=0):
-        """TODO: avocado
+    def _choose_obs_times(self, aug_obj_metadata, obj_data, z_ori):
+        """Choose the times at which mock observations will be made.
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
+        z_ori : float
+            Redshift of the original event.
+
+        Returns
+        -------
+        aug_obj_data : pandas.DataFrame
+            Table containing the times and passbands of the augmented event
+            observations. The other columns contain the information relative
+            to the original event.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion `Augmentor._choose_sampling_times` of
+        `avocado/augment.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
         """
         z_aug = aug_obj_metadata['hostgal_specz']
-        # Figure out the target number of observations to have for the new
-        # lightcurve. #TODO: avocado
-        target_number_obs = self._choose_target_observation_count(
-            aug_obj_metadata)
 
+        # Generate a copy of the original event
         aug_obj_data = obj_data.copy()
         aug_obj_data['object_id'] = aug_obj_metadata['object_id']
         aug_obj_data['ref_mjd'] = aug_obj_data['mjd'].copy()
 
-        # Adjust the observation times
+        # Stretch the observed epochs of the original event to account for the
+        # time dilation due to the difference between the original and
+        # augmented redshifts
         z_scale = (1 + z_ori) / (1 + z_aug)
-        # Shift such that the time of the maximum flux is invariant. Generally,
-        # the interesting part of the LC remains inside the viewing windows.
+        # Keep the time of the maximum flux invariant so that the interesting
+        # part of the light curve remains inside the observing window.
         time_peak = obj_data['mjd'].iloc[np.argmax(obj_data['flux'].values)]
         aug_obj_data['mjd'] = time_peak + z_scale**-1 * (
             aug_obj_data['ref_mjd'] - time_peak)
-        aug_obj_data['mjd'] += self._rs.uniform(-max_time_shift,
-                                                max_time_shift)
-
+        # Removed any observations outside the observing window
         is_not_seen = aug_obj_data['mjd'] < 0
         aug_obj_data = aug_obj_data[~is_not_seen]  # before 0
         aug_obj_data = self.trim_obj(aug_obj_data, self.max_duration)  # after
 
-        # Make sure that we have some observations left at this point. If not,
-        # return an empty observations list. TODO: avocado
+        # Ensure the augmented event still has observations. If not, stop this
+        # augmentation
         if len(aug_obj_data) == 0:
             print('obj {} failed.'.format(aug_obj_metadata['object_id']))
             return None
 
-        # At high redshifts, we need to fill in the light curve to account for
-        # the fact that there is a lower observation density compared to lower
-        # redshifts. TODO: avocado
+        # Randomly choose a target number of observations for the new event.
+        target_number_obs = self._choose_target_observation_count(
+            aug_obj_metadata)
+
+        # Events shifted to higher redshifts have a lower density of
+        # observations than the events observed at those redshifts. In order
+        # to account for this, we add more observations to these higher
+        # redshift events.
         num_fill = int(target_number_obs * (z_scale**-1 - 1))
         if num_fill > 0:
-            # At the most, create 50% more data; It prevents aug. events with
-            # many observations that provide no extra information
+            # At the most, create 50% more data; It prevents augmented events
+            # with many observations that provide no extra information
             if num_fill > len(obj_data)/2:
                 num_fill = int(len(obj_data)/2)
             new_indices = self._rs.choice(aug_obj_data.index, num_fill,
                                           replace=True)
             new_rows = aug_obj_data.loc[new_indices]
 
-            # Choose new bands randomly.
+            # Choose new passbands randomly
             obj_pbs = np.unique(aug_obj_data['filter'])
             new_rows['filter'] = self._rs.choice(obj_pbs, num_fill,
                                                  replace=True)
-
             aug_obj_data = pd.concat([aug_obj_data, new_rows])
-            # reorder observations in chronological order
+
+            # Reorder observations in chronological order
             aug_obj_data.sort_values(by=['mjd'], ignore_index=True,
                                      inplace=True)
 
-        # Drop back down to the target number of observations. Having too few
-        # observations is fine, but having too many is not. We always drop at
-        # least 10% of observations to get some shakeup of the light curve.
-        # TODO: avocado
+        # If the augmented event has more observations than the target number
+        # of observations, randomly drop the difference. In any case, to
+        # introduce additional variability, randomly drop at least 10% of the
+        # synthetic observations.
         drop_fraction = 0.1
-        number_drop = int(max(
-            len(aug_obj_data) - target_number_obs,
-            drop_fraction * len(aug_obj_data)))
+        number_drop = int(max(len(aug_obj_data) - target_number_obs,
+                              drop_fraction * len(aug_obj_data)))
         drop_indices = self._rs.choice(aug_obj_data.index, number_drop,
                                        replace=False)
         aug_obj_data = aug_obj_data.drop(drop_indices).copy()
 
-        # First observation at t=0 because all test set LCs have their first
-        # observation at t=0, which makes the augmentation more representative
+        # For consistency between all datasets, the first observation is at t=0
         aug_obj_data['mjd'] -= np.min(aug_obj_data['mjd'])
 
         aug_obj_data.reset_index(inplace=True, drop=True)
@@ -793,16 +820,16 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        aug_obj_metadata: pandas.DataFrame
+        aug_obj_metadata : pandas.DataFrame
             Metadata of the augmented event.
-        obj_data: pandas.DataFrame
+        obj_data : pandas.DataFrame
             Observations of the original event.
-        z_ori: float
+        z_ori : float
             Redshift of the original event.
 
         Returns
         -------
-        aug_obj_data: pandas.DataFrame
+        aug_obj_data : pandas.DataFrame
             Observations of the augmented event.
         """
         z_aug = aug_obj_metadata['hostgal_specz']
