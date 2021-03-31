@@ -574,7 +574,7 @@ class PlasticcData(EmptyDataset):
         data = pd.read_csv(folder + '/' + data_file, sep=',')
         if cut_non_detections:
             data = data.loc[data.detected == 1]  # Update dataframe with only detected points
-        data = self.remap_filters(df=data)
+        data = self._remap_filters(df=data)
         data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)  # snmachine and PLAsTiCC uses a different denomination
         # Abstract column names from dataset
         for col in data.columns:
@@ -611,7 +611,7 @@ class PlasticcData(EmptyDataset):
 
         Parameters
         ----------
-        pandas_lc: Pandas DataFrame
+        pandas_lc: pandas.core.frame.DataFrame
             Single object multi-band lightcurve.
 
         Returns
@@ -782,12 +782,24 @@ class PlasticcData(EmptyDataset):
         is_new_obj = np.in1d(current_objs, new_objs)
         self.metadata = self.metadata[is_new_obj]
 
-    def remap_filters(self, df):  # maybe not in snmachine (raise issue/channel)
-        """Function to remap integer filters to the corresponding lsst filters and
-        also to set filter name syntax to what snmachine already recognizes
+    def _remap_filters(self, df):
+        """Remaps the dataset filters to human-understandable values.
 
-        df: pandas.dataframe
-            Dataframe of lightcurve observations
+        Function to remap integer filters to the corresponding LSST filters.
+        For internal `snmachine` consistency, this function also changes the
+        column name `passand` to `filter`.
+
+        Parameters
+        ----------
+        df : pandas.core.frame.DataFrame
+            Light curve observations with numeric filters/passbands between 0
+            and 5.
+
+        Returns
+        -------
+        df : pandas.core.frame.DataFrame
+            Light curve observations with the LSST filters: `lsstu`, `lsstg`,
+            `lsstr`, `lssti`, `lsstz`, `lssty`.
         """
         df.rename({'passband': 'filter'}, axis='columns', inplace=True)
         filter_replace = {0: 'lsstu', 1: 'lsstg', 2: 'lsstr', 3: 'lssti',
