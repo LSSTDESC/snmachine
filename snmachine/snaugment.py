@@ -583,6 +583,16 @@ class GPAugment(SNAugment):
         **kwargs : dict, optional
             Optional keywords to pass arguments into `choose_z` and into
             `snamchine.gps.compute_gps`.
+
+        Notes
+        -----
+        This augmentation is based on [1]_.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
         """
         self._dataset = dataset
         self._aug_method = 'GP augmentation'
@@ -633,10 +643,10 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        aug_objs_data: list of pandas.DataFrame
+        aug_objs_data : list of pandas.DataFrame
             List containing the observations of each augmentation of each
             event.
-        aug_objs_metadata: list of pandas.DataFrame
+        aug_objs_metadata : list of pandas.DataFrame
             Ordered list containing the metadata of each augmentation of each
             event.
         """
@@ -674,15 +684,15 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        obj: str
+        obj : str
             Name of the original event.
 
         Returns
         -------
-        aug_objs_data: list of pandas.DataFrame
+        aug_objs_data : list of pandas.DataFrame
             Ordered list containing the observations of each augmentation of
             `obj`.
-        aug_objs_metadata: list of pandas.DataFrame
+        aug_objs_metadata : list of pandas.DataFrame
             Ordered list containing the metadata of each augmentation of `obj`.
         """
         obj_data = self.dataset.data[obj].to_pandas()
@@ -875,12 +885,12 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        obj: str
+        obj : str
             Name of the original event.
 
         Returns
         -------
-        gp_predict: functools.partial with bound method GP.predict
+        gp_predict : functools.partial with bound method GP.predict
             Function to predict the Gaussian Process flux and uncertainty at
             any time and wavelength.
         """
@@ -903,7 +913,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        aug_obj: str
+        aug_obj : str
             Name of the augmented event in the form
                 `[original event name]_[number of the augmentation]`.
         obj_metadata: pandas.DataFrame
@@ -911,7 +921,7 @@ class GPAugment(SNAugment):
 
         Returns
         -------
-        aug_obj_metadata: pandas.DataFrame
+        aug_obj_metadata : pandas.DataFrame
             Metadata of the augmented event.
         """
         aug_obj_metadata = obj_metadata.copy()
@@ -951,16 +961,16 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        z_spec: float
+        z_spec : float
             Spectroscopic redshift of the augmented event.
         i: int, optional
             Number of the current iteration. This acts as a stopping criteria.
 
         Returns
         -------
-        z_photo: float
+        z_photo : float
             Photometric redshift of the augmented event.
-        z_photo_error: float
+        z_photo_error : float
             Photometric redshift error of the augmented event.
 
         Raises
@@ -993,7 +1003,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        path_to_save_gps: str
+        path_to_save_gps : str
             Path where to save the new Gaussian Processes outputs.
         """
         # Confirm the data was augmented and the path to save the GPs exist
@@ -1040,7 +1050,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        value: {None, float}, optional
+        value : {None, float}, optional
             Maximum duration of the light curve. If `None`, it is set to the
             maximum lenght of an event in `dataset`.
 
@@ -1073,14 +1083,14 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        obj_data: pandas.DataFrame
+        obj_data : pandas.DataFrame
             Observations of an event.
-        max_duration: float
+        max_duration : float
             Maximum duration of the light curve.
 
         Returns
         -------
-        obj_data: pandas.DataFrame
+        obj_data : pandas.DataFrame
             Trimmed observations of an event.
         """
         obj_duration = np.max(obj_data['mjd'])
@@ -1137,16 +1147,16 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        z_ori: float
+        z_ori : float
             Redshift of the original event.
-        z_new: float
+        z_new : float
             Redshift of the new event.
-        obj_data: pandas.DataFrame
+        obj_data : pandas.DataFrame
             Observations of the original event.
 
         Returns
         -------
-        wavelength_new: list-like
+        wavelength_new : list-like
             Wavelength of the new observations at redshift `z_ori`.
         """
         z_scale = (1 + z_ori) / (1 + z_new)
@@ -1196,7 +1206,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        value: {None, pandas.DataFrame}, optional
+        value : {None, pandas.DataFrame}, optional
             Dataset of the spectroscopic and photometric redshift and
             photometric redshift error of events. This table is used to
             generate the photometric redshift and respective error for the
@@ -1219,7 +1229,7 @@ class GPAugment(SNAugment):
 
         Returns
         -------
-        z_table: pandas.DataFrame
+        z_table : pandas.DataFrame
             Table with `z_diff` and `hostgal_photoz_err`
 
         Raises
@@ -1250,7 +1260,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        path_to_test: str
+        path_to_test : str
             Path to test the existence.
 
         Raises
@@ -1293,7 +1303,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        value: {`None`, 'all', dict}, optional
+        value : {`None`, 'all', dict}, optional
             Specify which events to augment and by how much. If `None`, the
             dataset it not augmented. If `all`, all the events are augmented
             10 times. If a dictionary is provided, it should be in the form of:
@@ -1309,7 +1319,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        objs_number_to_aug: {`None`, 'all', dict}, optional
+        objs_number_to_aug : {`None`, 'all', dict}, optional
             Specify which events to augment and by how much. If `None`, the
             dataset it not augmented. If `all`, all the events are augmented
             10 times. If a dictionary is provided, it should be in the form of:
@@ -1317,7 +1327,7 @@ class GPAugment(SNAugment):
 
         Returns
         -------
-        objs_number_to_aug: dict
+        objs_number_to_aug : dict
             The events used to augment and how many of each in the form of:
                 event: number of times to augment that event.
 
