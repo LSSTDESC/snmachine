@@ -867,8 +867,9 @@ class GPAugment(SNAugment):
 
         # Add in light curve noise. This is survey specific and must be
         # implemented in subclasses.
-        aug_obj_data = self._simulate_light_curve_uncertainties(
-            aug_obj_data, aug_obj_metadata)
+        # TODO: avocado
+        aug_obj_data = self._compute_obs_uncertainty(aug_obj_data,
+                                                     aug_obj_metadata)
 
         # Simulate detection
         aug_obj_data, pass_detection = self._simulate_detection(
@@ -1373,10 +1374,10 @@ class GPAugment(SNAugment):
         return np.array(list(objs_number_to_aug.keys()))
 
     def _choose_target_number_obs(self, aug_obj_metadata):
-        """Randomly choose the target number of observations.
+        """Randomly choose the target number of light curve observations.
 
-        Using Gaussian mixture models, we modeled the number of observations
-        in the test set events simulated on the Wide-Fast-Deep (WFD) and Deep
+        Using Gaussian mixture models, we model the number of observations in
+        the test set events simulated on the Wide-Fast-Deep (WFD) and Deep
         Drilling Field (DDF) surveys. Each survey was modeled individually.
 
         Parameters
@@ -1394,7 +1395,7 @@ class GPAugment(SNAugment):
         This function is adapted from the code developed in [1]_. In
         particular, the funtion
         `PlasticcAugmentor._choose_target_observation_count` of
-        `avocado/augment.py`.
+        `avocado/plasticc.py`.
 
         References
         ----------
@@ -1402,7 +1403,7 @@ class GPAugment(SNAugment):
         astronomical transients with gaussian process augmentation." The
         Astronomical Journal 158.6 (2019): 257.
         """
-        if aug_obj_metadata["ddf"]:
+        if aug_obj_metadata["ddf"]:  # DDF event
             # Estimate the distribution of number of observations in the
             # DDF regions with a mixture of 2 gaussian distributions.
             gauss_choice = self._rs.choice(2, p=[0.34393457, 0.65606543])
@@ -1421,79 +1422,85 @@ class GPAugment(SNAugment):
 
         return target_number_obs
 
-    # avocado functions
-    def _simulate_light_curve_uncertainties(self, aug_obj_data,
-                                            aug_obj_metadata):
-        """Simulate the observation-related noise and detections for a light
-        curve. TODO: avocado
+    def _compute_obs_uncertainty(self, aug_obj_data, aug_obj_metadata):
+        """Compute and add uncertainty to the light curve observations.
 
-        For the PLAsTiCC dataset, we estimate the measurement uncertainties for
-        each band with a lognormal distribution for both the WFD and DDF
-        surveys. Those measurement uncertainties are added to the simulated
-        observations.
+        Following [1]_, we estimate the flux uncertainties for each
+        passband with a lognormal distribution for the Wide-Fast-Deep (WFD)
+        and Deep Drilling Field (DDF) surveys. Each passband in each survey
+        was modeled individually with test set events.
+        The flux uncertanty of the augmented events is the combination of the
+        flux uncertainty of the augmented events predicted by the GP in
+        quadrature with a value drawn from the flux uncertainty distribution
+        described above.
 
         Parameters
         ----------
-        observations : pandas.DataFrame
-            The augmented observations that have been sampled from a Gaussian
-            Process. These observations have model flux uncertainties listed
-            that should be included in the final uncertainties.
-        augmented_metadata : dict
-            The augmented metadata
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
 
         Returns
         -------
-        observations : pandas.DataFrame
-            The observations with uncertainties added.
+        aug_obj_data : pandas.DataFrame
+            Observations of the augmented event.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion
+        `PlasticcAugmentor._simulate_light_curve_uncertainties` of
+        `avocado/plasticc.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
         """
-        # Make a copy so that we don't modify the original array.
+        # Make a copy of the original data to avoid modifying it
         aug_obj_data = aug_obj_data.copy()
 
+        # Skip this function if there are no observations
         if len(aug_obj_data) == 0:
-            # No data, skip
             return aug_obj_data
 
-        if aug_obj_metadata["ddf"]:
-            band_noises = {
-                "lsstu": (0.68, 0.26),
-                "lsstg": (0.25, 0.50),
-                "lsstr": (0.16, 0.36),
-                "lssti": (0.53, 0.27),
-                "lsstz": (0.88, 0.22),
-                "lssty": (1.76, 0.23),
-            }
-        else:
-            band_noises = {
-                "lsstu": (2.34, 0.43),
-                "lsstg": (0.94, 0.41),
-                "lsstr": (1.30, 0.41),
-                "lssti": (1.82, 0.42),
-                "lsstz": (2.56, 0.36),
-                "lssty": (3.33, 0.37),
-            }
+        # The uncertainty levels of the observations in each passband can be
+        # modeled with a lognormal distribution. See [1].
+        # Lognormal parameters
+        if aug_obj_metadata["ddf"]:  # DDF event
+            pb_noises = {"lsstu": (0.68, 0.26), "lsstg": (0.25, 0.50),
+                         "lsstr": (0.16, 0.36), "lssti": (0.53, 0.27),
+                         "lsstz": (0.88, 0.22), "lssty": (1.76, 0.23)}
+        else:  # WFD event
+            pb_noises = {"lsstu": (2.34, 0.43), "lsstg": (0.94, 0.41),
+                         "lsstr": (1.30, 0.41), "lssti": (1.82, 0.42),
+                         "lsstz": (2.56, 0.36), "lssty": (3.33, 0.37)}
 
-        # Calculate the new noise levels using a lognormal distribution for
-        # each band.
+        # Calculate the new uncertainty levels for each passband
         lognormal_parameters = []
         for pb in aug_obj_data['filter']:
             try:
-                lognormal_parameters.append(band_noises[pb])
+                lognormal_parameters.append(pb_noises[pb])
             except KeyError:
-                raise ValueError(
-                    'Noise properties of passband {} not known, add them in '
-                    'PlasticcAugmentor._simulate_light_curve_uncertainties.'
-                    ''.format(pb))
+                raise ValueError(f'The noise properties of the passband {pb} '
+                                 f'are not known. Add them to '
+                                 f'`GPAugment._compute_obs_uncertainty`.')
         lognormal_parameters = np.array(lognormal_parameters)
 
+        # Combine the flux uncertainty of the augmented events predicted by
+        # the GP in quadrature with a value drawn from the flux uncertainty
+        # distribution of the test set
         add_stds = self._rs.lognormal(
             lognormal_parameters[:, 0], lognormal_parameters[:, 1])
-
         noise_add = self._rs.normal(loc=0.0, scale=add_stds)
-        aug_obj_data['flux'] += noise_add
+        aug_obj_data['flux'] += noise_add  # add noise to increase variability
         aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
                                              + add_stds ** 2)
         return aug_obj_data
 
+    # avocado functions
     def _simulate_detection(self, aug_obj_data, aug_obj_metadata):
         """Simulate the detection process for a light curve.
         We model the PLAsTiCC detection probabilities with an error function.
@@ -1519,10 +1526,8 @@ class GPAugment(SNAugment):
         """
         # TODO: avocado
         s2n = np.abs(aug_obj_data["flux"]) / aug_obj_data["flux_error"]
-        #print(f'sum s2n = {np.sum(s2n)}')
         prob_detected = (erf((s2n - 5.5) / 2) + 1) / 2.0
         aug_obj_data["detected"] = self._rs.rand(len(s2n)) < prob_detected
-        #print(f'sum dect = {np.sum(aug_obj_data["detected"])}')
 
         pass_detection = np.sum(aug_obj_data["detected"]) >= 2
 
