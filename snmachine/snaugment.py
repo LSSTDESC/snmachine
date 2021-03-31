@@ -778,8 +778,7 @@ class GPAugment(SNAugment):
             return None
 
         # Randomly choose a target number of observations for the new event.
-        target_number_obs = self._choose_target_observation_count(
-            aug_obj_metadata)
+        target_number_obs = self._choose_target_number_obs(aug_obj_metadata)
 
         # Events shifted to higher redshifts have a lower density of
         # observations than the events observed at those redshifts. In order
@@ -1373,28 +1372,38 @@ class GPAugment(SNAugment):
         objs_number_to_aug = self.objs_number_to_aug
         return np.array(list(objs_number_to_aug.keys()))
 
-    # avocado functions
-    def _choose_target_observation_count(self, augmented_metadata):
-        """Choose the target number of observations for a new augmented light
-        curve.
-        TODO: avocado
+    def _choose_target_number_obs(self, aug_obj_metadata):
+        """Randomly choose the target number of observations.
 
-        We use a functional form that roughly maps out the number of
-        observations in the PLAsTiCC test dataset for each of the DDF and WFD
-        samples.
+        Using Gaussian mixture models, we modeled the number of observations
+        in the test set events simulated on the Wide-Fast-Deep (WFD) and Deep
+        Drilling Field (DDF) surveys. Each survey was modeled individually.
 
         Parameters
         ----------
-        augmented_metadata : dict
-            The augmented metadata
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
 
         Returns
         -------
         target_number_obs : int
             The target number of observations in the new light curve.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion
+        `PlasticcAugmentor._choose_target_observation_count` of
+        `avocado/augment.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
         """
-        if augmented_metadata["ddf"]:
-            # I estimate the distribution of number of observations in the
+        if aug_obj_metadata["ddf"]:
+            # Estimate the distribution of number of observations in the
             # DDF regions with a mixture of 2 gaussian distributions.
             gauss_choice = self._rs.choice(2, p=[0.34393457, 0.65606543])
             if gauss_choice == 0:
@@ -1412,6 +1421,7 @@ class GPAugment(SNAugment):
 
         return target_number_obs
 
+    # avocado functions
     def _simulate_light_curve_uncertainties(self, aug_obj_data,
                                             aug_obj_metadata):
         """Simulate the observation-related noise and detections for a light
