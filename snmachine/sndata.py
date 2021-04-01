@@ -650,6 +650,7 @@ class PlasticcData(EmptyDataset):
         metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',',
                                   index_col=self.id_col)
         metadata_pd.index = metadata_pd.index.astype(str)
+
         # add `object_id` column because it is useful to call it
         metadata_pd['object_id'] = metadata_pd.index
         self.metadata = metadata_pd

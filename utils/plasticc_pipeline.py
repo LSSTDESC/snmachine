@@ -1,10 +1,11 @@
 """
-Machine learning pipeline for the PLAsTiCC competition using snmachine
-codebase.
+Useful functions for the Machine learning pipeline for classifying the
+PLAsTiCC dataset using snmachine.
 """
 
 import multiprocessing
 import os
+import re
 import subprocess
 import sys
 import warnings
@@ -12,24 +13,23 @@ import warnings
 import numpy as np
 import pandas as pd
 import yaml
-import re
 try:
     import cPickle as pickle
 except ModuleNotFoundError:
     import pickle
 try:
-    from snmachine import snfeatures, sndata, snaugment, gps
+    from snmachine import gps, snaugment, sndata, snfeatures
 except ImportError:
     print("Unable to import snmachine. Check environment set correctly")
 
-from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
-from astropy.table import Table
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from imblearn.metrics import classification_report_imbalanced
-from imblearn.pipeline import make_pipeline
-from imblearn.over_sampling import SMOTE
 from argparse import ArgumentParser
+from astropy.table import Table
+#from imblearn.metrics import classification_report_imbalanced  # not used at the moment
+#from imblearn.over_sampling import SMOTE  # not used at the moment
+#from imblearn.pipeline import make_pipeline  # not used at the moment
+from plasticc_utils import plasticc_log_loss, plot_confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
 warnings.filterwarnings("ignore")
 
@@ -74,7 +74,7 @@ def get_timestamp():
 
 
 def create_folder_structure(analyses_directory, analysis_name):
-    """Make directories that will be used for analysis
+    """Make directories that will be used for analysis.
 
     Parameters
     ----------
@@ -179,7 +179,8 @@ def get_directories(analyses_directory, analysis_name):
     directories = {"analysis_directory": analysis_directory,
                    "features_directory": features_directory,
                    "classifications_directory": classifications_directory,
-                   "intermediate_files_directory": intermediate_files_directory,
+                   "intermediate_files_directory":
+                   intermediate_files_directory,
                    "plots_directory": plots_directory}
 
     return directories
@@ -221,7 +222,7 @@ def load_configuration_file(path_to_configuration_file):
 
 
 def save_configuration_file(params, analysis_directory):
-    """ Make a copy of the configuration file that has been used inside the
+    """Make a copy of the configuration file that has been used inside the
     analysis directory
 
     Parameters
@@ -261,8 +262,10 @@ def save_configuration_file(params, analysis_directory):
         yaml.dump(params, config, default_flow_style=False)
 
 
-def load_training_data(data_path):
-    """ Load from disk the training data one will use for this analysis
+def load_dataset(data_path):
+    """Load from disk the dataset to use.
+
+    This dataset was previously saved as a snmachine.PlasticcData instance.
 
     Parameters
     ----------
@@ -272,45 +275,44 @@ def load_training_data(data_path):
 
     Returns
     -------
-    training_data : snmachine.PlasticcData
-        snmachine.PlasticcData instance of the training data
+    dataset : snmachine.PlasticcData
+        snmachine.PlasticcData instance of a dataset
 
     Examples
     --------
     >>> ...
-    >>> training_data = load_training_data(params)
-    >>> print(training_data)
+    >>> dataset = load_dataset(params)
+    >>> print(dataset)
     <snmachine.sndata.PlasticcData object at 0x7f8dc9dd4e10>
     """
     try:
         if data_path.lower().endswith((".pickle", ".pkl", ".p", ".pckl")):
             with open(data_path, 'rb') as input:
                 print("Opening from binary pickle")
-                training_data = pickle.load(input)
+                dataset = pickle.load(input)
                 print("Dataset loaded from pickle file as: {}".format(
-                    training_data))
+                    dataset))
         else:
-            folder_path, train_data_file_name = os.path.split(data_path)
-            metadata_file_name = "_metadata.".join(train_data_file_name.split(
+            folder_path, data_file_name = os.path.split(data_path)
+            metadata_file_name = "_metadata.".join(data_file_name.split(
                 "."))
 
             print("Opening from CSV")
-            training_data = sndata.PlasticcData(folder=folder_path,
-                                                data_file=train_data_file_name,
-                                                metadata_file=metadata_file_name,
-                                                cut_non_detections=False)
-            print("Dataset loaded from csv file as: {}".format(training_data))
-            print("Saving {} object to pickle binary".format(training_data))
+            dataset = sndata.PlasticcData(folder=folder_path,
+                                          data_file=data_file_name,
+                                          metadata_file=metadata_file_name)
+            print("Dataset loaded from csv file as: {}".format(dataset))
+            print("Saving {} object to pickle binary".format(dataset))
 
-            dat_binary = os.path.splitext(train_data_file_name)[0] + ".pckl"
+            dat_binary = os.path.splitext(data_file_name)[0] + ".pckl"
             print(os.path.join(folder_path, dat_binary))
             with open(os.path.join(folder_path, dat_binary), 'wb') as f:
-                pickle.dump(training_data, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(dataset, f, pickle.HIGHEST_PROTOCOL)
     except FileNotFoundError:
         print("No file found to load")
         exit()
 
-    return training_data
+    return dataset
 
 
 def reduce_size_of_training_data(training_data, directories, subset_size, seed=1234, save_subset_list=False):
@@ -397,16 +399,20 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
     Examples
     --------
     >>> ...
-    >>> waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
-                                                                     save_output='all',
-                                                                     output_root=directories.get("intermediate_files_directory"))
+    >>> waveout, waveout_err, wavelet_object = wavelet_decomposition(
+        training_data, number_gp=number_gp,
+        number_processes=number_processes, save_output='all',
+        output_root=directories.get("intermediate_files_directory"))
     >>> print()
     """
     wavelet_object = snfeatures.WaveletFeatures(number_gp=number_gp)
     print("WAV = {}\n".format(wavelet_object.wav))
     print("MLEV = {}\n".format(wavelet_object.mlev))
     print("number_gp = {}\n".format(number_gp))
-    waveout, waveout_err = wavelet_object.extract_wavelets(training_data, wavelet_object.wav, wavelet_object.mlev, **kwargs)
+    waveout, waveout_err = wavelet_object.extract_wavelets(training_data,
+                                                           wavelet_object.wav,
+                                                           wavelet_object.mlev,
+                                                           **kwargs)
     return waveout, waveout_err, wavelet_object
 
 
@@ -455,7 +461,7 @@ def combine_all_features(reduced_wavelet_features, dataframe):
 
 def _to_pandas(features):
     # TODO: Improve docstrings.
-    """ Helper function to take either an astropy Table
+    """Helper function to take either an astropy Table
     or numpy ndarray and convert to a pandas DataFrame representation
 
     Parameters
@@ -489,7 +495,7 @@ def create_classifier(combined_features, training_data, directories,
                       augmentation_method=None, random_state=42,
                       number_comps=''):
     # TODO: Improve docstrings.
-    """ Creation of an optimised Random Forest classifier.
+    """Creation of an optimised Random Forest classifier.
 
     Parameters
     ----------
@@ -507,7 +513,8 @@ def create_classifier(combined_features, training_data, directories,
     >>> ...
     >>> classifier, confusion_matrix = create_classifier(combined_features)
     >>> print(classifier)
-    (RandomForestClassifier(bootstrap=True, class_weight=None, criterion='entropy',
+    (RandomForestClassifier(bootstrap=True, class_weight=None,
+        criterion='entropy',
         max_depth=None, max_features='auto', max_leaf_nodes=None,
         min_impurity_split=1e-07, min_samples_leaf=1,
         min_samples_split=2, min_weight_fraction_leaf=0.0,
@@ -569,9 +576,11 @@ def restart_from_saved_wavelets(directories):
 
 def restart_from_saved_pca(directories, number_of_principal_components):
     # TODO: Write docstrings
-    wavelet_features = pd.read_pickle(os.path.join(directories.get("features_directory"), "reduced_wavelet_components_{}.pickle".format(number_of_principal_components)))
+    wavelet_features = pd.read_pickle(os.path.join(directories.get("features_directory"),
+        "reduced_wavelet_components_{}.pickle".format(number_of_principal_components)))
     combined_features = wavelet_features  # For running tests for now
-    classifier, confusion_matrix = create_classifier(combined_features, training_data)
+    classifier, confusion_matrix = create_classifier(combined_features,
+                                                     training_data)
     print(F"classifier = {classifier}")
 
 
@@ -626,19 +635,20 @@ if __name__ == "__main__":
         #   c. Saved GPs
 
         # Step 4. Load in training data
-        training_data = load_training_data(data_path)
+        training_data = load_dataset(data_path)
         print("training_data = {}".format(training_data))
 
         # Step 5. Compute GPs
-        gps.compute_gps(training_data, number_gp=number_gp, t_min=0, t_max=1100,
-                        kernel_param=kernel_param,
+        gps.compute_gps(training_data, number_gp=number_gp, t_min=0,
+                        t_max=1100, kernel_param=kernel_param,
                         output_root=directories['intermediate_files_directory'],
                         number_processes=number_processes)
 
         # Step 6. Extract wavelet coeffiencts
-        waveout, waveout_err, wavelet_object = wavelet_decomposition(training_data, number_gp=number_gp, number_processes=number_processes,
-                                                                     save_output='all',
-                                                                     output_root=directories.get("intermediate_files_directory"))
+        waveout, waveout_err, wavelet_object = wavelet_decomposition(
+            training_data, number_gp=number_gp,
+            number_processes=number_processes, save_output='all',
+            output_root=directories.get("intermediate_files_directory"))
         print("waveout = {}".format(waveout))
         print("waveout, type = {}".format(type(waveout)))
 
@@ -649,11 +659,12 @@ if __name__ == "__main__":
         print("wavelet_object, type = {}".format(type(wavelet_object)))
 
         # Step 7. Reduce dimensionality of wavelets by using only N principal components
-        wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(object_names=training_data.object_names, wavout=waveout, recompute_pca=True, method='svd', number_comp=number_of_principal_components,
-                                                                                              tol=None,
-                                                                                              pca_path=None,
-                                                                                              save_output=True,
-                                                                                              output_root=directories.get("features_directory"))
+        wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(
+            object_names=training_data.object_names, wavout=waveout,
+            recompute_pca=True, method='svd',
+            number_comp=number_of_principal_components, tol=None,
+            pca_path=None, save_output=True,
+            output_root=directories.get("features_directory"))
         print("wavelet_features = {}".format(wavelet_features))
         print("wavelet_features, type = {}".format(type(wavelet_features)))
 
