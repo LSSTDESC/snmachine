@@ -576,7 +576,7 @@ class PlasticcData(EmptyDataset):
         print('Reading data...')
         time_start_reading = time.time()
         data = pd.read_csv(folder + '/' + data_file, sep=',')
-        data = self.remap_filters(df=data)
+        data = self._remap_filters(df=data)
 
         # snmachine and PLAsTiCC use a different denomination
         data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)
@@ -619,12 +619,12 @@ class PlasticcData(EmptyDataset):
 
         Parameters
         ----------
-        pandas_lc: Pandas DataFrame
-            Single object multi-band light curve.
+        pandas_lc : pandas.core.frame.DataFrame
+            Single object multi-band lightcurve.
 
         Returns
         -------
-        lc: astropy.table.table
+        lc : astropy.table.table
             New single object light curve.
         """
         lc = Table.from_pandas(pandas_lc)
@@ -654,7 +654,7 @@ class PlasticcData(EmptyDataset):
         metadata_pd['object_id'] = metadata_pd.index
         self.metadata = metadata_pd
 
-        # Everything bellow is to conform with older versions of `snmachine`
+        # Everything bellow is to conform with `snmachine` version < 2.0
         number_objs = len(self.object_names)
         for i, obj in enumerate(self.object_names):
             self.print_progress(i+1, number_objs)  # +1 because the order
@@ -666,8 +666,8 @@ class PlasticcData(EmptyDataset):
     def set_inner_metadata(self, obj):
         """Set the metadata inside the astropy observation data.
 
-        This inner metadata is only used by the old code of `snmachine` but to
-        keep backwards compatibility, we keep it.
+        This inner metadata is only used by `snmachine` version < 2.0 but 
+        to have backwards compatibility, we keep it.
 
         Parameters
         ----------
@@ -798,16 +798,24 @@ class PlasticcData(EmptyDataset):
         # Reorder the object names to match the metadata
         self.object_names = self.metadata['object_id']
 
-    def remap_filters(self, df):
-        """Remap LSST filters.
+    def _remap_filters(self, df):
+        """Remaps the dataset filters to human-understandable values.
 
-        Function to remap integer filters to the corresponding LSST filters and
-        also to set filter name syntax to what snmachine already recognizes.
+        Function to remap integer filters to the corresponding LSST filters.
+        For internal `snmachine` consistency, this function also changes the
+        column name `passand` to `filter`.
 
         Parameters
         ----------
-        df: pandas.dataframe
-            Dataframe of light curve observations.
+        df : pandas.core.frame.DataFrame
+            Light curve observations with numeric filters/passbands between 0
+            and 5.
+
+        Returns
+        -------
+        df : pandas.core.frame.DataFrame
+            Light curve observations with the LSST filters: `lsstu`, `lsstg`,
+            `lsstr`, `lssti`, `lsstz`, `lssty`.
         """
         df.rename({'passband': 'filter'}, axis='columns', inplace=True)
         filter_replace = {0: 'lsstu', 1: 'lsstg', 2: 'lsstr', 3: 'lssti',
