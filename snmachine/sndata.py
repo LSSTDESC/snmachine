@@ -33,8 +33,8 @@ from snmachine import chisq as cs
 colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
            'sdssi': '#d35c00', 'sdssz': 'k', 'desg': '#007718',
            'desr': '#b30100', 'desi': '#d35c00', 'desz': 'k',
-           'lsstu': '#9a0eea', 'lsstg': '#75bbfd', 'lsstr': '#76ff7b',
-           'lssti': '#fdde6c', 'lsstz': '#f97306', 'lssty': '#e50000'}
+           'lsstu': '#984ea3', 'lsstg': '#377eb8', 'lsstr': '#4daf4a',
+           'lssti': '#e3c530', 'lsstz': '#ff7f00', 'lssty': '#e41a1c'}
 
 sntypes = {1: 'Ia', 2: 'II', 21: 'IIn', 22: 'IIP', 23: 'IIL',
            3: 'Ibc', 32: 'Ib', 33: 'Ic', 66: 'other'}
@@ -42,7 +42,7 @@ markers = {'desg': '^', 'desr': 'o', 'desi': 's', 'desz': '*'}
 labels = {'desg': 'g', 'desr': 'r', 'desi': 'i', 'desz': 'z'}
 
 
-def plot_lc(lc):
+def plot_lc(lc, show_legend=True):
     """
     External function to plot light curves.
 
@@ -50,13 +50,16 @@ def plot_lc(lc):
     ----------
     lc : astropy.table.Table
         Light curve
+    show_legend : bool, optional
+        Default True. If True shows the legend of the plot.
 
     """
     """
         @param fname The filename of the supernova (relative to data_root)
     """
 
-    # This selects the filters from the possible set that this object has measurements in and maintains the order
+    # This selects the filters from the possible set that this object has
+    # measurements in and maintains the order
     filts = np.unique(lc['filter'])
 
     # Keep track of the min and max values on the plot for resizing axes
@@ -64,9 +67,10 @@ def plot_lc(lc):
     max_x = -np.inf
     lines = []
     for j in range(len(filts)):
-        inds = np.where(lc['filter']==filts[j])[0]
+        inds = np.where(lc['filter'] == filts[j])[0]
         if 'flux_error' in lc.keys():
-            t, F, F_err = lc['mjd'][inds], lc['flux'][inds], lc['flux_error'][inds]
+            t = lc['mjd'][inds]
+            F, F_err = lc['flux'][inds], lc['flux_error'][inds]
             error = True
         else:
             t, F = lc['mjd'][inds], lc['flux'][inds]
@@ -78,12 +82,13 @@ def plot_lc(lc):
         else:
             mkr = 'o'
         if error:
-            l = plt.errorbar(tdelt, F, yerr=F_err,  marker=mkr,
-                             linestyle='none', color=colours[filts[j]],
-                             markersize=4)
+            lc_plot = plt.errorbar(tdelt, F, yerr=F_err, marker=mkr,
+                                   linestyle='none', color=colours[filts[j]],
+                                   markersize=4)
         else:
-            l = plt.plot(tdelt, F, lw=2, marker=mkr, color=colours[filts[j]])
-        lines.append(l)
+            lc_plot = plt.plot(tdelt, F, lw=2, marker=mkr,
+                               color=colours[filts[j]])
+        lines.append(lc_plot)
         if tdelt.min() < min_x:
             min_x = tdelt.min()
         if tdelt.max() > max_x:
@@ -91,15 +96,21 @@ def plot_lc(lc):
 
     ext = 0.05*(max_x-min_x)
     plt.xlim([min_x-ext, max_x+ext])
-    plt.xlabel('Time (days)',  fontsize=16)
-    plt.ylabel('Flux',  fontsize=16)
+    plt.xlabel('Time (days)', fontsize=16)
+    plt.ylabel('Flux', fontsize=16)
 
-    plt.legend(lines, filts, numpoints=1,loc='best')
+    if show_legend:
+        if len(lines) >= 6:
+            number_columns = 2
+        else:
+            number_columns = 2
+        plt.legend(lines, filts, ncol=number_columns, numpoints=1, loc='best')
 
 
 class EmptyDataset:
     """
-    Empty data set, to fill up with light curves (of format astropy.table.Table) in your memory.
+    Empty data set, to fill up with light curves
+    (of format astropy.table.Table) in your memory.
     """
 
     def __init__(self, folder=None, survey_name=None, filter_set=[]):
@@ -533,7 +544,7 @@ class PlasticcData(EmptyDataset):
     metadata_file: str
         Filename of the pandas dataframe containing the metadata for the light
         curves.
-    mix : boolean, optional
+    mix : bool, optional
         Default False. If True, randomly permutes the objects when they are
         read in.
     """
@@ -565,7 +576,7 @@ class PlasticcData(EmptyDataset):
         print('Reading data...')
         time_start_reading = time.time()
         data = pd.read_csv(folder + '/' + data_file, sep=',')
-        data = self.remap_filters(df=data)
+        data = self._remap_filters(df=data)
 
         # snmachine and PLAsTiCC use a different denomination
         data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)
@@ -608,13 +619,13 @@ class PlasticcData(EmptyDataset):
 
         Parameters
         ----------
-        pandas_lc: Pandas DataFrame
+        pandas_lc : pandas.core.frame.DataFrame
             Single object multi-band lightcurve.
 
         Returns
         -------
-        lc: astropy.table.table
-            New single object lightcurve.
+        lc : astropy.table.table
+            New single object light curve.
         """
         lc = Table.from_pandas(pandas_lc)
         lc[self.mjd_col] -= lc[self.mjd_col].min()
@@ -624,7 +635,8 @@ class PlasticcData(EmptyDataset):
         """Reads in simulated metadata and saves it.
 
         The data is saved into the `metadata` method from EmptyDataset and
-        into a dictonary associated with each `data` method (`.data[obj].meta`).
+        into a dictonary associated with each `data` method
+        (`.data[obj].meta`).
 
         Parameters
         ----------
@@ -638,11 +650,12 @@ class PlasticcData(EmptyDataset):
         metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',',
                                   index_col=self.id_col)
         metadata_pd.index = metadata_pd.index.astype(str)
-        metadata_pd['object_id'] = metadata_pd.index  # it is useful to be
-                                                      # call this column name
+
+        # add `object_id` column because it is useful to call it
+        metadata_pd['object_id'] = metadata_pd.index
         self.metadata = metadata_pd
 
-        # Everything bellow is to conform with older versions of `snmachine`
+        # Everything bellow is to conform with `snmachine` version < 2.0
         number_objs = len(self.object_names)
         for i, obj in enumerate(self.object_names):
             self.print_progress(i+1, number_objs)  # +1 because the order
@@ -654,8 +667,8 @@ class PlasticcData(EmptyDataset):
     def set_inner_metadata(self, obj):
         """Set the metadata inside the astropy observation data.
 
-        This inner metadata is only used by the old code of `snmachine` but to
-        keep backwards compatibility, we keep it.
+        This inner metadata is only used by `snmachine` version < 2.0 but 
+        to have backwards compatibility, we keep it.
 
         Parameters
         ----------
@@ -782,19 +795,100 @@ class PlasticcData(EmptyDataset):
         current_objs = self.metadata.object_id.astype(str)
         is_new_obj = np.in1d(current_objs, new_objs)
         self.metadata = self.metadata[is_new_obj]
+        
+        # Reorder the object names to match the metadata
+        self.object_names = self.metadata['object_id']
 
-    def remap_filters(self, df):  # maybe not in snmachine (raise issue/channel)
-        """Function to remap integer filters to the corresponding lsst filters and
-        also to set filter name syntax to what snmachine already recognizes
+    def _remap_filters(self, df):
+        """Remaps the dataset filters to human-understandable values.
 
-        df: pandas.dataframe
-            Dataframe of lightcurve observations
+        Function to remap integer filters to the corresponding LSST filters.
+        For internal `snmachine` consistency, this function also changes the
+        column name `passand` to `filter`.
+
+        Parameters
+        ----------
+        df : pandas.core.frame.DataFrame
+            Light curve observations with numeric filters/passbands between 0
+            and 5.
+
+        Returns
+        -------
+        df : pandas.core.frame.DataFrame
+            Light curve observations with the LSST filters: `lsstu`, `lsstg`,
+            `lsstr`, `lssti`, `lsstz`, `lssty`.
         """
         df.rename({'passband': 'filter'}, axis='columns', inplace=True)
         filter_replace = {0: 'lsstu', 1: 'lsstg', 2: 'lsstr', 3: 'lssti',
                           4: 'lsstz', 5: 'lssty'}
         df['filter'].replace(to_replace=filter_replace, inplace=True)
         return df
+
+    def remove_gaps(self, max_gap_length, verbose=False):
+        """Remove the first gap longer than the given threshold.
+
+        To remove all the gaps longer than `max_gap_length`, this function
+        must be called a few times.
+
+        Parameters
+        ----------
+        max_gap_length: float
+            Maximum duration of the gap to allowed in the light curves.
+        verbose: bool, optional
+            Default False. If True prints the ID of the longest event and its
+            length.
+        """
+        obj_names = self.object_names
+        time_transient = np.zeros(len(obj_names))
+        for i in range(len(obj_names)):
+            obj_data = self.data[obj_names[i]]
+            obs_time = obj_data['mjd']
+
+            # time gaps between consecutive observations
+            time_diff = obs_time[1:] - obs_time[:-1]
+
+            if np.max(time_diff) > max_gap_length:
+                index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
+                time_last_obs_before = obs_time[index_gap]
+                obs_time_detected = obs_time[obj_data['detected'] == 1]
+
+                # number of detections before and after the gap
+                number_detections_before = np.sum(
+                    obs_time_detected <= time_last_obs_before)
+                number_detections_after = np.sum(
+                    obs_time_detected > time_last_obs_before)
+
+                # more detections before the gap
+                if number_detections_before > number_detections_after:
+                    is_obs_transient = obs_time <= time_last_obs_before
+
+                # more detections after the gap
+                elif number_detections_before < number_detections_after:
+                    is_obs_transient = obs_time > time_last_obs_before
+
+                # same number of detections on before and after the gap
+                else:
+                    number_obs_before = np.sum(
+                        obs_time <= time_last_obs_before)
+                    number_obs_after = np.sum(
+                        obs_time > time_last_obs_before)
+                    # more observation before the gap
+                    if number_obs_before >= number_obs_after:
+                        is_obs_transient = obs_time <= time_last_obs_before
+                    # more observation after the gap
+                    else:
+                        is_obs_transient = obs_time > time_last_obs_before
+                obs_transient = obj_data[is_obs_transient]
+
+                # introduce uniformity: all transients start at time 0
+                obs_transient['mjd'] -= min(obs_transient['mjd'])
+
+                self.data[obj_names[i]] = obs_transient
+            time_transient[i] = obj_data['mjd'][-1] - obj_data['mjd'][0]
+        if verbose:
+            print(f'The longest event is '
+                  f'{obj_names[np.argmax(time_transient)]} '
+                  f'and its length is {np.max(time_transient):.2f} days.')
 
 
 class Dataset(EmptyDataset):
