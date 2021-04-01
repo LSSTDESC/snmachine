@@ -706,7 +706,7 @@ class GPAugment(SNAugment):
         for i in np.arange(number_aug):
             aug_obj = '{}_aug{}'.format(obj, i)
             j = 0
-            while j < number_tries:  # TODO: not efficient
+            while j < number_tries:
                 aug_obj_metadata = self.create_aug_obj_metadata(aug_obj,
                                                                 obj_metadata)
                 aug_obj_data = self.create_aug_obj_obs(aug_obj_metadata,
@@ -865,20 +865,21 @@ class GPAugment(SNAugment):
         aug_obj_data['flux'] = flux_pred * z_scale * dist_scale
         aug_obj_data['flux_error'] = flux_pred_error * z_scale * dist_scale
 
-        # Add in light curve noise. This is survey specific and must be
-        # implemented in subclasses.
-        # TODO: avocado
+        # Add flux uncertainty to the light curve observations
         aug_obj_data = self._compute_obs_uncertainty(aug_obj_data,
                                                      aug_obj_metadata)
 
-        # Simulate detection
+        # Apply quality cuts
+        # The event has at least two detections
         aug_obj_data, pass_detection = self._simulate_detection(
             aug_obj_data, aug_obj_metadata)
-        # If our light curve passes detection thresholds, we're done!
+        # Since two observations are insufficient for constraining a GP, we
+        # require an additional observation, regardless of its S/N.
         if pass_detection and (len(aug_obj_data) >= 3):
             return aug_obj_data
 
-        return []  # failed attempt
+        # Failed attempt
+        return []
 
     def load_gp(self, obj):
         """Load the Gaussian Process predict object.
@@ -1500,35 +1501,48 @@ class GPAugment(SNAugment):
                                              + add_stds ** 2)
         return aug_obj_data
 
-    # avocado functions
     def _simulate_detection(self, aug_obj_data, aug_obj_metadata):
         """Simulate the detection process for a light curve.
-        We model the PLAsTiCC detection probabilities with an error function.
-        I'm not entirely sure why this isn't deterministic. The full light
-        curve is considered to be detected if there are at least 2 individual
-        detected observations.
+
+        We impose quality cuts on the augmented events. Following [1]_, we
+        require at least two detections: at least two observations above the
+        signal-to-noise (S/N) threshold. [1]_ calculated this threshold by
+        fitting an error function to the observations from the PLAsTiCC
+        dataset to predict the probability of detection as a function of S/N.
 
         Parameters
-        ==========
-        observations : pandas.DataFrame
-            The augmented observations that have been sampled from a Gaussian
-            Process.
-        augmented_metadata : dict
-            The augmented metadata
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
 
         Returns
-        =======
-        observations : pandas.DataFrame
-            The observations with the detected flag set.
+        -------
+        aug_obj_data : pandas.DataFrame
+            Observations of the augmented event.
         pass_detection : bool
-            Whether or not the full light curve passes the detection thresholds
-            used for the full sample.
+            Whether or not the event passes the detection threshold.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion
+        `PlasticcAugmentor._simulate_light_curve_uncertainties` of
+        `avocado/plasticc.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
         """
-        # TODO: avocado
+        # Calculate the S/N of the observations
         s2n = np.abs(aug_obj_data["flux"]) / aug_obj_data["flux_error"]
+
+        # Apply the S/N threshold
         prob_detected = (erf((s2n - 5.5) / 2) + 1) / 2.0
         aug_obj_data["detected"] = self._rs.rand(len(s2n)) < prob_detected
-
         pass_detection = np.sum(aug_obj_data["detected"]) >= 2
 
         return aug_obj_data, pass_detection
