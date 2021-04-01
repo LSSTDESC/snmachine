@@ -582,6 +582,7 @@ class PlasticcData(EmptyDataset):
         data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)
         data.rename({'detected_bool': 'detected'}, axis='columns',
                     inplace=True)
+        data.rename({'ddf_bool': 'ddf'}, axis='columns', inplace=True)
 
         # Abstract column names from dataset
         for col in data.columns:
