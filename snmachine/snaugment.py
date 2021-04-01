@@ -1527,8 +1527,7 @@ class GPAugment(SNAugment):
         Notes
         -----
         This function is adapted from the code developed in [1]_. In
-        particular, the funtion
-        `PlasticcAugmentor._simulate_light_curve_uncertainties` of
+        particular, the funtion `PlasticcAugmentor._simulate_detection` of
         `avocado/plasticc.py`.
 
         References
