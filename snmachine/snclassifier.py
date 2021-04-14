@@ -19,7 +19,9 @@ import numpy as np
 
 # Solve imblearn problems introduced with sklearn version 0.24
 import sklearn
-import sklearn.neighbors, sklearn.utils, sklearn.ensemble
+import sklearn.neighbors
+import sklearn.utils
+import sklearn.ensemble
 from sklearn.utils._testing import ignore_warnings
 sys.modules['sklearn.neighbors.base'] = sklearn.neighbors._base
 sys.modules['sklearn.utils.safe_indexing'] = sklearn.utils._safe_indexing
@@ -71,45 +73,63 @@ def roc(pr, Yt, true_class=0, which_column=-1):
     Parameters
     ----------
     pr : array
-        An array of probability scores, either a 1d array of size N_samples or an nd array,
-        in which case the column corresponding to the true class will be used.
+        An array of probability scores, either a 1d array of size N_samples or
+        an nd array, in which case the column corresponding to the true class
+        will be used.
     Yt : array
         An array of class labels, of size (N_samples,)
     true_class : int, optional
-        Which class is taken to be the "true class" (e.g. Ia vs everything else). If `which_column`!=-1, `true_class`
-        is overriden. - NOTE this only works for sequential labels (as in SPCC). Should NOT be used for Plasticc!
+        Which class is taken to be the "true class" (e.g. Ia vs everything
+        else). If `which_column`!=-1, `true_class` is overriden. - NOTE this
+        only works for sequential labels (as in SPCC). Should NOT be used for
+        PLAsTiCC!
     which_column : int, optional
-        Defaults to -1 where `true_class` is used instead. If `which_column`!=-1, `true_class` is overriden and
-        `which_column` selects which column of the probabilities to take as the "true class". - use this
-        instead of `true_class` for PLAsTiCC.
+        Defaults to -1 where `true_class` is used instead. If
+        `which_column`!=-1, `true_class` is overriden and `which_column`
+        selects which column of the probabilities to take as the "true class".
+        - use this instead of `true_class` for PLAsTiCC.
 
     Returns
     -------
     fpr : array
-        An array containing the false positive rate at each probability threshold
+        An array containing the false positive rate at each probability
+        threshold.
     tpr : array
-        An array containing the true positive rate at each probability threshold
+        An array containing the true positive rate at each probability
+        threshold.
     auc : float
         The area under the ROC curve
     """
     probs = pr.copy()
     Y_test = Yt.copy()
-    min_class = (int)(Y_test.min())  # This is to deal with starting class assignment at 1.
+
+    # Deals with starting class assignment at 1.
+    min_class = (int)(Y_test.min())
+
     Y_test = Y_test.squeeze()
 
-    if len(pr.shape) > 1 and which_column==-1: # sequential labels (as in SPCC) case - backwards compatibility
+    # sequential labels (as in SPCC) case - backwards compatibility
+    if len(pr.shape) > 1 and which_column == -1:
         probs_1 = probs[:, true_class-min_class]
-    elif len(pr.shape) > 1 and which_column!=-1: # used by `optimised_classify`
+    # Used by `optimised_classify`
+    elif len(pr.shape) > 1 and which_column != -1:
         probs_1 = probs[:, which_column]
-        unique_labels = np.unique(Yt) # the classes are in the same order as `probs`
+
+        # the classes are in the same order as `probs`
+        unique_labels = np.unique(Yt)
+
         true_class = unique_labels[which_column]
-    else: # we give a 1D array of probability so use it - no ambiguity
+    # We give a 1D array of probability so use it - no ambiguity
+    else:
         probs_1 = probs
 
     threshold = np.linspace(0., 1., 50)  # 50 evenly spaced numbers between 0,1
 
-    # This creates an array where each column is the prediction for each threshold
-    preds = np.tile(probs_1, (len(threshold), 1)).T >= np.tile(threshold, (len(probs_1), 1))
+    # This creates an array where each column is the prediction for each
+    # threshold
+    preds = np.tile(probs_1,
+                    (len(threshold), 1)).T >= np.tile(threshold,
+                                                      (len(probs_1), 1))
     Y_bool = (Y_test == true_class)
     Y_bool = np.tile(Y_bool, (len(threshold), 1)).T
 
@@ -131,7 +151,7 @@ def roc(pr, Yt, true_class=0, which_column=-1):
 
 
 def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
-             line_width=3, figsize=(8,6)):
+             line_width=3, figsize=(8, 6)):
     """Plots a ROC curve or multiple curves.
 
     The function can plot the results from multiple classifiers if fpr and tpr
@@ -261,21 +281,25 @@ def F1(pr,  Yt, true_class, full_output=False):
     Parameters
     ----------
     pr : array
-        An array of probability scores, either a 1d array of size N_samples or an nd array,
-        in which case the column corresponding to the true class will be used.
+        An array of probability scores, either a 1d array of size N_samples or
+        an nd array, in which case the column corresponding to the true class
+        will be used.
     Yt : array
         An array of class labels, of size (N_samples,)
     true_class : int
-        which class is taken to be the "true class" (e.g. Ia vs everything else)
+        which class is taken to be the "true class" (e.g. Ia vs everything
+        else)
     full_output : bool, optional
-        If true returns two vectors corresponding to F1 as a function of threshold, instead of the best value.
+        If true returns two vectors corresponding to F1 as a function of
+        threshold, instead of the best value.
 
     Returns
     -------
     best_F1 : float
-        (If full_output=False) The largest F1 value
+        (If full_output=False) The largest F1 value.
     best_threshold : array
-        (If full_output=False) The probability threshold corresponding to best_F1
+        (If full_output=False) The probability threshold corresponding to
+        best_F1.
     f1  : array
         (If full_output=True) F1 as a function of threshold.
     threshold  : array
@@ -303,7 +327,7 @@ def F1(pr,  Yt, true_class, full_output=False):
 
     TP = (preds & Y_bool).sum(axis=0)
     FP = (preds & ~Y_bool).sum(axis=0)
-    TN = (~preds & ~Y_bool).sum(axis=0)
+    # TN = (~preds & ~Y_bool).sum(axis=0)  # not used in this function
     FN = (~preds & Y_bool).sum(axis=0)
 
     f1 = np.zeros(len(TP))
@@ -378,11 +402,13 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
 
     TP = (preds & Y_bool).sum(axis=0)
     FP = (preds & ~Y_bool).sum(axis=0)
-    TN = (~preds & ~Y_bool).sum(axis=0)
+    # TN = (~preds & ~Y_bool).sum(axis=0)  # not used in this function
     FN = (~preds & Y_bool).sum(axis=0)
 
     fom = np.zeros(len(TP))
-    fom[TP != 0] = TP[TP != 0]**2 / (TP[TP != 0] + FN[TP != 0]) / (TP[TP != 0] + weight * FP[TP != 0])
+    fom[TP != 0] = (TP[TP != 0]**2
+                    / (TP[TP != 0] + FN[TP != 0])
+                    / (TP[TP != 0] + weight * FP[TP != 0]))
 
     if full_output:
         return fom, threshold
@@ -397,7 +423,8 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
 
 class OptimisedClassifier():
     """Implements an optimised classifier (although it can be run without
-    optimisation). Equipped with interfaces to several sklearn classes and functions.
+    optimisation). Equipped with interfaces to several sklearn classes and
+    functions.
     """
 
     NB_param_dict = {}
@@ -411,15 +438,17 @@ class OptimisedClassifier():
                      'min_samples_leaf': list(range(1, 400, 25))}
     RF_param_dict = {'n_estimators': list(range(200, 900, 100)),
                      'criterion': ['gini', 'entropy']}
-    ests = [DecisionTreeClassifier(criterion='entropy',
-                                   min_samples_leaf=l) for l in range(5, 55, 10)]
+    ests = [
+        DecisionTreeClassifier(criterion='entropy',
+                               min_samples_leaf=l) for l in range(5, 55, 10)]
     Boost_param_dict = {'base_estimator': ests,
                         'n_estimators': list(range(5, 85, 10))}
     # This is a strange boosted random forest classifier that Max came up that
     # works quite well, but is likely biased in general
-    Boost_RF_param_dict = {'base_estimator': [RandomForestClassifier(400, 'entropy'),
-                                              RandomForestClassifier(600, 'entropy')],
-                           'n_estimators': list([2, 3, 5, 10])}
+    Boost_RF_param_dict = {
+        'base_estimator': [RandomForestClassifier(400, 'entropy'),
+                           RandomForestClassifier(600, 'entropy')],
+        'n_estimators': list([2, 3, 5, 10])}
 
     # Dictionary to hold good default ranges for parameters for each
     # classifier.
