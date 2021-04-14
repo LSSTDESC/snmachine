@@ -531,42 +531,35 @@ class OptimisedClassifier():
                 elif classifier == 'multiple_classifier':
                     pass
                 else:
-                    print('Requested classifier not recognised.')
-                    print('Choice of built-in classifiers:')
-                    print(choice_of_classifiers)
+                    print(f'Requested classifier not recognised.\nChoice of '
+                          f'built-in classifiers: {choice_of_classifiers}.')
                     sys.exit(0)
 
             except TypeError:
                 # Gracefully catch errors of sending the wrong kwargs to the
                 # classifiers
-                print()
-                print('Error')
-                print('One of the kwargs below:')
-                print(kwargs.keys())
-                print('Does not belong to classifier', classifier)
-                print()
+                raise AttributeError(f'One of the kwargs \n{kwargs.keys()}\n'
+                                     f'does not belong to classifier '
+                                     f'{classifier}.')
                 sys.exit(0)
 
         else:
             # This is already some sklearn classifier or an object that
             # behaves like one
             self.clf = classifier
-
-        print('Created classifier of type:')
-        print(self.clf)
-        print()
+        print(f'Created classifier of type: {self.clf}.\n')
 
     def classify(self, X_train, y_train, X_test):
-        """
-        Run unoptimised classifier with initial parameters.
+        """Run unoptimised classifier with initial parameters.
+
         Parameters
         ----------
         X_train : array
-            Array of training features of shape (n_train,n_features)
+            Array of training features of shape (n_train,n_features).
         y_train : array
-            Array of known classes of shape (n_train)
+            Array of known classes of shape (n_train).
         X_test : array
-            Array of validation features of shape (n_test,n_features)
+            Array of validation features of shape (n_test,n_features).
 
         Returns
         -------
@@ -576,7 +569,6 @@ class OptimisedClassifier():
             (If self.prob=True) Probability for each object to belong to each
             class.
         """
-
         self.clf.fit(X_train, y_train)
         if self.prob:  # Probabilities requested
             probs = self.clf.predict_proba(X_test)
@@ -626,7 +618,7 @@ class OptimisedClassifier():
         X : array
             Array of training features of shape (n_train,n_features).
         Y : array
-            Array of known classes of shape (n_train)
+            Array of known classes of shape (n_train).
 
         Returns
         -------
@@ -750,7 +742,7 @@ class OptimisedClassifier():
 
 def __call_classifier(classifier, X_train, y_train, X_test, param_dict,
                       return_classifier):
-    """Specifically designed to run with multiprocessing"""
+    """Specifically designed to run with multiprocessing."""
 
     c = OptimisedClassifier(classifier)
     if classifier in param_dict.keys():
@@ -914,7 +906,7 @@ def run_pipeline(features, types, output_name='', columns=[],
         fpr, tpr, auc = roc(probs, y_test, true_class=1)
         fom, thresh_fom = FoM(probs, y_test, true_class=1, full_output=False)
 
-        print('Classifier', cls+':', 'AUC =', auc, 'FoM =', fom)
+        print(f'Classifier {cls}: AUC = {auc} ; FoM = {fom}.')
 
         if i == 0:
             FPR = fpr
@@ -944,10 +936,9 @@ def run_pipeline(features, types, output_name='', columns=[],
             tab = Table(np.column_stack((fpr, tpr)), names=['FPR', 'TPR'])
             tab.write(output_name + cls + '.roc', format='ascii')
 
-            np.savetxt(output_name+cls+'.auc', [auc])
+            np.savetxt(output_name + cls + '.auc', [auc])
 
-    print()
-    print('Time taken ', (time.time()-t1)/60., 'minutes')
+    print(f'\nTime taken {(time.time()-t1)/60.} minutes.')
 
     labels = []
     for tp_row in unique(types, keys='Type'):
@@ -967,7 +958,7 @@ def run_pipeline(features, types, output_name='', columns=[],
     cms = []
     for cls in classifiers_for_cm_plots:
         if cls not in classifiers:
-            print('%s not in our choice of classifiers!' % cls)
+            print(f'{cls} not in our choice of classifiers!')
             continue
         y_fit = (probabilities[cls].argmax(axis=1)).tolist()
         cm = compute_confusion_matrix(y_fit, y_test)
