@@ -1,5 +1,6 @@
 """
-Utility module mostly wrapping sklearn functionality and providing utility functions.
+Module for training and optimizing classifiers. It mostly warps sklearn and
+LightGBM functionality.
 """
 from __future__ import division
 
@@ -51,14 +52,16 @@ else:
     import matplotlib.pyplot as plt
 
 # This allows the user to easily loop through all possible classifiers
-choice_of_classifiers = ['svm', 'knn', 'random_forest', 'decision_tree', 'boost_dt', 'boost_rf', 'nb']
+choice_of_classifiers = ['svm', 'knn', 'random_forest', 'decision_tree',
+                         'boost_dt', 'boost_rf', 'nb']
 # boost_rf is a set of boosted random forests which Max came up with.
 
 try:
     from sklearn.neural_network import MLPClassifier
     choice_of_classifiers.append('neural_network')
 except ImportError:
-    print('Neural networks not available in this version of scikit-learn. Neural networks are available from development version 0.18.')
+    print('Neural networks not available in this version of scikit-learn. '
+          'Neural networks are available from development version 0.18.')
 
 
 def roc(pr, Yt, true_class=0, which_column=-1):
@@ -127,17 +130,21 @@ def roc(pr, Yt, true_class=0, which_column=-1):
     return fpr, tpr, auc
 
 
-def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, line_width=3, figsize=(8,6)):
-    """
-    Plots a ROC curve or multiple curves. Can plot the results from multiple classifiers if fpr and tpr are arrays
-    where each column corresponds to a different classifier.
+def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
+             line_width=3, figsize=(8,6)):
+    """Plots a ROC curve or multiple curves.
+
+    The function can plot the results from multiple classifiers if fpr and tpr
+    are arrays where each column corresponds to a different classifier.
 
     Parameters
     ----------
     fpr : array
-        An array containing the false positive rate at each probability threshold
+        An array containing the false positive rate at each probability
+        threshold
     tpr : array
-        An array containing the true positive rate at each probability threshold
+        An array containing the true positive rate at each probability
+        threshold
     auc : float
         The area under the ROC curve
     labels : list, optional
@@ -154,7 +161,8 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, li
 
     # Automatically fill in the colors if not supplied
     if not isinstance(cols, basestring) and len(cols) == 0:
-        cols = ['#185aa9', '#008c48', '#ee2e2f', '#f47d23', '#662c91', '#a21d21', '#b43894', '#010202']
+        cols = ['#185aa9', '#008c48', '#ee2e2f', '#f47d23', '#662c91',
+                '#a21d21', '#b43894', '#010202']
 
     # This should work regardless of whether it's one or many roc curves
     # fig=plt.figure(figsize=figsize)
@@ -171,26 +179,26 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18, li
     plt.xlabel('False positive rate (contamination)', fontsize=label_size)
     plt.ylabel('True positive rate (completeness)', fontsize=label_size)
 
-    # Robust against the possibility of AUC being a single number instead of list
+    # Robust against the possibility of AUC being a single number instead of a
+    # list
     if not isinstance(auc, collections.Sequence):
         auc = [auc]
 
     if len(labels) > 0:
         labs = []
         for i in range(len(labels)):
-            labs.append(labels[i]+' (%.3f)' %(auc[i]))
+            labs.append(labels[i]+' (%.3f)' % (auc[i]))
     else:
         labs = np.array(range(len(ax.lines)), dtype='str')
         for i in range(len(labs)):
-            labs[i] = (labs[i]+' (%.3f)' %(auc[i]))
-    #plt.legend(labs, loc='lower right',  fancybox=True, bbox_to_anchor=(0.95, 0.05), fontsize=label_size)
+            labs[i] = (labs[i]+' (%.3f)' % (auc[i]))
     plt.legend(labs, loc='lower right',  bbox_to_anchor=(0.95, 0.05))
     plt.tight_layout()
-    #plt.show()
 
 
 def compute_confusion_matrix(Yfit, Ytrue):
-    '''
+    """Computes the confusion matrix.
+
     Wraps the scikit-learn routine to compute the confusion matrix.
 
     Parameters
@@ -203,26 +211,27 @@ def compute_confusion_matrix(Yfit, Ytrue):
     Returns
     -------
     confusion_matrix: numpy.array
-    '''
+    """
     return sklearn_cm(y_true=Ytrue, y_pred=Yfit)
 
 
-def plot_confusion_matrix(cm, normalise=False, labels=None, title='Confusion matrix'):
-    '''
-    Make a plot from a pre-computed confusion matrix.
+def plot_confusion_matrix(cm, normalise=False, labels=None,
+                          title='Confusion matrix'):
+    """Make a plot from a pre-computed confusion matrix.
 
     Parameters
     ----------
     cm : np.array
-       The confusion matrix, as computed by the snclassifier.compute_confusion_matrix
-    normalise : boolean, optional
-       If False, we use the absolute numbers in each matrix entry. If True, we use the
-       fractions within each true class
+       The confusion matrix, as computed by the
+       snclassifier.compute_confusion_matrix
+    normalise : bool, optional
+       If False, we use the absolute numbers in each matrix entry. If True, we
+       use the fractions within each true class
     labels : list of str
        Labels for each class that appear in the plot
     title : str
        Surprisingly, this is the title for the plot.
-    '''
+    """
     if labels is None:
         labels = np.arange(len(cm[:, 0])).tolist()
     plt.figure()
@@ -237,11 +246,11 @@ def plot_confusion_matrix(cm, normalise=False, labels=None, title='Confusion mat
     fmt = '.2f' if normalise else 'd'
     thresh = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, format(cm[i, j], fmt), horizontalalignment="center", color="white" if cm[i, j] > thresh else "black")
+        plt.text(j, i, format(cm[i, j], fmt), horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-    # plt.show()
 
 
 def F1(pr,  Yt, true_class, full_output=False):
@@ -271,12 +280,10 @@ def F1(pr,  Yt, true_class, full_output=False):
         (If full_output=True) F1 as a function of threshold.
     threshold  : array
         (If full_output=True) Vector of thresholds (from 0 to 1)
-
     """
-
     probs = pr.copy()
     Y_test = Yt.copy()
-    min_class = Y_test.min()  # This is to deal with starting class assignment at 1.
+    min_class = Y_test.min()  # deals with starting class assignment at 1.
     Y_test = Y_test.squeeze()
 
     if len(pr.shape) > 1:
@@ -286,8 +293,11 @@ def F1(pr,  Yt, true_class, full_output=False):
 
     threshold = np.arange(0, 1, 0.01)
 
-    # This creates an array where each column is the prediction for each threshold
-    preds = np.tile(probs_1, (len(threshold), 1)).T > np.tile(threshold, (len(probs_1), 1))
+    # This creates an array where each column is the prediction for each
+    # threshold
+    preds = np.tile(probs_1,
+                    (len(threshold), 1)).T > np.tile(threshold,
+                                                     (len(probs_1), 1))
     Y_bool = (Y_test == true_class)
     Y_bool = np.tile(Y_bool, (len(threshold), 1)).T
 
@@ -320,32 +330,35 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
     Parameters
     ----------
     pr : array
-        An array of probability scores, either a 1d array of size N_samples or an nd array,
-        in which case the column corresponding to the true class will be used.
+        An array of probability scores, either a 1d array of size N_samples or
+        an nd array, in which case the column corresponding to the true class
+        will be used.
     Yt : array
         An array of class labels, of size (N_samples,)
     true_class : int
-        which class is taken to be the "true class" (e.g. Ia vs everything else)
+        which class is taken to be the "true class" (e.g. Ia vs everything
+        else)
     full_output : bool, optional
-        If true returns two vectors corresponding to F1 as a function of threshold, instead of the best value.
+        If true returns two vectors corresponding to F1 as a function of
+        threshold, instead of the best value.
 
     Returns
     -------
     best_FoM : float
-        (If full_output=False) The largest FoM value
+        (If full_output=False) The largest FoM value.
     best_threshold : array
-        (If full_output=False) The probability threshold corresponding to best_FoM
+        (If full_output=False) The probability threshold corresponding to
+        best_FoM.
     fom  : array
         (If full_output=True) FoM as a function of threshold.
     threshold  : array
-        (If full_output=True) Vector of thresholds (from 0 to 1)
-
+        (If full_output=True) Vector of thresholds (from 0 to 1).
     """
     weight = 3.0
 
     probs = pr.copy()
     Y_test = Yt.copy()
-    min_class = Y_test.min()  # This is to deal with starting class assignment at 1.
+    min_class = Y_test.min()  # deals with starting class assignment at 1.
     Y_test = Y_test.squeeze()
 
     if len(pr.shape) > 1:
@@ -355,8 +368,11 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
 
     threshold = np.arange(0, 1, 0.01)
 
-    # This creates an array where each column is the prediction for each threshold
-    preds = np.tile(probs_1, (len(threshold), 1)).T > np.tile(threshold, (len(probs_1), 1))
+    # This creates an array where each column is the prediction for each
+    # threshold
+    preds = np.tile(probs_1,
+                    (len(threshold), 1)).T > np.tile(threshold,
+                                                     (len(probs_1), 1))
     Y_bool = (Y_test == true_class)
     Y_bool = np.tile(Y_bool, (len(threshold), 1)).T
 
@@ -380,50 +396,62 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
 
 
 class OptimisedClassifier():
-    """Implements an optimised classifier (although it can be run without optimisation). Equipped with interfaces to several
-    sklearn classes and functions.
+    """Implements an optimised classifier (although it can be run without
+    optimisation). Equipped with interfaces to several sklearn classes and functions.
     """
 
     NB_param_dict = {}
-    KNN_param_dict = {'n_neighbors': list(range(1, 180, 5)), 'weights': ['distance']}
-    SVM_param_dict = {'C': np.logspace(-2, 5, 5), 'gamma': np.logspace(-8, 3, 5)}
+    KNN_param_dict = {'n_neighbors': list(range(1, 180, 5)),
+                      'weights': ['distance']}
+    SVM_param_dict = {'C': np.logspace(-2, 5, 5),
+                      'gamma': np.logspace(-8, 3, 5)}
     NN_param_dict = {'hidden_layer_sizes': [(l,) for l in range(80, 120, 5)]}
 
-    DT_param_dict = {'criterion': ['gini','entropy'], 'min_samples_leaf': list(range(1,400,25))}
-    RF_param_dict = {'n_estimators': list(range(200, 900, 100)), 'criterion': ['gini', 'entropy']}
-    ests = [DecisionTreeClassifier(criterion='entropy', min_samples_leaf=l) for l in range(5, 55, 10)]
-    Boost_param_dict = {'base_estimator': ests, 'n_estimators': list(range(5, 85, 10))}
-    # This is a strange boosted random forest classifier that Max came up that works quite well, but is likely biased
-    # in general
+    DT_param_dict = {'criterion': ['gini', 'entropy'],
+                     'min_samples_leaf': list(range(1, 400, 25))}
+    RF_param_dict = {'n_estimators': list(range(200, 900, 100)),
+                     'criterion': ['gini', 'entropy']}
+    ests = [DecisionTreeClassifier(criterion='entropy',
+                                   min_samples_leaf=l) for l in range(5, 55, 10)]
+    Boost_param_dict = {'base_estimator': ests,
+                        'n_estimators': list(range(5, 85, 10))}
+    # This is a strange boosted random forest classifier that Max came up that
+    # works quite well, but is likely biased in general
     Boost_RF_param_dict = {'base_estimator': [RandomForestClassifier(400, 'entropy'),
-                                              RandomForestClassifier(600, 'entropy')], 'n_estimators': list([2, 3, 5, 10])}
+                                              RandomForestClassifier(600, 'entropy')],
+                           'n_estimators': list([2, 3, 5, 10])}
 
-
-    # Dictionary to hold good default ranges for parameters for each classifier.
-    params = {'svm': SVM_param_dict, 'knn': KNN_param_dict, 'decision_tree': DT_param_dict, 'random_forest': RF_param_dict,
-              'boost_dt': Boost_param_dict, 'boost_rf': Boost_RF_param_dict, 'nb': NB_param_dict, 'neural_network': NN_param_dict}
+    # Dictionary to hold good default ranges for parameters for each
+    # classifier.
+    params = {'svm': SVM_param_dict, 'knn': KNN_param_dict,
+              'decision_tree': DT_param_dict, 'random_forest': RF_param_dict,
+              'boost_dt': Boost_param_dict, 'boost_rf': Boost_RF_param_dict,
+              'nb': NB_param_dict, 'neural_network': NN_param_dict}
 
     def __init__(self, classifier, optimise=True,  **kwargs):
-        """
-        Wrapper around sklearn classifiers
+        """Wrapper around sklearn classifiers
 
         Parameters
         ----------
         classifier : str or sklearn.Classifier
-            Either a string (one of choice_of_classifiers) or sklearn classifier object
+            Either a string (one of choice_of_classifiers) or sklearn
+            classifier object.
         optimise : bool, optional
-            Whether or not to optimise the parameters
+            Whether or not to optimise the parameters.
         kwargs : optional
-            Keyword arguments passed directly to the classifier
+            Keyword arguments passed directly to the classifier.
         """
 
         self.classifier_name = classifier
         if isinstance(classifier, basestring):
-            # Choose from available classifiers, with default parameters best for SNe (unless overridden)
+            # Choose from available classifiers, with default parameters best
+            # for SNe (unless overridden)
             if 'probability' in kwargs:
                 self.prob = kwargs.pop('probability')
             else:
-                self.prob = True  # By default we want to always return probabilities. User can override this.
+                # By default we want to always return probabilities. User can
+                # override this.
+                self.prob = True
 
             try:
                 if classifier == 'svm':
@@ -431,7 +459,8 @@ class OptimisedClassifier():
                         kern = kwargs.pop('kernel')  # Removes this from kwargs
                     else:
                         kern = 'rbf'
-                    self.clf = svm.SVC(kernel=kern, probability=self.prob, **kwargs)
+                    self.clf = svm.SVC(kernel=kern, probability=self.prob,
+                                       **kwargs)
 
                 elif classifier == 'knn':
                     if 'n_neighbours' in kwargs:
@@ -442,7 +471,9 @@ class OptimisedClassifier():
                         wgts = kwargs.pop('weights')
                     else:
                         wgts = 'distance'
-                    self.clf = neighbors.KNeighborsClassifier(n_neighbors=n, weights=wgts, **kwargs)
+                    self.clf = neighbors.KNeighborsClassifier(n_neighbors=n,
+                                                              weights=wgts,
+                                                              **kwargs)
 
                 elif classifier == 'random_forest':
                     self.clf = RandomForestClassifier(**kwargs)
@@ -454,9 +485,9 @@ class OptimisedClassifier():
                     self.clf = GaussianNB(**kwargs)
                 elif classifier == 'neural_network':
                     if 'hidden_layer_sizes' in kwargs:
-                        l = kwargs.pop('hidden_layer_sizes')
+                        layer_sizes = kwargs.pop('hidden_layer_sizes')
                     else:
-                        l = (5, 2)
+                        layer_sizes = (5, 2)
                     if 'algorithm' in kwargs:
                         algo = kwargs.pop('algorithm')
                     else:
@@ -465,7 +496,9 @@ class OptimisedClassifier():
                         activation = kwargs.pop('activation')
                     else:
                         activation = 'tanh'
-                    self.clf = MLPClassifier(solver=algo, hidden_layer_sizes=l, activation=activation,  **kwargs)
+                    self.clf = MLPClassifier(solver=algo,
+                                             hidden_layer_sizes=layer_sizes,
+                                             activation=activation,  **kwargs)
                 elif classifier == 'multiple_classifier':
                     pass
                 else:
@@ -475,7 +508,8 @@ class OptimisedClassifier():
                     sys.exit(0)
 
             except TypeError:
-                # Gracefully catch errors of sending the wrong kwargs to the classifiers
+                # Gracefully catch errors of sending the wrong kwargs to the
+                # classifiers
                 print()
                 print('Error')
                 print('One of the kwargs below:')
@@ -485,9 +519,9 @@ class OptimisedClassifier():
                 sys.exit(0)
 
         else:
-            # This is already some sklearn classifier or an object that behaves like one
+            # This is already some sklearn classifier or an object that
+            # behaves like one
             self.clf = classifier
-
 
         print('Created classifier of type:')
         print(self.clf)
@@ -510,13 +544,17 @@ class OptimisedClassifier():
         Yfit : array
             Predicted classes for X_test
         probs : array
-        (If self.prob=True) Probability for each object to belong to each class.
+            (If self.prob=True) Probability for each object to belong to each
+            class.
         """
 
         self.clf.fit(X_train, y_train)
-        if self.prob: # Probabilities requested
+        if self.prob:  # Probabilities requested
             probs = self.clf.predict_proba(X_test)
-            Yfit = probs.argmax(axis=1)  # Each object is assigned the class with highest probability
+
+            # Each object is assigned the class with highest probability
+            Yfit = probs.argmax(axis=1)
+
             classes = np.unique(y_train)
             classes.sort()
             Yfit = classes[Yfit]
@@ -527,8 +565,7 @@ class OptimisedClassifier():
             return Yfit
 
     def _custom_auc_score(self, estimator, X, Y):
-        """
-        Custom scoring method for use with GridSearchCV.
+        """Custom scoring method for use with GridSearchCV.
 
         Parameters
         ----------
@@ -551,8 +588,7 @@ class OptimisedClassifier():
         return auc
 
     def _custom_logloss_score(self, estimator, X, Y):
-        """
-        Custom scoring method for use with GridSearchCV.
+        """Custom scoring method for use with GridSearchCV.
 
         Parameters
         ----------
@@ -566,15 +602,19 @@ class OptimisedClassifier():
         Returns
         -------
         float
-            Symmetric of the PLASTICC logloss score. The symmetric is returned because we want
-            a funtion to maximise and the optimal result of the logloss is its minimum (logloss=0).
+            Symmetric of the PLASTICC logloss score. The symmetric is returned
+            because we want a funtion to maximise and the optimal result of
+            the logloss is its minimum (logloss=0).
         """
         probs = estimator.predict_proba(X)
         logloss = plasticc_utils.plasticc_log_loss(Y, probs)
-        return -logloss # symmetric because we want to maximise this output
+        return -logloss  # symmetric because we want to maximise this output
 
-    def optimised_classify(self, X_train, y_train, X_test, scoring_func='accuracy', balance_classes=False, **kwargs):
-        """Run optimised classifier using grid search with cross validation to choose optimal classifier parameters.
+    def optimised_classify(self, X_train, y_train, X_test,
+                           scoring_func='accuracy', balance_classes=False,
+                           **kwargs):
+        """Run optimised classifier using grid search with cross validation to
+        choose optimal classifier parameters.
 
         Parameters
         ----------
@@ -585,37 +625,39 @@ class OptimisedClassifier():
         X_test : array
             Array of validation features of shape (n_test,n_features)
         scoring_func : string, optional
-            Choice of which function to optimise with when optimising hyperparameters. Currently implemented are
-            "auc" for the ROC AUC score (then "true_class" should be given as well as a kwarg), "logloss" for the
-            PLASTICC logloss function or accuracy from sklearn (default).
+            Choice of which function to optimise with when optimising
+            hyperparameters. Currently implemented are "auc" for the ROC AUC
+            score (then "true_class" should be given as well as a kwarg),
+            "logloss" for the PLASTICC logloss function or accuracy from
+            sklearn (default).
         params : dict, optional
-            Allows the user to specify which parameters and over what ranges to optimise. If not set,
-            defaults will be used.
+            Allows the user to specify which parameters and over what ranges
+            to optimise. If not set, defaults will be used.
         true_class : int, optional
-            The class determined to be the desired class (e.g. Ias, which might correspond to class 1). This allows
-            the user to optimise for different classes (based on ROC curve AUC).
+            The class determined to be the desired class (e.g. Ias, which
+            might correspond to class 1). This allows the user to optimise for
+            different classes (based on ROC curve AUC).
         balance_classes : bool, optional
-            If True, balances the classes using SMOTE. Otherwise, it runs without balancing.
-            Default is False.
+            If True, balances the classes using SMOTE. Otherwise, it runs
+            without balancing. Default is False.
 
         Returns
         -------
         Yfit : array
             Predicted classes for X_test
         probs : array
-        (If self.prob=True) Probability for each object to belong to each class.
+            (If self.prob=True) Probability for each object to belong to each
+            class.
         """
         if 'params' in kwargs:
             params = kwargs['params']
         else:
             params = self.params[self.classifier_name]
-#            if self.classifier_name=='svm':
-#                n_features=len(X_train[0, :]) #Update now the number of features is known
-#                params['gamma']=[1/(n_features**2), 1/n_features, 1/np.sqrt(n_features)]
 
         if 'true_class' in kwargs:
             self.true_class = kwargs['true_class']
-            # Do some error checking here to avoid confusion in the roc curve code when using it for optimisation
+            # Do some error checking here to avoid confusion in the roc curve
+            # code when using it for optimisation
             class_labels = np.unique(y_train)
             self.which_column = np.where(class_labels == self.true_class)[0][0]
         else:
@@ -629,14 +671,16 @@ class OptimisedClassifier():
         else:
             scoring = "accuracy"
 
-        if balance_classes == True :
-            self.clf = make_pipeline(SMOTE(sampling_strategy='not majority'), self.clf) # balance dataset
+        if balance_classes is True:
+            self.clf = make_pipeline(SMOTE(sampling_strategy='not majority'),
+                                     self.clf)  # balance dataset
             new_params = {}
             for key in params:
                 new_params['randomforestclassifier__'+key] = params[key]
             params = new_params
 
-        self.clf = model_selection.GridSearchCV(self.clf, params, scoring=scoring, cv=5)
+        self.clf = model_selection.GridSearchCV(self.clf, params,
+                                                scoring=scoring, cv=5)
 
         self.clf.fit(X_train, y_train)  # This actually does the grid search
         best_params = self.clf.best_params_
@@ -648,11 +692,13 @@ class OptimisedClassifier():
                 float(best_params[k])
                 if best_params[k] <= min(params[k]):
                     print()
-                    print('WARNING: Lower boundary on parameter', k, 'may be too high. Optimum may not have been reached.')
+                    print(f'WARNING: Lower boundary on parameter {k} may be '
+                          f'too high. Optimum may not have been reached.')
                     print()
                 elif best_params[k] >= max(params[k]):
                     print()
-                    print('WARNING: Upper boundary on parameter', k, 'may be too low. Optimum may not have been reached.')
+                    print(f'WARNING: Upper boundary on parameter {k} may be '
+                          f'too low. Optimum may not have been reached.')
                     print()
 
             except (ValueError, TypeError):
@@ -660,7 +706,10 @@ class OptimisedClassifier():
 
         if self.prob:  # Probabilities requested
             probs = self.clf.predict_proba(X_test)
-            Yfit = probs.argmax(axis=1).tolist()  # Each object is assigned the class with highest probability
+
+            # Each object is assigned the class with highest probability
+            Yfit = probs.argmax(axis=1).tolist()
+
             classes = np.unique(y_train)
             classes.sort()
             Yfit = classes[Yfit]
@@ -670,28 +719,35 @@ class OptimisedClassifier():
             return Yfit
 
 
-def __call_classifier(classifier, X_train, y_train, X_test, param_dict, return_classifier):
+def __call_classifier(classifier, X_train, y_train, X_test, param_dict,
+                      return_classifier):
     """Specifically designed to run with multiprocessing"""
 
     c = OptimisedClassifier(classifier)
     if classifier in param_dict.keys():
-        y_fit, probs = c.optimised_classify(X_train, y_train, X_test, params=param_dict[classifier])
+        y_fit, probs = c.optimised_classify(X_train, y_train, X_test,
+                                            params=param_dict[classifier])
     else:
         y_fit, probs = c.optimised_classify(X_train, y_train, X_test)
 
     if return_classifier:
-        return probs, c.clf  # Returns the best fitting sklearn classifier object
+        # Returns the best fitting sklearn classifier object
+        return probs, c.clf
     else:
         return probs
 
 
-def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb', 'knn', 'svm', 'neural_network', 'boost_dt'],
-                 training_set=0.3, param_dict={}, number_processes=1, scale=True,
-                 plot_roc_curve=True, return_classifier=False, classifiers_for_cm_plots=[],
-                 type_dict=None, seed=1234):
+def run_pipeline(features, types, output_name='', columns=[],
+                 classifiers=['nb', 'knn', 'svm', 'neural_network',
+                              'boost_dt'],
+                 training_set=0.3, param_dict={}, number_processes=1,
+                 scale=True, plot_roc_curve=True, return_classifier=False,
+                 classifiers_for_cm_plots=[], type_dict=None, seed=1234):
     """
-    Utility function to classify a dataset with a number of classification methods. This does assume your test
-    set has known values to compare against. Returns, if requested, the classifier objects to run on future test sets.
+    Utility function to classify a dataset with a number of classification
+    methods. This does assume your test set has known values to compare
+    against. Returns, if requested, the classifier objects to run on future
+    test sets.
 
     Parameters
     ----------
@@ -706,39 +762,48 @@ def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb',
     classifiers : list, optional
         Which available ML classifiers to use
     training_set : float or list, optional
-        If a float, this is the fraction of objects that will be used as training set. If a list, it's assumed these are
-        the ID's of the objects to be used
+        If a float, this is the fraction of objects that will be used as
+        training set. If a list, it's assumed these are the ID's of the
+        objects to be used.
     param_dict : dict, optional
-        Use to run different ranges of hyperparameters for the classifiers when optimising
+        Use to run different ranges of hyperparameters for the classifiers
+        when optimising.
     number_processes : int, optional
-        Number of processors for multiprocessing (shared memory only). Each classifier will then be run in parallel.
+        Number of processors for multiprocessing (shared memory only). Each
+        classifier will then be run in parallel.
     scale : bool, optional
-        Rescale features using sklearn's preprocessing Scalar class (highly recommended this is True)
+        Rescale features using sklearn's preprocessing Scalar class (highly
+        recommended this is True).
     plot_roc_curve : bool, optional
         Whether or not to plot the ROC curve at the end
     return_classifier : bool, optional
-        Whether or not to return the actual classifier objects (due to the limitations of multiprocessing, this can't
-        be done in parallel at the moment).
+        Whether or not to return the actual classifier objects (due to the
+        limitations of multiprocessing, this can't be done in parallel at the
+        moment).
 
     Returns
     -------
     dict
-        (If return_classifier=True) Dictionary of fitted sklearn Classifier objects
+        (If return_classifier=True) Dictionary of fitted sklearn Classifier
+        objects.
 
     """
     t1 = time.time()
 
     if type_dict is None:
-        type_dict = {value: value for value in range(len(unique(types, keys='Type')))}
+        type_dict = {value: value for value in range(len(unique(types,
+                                                                keys='Type')))}
 
     if isinstance(features, Table):
-        # The features are in astropy table format and must be converted to a numpy array before passing to sklearn
+        # The features are in astropy table format and must be converted to a
+        # numpy array before passing to sklearn
 
-        # We need to make sure we match the correct Y values to X values. The safest way to do this is to make types an
-        # astropy table as well.
+        # We need to make sure we match the correct Y values to X values. The
+        # safest way to do this is to make types an astropy table as well.
 
         if not isinstance(types, Table):
-            types = Table(data=[features['Object'], types], names=['Object', 'Type'])
+            types = Table(data=[features['Object'], types],
+                          names=['Object', 'Type'])
         feats = join(features, types, 'Object')
 
         if len(columns) == 0:
@@ -750,7 +815,8 @@ def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb',
             objs = np.random.RandomState(seed=seed).permutation(objs)
             training_set = objs[:(int)(training_set*len(objs))]
 
-        # Otherwise a training set has already been provided as a list of Object names and we can continue
+        # Otherwise a training set has already been provided as a list of
+        # object names and we can continue
         feats_train = feats[np.in1d(feats['Object'], training_set)]
         feats_test = feats[~np.in1d(feats['Object'], training_set)]
 
@@ -762,13 +828,15 @@ def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb',
     else:
         # Otherwise the features are already in the form of a numpy array
         if np.isscalar(training_set):
-            inds = np.random.RandomState(seed=seed).permutation(range(len(features)))
+            inds = np.random.RandomState(seed=seed).permutation(
+                range(len(features)))
             train_inds = inds[:(int)(len(inds)*training_set)]
             test_inds = inds[(int)(len(inds)*training_set):]
         else:
             # We assume the training set has been provided as indices
             train_inds = training_set
-            test_inds = range(len(types))[~np.in1d(range(len(types)),training_set)]
+            test_inds = range(len(types))[~np.in1d(range(
+                len(types)), training_set)]
 
         X_train = features[train_inds]
         y_train = types[train_inds]
@@ -786,13 +854,15 @@ def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb',
     classifier_objects = {}
 
     if number_processes > 1 and return_classifier:
-        print("Due to limitations with python's multiprocessing module, classifier objects cannot be returned if " \
-              "multiple processors are used. Continuing serially...")
+        print("Due to limitations with python's multiprocessing module, "
+              "classifier objects cannot be returned if multiple processors "
+              "are used. Continuing serially...")
         print()
 
     if number_processes > 1 and not return_classifier:
-        partial_func=partial(__call_classifier, X_train=X_train, y_train=y_train, X_test=X_test,
-                             param_dict=param_dict, return_classifier=False)
+        partial_func = partial(__call_classifier, X_train=X_train,
+                               y_train=y_train, X_test=X_test,
+                               param_dict=param_dict, return_classifier=False)
         p = Pool(number_processes, maxtasksperchild=1)
         result = p.map(partial_func, classifiers)
 
@@ -801,7 +871,8 @@ def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb',
             probabilities[cls] = result[i]
     else:
         for cls in classifiers:
-            retval = __call_classifier(cls, X_train, y_train, X_test, param_dict, return_classifier)
+            retval = __call_classifier(cls, X_train, y_train, X_test,
+                                       param_dict, return_classifier)
             if return_classifier:
                 probabilities[cls] = retval[0]
                 classifier_objects[cls] = retval[1]
@@ -825,7 +896,8 @@ def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb',
             TPR = np.column_stack((TPR, tpr))
             AUC.append(auc)
 
-        if len(output_name) != 0:  # Only save if an output directory is supplied
+        # Only save if an output directory is supplied
+        if len(output_name) != 0:
             typs = np.unique(y_train)
             typs.sort()
             typs = np.array(typs, dtype='str').tolist()
@@ -853,25 +925,24 @@ def run_pipeline(features, types, output_name='', columns=[], classifiers=['nb',
         labels.append(tp_row['Type'])
 
     if plot_roc_curve:
-        plot_roc(FPR, TPR, AUC, labels=classifiers, label_size=16, tick_size=12, line_width=1.5)
+        plot_roc(FPR, TPR, AUC, labels=classifiers, label_size=16,
+                 tick_size=12, line_width=1.5)
         plt.show()
 
     if classifiers_for_cm_plots is None:
         classifiers_for_cm_plots = []
 
-    if classifiers_for_cm_plots is 'all':
+    if classifiers_for_cm_plots == 'all':
         classifiers_for_cm_plots = classifiers
 
     cms = []
     for cls in classifiers_for_cm_plots:
         if cls not in classifiers:
-            print('%s not in our choice of classifiers!'%cls)
+            print('%s not in our choice of classifiers!' % cls)
             continue
         y_fit = (probabilities[cls].argmax(axis=1)).tolist()
         cm = compute_confusion_matrix(y_fit, y_test)
         cms.append(cm)
-        # plot_confusion_matrix(cm, labels=labels, title='Confusion matrix for %s'%cls, normalise=True)
-        # plt.show()
 
     if return_classifier:
         return classifier_objects, cms
