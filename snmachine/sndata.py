@@ -582,6 +582,7 @@ class PlasticcData(EmptyDataset):
         data.rename({'flux_err': 'flux_error'}, axis='columns', inplace=True)
         data.rename({'detected_bool': 'detected'}, axis='columns',
                     inplace=True)
+        data.rename({'ddf_bool': 'ddf'}, axis='columns', inplace=True)
 
         # Abstract column names from dataset
         for col in data.columns:
@@ -823,6 +824,142 @@ class PlasticcData(EmptyDataset):
                           4: 'lsstz', 5: 'lssty'}
         df['filter'].replace(to_replace=filter_replace, inplace=True)
         return df
+
+    @staticmethod
+    def plot_obj_and_model(obj_data, obj_model=None, **kwargs):
+        """Plot an object observations and the model fitted to them.
+
+        If `obj_model` is not provided, the function only plots the light
+        curve observations.
+
+        Parameters
+        ----------
+        obj_data : pandas.core.frame.DataFrame or astropy.table.Table
+            Time, flux, flux error and passbands of the object.
+        obj_model : {None, astropy.table.Table, pandas.core.frame.DataFrame},
+                    optional
+            If `None`, only plots `obj_data`. Otherwise, `obj_model` has the
+            time, flux, flux error (optional) and passbands of the model
+            fitted to the object.
+        **kwargs : dict
+            Additional keyword arguments that can replace default parameters in
+            other funtions:
+            - axes : {None, matplotlib.axes}, optional
+                If the axes are provided, the figure is plotted on the axes.
+                Otherwise, it is plotted directly with `matplotlib`.
+            - pb_colors : dict, optional
+                Mapping between the passband names and the colours with which
+                they are represented. If none mapping is provided, the
+                passbands are represented with the default colours.
+            - show_title : Bool, default = False
+                Whether to show the plot title.
+            - title : str, optional
+                The title for the plot.
+            - show_legend : Bool, default = True
+                Whether to show the plot legend.
+
+        Raises
+        ------
+        AttributeError
+            There is a default title if `obj_data` contains the object id and
+            redshift accessible through `obj_data.meta['name']` and
+            `obj_data.meta['hostgal_photoz']`, respectively.
+            Otherwise, if the kwarg `show_title` is `True` a title must be
+            provided in the kwarg `title`.
+        """
+        # Extra plotting parameters passed as kwargs
+        if 'axes' in kwargs:
+            axes = kwargs['axes']
+        else:
+            axes = None
+        if 'pb_colors' in kwargs:
+            pb_colors = kwargs['pb_colors']
+        else:
+            pb_colors = colours
+        if 'show_title' in kwargs:
+            show_title = kwargs['show_title']
+        else:
+            show_title = False
+        if 'title' in kwargs:
+            title = kwargs['title']
+        elif show_title is True:
+            try:
+                title = 'Object ID: {}\nPhoto-z = {:.3f}'.format(
+                    obj_data.meta['name'], obj_data.meta['hostgal_photoz'])
+            except AttributeError:
+                raise AttributeError('No default title available. Provide the'
+                                     ' desired title in the kwarg `title`.')
+        if 'show_legend' in kwargs:
+            show_legend = kwargs['show_legend']
+        else:
+            show_legend = True
+
+        passbands = ['lsstu', 'lsstg', 'lsstr', 'lssti', 'lsstz', 'lssty']
+        for pb in passbands:
+            # Get the light curve observations in the chosen passband `pb`
+            obj_data_pb = obj_data[obj_data['filter'] == pb]
+
+            # Skip this code block and plot only the light curve observations
+            # if no `obj_model` was inputed.
+            if obj_model is not None:
+                # Get the model observations in the chosen passband `pb`
+                obj_model_pb = obj_model[obj_model['filter'] == pb]
+                model_flux = obj_model_pb['flux']
+
+                # Plot the model values
+                if axes is None:
+                    plt.plot(obj_model_pb['mjd'], model_flux,
+                             color=pb_colors[pb], alpha=.7, label='')
+                else:
+                    axes.plot(obj_model_pb['mjd'], model_flux,
+                              color=pb_colors[pb], alpha=.7, label='')
+                try:  # if the model has error information, plot it
+                    model_flux_error = obj_model_pb['flux_error']
+                    if axes is None:
+                        plt.fill_between(x=obj_model_pb['mjd'],
+                                         y1=model_flux-model_flux_error,
+                                         y2=model_flux+model_flux_error,
+                                         color=pb_colors[pb], alpha=.15,
+                                         label=None)
+                    else:
+                        axes.fill_between(x=obj_model_pb['mjd'],
+                                          y1=model_flux-model_flux_error,
+                                          y2=model_flux+model_flux_error,
+                                          color=pb_colors[pb], alpha=.15,
+                                          label=None)
+                except KeyError:  # the model has no error information
+                    pass
+
+            # Plot the object observations.
+            # They are ploted after the models to be on top of these.
+            if axes is None:
+                plt.errorbar(obj_data_pb['mjd'], obj_data_pb['flux'],
+                             obj_data_pb['flux_error'], fmt='o',
+                             color=pb_colors[pb], label=pb[-1])
+            else:
+                axes.errorbar(obj_data_pb['mjd'], obj_data_pb['flux'],
+                              obj_data_pb['flux_error'], fmt='o',
+                              color=pb_colors[pb], label=pb[-1])
+        if axes is None:
+            plt.xlabel('Time (days)')
+            plt.ylabel('Flux units')
+        else:
+            axes.set_xlabel('Time (days)')
+            axes.set_ylabel('Flux units')
+
+        if show_title:
+            if axes is None:
+                plt.title(title)
+            else:
+                axes.set_title(title)
+
+        if show_legend:
+            if axes is None:
+                plt.legend(ncol=2, handletextpad=.3, borderaxespad=.3,
+                           labelspacing=.2, borderpad=.3, columnspacing=.4)
+            else:
+                axes.legend(ncol=2, handletextpad=.3, borderaxespad=.3,
+                            labelspacing=.2, borderpad=.3, columnspacing=.4)
 
     def remove_gaps(self, max_gap_length, verbose=False):
         """Remove the first gap longer than the given threshold.
