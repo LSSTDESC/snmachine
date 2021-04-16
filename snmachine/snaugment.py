@@ -5,6 +5,7 @@ Module handling the data augmentation of a snmachine dataset.
 import copy
 import os
 import pickle
+import sys
 import time
 
 import george
@@ -12,12 +13,25 @@ import numpy as np
 import pandas as pd
 import scipy.optimize as op
 
+# Solve imblearn problems introduced with sklearn version 0.24
+import sklearn
+import sklearn.neighbors, sklearn.utils, sklearn.ensemble
+from sklearn.utils._testing import ignore_warnings
+sys.modules['sklearn.neighbors.base'] = sklearn.neighbors._base
+sys.modules['sklearn.utils.safe_indexing'] = sklearn.utils._safe_indexing
+sys.modules['sklearn.utils.testing'] = sklearn.utils._testing
+sys.modules['sklearn.ensemble.bagging'] = sklearn.ensemble._bagging
+sys.modules['sklearn.ensemble.base'] = sklearn.ensemble._base
+sys.modules['sklearn.ensemble.forest'] = sklearn.ensemble._forest
+sys.modules['sklearn.metrics.classification'] = sklearn.metrics._classification
+
 from astropy.table import Table, vstack
 from astropy.cosmology import FlatLambdaCDM
 from collections import Counter
 from functools import partial  # TODO: erase when old sndata is deprecated
 from imblearn.combine import SMOTEENN, SMOTETomek
 from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
+from scipy.special import erf
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from snmachine import gps, snfeatures
@@ -25,17 +39,74 @@ from snmachine import gps, snfeatures
 
 # Functions to choose spectroscopic redshift for `GPAugment`.
 # They are inputed as the parameter `choose_z` and their arguments as `*kwargs`
-def choose_new_z_spec(z_ori, pb_wavelengths):
-    '''Choose a new spec-z for the event based on the original spec-z'''
+def choose_z_wfd(z_ori, pb_wavelengths, random_state):
+    """Choose the new spectroscopic redshift for an WFD augmented event.
 
-    z_min = max(10**(-6), (1 + z_ori) * (2 - pb_wavelengths['lsstg']
-                                         / pb_wavelengths['lsstu']) - 1)
-    z_max = ((1 + z_ori)
-             * (2 - pb_wavelengths['lsstz']/pb_wavelengths['lssty']) - 1)
-    log_z_star = np.random.uniform(low=np.log(z_min), high=np.log(z_max))
+    The new spectroscopic redshift is based on the redhsift of the original
+    event.
+    This target distribution of the redshift is class-agnostic and modeled
+    after the PLAsTiCC supernovae simulated in the Wide-Fast-Deep Survey.
+
+    Parameters
+    ----------
+    z_ori : float
+        Redshift of the original event.
+    pb_wavelengths : dict
+        Mapping between the passbands name and central wavelength.
+    random_state : numpy.random.mtrand.RandomState
+        Container for the slow Mersenne Twister pseudo-random number generator.
+        It allows reproducible results.
+
+    Returns
+    -------
+    z_new : float
+        Redshift of the new event.
+    """
+    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
+                                         / pb_wavelengths['lssty'])**(-1) - 1)
+    z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg']
+                            / pb_wavelengths['lsstu'])**(-1) - 1)
+
+    log_z_star = random_state.triangular(left=np.log(z_min),
+                                         mode=np.log(z_min),
+                                         right=np.log(z_max))
     z_new = - np.exp(log_z_star) + z_min + z_max
 
-    assert (z_new > z_min) and (z_new < z_max)
+    return z_new
+
+
+def choose_z_ddf(z_ori, pb_wavelengths, random_state):
+    """Choose the new spectroscopic redshift for an DDF augmented event.
+
+    The new spectroscopic redshift is based on the redhsift of the original
+    event.
+    This target distribution of the redshift is class-agnostic and modeled
+    after the PLAsTiCC supernovae simulated in the Deep Drilling Field Survey.
+
+    Parameters
+    ----------
+    z_ori : float
+        Redshift of the original event.
+    pb_wavelengths : dict
+        Mapping between the passbands name and central wavelength.
+    random_state : numpy.random.mtrand.RandomState
+        Container for the slow Mersenne Twister pseudo-random number generator.
+        It allows reproducible results.
+
+    Returns
+    -------
+    z_new: float
+        Redshift of the new event.
+    """
+    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
+                                         / pb_wavelengths['lssty'])**(-1) - 1)
+    z_max = 1.4*((1 + z_ori) * (2 - pb_wavelengths['lsstg']
+                                / pb_wavelengths['lsstu'])**(-1) - 1)
+
+    log_z_star = random_state.triangular(left=np.log(z_min),
+                                         mode=np.log(z_min),
+                                         right=np.log(z_max))
+    z_new = - np.exp(log_z_star) + z_min + z_max
 
     return z_new
 
@@ -266,6 +337,45 @@ class SNAugment:
         else:
             return classes
 
+    @property
+    def dataset(self):
+        """Return the original dataset.
+
+        Returns
+        -------
+        Dataset object (sndata class)
+            Dataset to augment.
+        """
+        return self._dataset
+
+    @property
+    def random_seed(self):
+        """Return the random state used to augment.
+
+        Returns
+        -------
+        int
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        """
+        return self._random_seed
+
+    @random_seed.setter
+    def random_seed(self, value):
+        """Set the seed to the random state used to augment.
+
+        It also initilizes the random state generator used to augment.
+
+        Parameters
+        ----------
+        value: int, optional
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        """
+        # Initialise the random state
+        self._rs = np.random.RandomState(value)
+        self._random_seed = value
+
 
 class NNAugment(SNAugment):
     """
@@ -273,10 +383,15 @@ class NNAugment(SNAugment):
     inspired algorithms such as SMOTE, ADASYN etc.
     """
 
-    def __init__(self, X, y, method):
-        self.X = X
-        self.y = y
-        self.method = method
+    def __init__(self, dataset, features, method, random_seed=None,
+                 output_root=None, **kwargs):
+        self._dataset = dataset
+        self.aug_method = method
+        self.random_seed = random_seed
+        self.features = features
+        self.output_root = output_root
+        self._kwargs = kwargs
+
     # TODO : allow for inheritance from SNAugment's constructor
     # def __init__(self, data, method):
     #         super().__init__(data)
@@ -300,31 +415,125 @@ class NNAugment(SNAugment):
 
 
     """
-    _METHODS = [
-        'SMOTE',
-        'ADASYN',
-        'SVMSMOTE',
-        'SMOTEENN',
-        'SMOTETomek'
-    ]
+    _METHODS = ['SMOTE', 'ADASYN', 'SVMSMOTE', 'SMOTEENN', 'SMOTETomek']
+
+    def augment(self):
+        """Augment the dataset."""
+        print('Augmenting the dataset...')
+        initial_time = time.time()
+
+        method = self.aug_method
+        labels = np.array(self.dataset.labels, dtype=str)
+        features = self._join_features()
+        self._ori_columns = features.columns
+
+        print(f"Before resampling: {sorted(Counter(labels).items())}")
+        try:
+            sampling_strategy = self._kwargs['sampling_strategy']
+        except KeyError:
+            sampling_strategy = 'auto'
+        sm = eval(method)(random_state=self._rs,
+                          sampling_strategy=sampling_strategy)
+        aug_features, aug_labels = sm.fit_resample(features, labels)
+        print(f"After resampling: {sorted(Counter(aug_labels).items())}")
+
+        self._create_aug_metadata(aug_features, aug_labels)
+        self._save_aug_feature_space()
+
+        time_spent = pd.to_timedelta(int(time.time()-initial_time), unit='s')
+        print('Time spent augmenting: {}.'.format(time_spent))
+
+    def _save_aug_feature_space(self):
+        output_root = self.output_root
+        if output_root is not None:
+            path_save_features = os.path.join(output_root,
+                                              'aug_feature_space.pckl')
+            with open(path_save_features, 'wb') as f:
+                pickle.dump(self.aug_features, f, pickle.HIGHEST_PROTOCOL)
+
+    def reconstruct_real_space(self):
+        """Go to real space to generate augmented light curves."""
+        # TODO: do it
+        aug_dataset = copy.deepcopy(self.dataset)
+        aug_dataset.metadata = self.aug_metadata
+        aug_dataset.object_names = self.aug_metadata.object_id
+        # objs = aug_dataset.object_names
+        self.aug_dataset = aug_dataset
+
+    def _create_aug_metadata(self, aug_features, aug_labels):
+        """d"""
+        self.aug_labels = aug_labels
+        aug_features = self._format_features(aug_features)
+
+        metadata = self.dataset.metadata
+        all_cols = metadata.columns
+        cols = all_cols.drop(['hostgal_photoz', 'hostgal_photoz_err', 'target',
+                              'object_id'])
+        aug_metadata = pd.DataFrame(aug_features[['hostgal_photoz',
+                                                  'hostgal_photoz_err']])
+        aug_metadata[cols] = metadata[cols]
+        aug_metadata['target'] = aug_labels
+        aug_metadata['object_id'] = aug_metadata.index
+        aug_metadata = aug_metadata[all_cols]
+        self.aug_metadata = aug_metadata
+        self.aug_features = aug_features.drop(columns=['hostgal_photoz',
+                                                       'hostgal_photoz_err'])
+
+    def _join_features(self):
+        """Join redshift features to the wavelet features."""
+        features = self.features.copy()
+        metadata = self.dataset.metadata
+        photoz = metadata.hostgal_photoz.values.astype(float)
+        photoz_err = metadata.hostgal_photoz_err.values.astype(float)
+        features['hostgal_photoz'] = photoz
+        features['hostgal_photoz_err'] = photoz_err
+        return features
+
+    def _format_features(self, aug_features):
+        """Format the new features into a Dataframe."""
+        ori_features = self.features
+        ori_index = ori_features.index
+
+        aug_features = pd.DataFrame(aug_features)
+        aug_features['object_id'] = None
+        aug_features['object_id'][:len(ori_index)] = ori_index
+        aug_objs_ids = [f'aug_{j}' for j in np.arange(0, (len(aug_features)
+                                                          - len(ori_index)))]
+        aug_features['object_id'][len(ori_index):] = aug_objs_ids
+        aug_features.set_index('object_id', inplace=True)
+        aug_features.columns = self._ori_columns
+        return aug_features
 
     @classmethod
     def methods(cls):
         return cls._METHODS
 
-    @staticmethod
-    def augment(X, y, method):
+    @property
+    def aug_method(self):
+        """Return the augmentation method.
 
-        print(NNAugment.methods())
+        Returns
+        -------
+        str
+            Name of the augmentation method.
+        """
+        return self._aug_method
+
+    @aug_method.setter
+    def aug_method(self, method):
+        """Set the augmentation method.
+
+        Parameters
+        ----------
+        method : str
+            Name of the augmentation method.
+        """
         if method not in NNAugment.methods():
-            raise ValueError(F"{method} not a possible augmentation method in `snmachine`")
-
-        print(F"Before resampling: {sorted(Counter(y).items())}")
-
-        X_resampled, y_resampled = eval(method)().fit_resample(X, y)
-        print(F"After resampling: {sorted(Counter(y_resampled).items())}")
-
-        return X_resampled, y_resampled
+            error_message = ('{} is not a possible augmentation method in '
+                             '`snmachine`.'.format(method))
+            raise ValueError(error_message)
+        else:
+            self._aug_method = method
 
 
 class GPAugment(SNAugment):
@@ -345,35 +554,45 @@ class GPAugment(SNAugment):
             Dataset to augment.
         path_saved_gps: str
             Path to the Gaussian Process files.
-        objs_number_to_aug: {`None`, 'all', dict}, optional
+        objs_number_to_aug : {`None`, 'all', dict}, optional
             Specify which events to augment and by how much. If `None`, the
             dataset it not augmented. If `all`, all the events are augmented
             10 times. If a dictionary is provided, it should be in the form of:
                 event: number of times to augment that event.
-        choose_z: {None, function}, optional
+        choose_z : {None, function}, optional
             Function used to choose the new true redshift of the augmented
             events. If `None`, the new events have the same redshift as the
             original event. If a function is provided, arguments can be
             included as `**kwargs`.
-        z_table: {None, pandas.DataFrame}, optional
-            Dataset of the spectroscopic and photometric redshift and
+        z_table : {None, pandas.DataFrame}, optional
+            Dataset of the spectroscopic and photometric redshift, and
             photometric redshift error of events. This table is used to
             generate the photometric redshift and respective error for the
             augmented events. If `None`, this table is generated from the
             events in the original dataset.
-        max_duration: {None, float}, optional
-            Maximum duration of the lightcurve. If `None`, it is set to the
-            maximum lenght of an event in `dataset`.
-        cosmology: astropy.cosmology.core.COSMOLOGY, optional
+        max_duration : {None, float}, optional
+            Maximum duration of the augmented light curves. If `None`, it is
+            set to the length of the longest event in `dataset`.
+        cosmology : astropy.cosmology.core.COSMOLOGY, optional
             Cosmology from `astropy` with the cosmologic parameters already
             defined. By default it assumes Flat LambdaCDM with parameters
             `H0 = 70`, `Om0 = 0.3` and `T_cmb0 = 2.725`.
-        random_seed: int, optional
+        random_seed : int, optional
             Random seed used. Saving this seed allows reproducible results.
             If given, it must be between 0 and 2**32 - 1.
-        **kwargs: dict, optional
+        **kwargs : dict, optional
             Optional keywords to pass arguments into `choose_z` and into
             `snamchine.gps.compute_gps`.
+
+        Notes
+        -----
+        This augmentation is based on [1]_.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
         """
         self._dataset = dataset
         self._aug_method = 'GP augmentation'
@@ -384,7 +603,8 @@ class GPAugment(SNAugment):
         self._path_saved_gps = path_saved_gps
         self._cosmology = cosmology
         self.max_duration = max_duration
-        self._kwargs = dict(kwargs, pb_wavelengths=self.dataset.pb_wavelengths)
+        self._kwargs = dict(kwargs, pb_wavelengths=self.dataset.pb_wavelengths,
+                            random_state=self._rs)
         self.choose_z = choose_z
 
     def augment(self):
@@ -423,10 +643,10 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        aug_objs_data: list of pandas.DataFrame
+        aug_objs_data : list of pandas.DataFrame
             List containing the observations of each augmentation of each
             event.
-        aug_objs_metadata: list of pandas.DataFrame
+        aug_objs_metadata : list of pandas.DataFrame
             Ordered list containing the metadata of each augmentation of each
             event.
         """
@@ -443,10 +663,13 @@ class GPAugment(SNAugment):
         aug_dataset.object_names = aug_metadata.object_id
 
         for obj_data in aug_objs_data:
-            obj = obj_data['object_id'].iloc[0]
-            obj_data = self.trim_obj(obj_data, self.max_duration)
-            aug_dataset.data[obj] = Table.from_pandas(obj_data)
-            aug_dataset.set_inner_metadata(obj)
+            try:
+                obj = obj_data['object_id'].iloc[0]
+                aug_dataset.data[obj] = Table.from_pandas(obj_data)
+                aug_dataset.set_inner_metadata(obj)
+            except (IndexError, TypeError):
+                print(obj_data)
+                print('Failed attempt.')
         self.aug_dataset = aug_dataset
 
         only_new_dataset = copy.deepcopy(aug_dataset)
@@ -461,15 +684,15 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        obj: str
+        obj : str
             Name of the original event.
 
         Returns
         -------
-        aug_objs_data: list of pandas.DataFrame
+        aug_objs_data : list of pandas.DataFrame
             Ordered list containing the observations of each augmentation of
             `obj`.
-        aug_objs_metadata: list of pandas.DataFrame
+        aug_objs_metadata : list of pandas.DataFrame
             Ordered list containing the metadata of each augmentation of `obj`.
         """
         obj_data = self.dataset.data[obj].to_pandas()
@@ -477,18 +700,126 @@ class GPAugment(SNAugment):
         z_obj = obj_metadata['hostgal_specz']
 
         number_aug = self.objs_number_to_aug[obj]  # # of new events
+        number_tries = 10  # # tries to generate an augmented event
         aug_objs_data = []
         aug_objs_metadata = []
         for i in np.arange(number_aug):
             aug_obj = '{}_aug{}'.format(obj, i)
-            aug_obj_metadata = self.create_aug_obj_metadata(aug_obj,
-                                                            obj_metadata)
-            aug_objs_metadata.append(aug_obj_metadata)
-
-            aug_obj_data = self.create_aug_obj_obs(aug_obj_metadata,
-                                                   obj_data, z_obj)
-            aug_objs_data.append(aug_obj_data)
+            j = 0
+            while j < number_tries:
+                aug_obj_metadata = self.create_aug_obj_metadata(aug_obj,
+                                                                obj_metadata)
+                aug_obj_data = self.create_aug_obj_obs(aug_obj_metadata,
+                                                       obj_data, z_obj)
+                if len(aug_obj_data) == 0:
+                    j += 1
+                else:
+                    j = number_tries  # finish the loop
+                    aug_objs_data.append(aug_obj_data)
+                    aug_objs_metadata.append(aug_obj_metadata)
         return aug_objs_data, aug_objs_metadata
+
+    def _choose_obs_times(self, aug_obj_metadata, obj_data, z_ori):
+        """Choose the times at which mock observations will be made.
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
+        z_ori : float
+            Redshift of the original event.
+
+        Returns
+        -------
+        aug_obj_data : pandas.DataFrame
+            Table containing the times and passbands of the augmented event
+            observations. The other columns contain the information relative
+            to the original event.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion `Augmentor._choose_sampling_times` of
+        `avocado/augment.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        z_aug = aug_obj_metadata['hostgal_specz']
+
+        # Generate a copy of the original event
+        aug_obj_data = obj_data.copy()
+        aug_obj_data['object_id'] = aug_obj_metadata['object_id']
+        aug_obj_data['ref_mjd'] = aug_obj_data['mjd'].copy()
+
+        # Stretch the observed epochs of the original event to account for the
+        # time dilation due to the difference between the original and
+        # augmented redshifts
+        z_scale = (1 + z_ori) / (1 + z_aug)
+        # Keep the time of the maximum flux invariant so that the interesting
+        # part of the light curve remains inside the observing window.
+        time_peak = obj_data['mjd'].iloc[np.argmax(obj_data['flux'].values)]
+        aug_obj_data['mjd'] = time_peak + z_scale**-1 * (
+            aug_obj_data['ref_mjd'] - time_peak)
+        # Removed any observations outside the observing window
+        is_not_seen = aug_obj_data['mjd'] < 0
+        aug_obj_data = aug_obj_data[~is_not_seen]  # before 0
+        aug_obj_data = self.trim_obj(aug_obj_data, self.max_duration)  # after
+
+        # Ensure the augmented event still has observations. If not, stop this
+        # augmentation
+        if len(aug_obj_data) == 0:
+            print('obj {} failed.'.format(aug_obj_metadata['object_id']))
+            return None
+
+        # Randomly choose a target number of observations for the new event.
+        target_number_obs = self._choose_target_number_obs(aug_obj_metadata)
+
+        # Events shifted to higher redshifts have a lower density of
+        # observations than the events observed at those redshifts. In order
+        # to account for this, we add more observations to these higher
+        # redshift events.
+        num_fill = int(target_number_obs * (z_scale**-1 - 1))
+        if num_fill > 0:
+            # At the most, create 50% more data; It prevents augmented events
+            # with many observations that provide no extra information
+            if num_fill > len(obj_data)/2:
+                num_fill = int(len(obj_data)/2)
+            new_indices = self._rs.choice(aug_obj_data.index, num_fill,
+                                          replace=True)
+            new_rows = aug_obj_data.loc[new_indices]
+
+            # Choose new passbands randomly
+            obj_pbs = np.unique(aug_obj_data['filter'])
+            new_rows['filter'] = self._rs.choice(obj_pbs, num_fill,
+                                                 replace=True)
+            aug_obj_data = pd.concat([aug_obj_data, new_rows])
+
+            # Reorder observations in chronological order
+            aug_obj_data.sort_values(by=['mjd'], ignore_index=True,
+                                     inplace=True)
+
+        # If the augmented event has more observations than the target number
+        # of observations, randomly drop the difference. In any case, to
+        # introduce additional variability, randomly drop at least 10% of the
+        # synthetic observations.
+        drop_fraction = 0.1
+        number_drop = int(max(len(aug_obj_data) - target_number_obs,
+                              drop_fraction * len(aug_obj_data)))
+        drop_indices = self._rs.choice(aug_obj_data.index, number_drop,
+                                       replace=False)
+        aug_obj_data = aug_obj_data.drop(drop_indices).copy()
+
+        # For consistency between all datasets, the first observation is at t=0
+        aug_obj_data['mjd'] -= np.min(aug_obj_data['mjd'])
+
+        aug_obj_data.reset_index(inplace=True, drop=True)
+        return aug_obj_data
 
     def create_aug_obj_obs(self, aug_obj_metadata, obj_data, z_ori):
         """Create observations for the augmented event.
@@ -498,55 +829,69 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        aug_obj_metadata: pandas.DataFrame
+        aug_obj_metadata : pandas.DataFrame
             Metadata of the augmented event.
-        obj_data: pandas.DataFrame
+        obj_data : pandas.DataFrame
             Observations of the original event.
-        z_ori: float
+        z_ori : float
             Redshift of the original event.
 
         Returns
         -------
-        aug_obj_data: pandas.DataFrame
+        aug_obj_data : pandas.DataFrame
             Observations of the augmented event.
         """
         z_aug = aug_obj_metadata['hostgal_specz']
         ori_obj = str(obj_data['object_id'][0])
 
-        aug_obj_data = obj_data.copy()
-        aug_obj_data['object_id'] = aug_obj_metadata['object_id']
+        aug_obj_data = self._choose_obs_times(aug_obj_metadata, obj_data,
+                                              z_ori)
+        if aug_obj_data is None:
+            return []  # failed attempt
         aug_obj_data['wavelength_z_ori'] = self.compute_new_wavelength(
-            z_ori, z_aug, obj_data)
+            z_ori, z_aug, aug_obj_data)
         gp_predict = self.load_gp(ori_obj)
 
         # Predict the augmented observations seen at `z_ori`
-        pred_x_data = np.vstack([obj_data['mjd'],
+        pred_x_data = np.vstack([aug_obj_data['ref_mjd'],
                                  aug_obj_data['wavelength_z_ori']]).T
         flux_pred, flux_pred_var = gp_predict(pred_x_data, return_var=True)
         flux_pred_error = np.sqrt(flux_pred_var)
 
         # Redshift flux values
         z_scale = (1 + z_ori) / (1 + z_aug)
-        dist_scale = (self.cosmology.distmod(z_ori)
-                      / self.cosmology.distmod(z_aug))**2
+        dist_scale = (self.cosmology.luminosity_distance(z_ori)
+                      / self.cosmology.luminosity_distance(z_aug))**2
         aug_obj_data['flux'] = flux_pred * z_scale * dist_scale
         aug_obj_data['flux_error'] = flux_pred_error * z_scale * dist_scale
 
-        # Adjust the observation times
-        aug_obj_data['mjd'] = obj_data['mjd'] * z_scale**-1
-        return aug_obj_data
+        # Add flux uncertainty to the light curve observations
+        aug_obj_data = self._compute_obs_uncertainty(aug_obj_data,
+                                                     aug_obj_metadata)
+
+        # Apply quality cuts
+        # The event has at least two detections
+        aug_obj_data, pass_detection = self._simulate_detection(
+            aug_obj_data, aug_obj_metadata)
+        # Since two observations are insufficient for constraining a GP, we
+        # require an additional observation, regardless of its S/N.
+        if pass_detection and (len(aug_obj_data) >= 3):
+            return aug_obj_data
+
+        # Failed attempt
+        return []
 
     def load_gp(self, obj):
         """Load the Gaussian Process predict object.
 
         Parameters
         ----------
-        obj: str
+        obj : str
             Name of the original event.
 
         Returns
         -------
-        gp_predict: functools.partial with bound method GP.predict
+        gp_predict : functools.partial with bound method GP.predict
             Function to predict the Gaussian Process flux and uncertainty at
             any time and wavelength.
         """
@@ -569,7 +914,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        aug_obj: str
+        aug_obj : str
             Name of the augmented event in the form
                 `[original event name]_[number of the augmentation]`.
         obj_metadata: pandas.DataFrame
@@ -577,7 +922,7 @@ class GPAugment(SNAugment):
 
         Returns
         -------
-        aug_obj_metadata: pandas.DataFrame
+        aug_obj_metadata : pandas.DataFrame
             Metadata of the augmented event.
         """
         aug_obj_metadata = obj_metadata.copy()
@@ -591,6 +936,21 @@ class GPAugment(SNAugment):
         aug_obj_metadata['hostgal_specz'] = z_spec
         aug_obj_metadata['hostgal_photoz'] = z_photo
         aug_obj_metadata['hostgal_photoz_err'] = z_photo_error
+
+        # Choose whether the new object will be in the DDF or not. TODO: avo
+        if obj_metadata["ddf"]:
+            # Most observations are WFD observations, so generate more of
+            # those. The DDF and WFD samples are effectively completely
+            # different, so this ratio doesn't really matter.
+            #aug_obj_metadata["ddf"] = True
+            #aug_obj_metadata["ddf"] = False
+            rd_value = self._rs.rand()
+            aug_obj_metadata["ddf"] = rd_value > 0.99  # .99
+        else:
+            # If the reference wasn't a DDF observation, can't simulate a DDF
+            # observation.
+            aug_obj_metadata["ddf"] = False
+
         return aug_obj_metadata
 
     def compute_new_z_photo(self, z_spec):
@@ -602,16 +962,16 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        z_spec: float
+        z_spec : float
             Spectroscopic redshift of the augmented event.
         i: int, optional
             Number of the current iteration. This acts as a stopping criteria.
 
         Returns
         -------
-        z_photo: float
+        z_photo : float
             Photometric redshift of the augmented event.
-        z_photo_error: float
+        z_photo_error : float
             Photometric redshift error of the augmented event.
 
         Raises
@@ -620,8 +980,9 @@ class GPAugment(SNAugment):
             If none of the generated `z_photo` or `z_photo_error` are positive.
         """
         z_table = self.z_table
-        number_tries = 100  # # of tries to get positive z values
-        rd_zs_triple = z_table.sample(random_state=self._rs, n=number_tries)
+        number_tries = 100  # number of tries to get positive z values
+        rd_zs_triple = z_table.sample(random_state=self._rs, n=number_tries,
+                                      replace=True)
         zs_diff = rd_zs_triple['z_diff']
         zs_photo = z_spec + (self._rs.choice([-1, 1], size=number_tries)
                              * zs_diff)
@@ -643,7 +1004,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        path_to_save_gps: str
+        path_to_save_gps : str
             Path where to save the new Gaussian Processes outputs.
         """
         # Confirm the data was augmented and the path to save the GPs exist
@@ -672,52 +1033,41 @@ class GPAugment(SNAugment):
                                  'the augmented events.')
 
     @property
-    def dataset(self):
-        """Return the original dataset.
-
-        Returns
-        -------
-        Dataset object (sndata class)
-            Dataset to augment.
-        """
-        return self._dataset
-
-    @property
     def max_duration(self):
-        """Return the maximum duration any lightcurve can have.
+        """Return the maximum duration any light curve can have.
 
         All the events in the original dataset must be shorter than this value.
 
         Returns
         -------
         float
-            Maximum duration any lightcurve can have.
+            Maximum duration any light curve can have.
         """
         return self._max_duration
 
     @max_duration.setter
     def max_duration(self, value):
-        """Set the maximum duration any lightcurve can have.
+        """Set the maximum duration any light curve can have.
 
         Parameters
         ----------
-        value: {None, float}, optional
-            Maximum duration of the lightcurve. If `None`, it is set to the
+        value : {None, float}, optional
+            Maximum duration of the light curve. If `None`, it is set to the
             maximum lenght of an event in `dataset`.
 
         Raises
         ------
         ValueError
             If any event in the original dataset is longer than the maximum
-            duration any lightcurve can have.
+            duration any light curve can have.
         """
         max_duration_ori = self.dataset.get_max_length()
         if value is None:
             duration = max_duration_ori
-        elif max_duration_ori < value:
+        elif max_duration_ori > value:
             raise ValueError('All the events in the original dataset must be '
                              'shorter than the required maximum duration any '
-                             'lightcurve. At the moment the maximum duration '
+                             'light curve. At the moment the maximum duration '
                              'of an event is {:.0f} days.'
                              ''.format(max_duration_ori))
         else:
@@ -734,14 +1084,14 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        obj_data: pandas.DataFrame
+        obj_data : pandas.DataFrame
             Observations of an event.
-        max_duration: float
-            Maximum duration of the lightcurve.
+        max_duration : float
+            Maximum duration of the light curve.
 
         Returns
         -------
-        obj_data: pandas.DataFrame
+        obj_data : pandas.DataFrame
             Trimmed observations of an event.
         """
         obj_duration = np.max(obj_data['mjd'])
@@ -790,7 +1140,7 @@ class GPAugment(SNAugment):
                             'redshift 1 by calling `cosmology.distmod(z=1)`.')
 
     def compute_new_wavelength(self, z_ori, z_new, obj_data):
-        """Compute the new observations wavelenght at the original redshift.
+        """Compute the new observations wavelength at the original redshift.
 
         The observation flux is measured at specific wavelengths. This
         function calculates the wavelength of the new event as seen by an
@@ -798,16 +1148,16 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        z_ori: float
+        z_ori : float
             Redshift of the original event.
-        z_new: float
+        z_new : float
             Redshift of the new event.
-        obj_data: pandas.DataFrame
+        obj_data : pandas.DataFrame
             Observations of the original event.
 
         Returns
         -------
-        wavelength_new: list-like
+        wavelength_new : list-like
             Wavelength of the new observations at redshift `z_ori`.
         """
         z_scale = (1 + z_ori) / (1 + z_new)
@@ -857,7 +1207,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        value: {None, pandas.DataFrame}, optional
+        value : {None, pandas.DataFrame}, optional
             Dataset of the spectroscopic and photometric redshift and
             photometric redshift error of events. This table is used to
             generate the photometric redshift and respective error for the
@@ -880,7 +1230,7 @@ class GPAugment(SNAugment):
 
         Returns
         -------
-        z_table: pandas.DataFrame
+        z_table : pandas.DataFrame
             Table with `z_diff` and `hostgal_photoz_err`
 
         Raises
@@ -911,7 +1261,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        path_to_test: str
+        path_to_test : str
             Path to test the existence.
 
         Raises
@@ -938,7 +1288,7 @@ class GPAugment(SNAugment):
 
     @property
     def objs_number_to_aug(self):
-        """Return the number and which events used to augment.
+        """Return which events to augment and by how much.
 
         Returns
         -------
@@ -950,11 +1300,11 @@ class GPAugment(SNAugment):
 
     @objs_number_to_aug.setter
     def objs_number_to_aug(self, value):
-        """Set the number and which events used to augment.
+        """Set which events to augment and by how much.
 
         Parameters
         ----------
-        value: {`None`, 'all', dict}, optional
+        value : {`None`, 'all', dict}, optional
             Specify which events to augment and by how much. If `None`, the
             dataset it not augmented. If `all`, all the events are augmented
             10 times. If a dictionary is provided, it should be in the form of:
@@ -970,7 +1320,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        objs_number_to_aug: {`None`, 'all', dict}, optional
+        objs_number_to_aug : {`None`, 'all', dict}, optional
             Specify which events to augment and by how much. If `None`, the
             dataset it not augmented. If `all`, all the events are augmented
             10 times. If a dictionary is provided, it should be in the form of:
@@ -978,7 +1328,7 @@ class GPAugment(SNAugment):
 
         Returns
         -------
-        objs_number_to_aug: dict
+        objs_number_to_aug : dict
             The events used to augment and how many of each in the form of:
                 event: number of times to augment that event.
 
@@ -1024,32 +1374,177 @@ class GPAugment(SNAugment):
         objs_number_to_aug = self.objs_number_to_aug
         return np.array(list(objs_number_to_aug.keys()))
 
-    @property
-    def random_seed(self):
-        """Return the random state used to augment.
+    def _choose_target_number_obs(self, aug_obj_metadata):
+        """Randomly choose the target number of light curve observations.
 
-        Returns
-        -------
-        int
-            Random seed used. Saving this seed allows reproducible results.
-            If given, it must be between 0 and 2**32 - 1.
-        """
-        return self._random_seed
-
-    @random_seed.setter
-    def random_seed(self, value):
-        """Set the seed to the random state used to augment.
-
-        It also initilizes the random state generator used to augment.
+        Using Gaussian mixture models, we model the number of observations in
+        the test set events simulated on the Wide-Fast-Deep (WFD) and Deep
+        Drilling Field (DDF) surveys. Each survey was modeled individually.
 
         Parameters
         ----------
-        value: int, optional
-            Random seed used. Saving this seed allows reproducible results.
-            If given, it must be between 0 and 2**32 - 1.
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+
+        Returns
+        -------
+        target_number_obs : int
+            The target number of observations in the new light curve.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion
+        `PlasticcAugmentor._choose_target_observation_count` of
+        `avocado/plasticc.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
         """
-        self._rs = np.random.RandomState(value)  # initialise the random state
-        self._random_seed = value
+        if aug_obj_metadata["ddf"]:  # DDF event
+            # Estimate the distribution of number of observations in the
+            # DDF regions with a mixture of 2 gaussian distributions.
+            gauss_choice = self._rs.choice(2, p=[0.34393457, 0.65606543])
+            if gauss_choice == 0:
+                mean = 57.36015146
+                var = np.sqrt(271.58889272)
+            elif gauss_choice == 1:
+                mean = 92.7741619
+                var = np.sqrt(338.53085446)
+            target_number_obs = int(
+                np.clip(self._rs.normal(mean, var), 20, None))
+        else:  # WFD event
+            target_number_obs = (
+                self._rs.normal(24.5006006, np.sqrt(72.5106613)))
+            target_number_obs = int(np.clip(target_number_obs, 3, None))
+
+        return target_number_obs
+
+    def _compute_obs_uncertainty(self, aug_obj_data, aug_obj_metadata):
+        """Compute and add uncertainty to the light curve observations.
+
+        Following [1]_, we estimate the flux uncertainties for each
+        passband with a lognormal distribution for the Wide-Fast-Deep (WFD)
+        and Deep Drilling Field (DDF) surveys. Each passband in each survey
+        was modeled individually with test set events.
+        The flux uncertanty of the augmented events is the combination of the
+        flux uncertainty of the augmented events predicted by the GP in
+        quadrature with a value drawn from the flux uncertainty distribution
+        described above.
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
+
+        Returns
+        -------
+        aug_obj_data : pandas.DataFrame
+            Observations of the augmented event.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion
+        `PlasticcAugmentor._simulate_light_curve_uncertainties` of
+        `avocado/plasticc.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        # Make a copy of the original data to avoid modifying it
+        aug_obj_data = aug_obj_data.copy()
+
+        # Skip this function if there are no observations
+        if len(aug_obj_data) == 0:
+            return aug_obj_data
+
+        # The uncertainty levels of the observations in each passband can be
+        # modeled with a lognormal distribution. See [1].
+        # Lognormal parameters
+        if aug_obj_metadata["ddf"]:  # DDF event
+            pb_noises = {"lsstu": (0.68, 0.26), "lsstg": (0.25, 0.50),
+                         "lsstr": (0.16, 0.36), "lssti": (0.53, 0.27),
+                         "lsstz": (0.88, 0.22), "lssty": (1.76, 0.23)}
+        else:  # WFD event
+            pb_noises = {"lsstu": (2.34, 0.43), "lsstg": (0.94, 0.41),
+                         "lsstr": (1.30, 0.41), "lssti": (1.82, 0.42),
+                         "lsstz": (2.56, 0.36), "lssty": (3.33, 0.37)}
+
+        # Calculate the new uncertainty levels for each passband
+        lognormal_parameters = []
+        for pb in aug_obj_data['filter']:
+            try:
+                lognormal_parameters.append(pb_noises[pb])
+            except KeyError:
+                raise ValueError(f'The noise properties of the passband {pb} '
+                                 f'are not known. Add them to '
+                                 f'`GPAugment._compute_obs_uncertainty`.')
+        lognormal_parameters = np.array(lognormal_parameters)
+
+        # Combine the flux uncertainty of the augmented events predicted by
+        # the GP in quadrature with a value drawn from the flux uncertainty
+        # distribution of the test set
+        add_stds = self._rs.lognormal(
+            lognormal_parameters[:, 0], lognormal_parameters[:, 1])
+        noise_add = self._rs.normal(loc=0.0, scale=add_stds)
+        aug_obj_data['flux'] += noise_add  # add noise to increase variability
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
+                                             + add_stds ** 2)
+        return aug_obj_data
+
+    def _simulate_detection(self, aug_obj_data, aug_obj_metadata):
+        """Simulate the detection process for a light curve.
+
+        We impose quality cuts on the augmented events. Following [1]_, we
+        require at least two detections: at least two observations above the
+        signal-to-noise (S/N) threshold. [1]_ calculated this threshold by
+        fitting an error function to the observations from the PLAsTiCC
+        dataset to predict the probability of detection as a function of S/N.
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
+
+        Returns
+        -------
+        aug_obj_data : pandas.DataFrame
+            Observations of the augmented event.
+        pass_detection : bool
+            Whether or not the event passes the detection threshold.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion `PlasticcAugmentor._simulate_detection` of
+        `avocado/plasticc.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        # Calculate the S/N of the observations
+        s2n = np.abs(aug_obj_data["flux"]) / aug_obj_data["flux_error"]
+
+        # Apply the S/N threshold
+        prob_detected = (erf((s2n - 5.5) / 2) + 1) / 2.0
+        aug_obj_data["detected"] = self._rs.rand(len(s2n)) < prob_detected
+        pass_detection = np.sum(aug_obj_data["detected"]) >= 2
+
+        return aug_obj_data, pass_detection
 
 
 class SimpleGPAugment(SNAugment):
