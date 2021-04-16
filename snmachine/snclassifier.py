@@ -15,6 +15,7 @@ import os
 import sys
 import time
 
+import lightgbm as lgb
 import numpy as np
 
 # Solve imblearn problems introduced with sklearn version 0.24
@@ -42,6 +43,7 @@ from sklearn import neighbors
 from sklearn import svm
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.metrics import confusion_matrix as sklearn_cm
+from sklearn.model_selection import PredefinedSplit, StratifiedKFold
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
@@ -966,3 +968,241 @@ def run_pipeline(features, types, output_name='', columns=[],
 
     if return_classifier:
         return classifier_objects, cms
+
+
+class BaseClassifier():
+    """Base class to hold a classifier and its methods. The derived classes
+    encapsulate specific methods, such as classifier optimization.
+    """
+
+    def __init__(self, classifier_name, random_seed=None):
+        """Class constructor.
+
+        Parameters:
+        ----------
+        classifier_name : TODO It is really needed?
+            TODO
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+        """
+        self.optimised = False  # the classifier was not yet optimised
+        self.random_seed = random_seed
+
+    def classifier(self):
+        """Returns the classifier instance."""
+        return self.classifier
+
+    def optimise(self):
+        """Optimise the classifier.
+        """
+        if self.optimised is True:
+            print('Raise error/ ask for confirmation because the classifier '
+                  'was already optimised')
+
+        self.optimised = True
+
+    def predict(self, features):
+        """"Predict the classes of a dataset.
+        """
+
+    def predict_proba(self):
+        """d"""
+
+    def save_classifier(self, output_path):
+        """Save the classifier.
+        """
+
+    @classmethod
+    def load_classifier():
+        """Load a previously saved classifier.
+        """
+
+    def _is_classifier_optimised(self):
+        """Check if the classifier was already optimised.
+
+        Raises
+        ------
+        ValueError
+            If the dataset has already been optimised, prevent it from
+            suffereing a new optimisation.
+        """
+        if self.optimised is True:
+            raise ValueError('The classifier was already optimised. Create a '
+                             'new classifier to perform a new optimisation.')
+
+    @property
+    def random_seed(self):
+        """Return the random state used in the classifier.
+
+        Returns
+        -------
+        int
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        """
+        return self._random_seed
+
+    @random_seed.setter
+    def random_seed(self, value):
+        """Set the seed to the random state used in the classifier.
+
+        It also initilizes the random state generator used in the classifier.
+
+        Parameters
+        ----------
+        value: int, optional
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        """
+        # Initialise the random state
+        self._rs = np.random.RandomState(value)
+        self._random_seed = value
+
+
+class SklearnClassifier(BaseClassifier):
+    3
+
+
+class SVMClassifier(SklearnClassifier):
+    """Uses Support vector machine (SVM) for classification.
+    """
+
+    def __init__(self,
+                 random_seed=None, **kwargs):
+        """Class enclosing the SVM classifier.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to augment.
+        **kwargs : dict, optional
+            Optional keywords to pass arguments into `choose_z` and into
+            `snamchine.gps.compute_gps`.
+        """
+
+
+class LightGBMClassifier(BaseClassifier):
+    """Uses a tree based learning algorithm for classification from LightGBM.
+    """
+
+    def __init__(self, classifier_name, random_seed=None, **lgb_params):
+        """Class enclosing a LightGBM classifier.
+
+        Parameters
+        ----------
+        dataset : Dataset object (sndata class)
+            Dataset to augment.
+        **lgb_params : dict, optional
+            Optional keywords to pass arguments into `lgb.LGBMClassifier`.
+        """
+        super().__init__(classifier_name, random_seed)
+        self.classifier = lgb.LGBMClassifier(random_state=self._rs,
+                                             **lgb_params)
+
+    def optimise(self, X_train, y_train, param_grid, scoring,
+                 use_fast_optimisation=False, random_state=None,
+                 number_cv_folds=5, metadata=None):
+        """Optimise the classifier.
+
+        optimise_classifier_only_aug(X_train, y_train, param_grid, scoring,
+                                     random_state, y_original,
+                                     number_cv_folds=5, metadata=None)
+        """
+        self._is_classifier_optimised()
+
+        if random_state is None:
+            random_state = self._rs
+
+        # First, optimise each hyperparameter individually using a 1D grid,
+        # keeping the other hyperparameters at default values. Then, construct
+        # a higher dimensional grid containing all the hyperparameters with
+        # three possible values for each hyperparameter informed by the
+        # earlier 1D optimization. Finally, optimise this higher dimensional
+        # grid through a standard grid search.
+        if use_fast_optimisation is True:
+            self._compute_fast_optimisation(X_train, y_train, param_grid,
+                                            scoring, random_state=random_state,
+                                            number_cv_folds=number_cv_folds,
+                                            metadata=metadata)
+        # Standard grid search
+        else:
+            self.compute_grid_search(X_train, y_train, param_grid, scoring,
+                                     random_state=random_state,
+                                     number_cv_folds=number_cv_folds,
+                                     metadata=metadata)
+
+        self.optimised = True
+
+    def compute_grid_search(self, X_train, y_train, param_grid, scoring,
+                            random_state, number_cv_folds, metadata):
+        """Computes a standard grid search.
+        """
+        time_begin = time.time()
+
+        cv_fold = StratifiedKFold(n_splits=number_cv_folds, shuffle=True,
+                                  random_state=random_state)
+
+        if metadata is not None:
+            # Whether the dataset is augmented
+            is_aug = 'augmented' in metadata
+        else:
+            # If no metadata is provided, assume the dataset is not augmented
+            is_aug = False
+
+        if is_aug:
+            cv = self._compute_cv_iterable(cv_fold, metadata)
+        else:
+            cv = cv_fold
+
+        grid_search = model_selection.GridSearchCV(self.classifier,
+                                                   param_grid=param_grid,
+                                                   scoring=scoring, cv=cv)
+        grid_search.fit(X_train, y_train)  # this searches through the grid
+
+        # Save the best grid search and the best estimator of the classifier
+        self.grid_search = grid_search
+        self.classifier = grid_search.best_estimator_
+        print(f'The optimisation takes {time.time() - time_begin:.3f}s.')
+
+    def _compute_cv_iterable(self, cv_fold, metadata):
+        """Computes a cross-validation iterable for augmented datasets.
+
+        In order to avoid information leaks, all augmented events generated by
+        the training set augmentation which derived from the same original
+        event were placed in the same fold.
+
+        Parameters
+        ----------
+        cv_fold :
+        metadata :
+
+        Returns
+        -------
+        predefined_split :
+        """
+        aug_objs_original_obj = np.array(metadata.original_event).astype(str)
+        fold_index = np.zeros(len(metadata), dtype=int) - 1
+
+        # Retrieve the target/classes of the original events
+        output = [list(metadata.original_event).index(elem)
+                  for elem in set(metadata.original_event)]
+        y_original = metadata.labels[sorted(output)]
+        y_original.index = metadata.original_event[sorted(output)]
+        y_original = y_original.astype(int)
+
+        indices_split = cv_fold.split(np.zeros_like(y_original), y_original)
+        # Add augmented objects corresponding to the added originals
+        for i, (train, test) in enumerate(indices_split):
+            # Original events in fold i
+            fold_objs = y_original.iloc[test].index
+            # Find all augmented events derived from the original events in
+            # fold i and add them to the cross-validation fold
+            is_aug_objs_in_fold = np.in1d(aug_objs_original_obj, fold_objs)
+            fold_index[is_aug_objs_in_fold] = i
+
+        predefined_split = PredefinedSplit(fold_index)
+        return predefined_split
+
+    def _compute_fast_optimisation(self, X_train, y_train, param_grid, scoring,
+                                   random_state, number_cv_folds, metadata):
+        return 'Not yet implemented'
