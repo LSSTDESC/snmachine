@@ -191,9 +191,13 @@ class SNAugment:
             raise RuntimeError('Filter %s not amongst the filters in the'
                                'dataset!')
 
-        # Consistency check: if we want to return salt2-fitted redshifts, do we actually have features?
-        if which_redshifts == 'headerfill' and all([(isinstance(z, float)) & (z >= 0) for z in self.dataset.get_redshift()]):
-            # Corner case: if 'headerfill' this check should only complain if there are actually invalid z values to fill in
+        # Consistency check: if we want to return salt2-fitted redshifts, do
+        # we actually have features?
+        is_valid_z = all([(isinstance(z, float)) & (z >= 0)
+                          for z in self.dataset.get_redshift()])
+        if which_redshifts == 'headerfill' and is_valid_z:
+            # Corner case: if 'headerfill' this check should only complain if
+            # there are actually invalid z values to fill in
             which_redshifts = 'header'
         if not fit_salt2 and which_redshifts in ['salt2', 'headerfill']:
             print('We need SALT2 features in order to return fitted redshifts!'
@@ -218,7 +222,8 @@ class SNAugment:
             # Fit models and extract r-peakmags
             peaklogflux = []
             for i in range(len(self.dataset.object_names)):
-                model = tf.fit_sn(self.dataset.data[self.dataset.object_names[i]], salt2feats)
+                model = tf.fit_sn(self.dataset.data[
+                    self.dataset.object_names[i]], salt2feats)
                 model = model[model['filter'] == peak_filter]
                 if len(model) > 0:
                     peaklogflux = np.append(peaklogflux,
@@ -242,14 +247,18 @@ class SNAugment:
         if which_redshifts == 'header':
             z = self.dataset.get_redshift()
         elif which_redshifts == 'salt2':
-            z = [float(salt2feats[salt2feats['Object'] == o]['[Ia]z']) for o in self.dataset.object_names]
+            z = [float(salt2feats[salt2feats['Object'] == o]['[Ia]z'])
+                 for o in self.dataset.object_names]
         elif which_redshifts == 'headerfill':
             z = self.dataset.get_redshift().astype(float)
             for i in range(len(z)):
                 if not isinstance(z[i], float) or z[i] < 0:
-                    z[i] = float(salt2feats['[Ia]z'][salt2feats['Object'] == self.dataset.object_names[i]])
+                    obj_name = self.dataset.object_names[i]
+                    index_obj_name = salt2feats['Object'] == obj_name
+                    z[i] = float(salt2feats['[Ia]z'][index_obj_name])
         else:
-            raise RuntimeError('Unknown value %s for argument which_redshifts!' % which_redshifts)
+            raise RuntimeError(f'Unknown value {which_redshifts} for argument '
+                               f'which_redshifts!')
 
         proxy_features = np.array([z, peaklogflux]).transpose()
 
@@ -258,7 +267,8 @@ class SNAugment:
         else:
             return proxy_features
 
-    def compute_propensity_scores(self, train_names, algo='logistic', **kwargs):
+    def compute_propensity_scores(self, train_names, algo='logistic',
+                                  **kwargs):
         """Wherein we fit a model for the propensity score (the probability of
         an object to be in the training set) in the proxy-feature parameter
         space. We then evaluate the model on the full dataset and return the
@@ -281,13 +291,16 @@ class SNAugment:
              array of all fitted scores
         """
         retval = self.extract_proxy_features(**kwargs)
-        if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
+        is_return_features = ('return_features' in kwargs.keys()
+                              and kwargs['return_features'])
+        if len(retval) == 2 and is_return_features:
             proxy_features = retval[0]
             salt2_features = retval[1]
         else:
             proxy_features = retval
         # Logistic regression on proxy_features
-        is_in_training_set = [1 if o in train_names else 0 for o in self.dataset.object_names]
+        is_in_training_set = [1 if o in train_names else 0
+                              for o in self.dataset.object_names]
         if algo == 'logistic':
             regr = LogisticRegression()
         elif algo == 'network':
@@ -295,7 +308,7 @@ class SNAugment:
                                  hidden_layer_sizes=(2,))
         regr.fit(proxy_features, is_in_training_set)
         propensity_scores = regr.predict_proba(proxy_features)
-        if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
+        if len(retval) == 2 and is_return_features:
             return propensity_scores[:, 0], salt2_features
         else:
             return propensity_scores[:, 0]
@@ -321,7 +334,9 @@ class SNAugment:
             `self.dataset.object_names`.
         """
         retval = self.compute_propensity_scores(train_names, **kwargs)
-        if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
+        is_return_features = ('return_features' in kwargs.keys()
+                              and kwargs['return_features'])
+        if len(retval) == 2 and is_return_features:
             prop = retval[0]
             salt2_features = retval[1]
         else:
@@ -332,7 +347,7 @@ class SNAugment:
         for c in range(len(self.dataset.object_names)):
             thisclass = (c * nclasses) // N
             classes[sorted_indices[c]] = thisclass
-        if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
+        if len(retval) == 2 and is_return_features:
             return classes, salt2_features
         else:
             return classes
@@ -942,8 +957,8 @@ class GPAugment(SNAugment):
             # Most observations are WFD observations, so generate more of
             # those. The DDF and WFD samples are effectively completely
             # different, so this ratio doesn't really matter.
-            #aug_obj_metadata["ddf"] = True
-            #aug_obj_metadata["ddf"] = False
+            # aug_obj_metadata["ddf"] = True
+            # aug_obj_metadata["ddf"] = False
             rd_value = self._rs.rand()
             aug_obj_metadata["ddf"] = rd_value > 0.99  # .99
         else:
@@ -1143,8 +1158,8 @@ class GPAugment(SNAugment):
         """Compute the new observations wavelength at the original redshift.
 
         The observation flux is measured at specific wavelengths. This
-        function calculates the wavelength of the new event as seen by an
-        observer at redshift `z_ori`.
+        function calculates the wavelength of the new event as seen at
+        redshift `z_ori`.
 
         Parameters
         ----------
