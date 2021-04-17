@@ -1102,14 +1102,41 @@ class LightGBMClassifier(BaseClassifier):
         # Store the unoptimised classifier
         self.unoptimised_classifier = unoptimised_classifier
 
-    def optimise(self, X_train, y_train, param_grid, scoring,
-                 use_fast_optimisation=False, random_state=None,
-                 number_cv_folds=5, metadata=None):
+    def optimise(self, X_train, y_train, scoring,
+                 use_fast_optimisation=False, param_grid=None,
+                 random_state=None, number_cv_folds=5, metadata=None):
         """Optimise the classifier.
 
-        optimise_classifier_only_aug(X_train, y_train, param_grid, scoring,
-                                     random_state, y_original,
-                                     number_cv_folds=5, metadata=None)
+        Parameters
+        ----------
+        X_train : pandas.DataFrame
+            Features of the events with which to train the classifier.
+        y_train : pandas.core.series.Series
+            Labels of the events with which to train the classifier.
+        scoring : callable, str
+            The metric used to evaluate the predictions on the test or
+            validation sets. See
+            `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
+            how to choose this parameter.
+        use_fast_optimisation : bool, optional
+            TODO
+        param_grid : dict
+            Dictionary containing the parameters names (`str`) as keys and
+            lists of their possible settings as values.
+        random_state : int, RandomState instance or None, optional
+            The `random_state` affects the ordering of the indices, which
+            controls which events are in each fold of the cross-validation.
+            TODO
+        number_cv_folds : int, optional
+            Number of folds for cross-validation. By default it is 5.
+        metadata : {None, pandas.DataFrame}, optional
+            Metadata of the events with which to train the classifier.
+            TODO
+
+        References
+        ----------
+        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
         """
         self._is_classifier_optimised()
 
@@ -1123,22 +1150,55 @@ class LightGBMClassifier(BaseClassifier):
         # earlier 1D optimization. Finally, optimise this higher dimensional
         # grid through a standard grid search.
         if use_fast_optimisation is True:
-            self._compute_fast_optimisation(X_train, y_train, param_grid,
-                                            scoring, random_state=random_state,
+            self._compute_fast_optimisation(X_train=X_train, y_train=y_train,
+                                            scoring=scoring,
+                                            param_grid=param_grid,
+                                            random_state=random_state,
                                             number_cv_folds=number_cv_folds,
                                             metadata=metadata)
         # Standard grid search
         else:
-            self.compute_grid_search(X_train, y_train, param_grid, scoring,
+            self.compute_grid_search(X_train=X_train, y_train=y_train,
+                                     scoring=scoring, param_grid=param_grid,
                                      random_state=random_state,
                                      number_cv_folds=number_cv_folds,
                                      metadata=metadata)
 
         self.is_optimised = True
 
-    def compute_grid_search(self, X_train, y_train, param_grid, scoring,
+    def compute_grid_search(self, X_train, y_train, scoring, param_grid,
                             random_state, number_cv_folds, metadata):
         """Computes a standard grid search.
+
+        This grid search is optimised using cross validation with
+        `number_cv_folds` folds.
+
+        Parameters
+        ----------
+        X_train : pandas.DataFrame
+            Features of the events with which to train the classifier.
+        y_train : pandas.core.series.Series
+            Labels of the events with which to train the classifier.
+        scoring : callable, str
+            The metric used to evaluate the predictions on the test or
+            validation sets. See
+            `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
+            how to choose this parameter.
+        param_grid : dict
+            Dictionary containing the parameters names (`str`) as keys and
+            lists of their possible settings as values.
+        random_state : int, RandomState instance or None
+            The `random_state` affects the ordering of the indices, which
+            controls which events are in each fold of the cross-validation.
+        number_cv_folds : int
+            Number of folds for cross-validation.
+        metadata : pandas.DataFrame
+            Metadata of the events with which to train the classifier.
+
+        References
+        ----------
+        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
         """
         time_begin = time.time()
 
@@ -1177,12 +1237,15 @@ class LightGBMClassifier(BaseClassifier):
 
         Parameters
         ----------
-        cv_fold :
-        metadata :
+        cv_fold : sklearn.model_selection._split.StratifiedKFold
+            Stratified K-Folds cross-validator.
+        metadata : pandas.DataFrame
+            Metadata of the events with which to train the classifier.
 
         Returns
         -------
-        predefined_split :
+        predefined_split : sklearn.model_selection._split.PredefinedSplit
+            Predefined split cross-validator.
         """
         aug_objs_original_obj = np.array(metadata.original_event).astype(str)
         fold_index = np.zeros(len(metadata), dtype=int) - 1
