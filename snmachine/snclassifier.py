@@ -975,7 +975,7 @@ class BaseClassifier():
     encapsulate specific methods, such as classifier optimization.
     """
 
-    def __init__(self, classifier_name, random_seed=None):
+    def __init__(self, classifier_name, random_seed=42):
         """Class constructor.
 
         Parameters:
@@ -985,7 +985,7 @@ class BaseClassifier():
         random_seed : int, optional
             Random seed used. Saving this seed allows reproducible results.
         """
-        self.optimised = False  # the classifier was not yet optimised
+        self.is_optimised = False  # the classifier was not yet optimised
         self.random_seed = random_seed
 
     def classifier(self):
@@ -995,11 +995,11 @@ class BaseClassifier():
     def optimise(self):
         """Optimise the classifier.
         """
-        if self.optimised is True:
+        if self.is_optimised is True:
             print('Raise error/ ask for confirmation because the classifier '
                   'was already optimised')
 
-        self.optimised = True
+        self.is_optimised = True
 
     def predict(self, features):
         """"Predict the classes of a dataset.
@@ -1026,7 +1026,7 @@ class BaseClassifier():
             If the dataset has already been optimised, prevent it from
             suffereing a new optimisation.
         """
-        if self.optimised is True:
+        if self.is_optimised is True:
             raise ValueError('The classifier was already optimised. Create a '
                              'new classifier to perform a new optimisation.')
 
@@ -1096,8 +1096,11 @@ class LightGBMClassifier(BaseClassifier):
             Optional keywords to pass arguments into `lgb.LGBMClassifier`.
         """
         super().__init__(classifier_name, random_seed)
-        self.classifier = lgb.LGBMClassifier(random_state=self._rs,
-                                             **lgb_params)
+        unoptimised_classifier = lgb.LGBMClassifier(
+            random_state=self._random_seed, **lgb_params)
+        self.classifier = unoptimised_classifier
+        # Store the unoptimised classifier
+        self.unoptimised_classifier = unoptimised_classifier
 
     def optimise(self, X_train, y_train, param_grid, scoring,
                  use_fast_optimisation=False, random_state=None,
@@ -1131,7 +1134,7 @@ class LightGBMClassifier(BaseClassifier):
                                      number_cv_folds=number_cv_folds,
                                      metadata=metadata)
 
-        self.optimised = True
+        self.is_optimised = True
 
     def compute_grid_search(self, X_train, y_train, param_grid, scoring,
                             random_state, number_cv_folds, metadata):
@@ -1159,7 +1162,8 @@ class LightGBMClassifier(BaseClassifier):
                                                    scoring=scoring, cv=cv)
         grid_search.fit(X_train, y_train)  # this searches through the grid
 
-        # Save the best grid search and the best estimator of the classifier
+        # Save the grid search and update the saved classifier with the best
+        # estimator obtained on the grid search
         self.grid_search = grid_search
         self.classifier = grid_search.best_estimator_
         print(f'The optimisation takes {time.time() - time_begin:.3f}s.')
@@ -1186,7 +1190,7 @@ class LightGBMClassifier(BaseClassifier):
         # Retrieve the target/classes of the original events
         output = [list(metadata.original_event).index(elem)
                   for elem in set(metadata.original_event)]
-        y_original = metadata.labels[sorted(output)]
+        y_original = metadata.target[sorted(output)]
         y_original.index = metadata.original_event[sorted(output)]
         y_original = y_original.astype(int)
 
