@@ -991,8 +991,8 @@ class GPAugment(SNAugment):
 
         are_zs_pos = (zs_photo > 0) & (zs_photo_error > 0)
         try:  # choose the first appropriate value
-            z_photo = zs_photo[are_zs_pos][0]
-            z_photo_error = zs_photo_error[are_zs_pos][0]
+            z_photo = np.array(zs_photo[are_zs_pos])[0]
+            z_photo_error = np.array(zs_photo_error[are_zs_pos])[0]
         except (KeyError, IndexError):
             raise ValueError('The new redshift and respective error must be '
                              'positive and they were not after 100 tries so '
