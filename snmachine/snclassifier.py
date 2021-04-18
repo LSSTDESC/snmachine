@@ -12,6 +12,7 @@ from past.builtins import basestring
 import collections
 import itertools
 import os
+import pickle
 import sys
 import time
 
@@ -980,42 +981,67 @@ class BaseClassifier():
 
         Parameters:
         ----------
-        classifier_name : TODO It is really needed?
-            TODO
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `lgbm_classifier`.
         random_seed : int, optional
             Random seed used. Saving this seed allows reproducible results.
         """
         self.is_optimised = False  # the classifier was not yet optimised
         self.random_seed = random_seed
+        self.classifier_name = classifier_name
 
     def classifier(self):
-        """Returns the classifier instance."""
+        """Returns the classifier instance.
+
+        Returns
+        -------
+        classifier instance
+            The classifier instance initialized with this class.
+        """
         return self.classifier
 
     def optimise(self):
         """Optimise the classifier.
         """
-        if self.is_optimised is True:
-            print('Raise error/ ask for confirmation because the classifier '
-                  'was already optimised')
-
-        self.is_optimised = True
-
-    def predict(self, features):
-        """"Predict the classes of a dataset.
-        """
-
-    def predict_proba(self):
-        """d"""
+        return NotImplementedError('This method should be defined on child '
+                                   'classes.')
 
     def save_classifier(self, output_path):
-        """Save the classifier.
-        """
+        """Save the classifier instance.
 
-    @classmethod
-    def load_classifier():
-        """Load a previously saved classifier.
+        It saves the classifier in `pickle` format on the folder `output_path`
+        with the name stored `self.classifier_name`.
+
+        Parameters
+        ----------
+        output_path : str
+            Path to the folder where the classifier will be saved.
         """
+        classifier_name = self.classifier_name
+        path_to_save = os.path.join(output_path, classifier_name+'.pck')
+        with open(path_to_save, 'wb') as clf_path:
+            pickle.dump(self, clf_path)
+        print(f'Classifier saved in {path_to_save}.')
+
+    @staticmethod
+    def load_classifier(path_saved_classifier):
+        """Load a previously saved classifier instance.
+
+        Parameters
+        ----------
+        path_saved_classifier : str
+            Path to the file of the classifier instance. This also includes the
+            classifier name.
+
+        Returns
+        -------
+        classifier_instance : instance BaseClassifier or childs
+            Instance of the class that holds a classifier and its methods.
+        """
+        with open(path_saved_classifier, 'rb') as input:
+            classifier_instance = pickle.load(input)
+        return classifier_instance
 
     def _is_classifier_optimised(self):
         """Check if the classifier was already optimised.
@@ -1060,31 +1086,6 @@ class BaseClassifier():
 
 
 class SklearnClassifier(BaseClassifier):
-    3
-
-
-class SVMClassifier(SklearnClassifier):
-    """Uses Support vector machine (SVM) for classification.
-    """
-
-    def __init__(self,
-                 random_seed=None, **kwargs):
-        """Class enclosing the SVM classifier.
-
-        Parameters
-        ----------
-        dataset : Dataset object (sndata class)
-            Dataset to augment.
-        **kwargs : dict, optional
-            Optional keywords to pass arguments into `choose_z` and into
-            `snamchine.gps.compute_gps`.
-        """
-
-
-class LightGBMClassifier(BaseClassifier):
-    """Uses a tree based learning algorithm for classification from LightGBM.
-    """
-
     def __init__(self, classifier_name='lgbm_classifier', random_seed=None,
                  **lgb_params):
         """Class enclosing a LightGBM classifier.
@@ -1096,6 +1097,65 @@ class LightGBMClassifier(BaseClassifier):
             `lgbm_classifier`.
         **lgb_params : dict, optional
             Optional keywords to pass arguments into `lgb.LGBMClassifier`.
+        """
+
+
+class SVMClassifier(SklearnClassifier):
+    """Uses Support vector machine (SVM) for classification.
+    """
+    def __init__(self, classifier_name='lgbm_classifier', random_seed=None,
+                 **lgb_params):
+        """Class enclosing a Support vector machine classifier.
+
+        This class uses the Support vector machine (SVM) implementation of
+        Scikit-learn [1]_.
+
+        Parameters TODO
+        ----------
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `svm_classifier`.
+        **lgb_params : dict, optional
+            Optional keywords to pass arguments into `lgb.LGBMClassifier`.
+
+        References
+        ----------
+        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
+        """
+        super().__init__(classifier_name=classifier_name,
+                         random_seed=random_seed)
+        unoptimised_classifier = lgb.LGBMClassifier(
+            random_state=self._random_seed, **lgb_params)
+        self.classifier = unoptimised_classifier
+        # Store the unoptimised classifier
+        self.unoptimised_classifier = unoptimised_classifier
+
+
+class LightGBMClassifier(BaseClassifier):
+    """Uses a tree based learning algorithm for classification from LightGBM.
+    """
+
+    def __init__(self, classifier_name='lgbm_classifier', random_seed=None,
+                 **lgb_params):
+        """Class enclosing a `LightGBM` classifier.
+
+        This class uses the tree based learning algorithms implemented in
+        LightGBM [1]_.
+
+        Parameters
+        ----------
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `lgbm_classifier`.
+        **lgb_params : dict, optional
+            Optional keywords to pass arguments into `lgb.LGBMClassifier`.
+
+        References
+        ----------
+        .. [1] Guolin Ke et al. “LightGBM: A Highly Efficient Gradient
+        Boosting Decision Tree.” Advances in Neural Information Processing
+        Systems 30 (NIPS 2017), pp. 3149-3157.
         """
         super().__init__(classifier_name=classifier_name,
                          random_seed=random_seed)
