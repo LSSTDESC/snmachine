@@ -27,6 +27,9 @@ sys.modules['sklearn.ensemble.base'] = sklearn.ensemble._base
 sys.modules['sklearn.ensemble.forest'] = sklearn.ensemble._forest
 sys.modules['sklearn.metrics.classification'] = sklearn.metrics._classification
 
+from imblearn.combine import SMOTEENN, SMOTETomek
+from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
+
 
 class NNAugment(SNAugment):
     """
