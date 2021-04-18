@@ -1085,17 +1085,20 @@ class LightGBMClassifier(BaseClassifier):
     """Uses a tree based learning algorithm for classification from LightGBM.
     """
 
-    def __init__(self, classifier_name, random_seed=None, **lgb_params):
+    def __init__(self, classifier_name='lgbm_classifier', random_seed=None,
+                 **lgb_params):
         """Class enclosing a LightGBM classifier.
 
         Parameters
         ----------
-        dataset : Dataset object (sndata class)
-            Dataset to augment.
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `lgbm_classifier`.
         **lgb_params : dict, optional
             Optional keywords to pass arguments into `lgb.LGBMClassifier`.
         """
-        super().__init__(classifier_name, random_seed)
+        super().__init__(classifier_name=classifier_name,
+                         random_seed=random_seed)
         unoptimised_classifier = lgb.LGBMClassifier(
             random_state=self._random_seed, **lgb_params)
         self.classifier = unoptimised_classifier
@@ -1104,7 +1107,7 @@ class LightGBMClassifier(BaseClassifier):
 
     def optimise(self, X_train, y_train, scoring,
                  use_fast_optimisation=False, param_grid=None,
-                 random_state=None, number_cv_folds=5, metadata=None):
+                 number_cv_folds=5, metadata=None):
         """Optimise the classifier.
 
         Parameters
@@ -1117,21 +1120,30 @@ class LightGBMClassifier(BaseClassifier):
             The metric used to evaluate the predictions on the test or
             validation sets. See
             `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
-            how to choose this parameter.
+            how to choose this input.
         use_fast_optimisation : bool, optional
-            TODO
-        param_grid : dict
+            Whether to perform a specific hyperparameter optimisation that is
+            faster than optimising a high dimensional grid through a standard
+            grid search. By default it is `False`.
+            See Notes for the details of this hyperparameter optimisation.
+        param_grid : {None, dict}, optional
             Dictionary containing the parameters names (`str`) as keys and
             lists of their possible settings as values.
-        random_state : int, RandomState instance or None, optional
-            The `random_state` affects the ordering of the indices, which
-            controls which events are in each fold of the cross-validation.
-            TODO
+            If `use_fast_optimisation = True`, this input is ignored.
         number_cv_folds : int, optional
             Number of folds for cross-validation. By default it is 5.
         metadata : {None, pandas.DataFrame}, optional
             Metadata of the events with which to train the classifier.
-            TODO
+
+        Notes
+        -----
+        The hyperparameter optimisation used for `use_fast_optimisation` is:
+        First, optimise each hyperparameter individually using a 1D grid,
+        keeping the other hyperparameters at default values. Then, construct a
+        higher dimensional grid containing all the hyperparameters with three
+        possible values for each hyperparameter informed by the earlier 1D
+        optimization. Finally, optimise this higher dimensional grid through a
+        standard grid search.
 
         References
         ----------
@@ -1139,35 +1151,27 @@ class LightGBMClassifier(BaseClassifier):
         JMLR 12, pp. 2825-2830, 2011
         """
         self._is_classifier_optimised()
+        time_begin = time.time()
 
-        if random_state is None:
-            random_state = self._rs
-
-        # First, optimise each hyperparameter individually using a 1D grid,
-        # keeping the other hyperparameters at default values. Then, construct
-        # a higher dimensional grid containing all the hyperparameters with
-        # three possible values for each hyperparameter informed by the
-        # earlier 1D optimization. Finally, optimise this higher dimensional
-        # grid through a standard grid search.
+        # The hyperparameter optimisation of `use_fast_optimisation` is
+        # described in the Notes of the docstring
         if use_fast_optimisation is True:
             self._compute_fast_optimisation(X_train=X_train, y_train=y_train,
                                             scoring=scoring,
-                                            param_grid=param_grid,
-                                            random_state=random_state,
                                             number_cv_folds=number_cv_folds,
                                             metadata=metadata)
         # Standard grid search
         else:
             self.compute_grid_search(X_train=X_train, y_train=y_train,
                                      scoring=scoring, param_grid=param_grid,
-                                     random_state=random_state,
                                      number_cv_folds=number_cv_folds,
                                      metadata=metadata)
 
         self.is_optimised = True
+        print(f'The optimisation takes {time.time() - time_begin:.3f}s.')
 
     def compute_grid_search(self, X_train, y_train, scoring, param_grid,
-                            random_state, number_cv_folds, metadata):
+                            number_cv_folds, metadata):
         """Computes a standard grid search.
 
         This grid search is optimised using cross validation with
@@ -1187,23 +1191,28 @@ class LightGBMClassifier(BaseClassifier):
         param_grid : dict
             Dictionary containing the parameters names (`str`) as keys and
             lists of their possible settings as values.
-        random_state : int, RandomState instance or None
-            The `random_state` affects the ordering of the indices, which
-            controls which events are in each fold of the cross-validation.
         number_cv_folds : int
             Number of folds for cross-validation.
         metadata : pandas.DataFrame
             Metadata of the events with which to train the classifier.
+
+        Raises
+        ------
+        AttributeError
+            A grid must be provided in `param_grid` to perform a standard grid
+            search. Thus, this input cannot be `None`.
 
         References
         ----------
         .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
         JMLR 12, pp. 2825-2830, 2011
         """
-        time_begin = time.time()
+        if param_grid is None:
+            raise AttributeError('To perform a standard grid search, you must '
+                                 'provide a grid in `param_grid`.')
 
         cv_fold = StratifiedKFold(n_splits=number_cv_folds, shuffle=True,
-                                  random_state=random_state)
+                                  random_state=self._rs)
 
         if metadata is not None:
             # Whether the dataset is augmented
@@ -1226,7 +1235,6 @@ class LightGBMClassifier(BaseClassifier):
         # estimator obtained on the grid search
         self.grid_search = grid_search
         self.classifier = grid_search.best_estimator_
-        print(f'The optimisation takes {time.time() - time_begin:.3f}s.')
 
     def _compute_cv_iterable(self, cv_fold, metadata):
         """Computes a cross-validation iterable for augmented datasets.
@@ -1270,6 +1278,172 @@ class LightGBMClassifier(BaseClassifier):
         predefined_split = PredefinedSplit(fold_index)
         return predefined_split
 
-    def _compute_fast_optimisation(self, X_train, y_train, param_grid, scoring,
-                                   random_state, number_cv_folds, metadata):
-        return 'Not yet implemented'
+    def _compute_fast_optimisation(self, X_train, y_train, scoring,
+                                   number_cv_folds, metadata):
+        """Optimises each parameter individually and then uses a grid search.
+
+        First, optimise each hyperparameter individually using a 1D grid,
+        keeping the other hyperparameters at default values. Then, construct
+        a higher dimensional grid containing all the hyperparameters with
+        three possible values for each hyperparameter informed by the
+        earlier 1D optimization. Finally, optimise this higher dimensional
+        grid through a standard grid search.
+
+        Parameters
+        ----------
+        X_train : pandas.DataFrame
+            Features of the events with which to train the classifier.
+        y_train : pandas.core.series.Series
+            Labels of the events with which to train the classifier.
+        scoring : callable, str
+            The metric used to evaluate the predictions on the test or
+            validation sets. See
+            `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
+            how to choose this parameter.
+        number_cv_folds : int
+            Number of folds for cross-validation.
+        metadata : pandas.DataFrame
+            Metadata of the events with which to train the classifier.
+
+        References
+        ----------
+        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
+        """
+        # This is the grid used to optimise each hyperparameter individually
+        param_grid = {'num_leaves': np.arange(10, 55, 5),
+                      'learning_rate': np.logspace(-3, -.01, 50),
+                      'n_estimators': np.arange(25, 120, 10),
+                      'min_child_samples': np.arange(20, 80, 10),
+                      'max_depth': np.arange(1, 20, 3),
+                      'min_split_gain': np.linspace(0., 2., 21)}
+        # For testing purposes v TODO ; it is to see after testing saving
+        # classifier
+        param_grid = {'num_leaves': np.arange(10, 25, 5),
+                      'learning_rate': np.logspace(-3, -.01, 3),
+                      'n_estimators': np.arange(25, 40, 10),
+                      'min_child_samples': np.arange(20, 25, 10),
+                      'max_depth': np.arange(1, 6, 3),
+                      'min_split_gain': np.linspace(0., 2., 3)}
+
+        best_param = {}  # to refister the best value of the 1D optimisation
+        for param in param_grid.keys():
+            new_param_grid = {param: param_grid[param]}
+
+            # Optimise `param` with the other hyperparameters at default values
+            self.compute_grid_search(X_train=X_train, y_train=y_train,
+                                     scoring=scoring,
+                                     param_grid=new_param_grid,
+                                     number_cv_folds=number_cv_folds,
+                                     metadata=metadata)
+            # Register the best value
+            best_param[param] = self.grid_search.best_params_[param]
+
+        # New grid to optimise all the hyperparameters simultaneously
+        param_grid = self._construct_6d_grid(best_param)
+        # Optimise `param` with the other hyperparameters at default values
+        self.compute_grid_search(X_train=X_train, y_train=y_train,
+                                 scoring=scoring, param_grid=param_grid,
+                                 number_cv_folds=number_cv_folds,
+                                 metadata=metadata)
+
+    @staticmethod
+    def _construct_6d_grid(best_param):
+        """Constructs a 6D grid containing all the hyperparameters.
+
+        This function constructs a six-dimensional grid containing the LightGBM
+        hyperparameters `num_leaves`, `learning_rate`, `n_estimators`,
+        `min_child_samples`, `max_depth`, and `min_split_gain` with three
+        possible values for each hyperparameter informed by the 1D
+        optimisation performed in
+        `LightGBMClassifier._compute_fast_optimisation`.
+
+        Parameters
+        ----------
+        best_param : dict
+            Dictionary containing the values of the hyperparameters
+            `num_leaves`, `learning_rate`, `n_estimators`, `min_child_samples`,
+            `max_depth`, and `min_split_gain`, obtained after the 1D
+            optimisation performed in
+            `LightGBMClassifier._compute_fast_optimisation`.
+        """
+        param_grid = {}
+
+        # The bellow values were informed by exploring the optmisation of
+        # several classifiers. For a more detailed optimisation, run
+        # `LightGBMClassifier.compute_grid_search`
+        param = 'num_leaves'
+        param_best_value = best_param[param]
+        min_value, max_value = 10, 50
+        if param_best_value <= min_value:
+            param_grid[param] = [param_best_value, 15, max_value]
+        elif param_best_value >= max_value:
+            param_grid[param] = [min_value, param_best_value,
+                                 param_best_value + 5]
+        elif (param_best_value > min_value) and (param_best_value < max_value):
+            param_grid[param] = [min_value, param_best_value, max_value]
+
+        param = 'learning_rate'
+        param_best_value = best_param[param]
+        min_value, max_value = .04, .24
+        if abs(param_best_value - min_value) < 1E-3:
+            param_grid[param] = [.005, param_best_value, max_value]
+        elif param_best_value < min_value:
+            param_grid[param] = [max(param_best_value - .005, 0.001),
+                                 param_best_value, max_value]
+        elif abs(param_best_value - max_value) < 1E-3:
+            param_grid[param] = [min_value, param_best_value, .7]
+        elif param_best_value > max_value:
+            param_grid[param] = [min_value, param_best_value,
+                                 param_best_value + .1]
+        elif (param_best_value > min_value) and (param_best_value < max_value):
+            param_grid[param] = [min_value, param_best_value, max_value]
+
+        param = 'n_estimators'
+        param_best_value = best_param[param]
+        min_value, max_value = 25, 115
+        if abs(param_best_value - min_value) <= 5:
+            param_grid[param] = [param_best_value, 45, max_value]
+        elif param_best_value < min_value:
+            param_grid[param] = [param_best_value, 20, max_value]
+        elif param_best_value >= max_value:
+            param_grid[param] = [min_value, 45, param_best_value]
+        elif (param_best_value > min_value) and (param_best_value < max_value):
+            param_grid[param] = [min_value, param_best_value, max_value]
+
+        param = 'min_child_samples'
+        param_best_value = best_param[param]
+        min_value, max_value = 20, 70
+        if abs(param_best_value - min_value) <= 5:
+            param_grid[param] = [10, param_best_value, max_value]
+        elif param_best_value < min_value:
+            param_grid[param] = [param_best_value, 20, max_value]
+        elif param_best_value == max_value:
+            param_grid[param] = [min_value, 45, param_best_value]
+        elif (param_best_value > min_value) and (param_best_value < max_value):
+            param_grid[param] = [min_value, param_best_value, max_value]
+
+        param = 'max_depth'
+        param_best_value = best_param[param]
+        min_value, max_value = 3, 19
+        if param_best_value <= min_value:
+            param_grid[param] = [param_best_value, 5, max_value]
+        elif param_best_value >= max_value:
+            param_grid[param] = [min_value, 16, param_best_value]
+        elif (param_best_value > min_value) and (param_best_value < max_value):
+            param_grid[param] = [min_value, param_best_value, max_value]
+
+        param = 'min_split_gain'
+        param_best_value = best_param[param]
+        min_value, max_value = 0., .7
+        if abs(param_best_value - min_value) < 1E-3:
+            param_grid[param] = [param_best_value, .1, max_value]
+        elif abs(param_best_value - max_value) < 1E-3:
+            param_grid[param] = [min_value, param_best_value, .8]
+        elif param_best_value > max_value:
+            param_grid[param] = [min_value, param_best_value,
+                                 param_best_value + .1]
+        elif (param_best_value > min_value) and (param_best_value < max_value):
+            param_grid[param] = [min_value, param_best_value, max_value]
+
+        return param_grid
