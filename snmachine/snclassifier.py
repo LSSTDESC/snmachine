@@ -1364,6 +1364,99 @@ class KNNClassifier(SklearnClassifier):
                                    'weights': ['distance']}
 
 
+class NNClassifier(SklearnClassifier):
+    """Uses Multi-layer Perceptron for classification.
+    """
+    def __init__(self, classifier_name='nn_classifier',
+                 random_seed=None, **nn_params):
+        """Class enclosing a Multi-layer Perceptron classifier.
+
+        This class uses the Multi-layer Perceptron classifier of a Neural
+        Network (NN) implementation of Scikit-learn [1]_.
+
+        Parameters
+        ----------
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `nn_classifier`.
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+        **nn_params : dict, optional
+            Optional keywords to pass arguments into
+            `sklearn.neural_network.MLPClassifier`.
+
+        References
+        ----------
+        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
+        """
+        super().__init__(classifier_name=classifier_name,
+                         random_seed=random_seed, **nn_params)
+        if 'hidden_layer_sizes' in nn_params:
+            layer_sizes = nn_params.pop('hidden_layer_sizes')
+        else:
+            layer_sizes = (5, 2)
+        if 'algorithm' in nn_params:
+            algo = nn_params.pop('algorithm')
+        else:
+            algo = 'adam'
+        if 'activation' in nn_params:
+            activation = nn_params.pop('activation')
+        else:
+            activation = 'tanh'
+        unoptimised_classifier = sklearn.neural_network.MLPClassifier(
+            solver=algo, hidden_layer_sizes=layer_sizes, activation=activation,
+            random_state=self._rs, **nn_params)
+        self.classifier = unoptimised_classifier
+        # Store the unoptimised classifier
+        self.unoptimised_classifier = unoptimised_classifier
+        print(f'Created classifier of type: {self.classifier}.')
+
+        # Good defauld ranges for these parameters
+        self.param_grid_default = {
+            'hidden_layer_sizes': [(layer,) for layer in range(80, 120, 5)]}
+
+
+class RFClassifier(SklearnClassifier):
+    """Uses random forest (RF) for classification.
+    """
+    def __init__(self, classifier_name='rf_classifier',
+                 random_seed=None, **rf_params):
+        """Class enclosing a random forest classifier.
+
+        This class uses the random forest classifier (RF) implementation of
+        Scikit-learn [1]_.
+
+        Parameters
+        ----------
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `rf_classifier`.
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+        **rf_params : dict, optional
+            Optional keywords to pass arguments into
+            `sklearn.ensemble.RandomForestClassifier`.
+
+        References
+        ----------
+        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
+        """
+        super().__init__(classifier_name=classifier_name,
+                         random_seed=random_seed, **rf_params)
+        unoptimised_classifier = sklearn.ensemble.RandomForestClassifier(
+            random_state=self._rs, **rf_params)
+        self.classifier = unoptimised_classifier
+        # Store the unoptimised classifier
+        self.unoptimised_classifier = unoptimised_classifier
+        print(f'Created classifier of type: {self.classifier}.')
+
+        # Good defauld ranges for these parameters
+        self.param_grid_default = {'n_estimators': list(range(200, 900, 100)),
+                                   'criterion': ['gini', 'entropy']}
+
+
 class LightGBMClassifier(BaseClassifier):
     """Uses a tree based learning algorithm for classification from LightGBM.
     """
