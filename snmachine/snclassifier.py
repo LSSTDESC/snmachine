@@ -55,6 +55,64 @@ except ImportError:
           'Neural networks are available from development version 0.18.')
 
 
+# Costum scoring/metrics functions ##
+def logloss_score(classifier, X_features, y_true):
+    """PLAsTiCC logloss classification score.
+
+    This costum scoring method can be used in a grid search.
+
+    Parameters
+    ----------
+    classifier : classifier instance `sklearn`, `LightGBM` or
+                `BaseClassifier.child.classifier`
+        Classifier.
+    X_features : pandas.DataFrame or np.array
+        Features of shape (n_samples, n_features).
+    y_true : 1D array-like
+        Ground truth (correct) labels of shape (n_samples,).
+
+    Returns
+    -------
+    float
+        Symmetric of the PLAsTiCC logloss score. We use the symmetric
+        because this function is going to be maximised and the optimal
+        result of the logloss is its minimum (logloss = 0).
+    """
+    probs = classifier.predict_proba(X_features)
+    logloss = plasticc_utils.plasticc_log_loss(y_true, probs)
+    return -logloss  # symmetric because we want to maximise this output
+
+
+def auc_score(classifier, X_features, y_true, which_column):
+    """A Area Under the ROC Curve (AUC) classification score.
+
+    ROC stands for Receiver Operating Characteristic Curve
+    This costum scoring method can be used in a grid search.
+
+    Parameters
+    ----------
+    classifier : classifier instance `sklearn`, `LightGBM` or
+                `BaseClassifier.child.classifier`
+        Classifier.
+    X_features : pandas.DataFrame or np.array
+        Features of shape (n_samples, n_features).
+    y_true : 1D array-like
+        Ground truth (correct) labels of shape (n_samples,).
+    which_column : int
+        The index of the column refering to the desired class (e.g. Ias, which
+        might correspond to class 1, or 90). This allows the user to optimise
+        for different classes.
+
+    Returns
+    -------
+    auc : float
+        AUC score.
+    """
+    probs = classifier.predict_proba(X_features)
+    fpr, tpr, auc = roc(pr=probs, Yt=y_true, which_column=which_column)
+    return auc  # symmetric because we want to maximise this output
+
+
 def roc(pr, Yt, true_class=0, which_column=-1):
     """Produce the false positive rate and true positive rate required to plot
     a ROC curve, and the area under that curve.
