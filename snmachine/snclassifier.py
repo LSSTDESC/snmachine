@@ -1129,19 +1129,24 @@ class BaseClassifier():
 
 
 class SklearnClassifier(BaseClassifier):
-    def __init__(self, classifier_name='lgbm_classifier', random_seed=None,
+    def __init__(self, classifier_name='sklearn_classifier', random_seed=None,
                  **kwargs):
-        """Class enclosing a LightGBM classifier.
+        """Class enclosing a Scikit-learn [1]_ classifier.
 
         Parameters
         ----------
         classifier_name : str, optional
             Name of the classifier, which is used to save it. By default it is
-            `lgbm_classifier`.
+            `sklearn_classifier`.
         random_seed : int, optional
             Random seed used. Saving this seed allows reproducible results.
-        **lgb_params : dict, optional
-            Optional keywords to pass arguments into `lgb.LGBMClassifier`.
+        **kwargs : dict, optional
+            Optional keywords to pass arguments into `sklearn` classifiers.
+
+        References
+        ----------
+        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
         """
         super().__init__(classifier_name=classifier_name,
                          random_seed=random_seed)
@@ -1152,10 +1157,9 @@ class SklearnClassifier(BaseClassifier):
             # override this.
             self.prob = True
 
-    def optimise(self, X_train, y_train, scoring,
-                 param_grid=None,
-                 number_cv_folds=5, metadata=None):
-        """Optimise the classifier. TODO
+    def optimise(self, X_train, y_train, scoring, param_grid=None,
+                 number_cv_folds=5, metadata=None, **kwargs):
+        """Optimise the classifier.
 
         Parameters
         ----------
@@ -1171,11 +1175,14 @@ class SklearnClassifier(BaseClassifier):
         param_grid : {None, dict}, optional
             Dictionary containing the parameters names (`str`) as keys and
             lists of their possible settings as values.
-            If `use_fast_optimisation = True`, this input is ignored.
+            If `None`, the default `param_grid` is used. This is defined in
+            child classes of `SklearnClassifier`.
         number_cv_folds : int, optional
             Number of folds for cross-validation. By default it is 5.
         metadata : {None, pandas.DataFrame}, optional
             Metadata of the events with which to train the classifier.
+        **kwargs : dict, optional
+            You can include as `true_class` the class to use in the ROC curve.
 
         References
         ----------
@@ -1188,6 +1195,16 @@ class SklearnClassifier(BaseClassifier):
         if param_grid is None:
             param_grid = self.param_grid_default
 
+        if 'true_class' in kwargs:
+            self.true_class = kwargs['true_class']
+            # Do some error checking here to avoid confusion in the roc curve
+            # code when using it for optimisation
+            class_labels = np.unique(y_train)
+            self.which_column = np.where(class_labels == self.true_class)[0][0]
+        else:
+            self.true_class = 0
+            self.which_column = 0
+
         # Standard grid search
         self.compute_grid_search(X_train=X_train, y_train=y_train,
                                  scoring=scoring, param_grid=param_grid,
@@ -1198,7 +1215,7 @@ class SklearnClassifier(BaseClassifier):
         print(f'The optimisation takes {time.time() - time_begin:.3f}s.')
 
     def compute_grid_search(self, X_train, y_train, scoring, param_grid,
-                            number_cv_folds, metadata, **kwargs):
+                            number_cv_folds, metadata):
         """Computes a standard grid search.
 
         This grid search is optimised using cross validation with
@@ -1236,16 +1253,6 @@ class SklearnClassifier(BaseClassifier):
         """
         if param_grid is None:
             param_grid = self.param_grid_default
-
-        if 'true_class' in kwargs:
-            self.true_class = kwargs['true_class']
-            # Do some error checking here to avoid confusion in the roc curve
-            # code when using it for optimisation
-            class_labels = np.unique(y_train)
-            self.which_column = np.where(class_labels == self.true_class)[0][0]
-        else:
-            self.true_class = 0
-            self.which_column = 0
 
         cv_fold = StratifiedKFold(n_splits=number_cv_folds, shuffle=True,
                                   random_state=self._rs)
@@ -1293,7 +1300,7 @@ class SklearnClassifier(BaseClassifier):
 class SVMClassifier(SklearnClassifier):
     """Uses Support vector machine (SVM) for classification.
     """
-    def __init__(self, classifier_name='lgbm_classifier', random_seed=None,
+    def __init__(self, classifier_name='svm_classifier', random_seed=None,
                  **svm_params):
         """Class enclosing a Support vector machine classifier.
 
