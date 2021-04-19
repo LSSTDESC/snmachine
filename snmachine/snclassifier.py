@@ -1316,6 +1316,54 @@ class SVMClassifier(SklearnClassifier):
                                    'gamma': np.logspace(-8, 3, 5)}
 
 
+class KNNClassifier(SklearnClassifier):
+    """Uses k-nearest neighbors vote (KNN) for classification.
+    """
+    def __init__(self, classifier_name='knn_classifier', random_seed=None,
+                 **knn_params):
+        """Class enclosing a k-nearest neighbors vote classifier.
+
+        This class uses the k-nearest neighbors vote (KNN) implementation of
+        Scikit-learn [1]_.
+
+        Parameters
+        ----------
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `knn_classifier`.
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+        **knn_params : dict, optional
+            Optional keywords to pass arguments into
+            `sklearn.neighbors.KNeighborsClassifier`.
+
+        References
+        ----------
+        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
+        """
+        super().__init__(classifier_name=classifier_name,
+                         random_seed=random_seed, **knn_params)
+        if 'n_neighbors' in knn_params:
+            n_neighbors = knn_params.pop('n_neighbors')
+        else:
+            n_neighbors = 5
+        if 'weights' in knn_params:
+            weights = knn_params.pop('weights')
+        else:
+            weights = 'distance'
+        unoptimised_classifier = sklearn.neighbors.KNeighborsClassifier(
+            n_neighbors=n_neighbors, weights=weights, **knn_params)
+        self.classifier = unoptimised_classifier
+        # Store the unoptimised classifier
+        self.unoptimised_classifier = unoptimised_classifier
+        print(f'Created classifier of type: {self.classifier}.')
+
+        # Good defauld ranges for these parameters
+        self.param_grid_default = {'n_neighbors': list(range(1, 180, 5)),
+                                   'weights': ['distance']}
+
+
 class LightGBMClassifier(BaseClassifier):
     """Uses a tree based learning algorithm for classification from LightGBM.
     """
