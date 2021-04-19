@@ -19,25 +19,10 @@ import warnings
 
 import lightgbm as lgb
 import numpy as np
-
-# Solve imblearn problems introduced with sklearn version 0.24
 import sklearn
-import sklearn.neighbors
-import sklearn.utils
-import sklearn.ensemble
-from sklearn.utils._testing import ignore_warnings
-sys.modules['sklearn.neighbors.base'] = sklearn.neighbors._base
-sys.modules['sklearn.utils.safe_indexing'] = sklearn.utils._safe_indexing
-sys.modules['sklearn.utils.testing'] = sklearn.utils._testing
-sys.modules['sklearn.ensemble.bagging'] = sklearn.ensemble._bagging
-sys.modules['sklearn.ensemble.base'] = sklearn.ensemble._base
-sys.modules['sklearn.ensemble.forest'] = sklearn.ensemble._forest
-sys.modules['sklearn.metrics.classification'] = sklearn.metrics._classification
 
 from astropy.table import Table, join, unique
 from functools import partial
-from imblearn.over_sampling import SMOTE
-from imblearn.pipeline import make_pipeline
 from multiprocessing import Pool
 from scipy.integrate import trapz
 from sklearn import model_selection
@@ -636,8 +621,7 @@ class OptimisedClassifier():
         return -logloss  # symmetric because we want to maximise this output
 
     def optimised_classify(self, X_train, y_train, X_test,
-                           scoring_func='accuracy', balance_classes=False,
-                           **kwargs):
+                           scoring_func='accuracy', **kwargs):
         """Run optimised classifier using grid search with cross validation to
         choose optimal classifier parameters.
 
@@ -662,9 +646,6 @@ class OptimisedClassifier():
             The class determined to be the desired class (e.g. Ias, which
             might correspond to class 1). This allows the user to optimise for
             different classes (based on ROC curve AUC).
-        balance_classes : bool, optional
-            If True, balances the classes using SMOTE. Otherwise, it runs
-            without balancing. Default is False.
 
         Returns
         -------
@@ -695,14 +676,6 @@ class OptimisedClassifier():
             scoring = self._custom_logloss_score
         else:
             scoring = "accuracy"
-
-        if balance_classes is True:
-            self.clf = make_pipeline(SMOTE(sampling_strategy='not majority'),
-                                     self.clf)  # balance dataset
-            new_params = {}
-            for key in params:
-                new_params['randomforestclassifier__'+key] = params[key]
-            params = new_params
 
         self.clf = model_selection.GridSearchCV(self.clf, params,
                                                 scoring=scoring, cv=5)
@@ -1182,7 +1155,9 @@ class SklearnClassifier(BaseClassifier):
         metadata : {None, pandas.DataFrame}, optional
             Metadata of the events with which to train the classifier.
         **kwargs : dict, optional
-            You can include as `true_class` the class to use in the ROC curve.
+            If the scoring is the ROC curve AUC (`scoring='auc'`), include as
+            `true_class` the desired class to optimise (e.g. Ias, which might
+            correspond to class 1 or 90 depending on the dataset).
 
         References
         ----------
