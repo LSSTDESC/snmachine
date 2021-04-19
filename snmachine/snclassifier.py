@@ -1542,6 +1542,53 @@ class BoostDTClassifier(SklearnClassifier):
                                    'n_estimators': list(range(5, 85, 10))}
 
 
+class BoostRFClassifier(SklearnClassifier):
+    """Uses boosted random forests for classification.
+    """
+    def __init__(self, classifier_name='boost_rf_classifier',
+                 random_seed=None, **boost_rf_params):
+        """Class enclosing a boosted random forest classifier.
+
+        This class uses random forests as the base estimator of the boosted
+        ensemble AdaBoost classifier. This class implements the algorithm
+        AdaBoost-SAMME [1]_ through Scikit-learn [2]_.
+
+        Parameters
+        ----------
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `boost_rf_classifier`.
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+        **boost_rf_params : dict, optional
+            Optional keywords to pass arguments into
+            `sklearn.ensemble.AdaBoostClassifier`.
+
+        References
+        ----------
+        .. [1] Zhu, H. Zou, S. Rosset, T. Hastie, “Multi-class AdaBoost”, 2009
+        .. [2] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
+        """
+        super().__init__(classifier_name=classifier_name,
+                         random_seed=random_seed, **boost_rf_params)
+        unoptimised_classifier = sklearn.ensemble.AdaBoostClassifier(
+            random_state=self._rs, **boost_rf_params)
+        self.classifier = unoptimised_classifier
+        # Store the unoptimised classifier
+        self.unoptimised_classifier = unoptimised_classifier
+        print(f'Created classifier of type: {self.classifier}.')
+
+        # Good defauld ranges for these parameters
+        # This is a strange boosted random forest classifier that Max came up
+        # that works quite well, but is likely biased in general
+        base_estimators = [
+            sklearn.ensemble.RandomForestClassifier(400, 'entropy'),
+            sklearn.ensemble.RandomForestClassifier(600, 'entropy')]
+        self.param_grid_default = {'base_estimator': base_estimators,
+                                   'n_estimators': list([2, 3, 5, 10])}
+
+
 class LightGBMClassifier(BaseClassifier):
     """Uses a tree based learning algorithm for classification from LightGBM.
     """
