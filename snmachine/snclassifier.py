@@ -160,6 +160,11 @@ def roc(pr, Yt, true_class=0, which_column=-1):
         probs_1 = probs[:, true_class-min_class]
     # Used by `optimised_classify`
     elif len(pr.shape) > 1 and which_column != -1:
+        if which_column >= np.shape(probs)[1]:
+            sys.exit(f'`which_column` must be -1 or between 0 and '
+                     f'{np.shape(probs)[1]-1}.')  # the error was not working
+            raise IndexError(f'`which_column` must be -1 or between 0 and '
+                             f'{np.shape(probs)[1]-1}.')
         probs_1 = probs[:, which_column]
 
         # the classes are in the same order as `probs`
@@ -1158,6 +1163,95 @@ class BaseClassifier():
         self._rs = np.random.RandomState(value)
         self._random_seed = value
 
+    @property
+    def scoring(self):
+        """Return scoring name or callable.
+
+        Returns
+        -------
+        str, callable
+            The scoring used to evaluate the performance of a model.
+        """
+        return self._scoring
+
+    @scoring.setter
+    def scoring(self, value):
+        """Set the scoring to evaluate the performance of a model.
+
+        Here we link the name of the costum scoring methods to their
+        implementation.
+
+        Parameters
+        ----------
+        value : {str, callable}, optional
+            The strategy to evaluate the performance of a cross-validated
+            model. By deafault it is `accuracy`, which calls
+            `sklearn.metrics.accuracy_score`.
+
+        Raises
+        ------
+        ValueError
+            The scoring name is not recognised.
+        """
+        if value == 'auc':
+            value = self._auc_score
+        elif value == 'logloss':
+            value = logloss_score
+        self._scoring = value
+
+    def _set_auc_score_kwargs(self, y_train, **kwargs):
+        """Set the parameters needed for the AUC score.
+
+        Parameters
+        ----------
+        y_train : pandas.core.series.Series
+            Labels of the events with which to train the classifier.
+        **kwargs : dict, optional
+            If the scoring is the ROC curve AUC (`scoring='auc'`), include as
+            `true_class` the desired class to optimise (e.g. Ias, which might
+            correspond to class 1 or 90 depending on the dataset).
+        """
+        if 'true_class' in kwargs:
+            self.true_class = kwargs['true_class']
+            # Do some error checking here to avoid confusion in the roc curve
+            # code when using it for optimisation
+            class_labels = np.unique(y_train)
+            self.which_column = np.where(class_labels == self.true_class)[0][0]
+        else:
+            self.true_class = 0
+            self.which_column = 0
+        if 'which_column' in kwargs:
+            self.which_column = kwargs['which_column']
+
+    def _auc_score(self, classifier, X_features, y_true):
+        """A Area Under the ROC Curve (AUC) classification score.
+
+        ROC stands for Receiver Operating Characteristic Curve.
+        This costum scoring method can be used in a grid search.
+
+        This function differs from the related `auc_score` because it uses the
+        `which_column` value stored in the `BaseClassifier` instance.
+
+        Parameters
+        ----------
+        classifier : classifier instance `sklearn`, `LightGBM` or
+                    `BaseClassifier.child.classifier`
+            Classifier.
+        X_features : pandas.DataFrame or np.array
+            Features of shape (n_samples, n_features).
+        y_true : 1D array-like
+            Ground truth (correct) labels of shape (n_samples,).
+
+        Returns
+        -------
+        auc : float
+            AUC score.
+        """
+        probs = classifier.predict_proba(X_features)
+        fpr, tpr, auc = roc(pr=probs, Yt=y_true,
+                            which_column=self.which_column)
+        return auc  # symmetric because we want to maximise this output
+
 
 class SklearnClassifier(BaseClassifier):
     def __init__(self, classifier_name='sklearn_classifier', random_seed=None,
@@ -1203,6 +1297,9 @@ class SklearnClassifier(BaseClassifier):
             validation sets. See
             `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
             how to choose this input.
+            `snmachine` also contains the 'logloss' and 'auc' costum scoring.
+            For more details about these, see `logloss_score` and
+            `auc_score`, respectively.
         param_grid : {None, dict}, optional
             Dictionary containing the parameters names (`str`) as keys and
             lists of their possible settings as values.
@@ -1224,9 +1321,12 @@ class SklearnClassifier(BaseClassifier):
         """
         self._is_classifier_optimised()
         time_begin = time.time()
+        if scoring == 'auc':
+            self._set_auc_score_kwargs(y_train=y_train, **kwargs)
+        self.scoring = scoring
 
         if param_grid is None:
-            param_grid = self.param_grid_default
+            param_grid = self.param_grid_default(y_train, **kwargs)
 
         if 'true_class' in kwargs:
             self.true_class = kwargs['true_class']
@@ -1724,7 +1824,7 @@ class LightGBMClassifier(BaseClassifier):
 
     def optimise(self, X_train, y_train, scoring,
                  use_fast_optimisation=False, param_grid=None,
-                 number_cv_folds=5, metadata=None):
+                 number_cv_folds=5, metadata=None, **kwargs):
         """Optimise the classifier.
 
         Parameters
@@ -1738,6 +1838,9 @@ class LightGBMClassifier(BaseClassifier):
             validation sets. See
             `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
             how to choose this input.
+            `snmachine` also contains the 'logloss' and 'auc' costum scoring.
+            For more details about these, see `logloss_score` and
+            `auc_score`, respectively.
         use_fast_optimisation : bool, optional
             Whether to perform a specific hyperparameter optimisation that is
             faster than optimising a high dimensional grid through a standard
@@ -1769,12 +1872,14 @@ class LightGBMClassifier(BaseClassifier):
         """
         self._is_classifier_optimised()
         time_begin = time.time()
+        if scoring == 'auc':
+            self._set_auc_score_kwargs(y_train=y_train, **kwargs)
+        self.scoring = scoring
 
         # The hyperparameter optimisation of `use_fast_optimisation` is
         # described in the Notes of the docstring
         if use_fast_optimisation is True:
             self._compute_fast_optimisation(X_train=X_train, y_train=y_train,
-                                            scoring=scoring,
                                             number_cv_folds=number_cv_folds,
                                             metadata=metadata)
         # Standard grid search
@@ -1788,7 +1893,7 @@ class LightGBMClassifier(BaseClassifier):
         print(f'The optimisation takes {time.time() - time_begin:.3f}s.')
 
     def compute_grid_search(self, X_train, y_train, scoring, param_grid,
-                            number_cv_folds, metadata):
+                            number_cv_folds, metadata, **kwargs):
         """Computes a standard grid search.
 
         This grid search is optimised using cross validation with
@@ -1805,6 +1910,9 @@ class LightGBMClassifier(BaseClassifier):
             validation sets. See
             `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
             how to choose this parameter.
+            `snmachine` also contains the 'logloss' and 'auc' costum scoring.
+            For more details about these, see `logloss_score` and
+            `auc_score`, respectively.
         param_grid : dict
             Dictionary containing the parameters names (`str`) as keys and
             lists of their possible settings as values.
@@ -1812,6 +1920,10 @@ class LightGBMClassifier(BaseClassifier):
             Number of folds for cross-validation.
         metadata : pandas.DataFrame
             Metadata of the events with which to train the classifier.
+        **kwargs : dict, optional
+            If the scoring is the ROC curve AUC (`scoring='auc'`), include as
+            `true_class` the desired class to optimise (e.g. Ias, which might
+            correspond to class 1 or 90 depending on the dataset).
 
         Raises
         ------
@@ -1824,6 +1936,10 @@ class LightGBMClassifier(BaseClassifier):
         .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
         JMLR 12, pp. 2825-2830, 2011
         """
+        if scoring == 'auc':
+            self._set_auc_score_kwargs(y_train=y_train, **kwargs)
+        self.scoring = scoring
+
         if param_grid is None:
             raise AttributeError('To perform a standard grid search, you must '
                                  'provide a grid in `param_grid`.')
@@ -1853,8 +1969,8 @@ class LightGBMClassifier(BaseClassifier):
         self.grid_search = grid_search
         self.classifier = grid_search.best_estimator_
 
-    def _compute_fast_optimisation(self, X_train, y_train, scoring,
-                                   number_cv_folds, metadata):
+    def _compute_fast_optimisation(self, X_train, y_train, number_cv_folds,
+                                   metadata):
         """Optimises each parameter individually and then uses a grid search.
 
         First, optimise each hyperparameter individually using a 1D grid,
@@ -1907,7 +2023,7 @@ class LightGBMClassifier(BaseClassifier):
 
             # Optimise `param` with the other hyperparameters at default values
             self.compute_grid_search(X_train=X_train, y_train=y_train,
-                                     scoring=scoring,
+                                     scoring=self.scoring,
                                      param_grid=new_param_grid,
                                      number_cv_folds=number_cv_folds,
                                      metadata=metadata)
@@ -1918,7 +2034,7 @@ class LightGBMClassifier(BaseClassifier):
         param_grid = self._construct_6d_grid(best_param)
         # Optimise `param` with the other hyperparameters at default values
         self.compute_grid_search(X_train=X_train, y_train=y_train,
-                                 scoring=scoring, param_grid=param_grid,
+                                 scoring=self.scoring, param_grid=param_grid,
                                  number_cv_folds=number_cv_folds,
                                  metadata=metadata)
 
