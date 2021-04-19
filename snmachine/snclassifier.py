@@ -682,7 +682,8 @@ class OptimisedClassifier():
 
         self.clf.fit(X_train, y_train)  # This actually does the grid search
         best_params = self.clf.best_params_
-        print('Optimised parameters:', best_params)
+        print(f'This is a {self.clf}.\nOptimised parameters: {best_params}.')
+        # print('Optimised parameters:', best_params)
 
         for k in best_params.keys():
             # This is the safest way to check if something is a number
@@ -1455,6 +1456,46 @@ class RFClassifier(SklearnClassifier):
         # Good defauld ranges for these parameters
         self.param_grid_default = {'n_estimators': list(range(200, 900, 100)),
                                    'criterion': ['gini', 'entropy']}
+
+
+class DTClassifier(SklearnClassifier):
+    """Uses a decision tree (DT) for classification.
+    """
+    def __init__(self, classifier_name='dt_classifier',
+                 random_seed=None, **dt_params):
+        """Class enclosing a decision tree classifier.
+
+        This class uses the decision tree classifier (DT) implementation of
+        Scikit-learn [1]_.
+
+        Parameters
+        ----------
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `dt_classifier`.
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+        **dt_params : dict, optional
+            Optional keywords to pass arguments into
+            `sklearn.tree.DecisionTreeClassifier`.
+
+        References
+        ----------
+        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
+        """
+        super().__init__(classifier_name=classifier_name,
+                         random_seed=random_seed, **dt_params)
+        unoptimised_classifier = sklearn.tree.DecisionTreeClassifier(
+            random_state=self._rs, **dt_params)
+        self.classifier = unoptimised_classifier
+        # Store the unoptimised classifier
+        self.unoptimised_classifier = unoptimised_classifier
+        print(f'Created classifier of type: {self.classifier}.')
+
+        # Good defauld ranges for these parameters
+        self.param_grid_default = {'criterion': ['gini', 'entropy'],
+                                   'min_samples_leaf': list(range(1, 400, 25))}
 
 
 class LightGBMClassifier(BaseClassifier):
