@@ -682,8 +682,7 @@ class OptimisedClassifier():
 
         self.clf.fit(X_train, y_train)  # This actually does the grid search
         best_params = self.clf.best_params_
-        print(f'This is a {self.clf}.\nOptimised parameters: {best_params}.')
-        # print('Optimised parameters:', best_params)
+        print('Optimised parameters:', best_params)
 
         for k in best_params.keys():
             # This is the safest way to check if something is a number
@@ -1496,6 +1495,51 @@ class DTClassifier(SklearnClassifier):
         # Good defauld ranges for these parameters
         self.param_grid_default = {'criterion': ['gini', 'entropy'],
                                    'min_samples_leaf': list(range(1, 400, 25))}
+
+
+class BoostDTClassifier(SklearnClassifier):
+    """Uses boosted decision trees for classification.
+    """
+    def __init__(self, classifier_name='boost_dt_classifier',
+                 random_seed=None, **boost_dt_params):
+        """Class enclosing a boosted decision tree classifier.
+
+        This class uses decision trees as the base estimator of the boosted
+        ensemble AdaBoost classifier. This class implements the algorithm
+        AdaBoost-SAMME [1]_ through Scikit-learn [2]_.
+
+        Parameters
+        ----------
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `boost_dt_classifier`.
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+        **boost_dt_params : dict, optional
+            Optional keywords to pass arguments into
+            `sklearn.ensemble.AdaBoostClassifier`.
+
+        References
+        ----------
+        .. [1] Zhu, H. Zou, S. Rosset, T. Hastie, “Multi-class AdaBoost”, 2009
+        .. [2] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
+        """
+        super().__init__(classifier_name=classifier_name,
+                         random_seed=random_seed, **boost_dt_params)
+        unoptimised_classifier = sklearn.ensemble.AdaBoostClassifier(
+            random_state=self._rs, **boost_dt_params)
+        self.classifier = unoptimised_classifier
+        # Store the unoptimised classifier
+        self.unoptimised_classifier = unoptimised_classifier
+        print(f'Created classifier of type: {self.classifier}.')
+
+        # Good defauld ranges for these parameters
+        base_estimators = [sklearn.tree.DecisionTreeClassifier(
+            criterion='entropy',
+            min_samples_leaf=leafs) for leafs in range(5, 55, 10)]
+        self.param_grid_default = {'base_estimator': base_estimators,
+                                   'n_estimators': list(range(5, 85, 10))}
 
 
 class LightGBMClassifier(BaseClassifier):
