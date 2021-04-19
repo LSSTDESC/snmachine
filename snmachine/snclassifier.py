@@ -1311,7 +1311,7 @@ class SVMClassifier(SklearnClassifier):
         self.unoptimised_classifier = unoptimised_classifier
         print(f'Created classifier of type: {self.classifier}.')
 
-        # Good defauld ranges for these parameters
+        # Good defaulf ranges for these parameters
         self.param_grid_default = {'C': np.logspace(-2, 5, 5),
                                    'gamma': np.logspace(-8, 3, 5)}
 
@@ -1359,7 +1359,7 @@ class KNNClassifier(SklearnClassifier):
         self.unoptimised_classifier = unoptimised_classifier
         print(f'Created classifier of type: {self.classifier}.')
 
-        # Good defauld ranges for these parameters
+        # Good defaulf ranges for these parameters
         self.param_grid_default = {'n_neighbors': list(range(1, 180, 5)),
                                    'weights': ['distance']}
 
@@ -1412,7 +1412,7 @@ class NNClassifier(SklearnClassifier):
         self.unoptimised_classifier = unoptimised_classifier
         print(f'Created classifier of type: {self.classifier}.')
 
-        # Good defauld ranges for these parameters
+        # Good defaulf ranges for these parameters
         self.param_grid_default = {
             'hidden_layer_sizes': [(layer,) for layer in range(80, 120, 5)]}
 
@@ -1452,7 +1452,7 @@ class RFClassifier(SklearnClassifier):
         self.unoptimised_classifier = unoptimised_classifier
         print(f'Created classifier of type: {self.classifier}.')
 
-        # Good defauld ranges for these parameters
+        # Good defaulf ranges for these parameters
         self.param_grid_default = {'n_estimators': list(range(200, 900, 100)),
                                    'criterion': ['gini', 'entropy']}
 
@@ -1492,7 +1492,7 @@ class DTClassifier(SklearnClassifier):
         self.unoptimised_classifier = unoptimised_classifier
         print(f'Created classifier of type: {self.classifier}.')
 
-        # Good defauld ranges for these parameters
+        # Good defaulf ranges for these parameters
         self.param_grid_default = {'criterion': ['gini', 'entropy'],
                                    'min_samples_leaf': list(range(1, 400, 25))}
 
@@ -1534,7 +1534,7 @@ class BoostDTClassifier(SklearnClassifier):
         self.unoptimised_classifier = unoptimised_classifier
         print(f'Created classifier of type: {self.classifier}.')
 
-        # Good defauld ranges for these parameters
+        # Good defaulf ranges for these parameters
         base_estimators = [sklearn.tree.DecisionTreeClassifier(
             criterion='entropy',
             min_samples_leaf=leafs) for leafs in range(5, 55, 10)]
@@ -1579,7 +1579,7 @@ class BoostRFClassifier(SklearnClassifier):
         self.unoptimised_classifier = unoptimised_classifier
         print(f'Created classifier of type: {self.classifier}.')
 
-        # Good defauld ranges for these parameters
+        # Good defaulf ranges for these parameters
         # This is a strange boosted random forest classifier that Max came up
         # that works quite well, but is likely biased in general
         base_estimators = [
@@ -1587,6 +1587,45 @@ class BoostRFClassifier(SklearnClassifier):
             sklearn.ensemble.RandomForestClassifier(600, 'entropy')]
         self.param_grid_default = {'base_estimator': base_estimators,
                                    'n_estimators': list([2, 3, 5, 10])}
+
+
+class NBClassifier(SklearnClassifier):
+    """Uses Gaussian Naive Bayes for classification.
+    """
+    def __init__(self, classifier_name='nb_classifier',
+                 random_seed=None, **nb_params):
+        """Class enclosing a Gaussian Naive Bayes classifier.
+
+        This class uses the Gaussian Naive Bayes implementation of
+        Scikit-learn [1]_.
+
+        Parameters
+        ----------
+        classifier_name : str, optional
+            Name of the classifier, which is used to save it. By default it is
+            `nb_classifier`.
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+        **nb_params : dict, optional
+            Optional keywords to pass arguments into
+            `sklearn.naive_bayes.GaussianNB`.
+
+        References
+        ----------
+        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
+        JMLR 12, pp. 2825-2830, 2011
+        """
+        super().__init__(classifier_name=classifier_name,
+                         random_seed=random_seed, **nb_params)
+        unoptimised_classifier = sklearn.naive_bayes.GaussianNB(**nb_params)
+        self.classifier = unoptimised_classifier
+        # Store the unoptimised classifier
+        self.unoptimised_classifier = unoptimised_classifier
+        print(f'Created classifier of type: {self.classifier}.')
+
+        # Good defaulf ranges for these parameters
+        print('This class has no default hyperparameter range.')
+        self.param_grid_default = {}
 
 
 class LightGBMClassifier(BaseClassifier):
