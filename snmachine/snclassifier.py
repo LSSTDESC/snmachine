@@ -1059,7 +1059,7 @@ class BaseClassifier():
         path_to_save = os.path.join(output_path, classifier_name+'.pck')
         with open(path_to_save, 'wb') as clf_path:
             pickle.dump(self, clf_path)
-        print(f'Classifier saved in {path_to_save}.')
+        print(f'Classifier saved in {path_to_save} .')
 
     def _compute_cv_iterable(self, cv_fold, metadata):
         """Computes a cross-validation iterable for augmented datasets.
@@ -1326,29 +1326,20 @@ class SklearnClassifier(BaseClassifier):
         self.scoring = scoring
 
         if param_grid is None:
-            param_grid = self.param_grid_default(y_train, **kwargs)
-
-        if 'true_class' in kwargs:
-            self.true_class = kwargs['true_class']
-            # Do some error checking here to avoid confusion in the roc curve
-            # code when using it for optimisation
-            class_labels = np.unique(y_train)
-            self.which_column = np.where(class_labels == self.true_class)[0][0]
-        else:
-            self.true_class = 0
-            self.which_column = 0
+            param_grid = self.param_grid_default
+            print('Using the default parameter grid optimisation.')
 
         # Standard grid search
-        self.compute_grid_search(X_train=X_train, y_train=y_train,
-                                 scoring=scoring, param_grid=param_grid,
-                                 number_cv_folds=number_cv_folds,
-                                 metadata=metadata)
+        self._compute_grid_search(X_train=X_train, y_train=y_train,
+                                  param_grid=param_grid,
+                                  number_cv_folds=number_cv_folds,
+                                  metadata=metadata)
 
         self.is_optimised = True
         print(f'The optimisation takes {time.time() - time_begin:.3f}s.')
 
-    def compute_grid_search(self, X_train, y_train, scoring, param_grid,
-                            number_cv_folds, metadata):
+    def _compute_grid_search(self, X_train, y_train, param_grid,
+                             number_cv_folds, metadata):
         """Computes a standard grid search.
 
         This grid search is optimised using cross validation with
@@ -1360,11 +1351,6 @@ class SklearnClassifier(BaseClassifier):
             Features of the events with which to train the classifier.
         y_train : pandas.core.series.Series
             Labels of the events with which to train the classifier.
-        scoring : callable, str
-            The metric used to evaluate the predictions on the test or
-            validation sets. See
-            `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
-            how to choose this parameter.
         param_grid : dict
             Dictionary containing the parameters names (`str`) as keys and
             lists of their possible settings as values.
@@ -1378,15 +1364,7 @@ class SklearnClassifier(BaseClassifier):
         AttributeError
             A grid must be provided in `param_grid` to perform a standard grid
             search. Thus, this input cannot be `None`.
-
-        References
-        ----------
-        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
-        JMLR 12, pp. 2825-2830, 2011
         """
-        if param_grid is None:
-            param_grid = self.param_grid_default
-
         cv_fold = StratifiedKFold(n_splits=number_cv_folds, shuffle=True,
                                   random_state=self._rs)
 
@@ -1404,7 +1382,7 @@ class SklearnClassifier(BaseClassifier):
 
         grid_search = model_selection.GridSearchCV(self.classifier,
                                                    param_grid=param_grid,
-                                                   scoring=scoring, cv=cv)
+                                                   scoring=self.scoring, cv=cv)
 
         grid_search.fit(X_train, y_train)  # this searches through the grid
 
@@ -1822,8 +1800,7 @@ class LightGBMClassifier(BaseClassifier):
         self.unoptimised_classifier = unoptimised_classifier
         print(f'Created classifier of type: {self.classifier}.')
 
-    def optimise(self, X_train, y_train, scoring,
-                 use_fast_optimisation=False, param_grid=None,
+    def optimise(self, X_train, y_train, scoring, param_grid=None,
                  number_cv_folds=5, metadata=None, **kwargs):
         """Optimise the classifier.
 
@@ -1841,26 +1818,28 @@ class LightGBMClassifier(BaseClassifier):
             `snmachine` also contains the 'logloss' and 'auc' costum scoring.
             For more details about these, see `logloss_score` and
             `auc_score`, respectively.
-        use_fast_optimisation : bool, optional
-            Whether to perform a specific hyperparameter optimisation that is
-            faster than optimising a high dimensional grid through a standard
-            grid search. By default it is `False`.
-            See Notes for the details of this hyperparameter optimisation.
         param_grid : {None, dict}, optional
             Dictionary containing the parameters names (`str`) as keys and
             lists of their possible settings as values.
-            If `use_fast_optimisation = True`, this input is ignored.
+            If `None`, it performs a specific hyperparameter optimisation that
+            is faster than optimising a high dimensional grid through a
+            standard grid search. See Notes for the details of this
+            hyperparameter optimisation.
         number_cv_folds : int, optional
             Number of folds for cross-validation. By default it is 5.
         metadata : {None, pandas.DataFrame}, optional
             Metadata of the events with which to train the classifier.
+        **kwargs : dict, optional
+            If the scoring is the ROC curve AUC (`scoring='auc'`), include as
+            `true_class` the desired class to optimise (e.g. Ias, which might
+            correspond to class 1 or 90 depending on the dataset).
 
         Notes
         -----
-        The hyperparameter optimisation used for `use_fast_optimisation` is:
-        First, optimise each hyperparameter individually using a 1D grid,
-        keeping the other hyperparameters at default values. Then, construct a
-        higher dimensional grid containing all the hyperparameters with three
+        The hyperparameter optimisation used as deafult is: First, optimise
+        each hyperparameter individually using a 1D grid, keeping the other
+        hyperparameters at default values. Then, construct a higher
+        dimensional grid containing all the hyperparameters with three
         possible values for each hyperparameter informed by the earlier 1D
         optimization. Finally, optimise this higher dimensional grid through a
         standard grid search.
@@ -1876,6 +1855,8 @@ class LightGBMClassifier(BaseClassifier):
             self._set_auc_score_kwargs(y_train=y_train, **kwargs)
         self.scoring = scoring
 
+        use_fast_optimisation = param_grid is None
+
         # The hyperparameter optimisation of `use_fast_optimisation` is
         # described in the Notes of the docstring
         if use_fast_optimisation is True:
@@ -1884,16 +1865,16 @@ class LightGBMClassifier(BaseClassifier):
                                             metadata=metadata)
         # Standard grid search
         else:
-            self.compute_grid_search(X_train=X_train, y_train=y_train,
-                                     scoring=scoring, param_grid=param_grid,
-                                     number_cv_folds=number_cv_folds,
-                                     metadata=metadata)
+            self._compute_grid_search(X_train=X_train, y_train=y_train,
+                                      param_grid=param_grid,
+                                      number_cv_folds=number_cv_folds,
+                                      metadata=metadata)
 
         self.is_optimised = True
         print(f'The optimisation takes {time.time() - time_begin:.3f}s.')
 
-    def compute_grid_search(self, X_train, y_train, scoring, param_grid,
-                            number_cv_folds, metadata, **kwargs):
+    def _compute_grid_search(self, X_train, y_train, param_grid,
+                             number_cv_folds, metadata):
         """Computes a standard grid search.
 
         This grid search is optimised using cross validation with
@@ -1905,14 +1886,6 @@ class LightGBMClassifier(BaseClassifier):
             Features of the events with which to train the classifier.
         y_train : pandas.core.series.Series
             Labels of the events with which to train the classifier.
-        scoring : callable, str
-            The metric used to evaluate the predictions on the test or
-            validation sets. See
-            `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
-            how to choose this parameter.
-            `snmachine` also contains the 'logloss' and 'auc' costum scoring.
-            For more details about these, see `logloss_score` and
-            `auc_score`, respectively.
         param_grid : dict
             Dictionary containing the parameters names (`str`) as keys and
             lists of their possible settings as values.
@@ -1920,26 +1893,13 @@ class LightGBMClassifier(BaseClassifier):
             Number of folds for cross-validation.
         metadata : pandas.DataFrame
             Metadata of the events with which to train the classifier.
-        **kwargs : dict, optional
-            If the scoring is the ROC curve AUC (`scoring='auc'`), include as
-            `true_class` the desired class to optimise (e.g. Ias, which might
-            correspond to class 1 or 90 depending on the dataset).
 
         Raises
         ------
         AttributeError
             A grid must be provided in `param_grid` to perform a standard grid
             search. Thus, this input cannot be `None`.
-
-        References
-        ----------
-        .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
-        JMLR 12, pp. 2825-2830, 2011
         """
-        if scoring == 'auc':
-            self._set_auc_score_kwargs(y_train=y_train, **kwargs)
-        self.scoring = scoring
-
         if param_grid is None:
             raise AttributeError('To perform a standard grid search, you must '
                                  'provide a grid in `param_grid`.')
@@ -1961,7 +1921,7 @@ class LightGBMClassifier(BaseClassifier):
 
         grid_search = model_selection.GridSearchCV(self.classifier,
                                                    param_grid=param_grid,
-                                                   scoring=scoring, cv=cv)
+                                                   scoring=self.scoring, cv=cv)
         grid_search.fit(X_train, y_train)  # this searches through the grid
 
         # Save the grid search and update the saved classifier with the best
@@ -2001,6 +1961,7 @@ class LightGBMClassifier(BaseClassifier):
         .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
         JMLR 12, pp. 2825-2830, 2011
         """
+        print('Using the default parameter grid optimisation.')
         # This is the grid used to optimise each hyperparameter individually
         param_grid = {'num_leaves': np.arange(10, 55, 5),
                       'learning_rate': np.logspace(-3, -.01, 50),
@@ -2008,35 +1969,26 @@ class LightGBMClassifier(BaseClassifier):
                       'min_child_samples': np.arange(20, 80, 10),
                       'max_depth': np.arange(1, 20, 3),
                       'min_split_gain': np.linspace(0., 2., 21)}
-        # For testing purposes v TODO ; it is to see after testing saving
-        # classifier
-        param_grid = {'num_leaves': np.arange(10, 25, 5),
-                      'learning_rate': np.logspace(-3, -.01, 3),
-                      'n_estimators': np.arange(25, 40, 10),
-                      'min_child_samples': np.arange(20, 25, 10),
-                      'max_depth': np.arange(1, 6, 3),
-                      'min_split_gain': np.linspace(0., 2., 3)}
 
         best_param = {}  # to refister the best value of the 1D optimisation
         for param in param_grid.keys():
             new_param_grid = {param: param_grid[param]}
 
             # Optimise `param` with the other hyperparameters at default values
-            self.compute_grid_search(X_train=X_train, y_train=y_train,
-                                     scoring=self.scoring,
-                                     param_grid=new_param_grid,
-                                     number_cv_folds=number_cv_folds,
-                                     metadata=metadata)
+            self._compute_grid_search(X_train=X_train, y_train=y_train,
+                                      param_grid=new_param_grid,
+                                      number_cv_folds=number_cv_folds,
+                                      metadata=metadata)
             # Register the best value
             best_param[param] = self.grid_search.best_params_[param]
 
         # New grid to optimise all the hyperparameters simultaneously
         param_grid = self._construct_6d_grid(best_param)
         # Optimise `param` with the other hyperparameters at default values
-        self.compute_grid_search(X_train=X_train, y_train=y_train,
-                                 scoring=self.scoring, param_grid=param_grid,
-                                 number_cv_folds=number_cv_folds,
-                                 metadata=metadata)
+        self._compute_grid_search(X_train=X_train, y_train=y_train,
+                                  param_grid=param_grid,
+                                  number_cv_folds=number_cv_folds,
+                                  metadata=metadata)
 
     @staticmethod
     def _construct_6d_grid(best_param):
@@ -2062,7 +2014,7 @@ class LightGBMClassifier(BaseClassifier):
 
         # The bellow values were informed by exploring the optmisation of
         # several classifiers. For a more detailed optimisation, run
-        # `LightGBMClassifier.compute_grid_search`
+        # `LightGBMClassifier._compute_grid_search`
         param = 'num_leaves'
         param_best_value = best_param[param]
         min_value, max_value = 10, 50
