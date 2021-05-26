@@ -55,11 +55,11 @@ except ImportError:
           'Neural networks are available from development version 0.18.')
 
 
-# Costum scoring/metrics functions ##
+# Custom scoring/metrics functions ##
 def logloss_score(classifier, X_features, y_true):
     """PLAsTiCC logloss classification score.
 
-    This costum scoring method can be used in a grid search.
+    This custom scoring method can be used in a grid search.
 
     Parameters
     ----------
@@ -87,7 +87,7 @@ def auc_score(classifier, X_features, y_true, which_column):
     """A Area Under the ROC Curve (AUC) classification score.
 
     ROC stands for Receiver Operating Characteristic Curve
-    This costum scoring method can be used in a grid search.
+    This custom scoring method can be used in a grid search.
 
     Parameters
     ----------
@@ -1179,7 +1179,7 @@ class BaseClassifier():
     def scoring(self, value):
         """Set the scoring to evaluate the performance of a model.
 
-        Here we link the name of the costum scoring methods to their
+        Here we link the name of the custom scoring methods to their
         implementation.
 
         Parameters
@@ -1228,7 +1228,7 @@ class BaseClassifier():
         """A Area Under the ROC Curve (AUC) classification score.
 
         ROC stands for Receiver Operating Characteristic Curve.
-        This costum scoring method can be used in a grid search.
+        This custom scoring method can be used in a grid search.
 
         This function differs from the related `auc_score` because it uses the
         `which_column` value stored in the `BaseClassifier` instance.
@@ -1298,7 +1298,7 @@ class SklearnClassifier(BaseClassifier):
             validation sets. See
             `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
             how to choose this input.
-            `snmachine` also contains the 'logloss' and 'auc' costum scoring.
+            `snmachine` also contains the 'logloss' and 'auc' custom scoring.
             For more details about these, see `logloss_score` and
             `auc_score`, respectively.
         param_grid : {None, dict}, optional
@@ -1816,7 +1816,7 @@ class LightGBMClassifier(BaseClassifier):
             validation sets. See
             `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
             how to choose this input.
-            `snmachine` also contains the 'logloss' and 'auc' costum scoring.
+            `snmachine` also contains the 'logloss' and 'auc' custom scoring.
             For more details about these, see `logloss_score` and
             `auc_score`, respectively.
         param_grid : {None, dict}, optional
