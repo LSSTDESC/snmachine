@@ -581,9 +581,9 @@ class OptimisedClassifier():
                 elif classifier == 'multiple_classifier':
                     pass
                 else:
-                    print(f'Requested classifier not recognised.\nChoice of '
-                          f'built-in classifiers: {choice_of_classifiers}.')
-                    sys.exit(0)
+                    raise ValueError(f'Requested classifier not recognised.'
+                                     f'\nChoice of built-in classifiers: '
+                                     f'{choice_of_classifiers}.')
 
             except TypeError:
                 # Gracefully catch errors of sending the wrong kwargs to the
@@ -591,7 +591,6 @@ class OptimisedClassifier():
                 raise AttributeError(f'One of the kwargs \n{kwargs.keys()}\n'
                                      f'does not belong to classifier '
                                      f'{classifier}.')
-                sys.exit(0)
 
         else:
             # This is already some sklearn classifier or an object that
