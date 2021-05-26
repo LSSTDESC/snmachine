@@ -379,7 +379,6 @@ def F1(pr,  Yt, true_class, full_output=False):
 
     TP = (preds & Y_bool).sum(axis=0)
     FP = (preds & ~Y_bool).sum(axis=0)
-    # TN = (~preds & ~Y_bool).sum(axis=0)  # not used in this function
     FN = (~preds & Y_bool).sum(axis=0)
 
     f1 = np.zeros(len(TP))
@@ -454,7 +453,6 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
 
     TP = (preds & Y_bool).sum(axis=0)
     FP = (preds & ~Y_bool).sum(axis=0)
-    # TN = (~preds & ~Y_bool).sum(axis=0)  # not used in this function
     FN = (~preds & Y_bool).sum(axis=0)
 
     fom = np.zeros(len(TP))
