@@ -1080,6 +1080,7 @@ class BaseClassifier():
         predefined_split : sklearn.model_selection._split.PredefinedSplit
             Predefined split cross-validator.
         """
+        print('Cross-validation for an augmented dataset.')
         aug_objs_original_obj = np.array(metadata.original_event).astype(str)
         fold_index = np.zeros(len(metadata), dtype=int) - 1
 
@@ -1973,6 +1974,7 @@ class LightGBMClassifier(BaseClassifier):
         best_param = {}  # to refister the best value of the 1D optimisation
         for param in param_grid.keys():
             new_param_grid = {param: param_grid[param]}
+            print(f'Optimise parameter {param}.')
 
             # Optimise `param` with the other hyperparameters at default values
             self._compute_grid_search(X_train=X_train, y_train=y_train,
@@ -1985,6 +1987,7 @@ class LightGBMClassifier(BaseClassifier):
         # New grid to optimise all the hyperparameters simultaneously
         param_grid = self._construct_6d_grid(best_param)
         # Optimise `param` with the other hyperparameters at default values
+        print(f'Final optimisation - grid \n{param_grid}')
         self._compute_grid_search(X_train=X_train, y_train=y_train,
                                   param_grid=param_grid,
                                   number_cv_folds=number_cv_folds,
