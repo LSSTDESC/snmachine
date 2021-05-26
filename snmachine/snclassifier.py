@@ -326,8 +326,7 @@ def plot_confusion_matrix(cm, normalise=False, labels=None,
 
 
 def F1(pr,  Yt, true_class, full_output=False):
-    """
-    Calculate an F1 score for many probability threshold increments
+    """Calculate an F1 score for many probability threshold increments
     and select the best one.
 
     Parameters
@@ -395,8 +394,7 @@ def F1(pr,  Yt, true_class, full_output=False):
 
 
 def FoM(pr,  Yt, true_class=1, full_output=False):
-    """
-    Calculate a Kessler FoM for many probability threshold increments
+    """Calculate a Kessler FoM for many probability threshold increments
     and select the best one.
 
     FoM is defined as:
