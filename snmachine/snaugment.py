@@ -775,8 +775,8 @@ class GPAugment(SNAugment):
         aug_obj_metadata : pandas.DataFrame
             Metadata of the augmented event.
         """
-        return NotImplementedError('This method should be defined on child '
-                                   'classes')
+        raise NotImplementedError('This method should be defined on child '
+                                  'classes')
 
     def compute_new_z_photo(self, z_spec):
         """Compute a new photometric redshift and error.
@@ -1212,8 +1212,8 @@ class GPAugment(SNAugment):
         target_number_obs : int
             The target number of observations in the new light curve.
         """
-        return NotImplementedError('This method should be defined on child '
-                                   'classes')
+        raise NotImplementedError('This method should be defined on child '
+                                  'classes')
 
     def _compute_obs_uncertainty(self, aug_obj_data, aug_obj_metadata):
         """Compute and add uncertainty to the light curve observations.
