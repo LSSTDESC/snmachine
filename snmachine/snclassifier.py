@@ -13,7 +13,6 @@ import collections
 import itertools
 import os
 import pickle
-import sys
 import time
 import warnings
 
@@ -157,12 +156,14 @@ def roc(pr, Yt, true_class=0, which_column=-1):
 
     # sequential labels (as in SPCC) case - backwards compatibility
     if len(pr.shape) > 1 and which_column == -1:
-        probs_1 = probs[:, true_class-min_class]
+        try:
+            probs_1 = probs[:, true_class-min_class]
+        except IndexError:
+            raise IndexError('If `which_column` is -1, the `Yt` labels must '
+                             'be sequential and `true_class` must be provided.')
     # Used by `optimised_classify`
     elif len(pr.shape) > 1 and which_column != -1:
         if which_column >= np.shape(probs)[1]:
-            sys.exit(f'`which_column` must be -1 or between 0 and '
-                     f'{np.shape(probs)[1]-1}.')  # the error was not working
             raise IndexError(f'`which_column` must be -1 or between 0 and '
                              f'{np.shape(probs)[1]-1}.')
         probs_1 = probs[:, which_column]
