@@ -8,10 +8,8 @@ import pickle
 import time
 import warnings
 
-import george
 import numpy as np
 import pandas as pd
-import scipy.optimize as op
 
 from astropy.table import Table
 from astropy.cosmology import FlatLambdaCDM
@@ -609,11 +607,12 @@ class GPAugment(SNAugment):
         # time dilation due to the difference between the original and
         # augmented redshifts
         z_scale = (1 + z_ori) / (1 + z_aug)
+
         # Keep the time of the maximum flux invariant so that the interesting
         # part of the light curve remains inside the observing window.
         time_peak = obj_data['mjd'].iloc[np.argmax(obj_data['flux'].values)]
         aug_obj_data['mjd'] = time_peak + z_scale**-1 * (
-            aug_obj_data['ref_mjd'] - time_peak)
+            obj_data['mjd'] - time_peak)
         # Removed any observations outside the observing window
         is_not_seen = aug_obj_data['mjd'] < 0
         aug_obj_data = aug_obj_data[~is_not_seen]  # before 0
@@ -1252,8 +1251,8 @@ class GPAugment(SNAugment):
         astronomical transients with gaussian process augmentation." The
         Astronomical Journal 158.6 (2019): 257.
         """
-        return NotImplementedError('This method should be defined on child '
-                                   'classes')
+        raise NotImplementedError('This method should be defined on child '
+                                  'classes')
 
     def _simulate_detection(self, aug_obj_data, aug_obj_metadata):
         """Simulate the detection process for a light curve.
@@ -1307,7 +1306,7 @@ class PlasticcWFDAugment(GPAugment):
     """
 
     def __init__(self, dataset, path_saved_gps, objs_number_to_aug=None,
-                 choose_z=None, z_table=None, max_duration=None,
+                 z_table=None, max_duration=None,
                  cosmology=FlatLambdaCDM(**{"H0": 70, "Om0": 0.3,
                                             "Tcmb0": 2.725}),
                  random_seed=None, **kwargs):
@@ -1514,7 +1513,7 @@ class PlasticcDDFAugment(GPAugment):
     """
 
     def __init__(self, dataset, path_saved_gps, objs_number_to_aug=None,
-                 choose_z=None, z_table=None, max_duration=None,
+                 z_table=None, max_duration=None,
                  cosmology=FlatLambdaCDM(**{"H0": 70, "Om0": 0.3,
                                             "Tcmb0": 2.725}),
                  random_seed=None, **kwargs):
