@@ -159,8 +159,8 @@ def roc(pr, Yt, true_class=0, which_column=-1):
         try:
             probs_1 = probs[:, true_class-min_class]
         except IndexError:
-            raise IndexError('If `which_column` is -1, the `Yt` labels must '
-                             'be sequential and `true_class` must be provided.')
+            raise IndexError('If `which_column` is -1, the `Yt` labels must be'
+                             'sequential and `true_class` must be provided.')
     # Used by `optimised_classify`
     elif len(pr.shape) > 1 and which_column != -1:
         if which_column >= np.shape(probs)[1]:
