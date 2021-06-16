@@ -15,9 +15,7 @@ from astropy.table import Table
 from astropy.cosmology import FlatLambdaCDM
 from functools import partial  # TODO: erase when old sndata is deprecated
 from scipy.special import erf
-from sklearn.linear_model import LogisticRegression
-from sklearn.neural_network import MLPClassifier
-from snmachine import gps, snfeatures
+from snmachine import gps
 
 
 # Functions to choose spectroscopic redshift for `GPAugment`.
@@ -117,223 +115,10 @@ class SNAugment:
         self.original_object_names = dataset.object_names.copy()
 
     def augment(self):
-        pass
-
-    def extract_proxy_features(self, peak_filter='desr', nproc=1,
-                               fit_salt2=False, salt2feats=None,
-                               return_features=False, fix_redshift=False,
-                               which_redshifts='header', sampler='leastsq'):
-        """Extracts the 2D proxy features from raw light curves, e.g.,
-        redshift and peak logflux in a certain band. There are plenty of
-        options for how to get these values, if you should be so inclined.
-        For the peak flux, we take either the maximum flux amongst the
-        observations in the specified band (quick and dirty), or we perform
-        SALT2 fits to the data and extract the peak flux from there (proper
-        and slow). For the redshift, we take either the redshift specified in
-        the header or the fitted SALT2 parameter.
-
-        Parameters:
-        ----------
-        peak_filter : str, optional (default: 'desr')
-            Name of the filter whose peak flux will be used as second column.
-        nproc : int, optional (default: 1)
-            Number of processes for salt2 feature extraction
-        fit_salt2 : boolean, optional (default: False)
-            If True, we compute the peak flux from SALT2 fits; if False, we
-            return the brightest observation
-        salt2feats : astropy.table.Table, optional (default: None)
-            If you already have the features precomputed and do not want to
-            recompute, you can hand them over here.
-        return_features : bool, optional (default: False)
-            If you want to store fitted SALT2 features, you can set this flag
-            to return them
-        fix_redshift : bool, optional (default: False)
-            If True, we fix the redshift in the SALT2 fits to the value found
-            in the table headers; if False, we leave the parameter free for
-            sampling
-        which_redshifts : str, optional (default: 'header')
-            If 'salt2', the first column of proxy features will be the
-            SALT2-fitted redshift; if 'header', we take the redshift from the
-            header, if 'headerfill', we take the header redshift where
-            available and fill with fitted values for the objects without
-            valid redshift.
-        sampler : str, optional (default: 'leastsq')
-            Which sampler do we use to perform the SALT2 fit? 'leastsq' is a
-            simple least squares fit, 'nested' uses nested sampling and
-            requires MultiNest and PyMultiNest to be installed.
-        Returns:
-        -------
-        proxy_features : np.array
-            Nobj x 2 table with the extracted (z,peakflux) proxy features
-        salt2feats : astropy.table.Table
-            fitted SALT2 features for further applications
+        """Augment the dataset.
         """
-
-        # Consistency check: is the specified filter actually in the dataset?
-        if peak_filter not in self.dataset.filter_set:
-            raise RuntimeError('Filter %s not amongst the filters in the'
-                               'dataset!')
-
-        # Consistency check: if we want to return salt2-fitted redshifts, do
-        # we actually have features?
-        is_valid_z = all([(isinstance(z, float)) & (z >= 0)
-                          for z in self.dataset.get_redshift()])
-        if which_redshifts == 'headerfill' and is_valid_z:
-            # Corner case: if 'headerfill' this check should only complain if
-            # there are actually invalid z values to fill in
-            which_redshifts = 'header'
-        if not fit_salt2 and which_redshifts in ['salt2', 'headerfill']:
-            print('We need SALT2 features in order to return fitted redshifts!'
-                  'Setting which_redshifts to "header".')
-            which_redshifts = 'header'
-
-        # Consistency check: to return features, we need to have features
-        if return_features and not fit_salt2 and salt2feats is None:
-            print('We need SALT2 features to return features - either provide'
-                  'some or compute them! Setting return_features to False.')
-            return_features = False
-
-        # Fitting new features
-        if fit_salt2:
-            # We use a fit to SALT2 model to extract the r-band peak magnitudes
-            tf = snfeatures.TemplateFeatures(sampler=sampler)
-            if salt2feats is None:
-                salt2feats = tf.extract_features(self.dataset,
-                                                 number_processes=nproc,
-                                                 use_redshift=fix_redshift)
-
-            # Fit models and extract r-peakmags
-            peaklogflux = []
-            for i in range(len(self.dataset.object_names)):
-                model = tf.fit_sn(self.dataset.data[
-                    self.dataset.object_names[i]], salt2feats)
-                model = model[model['filter'] == peak_filter]
-                if len(model) > 0:
-                    peaklogflux = np.append(peaklogflux,
-                                            np.log10(np.nanmax(model['flux'])))
-                else:
-                    # Band is missing: do something better than this
-                    peaklogflux = np.append(peaklogflux, -42)
-        else:
-            peaklogflux = []
-            for o in self.dataset.object_names:
-                model = self.dataset.data[o]
-                model = model[model['filter'] == peak_filter]
-                if len(model) > 0:
-                    peaklogflux = np.append(peaklogflux,
-                                            np.log10(np.nanmax(model['flux'])))
-                else:
-                    # Band is missing: do something better
-                    peaklogflux = np.append(peaklogflux, -42)
-
-        # Extracting redshifts
-        if which_redshifts == 'header':
-            z = self.dataset.get_redshift()
-        elif which_redshifts == 'salt2':
-            z = [float(salt2feats[salt2feats['Object'] == o]['[Ia]z'])
-                 for o in self.dataset.object_names]
-        elif which_redshifts == 'headerfill':
-            z = self.dataset.get_redshift().astype(float)
-            for i in range(len(z)):
-                if not isinstance(z[i], float) or z[i] < 0:
-                    obj_name = self.dataset.object_names[i]
-                    index_obj_name = salt2feats['Object'] == obj_name
-                    z[i] = float(salt2feats['[Ia]z'][index_obj_name])
-        else:
-            raise RuntimeError(f'Unknown value {which_redshifts} for argument '
-                               f'which_redshifts!')
-
-        proxy_features = np.array([z, peaklogflux]).transpose()
-
-        if return_features:
-            return proxy_features, salt2feats
-        else:
-            return proxy_features
-
-    def compute_propensity_scores(self, train_names, algo='logistic',
-                                  **kwargs):
-        """Wherein we fit a model for the propensity score (the probability of
-        an object to be in the training set) in the proxy-feature parameter
-        space. We then evaluate the model on the full dataset and return the
-        values.
-
-        Parameters:
-        ----------
-        train_names : np.array of str
-            Names of all objects in the training set
-        algo : str, optional
-            Name of the model to fit. 'logistic' is logistic regression,
-            'network' is a simple ANN with two nodes in one hidden layer.
-        kwargs : optional
-            All of these will be handed to `self.extract_proxy_features`. See
-            there for more info.
-
-        Returns:
-        -------
-        propensity_scores : np.array
-             array of all fitted scores
-        """
-        retval = self.extract_proxy_features(**kwargs)
-        is_return_features = ('return_features' in kwargs.keys()
-                              and kwargs['return_features'])
-        if len(retval) == 2 and is_return_features:
-            proxy_features = retval[0]
-            salt2_features = retval[1]
-        else:
-            proxy_features = retval
-        # Logistic regression on proxy_features
-        is_in_training_set = [1 if o in train_names else 0
-                              for o in self.dataset.object_names]
-        if algo == 'logistic':
-            regr = LogisticRegression()
-        elif algo == 'network':
-            regr = MLPClassifier(solver='lbfgs', alpha=1e-5,
-                                 hidden_layer_sizes=(2,))
-        regr.fit(proxy_features, is_in_training_set)
-        propensity_scores = regr.predict_proba(proxy_features)
-        if len(retval) == 2 and is_return_features:
-            return propensity_scores[:, 0], salt2_features
-        else:
-            return propensity_scores[:, 0]
-
-    def divide_into_propensity_percentiles(self, train_names, nclasses,
-                                           **kwargs):
-        """Wherein we fit the propensity scores and divide into
-        equal-percentile classes from lowest to hightest.
-
-        Parameters:
-        ----------
-        train_names : np.array of str
-            Names of objects in the training set
-        nclasses : int
-            Number of classes
-        kwargs : optional
-            All of these will be handed to self.extract_proxy_features. See
-            there for more info.
-        Returns:
-        -------
-        classes : np.array of int
-            classes from 0, ..., nclasses-1, in the same order as
-            `self.dataset.object_names`.
-        """
-        retval = self.compute_propensity_scores(train_names, **kwargs)
-        is_return_features = ('return_features' in kwargs.keys()
-                              and kwargs['return_features'])
-        if len(retval) == 2 and is_return_features:
-            prop = retval[0]
-            salt2_features = retval[1]
-        else:
-            prop = retval
-        sorted_indices = np.argsort(prop)
-        N = len(self.dataset.object_names)
-        classes = np.array([-42] * N)
-        for c in range(len(self.dataset.object_names)):
-            thisclass = (c * nclasses) // N
-            classes[sorted_indices[c]] = thisclass
-        if len(retval) == 2 and is_return_features:
-            return classes, salt2_features
-        else:
-            return classes
+        return NotImplementedError('This method should be defined on child '
+                                   'classes.')
 
     @property
     def dataset(self):
@@ -1279,9 +1064,12 @@ class GPAugment(SNAugment):
 
         Notes
         -----
-        This function is adapted from the code developed in [1]_. In
-        particular, the funtion `PlasticcAugmentor._simulate_detection` of
+        This method is adapted from the code developed in [1]_. In particular,
+        the funtion `PlasticcAugmentor._simulate_detection` of
         `avocado/plasticc.py`.
+        Note that this method should be overridden in child classes if the
+        quality cuts desired are different.
+
 
         References
         ----------
