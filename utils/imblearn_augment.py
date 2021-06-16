@@ -2,8 +2,8 @@
 File to save possible future augmentations.
 These classes/functions should be implemented in `snaugment`.
 
-We do not find this this code to work for our imbalanced problem, but it might
-be useful for someone else.
+We do not find this code to work for our imbalanced problem, but it might be
+useful for someone else.
 """
 
 import copy
