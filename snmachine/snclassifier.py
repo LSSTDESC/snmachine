@@ -1840,6 +1840,9 @@ class LightGBMClassifier(BaseClassifier):
         possible values for each hyperparameter informed by the earlier 1D
         optimization. Finally, optimise this higher dimensional grid through a
         standard grid search.
+        The values of the hyperparameters in this optimisation were fine-tuned
+        to PLAsTiCC. Thus, this combination will probably not work for a
+        general problem.
 
         References
         ----------
@@ -1953,6 +1956,12 @@ class LightGBMClassifier(BaseClassifier):
         metadata : pandas.DataFrame
             Metadata of the events with which to train the classifier.
 
+        Notes
+        -----
+        The values of the hyperparameters in this optimisation were fine-tuned
+        to PLAsTiCC. Thus, this combination will probably not work for a
+        general problem.
+
         References
         ----------
         .. [1] Pedregosa et al. "Scikit-learn: Machine Learning in Python",
@@ -2008,6 +2017,12 @@ class LightGBMClassifier(BaseClassifier):
             `max_depth`, and `min_split_gain`, obtained after the 1D
             optimisation performed in
             `LightGBMClassifier._compute_fast_optimisation`.
+
+        Notes
+        -----
+        The values of the hyperparameters in this optimisation were fine-tuned
+        to PLAsTiCC. Thus, this combination will probably not work for a
+        general problem.
         """
         param_grid = {}
 
