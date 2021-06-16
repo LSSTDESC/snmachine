@@ -1,6 +1,9 @@
 """
 File to save possible future augmentations.
 These classes/functions should be implemented in `snaugment`.
+
+We do not find this this code to work for our imbalanced problem, but it might
+be useful for someone else.
 """
 
 import copy
@@ -31,7 +34,7 @@ from imblearn.combine import SMOTEENN, SMOTETomek
 from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
 
 
-class NNAugment(SNAugment):
+class ImblearnAugment(SNAugment):
     """
     Derived class that encapsulates data augmentation via Nearest Neighbour
     inspired algorithms such as SMOTE, ADASYN etc.
@@ -182,7 +185,7 @@ class NNAugment(SNAugment):
         method : str
             Name of the augmentation method.
         """
-        if method not in NNAugment.methods():
+        if method not in ImblearnAugment.methods():
             error_message = ('{} is not a possible augmentation method in '
                              '`snmachine`.'.format(method))
             raise ValueError(error_message)
