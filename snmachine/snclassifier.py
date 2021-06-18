@@ -913,8 +913,7 @@ def run_pipeline(features, types, output_name='', columns=[],
     if number_processes > 1 and return_classifier:
         print("Due to limitations with python's multiprocessing module, "
               "classifier objects cannot be returned if multiple processors "
-              "are used. Continuing serially...")
-        print()
+              "are used. Continuing serially...\n")
 
     if number_processes > 1 and not return_classifier:
         partial_func = partial(__call_classifier, X_train=X_train,
@@ -1442,7 +1441,7 @@ class SVMClassifier(SklearnClassifier):
         self.classifier = unoptimised_classifier
         # Store the unoptimised classifier
         self.unoptimised_classifier = unoptimised_classifier
-        print(f'Created classifier of type: {self.classifier}.')
+        print(f'Created classifier of type: {self.classifier}.\n')
 
         # Good defaulf ranges for these parameters
         self.param_grid_default = {'C': np.logspace(-2, 5, 5),
@@ -1490,7 +1489,7 @@ class KNNClassifier(SklearnClassifier):
         self.classifier = unoptimised_classifier
         # Store the unoptimised classifier
         self.unoptimised_classifier = unoptimised_classifier
-        print(f'Created classifier of type: {self.classifier}.')
+        print(f'Created classifier of type: {self.classifier}.\n')
 
         # Good defaulf ranges for these parameters
         self.param_grid_default = {'n_neighbors': list(range(1, 180, 5)),
@@ -1543,7 +1542,7 @@ class NNClassifier(SklearnClassifier):
         self.classifier = unoptimised_classifier
         # Store the unoptimised classifier
         self.unoptimised_classifier = unoptimised_classifier
-        print(f'Created classifier of type: {self.classifier}.')
+        print(f'Created classifier of type: {self.classifier}.\n')
 
         # Good defaulf ranges for these parameters
         self.param_grid_default = {
@@ -1583,7 +1582,7 @@ class RFClassifier(SklearnClassifier):
         self.classifier = unoptimised_classifier
         # Store the unoptimised classifier
         self.unoptimised_classifier = unoptimised_classifier
-        print(f'Created classifier of type: {self.classifier}.')
+        print(f'Created classifier of type: {self.classifier}.\n')
 
         # Good defaulf ranges for these parameters
         self.param_grid_default = {'n_estimators': list(range(200, 900, 100)),
@@ -1623,7 +1622,7 @@ class DTClassifier(SklearnClassifier):
         self.classifier = unoptimised_classifier
         # Store the unoptimised classifier
         self.unoptimised_classifier = unoptimised_classifier
-        print(f'Created classifier of type: {self.classifier}.')
+        print(f'Created classifier of type: {self.classifier}.\n')
 
         # Good defaulf ranges for these parameters
         self.param_grid_default = {'criterion': ['gini', 'entropy'],
@@ -1665,7 +1664,7 @@ class BoostDTClassifier(SklearnClassifier):
         self.classifier = unoptimised_classifier
         # Store the unoptimised classifier
         self.unoptimised_classifier = unoptimised_classifier
-        print(f'Created classifier of type: {self.classifier}.')
+        print(f'Created classifier of type: {self.classifier}.\n')
 
         # Good defaulf ranges for these parameters
         base_estimators = [sklearn.tree.DecisionTreeClassifier(
@@ -1710,7 +1709,7 @@ class BoostRFClassifier(SklearnClassifier):
         self.classifier = unoptimised_classifier
         # Store the unoptimised classifier
         self.unoptimised_classifier = unoptimised_classifier
-        print(f'Created classifier of type: {self.classifier}.')
+        print(f'Created classifier of type: {self.classifier}.\n')
 
         # Good defaulf ranges for these parameters
         # This is a strange boosted random forest classifier that Max came up
@@ -1754,7 +1753,7 @@ class NBClassifier(SklearnClassifier):
         self.classifier = unoptimised_classifier
         # Store the unoptimised classifier
         self.unoptimised_classifier = unoptimised_classifier
-        print(f'Created classifier of type: {self.classifier}.')
+        print(f'Created classifier of type: {self.classifier}.\n')
 
         # Good defaulf ranges for these parameters
         print('This class has no default hyperparameter range.')
@@ -1795,7 +1794,7 @@ class LightGBMClassifier(BaseClassifier):
         self.classifier = unoptimised_classifier
         # Store the unoptimised classifier
         self.unoptimised_classifier = unoptimised_classifier
-        print(f'Created classifier of type: {self.classifier}.')
+        print(f'Created classifier of type: {self.classifier}.\n')
 
     def optimise(self, X_train, y_train, scoring, param_grid=None,
                  number_cv_folds=5, metadata=None, **kwargs):
