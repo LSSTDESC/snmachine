@@ -13,6 +13,7 @@ import collections
 import itertools
 import os
 import pickle
+import sys
 import time
 import warnings
 
@@ -137,7 +138,6 @@ def roc(pr, Yt, true_class=0, which_column=-1):
     min_class = (int)(Y_test.min())
 
     Y_test = Y_test.squeeze()
-
     # sequential labels (as in SPCC) case - backwards compatibility
     if len(pr.shape) > 1 and which_column == -1:
         try:
@@ -148,6 +148,10 @@ def roc(pr, Yt, true_class=0, which_column=-1):
     # Used by `optimised_classify`
     elif len(pr.shape) > 1 and which_column != -1:
         if which_column >= np.shape(probs)[1]:
+            sys.exit(f'`which_column` must be -1 or between 0 and '
+                     f'{np.shape(probs)[1]-1}.')
+            # some error is happening and the raise error bellow does not stop
+            # the code -> TODO: find why and fix it
             raise IndexError(f'`which_column` must be -1 or between 0 and '
                              f'{np.shape(probs)[1]-1}.')
         probs_1 = probs[:, which_column]
@@ -456,7 +460,8 @@ def run_several_classifiers(classifier_list, features, labels,
                             scoring, train_set, scale_features,
                             param_grid, random_seed, output_root,
                             which_column, **kwargs):
-    """The features must be pandas DataFrame"""
+    """The features must be pandas DataFrame
+    """
     initial_time = time.time()
 
     # Split into training and validation sets
@@ -480,6 +485,7 @@ def run_several_classifiers(classifier_list, features, labels,
         partial_func = partial(_run_classifier, X_train=X_train,
                                y_train=y_train, X_test=X_test,
                                param_grid=param_grid, scoring=scoring,
+                               which_column=which_column,
                                random_seed=random_seed)
         p = Pool(number_processes, maxtasksperchild=1)
         result = p.map(partial_func, classifier_list)
@@ -492,8 +498,10 @@ def run_several_classifiers(classifier_list, features, labels,
     else:  # run serially
         for classifier_name in classifier_list:
             probs, best_classifier = _run_classifier(
-                classifier_name, X_train, y_train, X_test,
-                param_grid, scoring, random_seed)
+                classifier_name=classifier_name, X_train=X_train,
+                y_train=y_train, X_test=X_test, param_grid=param_grid,
+                scoring=scoring, which_column=which_column,
+                random_seed=random_seed)
 
             classifier_instances[classifier_name] = best_classifier
             probabilities[classifier_name] = probs
@@ -507,11 +515,11 @@ def run_several_classifiers(classifier_list, features, labels,
         best_classifier = classifier_instances[classifier_name]
         probs = probabilities[classifier_name]
 
-        fpr_class, tpr_class, auc_class = roc(
-            probs, y_test, which_column=which_column) # I need to improve the which_column here
-        fom_class, thresh_fom_class = FoM(
-            probs, y_test, which_column=which_column,
-            full_output=False) # I need to improve the which_column here
+        fpr_class, tpr_class, auc_class = roc(probs, y_test,
+                                              which_column=which_column)
+        fom_class, thresh_fom_class = FoM(probs, y_test,
+                                          which_column=which_column,
+                                          full_output=False)
         print(f'Classifier {classifier_name}: AUC = {auc_class} ; FoM = '
               f'{fom_class}.')
         fpr.append(fpr_class)
@@ -568,7 +576,7 @@ def _split_train_test(features, labels, train_set, random_seed):
 
 
 def _run_classifier(classifier_name, X_train, y_train, X_test,
-                    param_grid, scoring, random_seed):
+                    param_grid, scoring, which_column, random_seed):
     """Note this does not have the same inputs as
     `run_several_classifiers`"""
 
@@ -588,10 +596,10 @@ def _run_classifier(classifier_name, X_train, y_train, X_test,
         classifier_name=classifier_name, random_seed=random_seed)
 
     # Optimise classifier
-    classifier_instance.optimise(X_train, y_train,
-                                 param_grid=param_grid,
-                                 scoring=scoring,
-                                 number_cv_folds=5, metadata=None)
+    classifier_instance.optimise(X_train, y_train, param_grid=param_grid,
+                                 scoring=scoring, number_cv_folds=5,
+                                 metadata=None,
+                                 **{'which_column': which_column})
     best_classifier = classifier_instance.classifier
 
     # Predict the class probabilities
@@ -1029,12 +1037,13 @@ class SVMClassifier(SklearnClassifier):
         """
         super().__init__(classifier_name=classifier_name,
                          random_seed=random_seed, **svm_params)
-        if 'kernel' in svm_params:
-            kernel = svm_params.pop('kernel')  # Removes this from kwargs
-        else:
-            kernel = 'rbf'
+
+        # Important and necessary SVM parameters
+        kernel = svm_params.pop('kernel', 'rbf')
+
         unoptimised_classifier = sklearn.svm.SVC(kernel=kernel,
                                                  probability=self.prob,
+                                                 random_state=self._rs,
                                                  **svm_params)
         self.classifier = unoptimised_classifier
         # Store the unoptimised classifier
@@ -1074,14 +1083,11 @@ class KNNClassifier(SklearnClassifier):
         """
         super().__init__(classifier_name=classifier_name,
                          random_seed=random_seed, **knn_params)
-        if 'n_neighbors' in knn_params:
-            n_neighbors = knn_params.pop('n_neighbors')
-        else:
-            n_neighbors = 5
-        if 'weights' in knn_params:
-            weights = knn_params.pop('weights')
-        else:
-            weights = 'distance'
+
+        # Important and necessary KNN parameters
+        n_neighbors = knn_params.pop('n_neighbors', 5)
+        weights = knn_params.pop('weights', 'distance')
+
         unoptimised_classifier = sklearn.neighbors.KNeighborsClassifier(
             n_neighbors=n_neighbors, weights=weights, **knn_params)
         self.classifier = unoptimised_classifier
@@ -1122,18 +1128,12 @@ class NNClassifier(SklearnClassifier):
         """
         super().__init__(classifier_name=classifier_name,
                          random_seed=random_seed, **nn_params)
-        if 'hidden_layer_sizes' in nn_params:
-            layer_sizes = nn_params.pop('hidden_layer_sizes')
-        else:
-            layer_sizes = (5, 2)
-        if 'algorithm' in nn_params:
-            algo = nn_params.pop('algorithm')
-        else:
-            algo = 'adam'
-        if 'activation' in nn_params:
-            activation = nn_params.pop('activation')
-        else:
-            activation = 'tanh'
+
+        # Important and necessary NN parameters
+        layer_sizes = nn_params.pop('hidden_layer_sizes', (5, 2))
+        algo = nn_params.pop('algorithm', 'adam')
+        activation = nn_params.pop('activation', 'tanh')
+
         unoptimised_classifier = sklearn.neural_network.MLPClassifier(
             solver=algo, hidden_layer_sizes=layer_sizes, activation=activation,
             random_state=self._rs, **nn_params)
