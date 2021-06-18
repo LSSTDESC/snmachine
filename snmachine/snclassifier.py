@@ -17,35 +17,26 @@ import time
 import warnings
 
 import lightgbm as lgb
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import sklearn
+import sklearn.naive_bayes  # requires a specific import
+import sklearn.neural_network  # requires a specific import
 
-from astropy.table import Table, join, unique
 from functools import partial
 from multiprocessing import Pool
 from scipy.integrate import trapz
 from sklearn import model_selection
-from sklearn import neighbors
-from sklearn import svm
-from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
-from sklearn.metrics import confusion_matrix as sklearn_cm
 from sklearn.model_selection import PredefinedSplit, StratifiedKFold
-from sklearn.naive_bayes import GaussianNB
-from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
-from sklearn.tree import DecisionTreeClassifier
 from utils import plasticc_utils
-
-if 'DISPLAY' not in os.environ:
-    import matplotlib
-    matplotlib.use('Agg')
-else:
-    import matplotlib.pyplot as plt
 
 # This allows the user to easily loop through all possible classifiers
 choice_of_classifiers = ['svm', 'knn', 'random_forest', 'decision_tree',
                          'boost_dt', 'boost_rf', 'nb', 'neural_network']
 # boost_rf is a set of boosted random forests which Max came up with.
+
 
 # Custom scoring/metrics functions ##
 def logloss_score(classifier, X_features, y_true):
@@ -260,6 +251,7 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
             labs[i] = (labs[i]+' (%.3f)' % (auc[i]))
     plt.legend(labs, loc='lower right',  bbox_to_anchor=(0.95, 0.05))
     plt.tight_layout()
+    plt.show()
 
 
 def plot_confusion_matrix(cm, normalise=False, labels=None,
@@ -368,7 +360,7 @@ def F1(pr,  Yt, true_class, full_output=False):
         return best_F1, best_threshold
 
 
-def FoM(pr,  Yt, true_class=1, full_output=False):
+def FoM(pr,  Yt, which_column=-1, true_class=1, full_output=False):
     """Calculate a Kessler FoM for many probability threshold increments
     and select the best one.
 
@@ -409,8 +401,24 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
     min_class = Y_test.min()  # deals with starting class assignment at 1.
     Y_test = Y_test.squeeze()
 
-    if len(pr.shape) > 1:
-        probs_1 = probs[:, true_class-min_class]
+    # sequential labels (as in SPCC) case - backwards compatibility
+    if len(pr.shape) > 1 and which_column == -1:
+        try:
+            probs_1 = probs[:, true_class-min_class]
+        except IndexError:
+            raise IndexError('If `which_column` is -1, the `Yt` labels must be'
+                             'sequential and `true_class` must be provided.')
+    elif len(pr.shape) > 1 and which_column != -1:
+        if which_column >= np.shape(probs)[1]:
+            raise IndexError(f'`which_column` must be -1 or between 0 and '
+                             f'{np.shape(probs)[1]-1}.')
+        probs_1 = probs[:, which_column]
+
+        # the classes are in the same order as `probs`
+        unique_labels = np.unique(Yt)
+
+        true_class = unique_labels[which_column]
+    # We give a 1D array of probability so use it - no ambiguity
     else:
         probs_1 = probs
 
@@ -443,6 +451,154 @@ def FoM(pr,  Yt, true_class=1, full_output=False):
 
         return best_FoM, best_threshold
 
+
+def run_several_classifiers(classifier_list, features, labels,
+                            scoring, train_set, scale_features,
+                            param_grid, random_seed, output_root,
+                            which_column, **kwargs):
+    """The features must be pandas DataFrame"""
+    initial_time = time.time()
+
+    # Split into training and validation sets
+    X_train, X_test, y_train, y_test = _split_train_test(
+        features, labels, train_set, random_seed)
+
+    # Rescale the data (highly recommended)
+    if scale_features:
+        scaler = StandardScaler()
+        scaler.fit(np.vstack((X_train, X_test)))
+        X_train = scaler.transform(X_train)  # it is now an np.array
+        X_test = scaler.transform(X_test)  # it is now an np.array
+
+    classifier_instances = {}
+    probabilities = {}
+    y_pred = {}
+
+    # Train, optimise and make predictions with the classifiers
+    number_processes = kwargs.pop('number_processes', 1)
+    if number_processes > 1:  # run in parallel
+        partial_func = partial(_run_classifier, X_train=X_train,
+                               y_train=y_train, X_test=X_test,
+                               param_grid=param_grid, scoring=scoring,
+                               random_seed=random_seed)
+        p = Pool(number_processes, maxtasksperchild=1)
+        result = p.map(partial_func, classifier_list)
+
+        for i, classifier_name in enumerate(classifier_list):
+            best_classifier = result[i][1]
+            probabilities[classifier_name] = result[i][0]
+            classifier_instances[classifier_name] = best_classifier
+            y_pred[classifier_name] = best_classifier.predict(X_test)
+    else:  # run serially
+        for classifier_name in classifier_list:
+            probs, best_classifier = _run_classifier(
+                classifier_name, X_train, y_train, X_test,
+                param_grid, scoring, random_seed)
+
+            classifier_instances[classifier_name] = best_classifier
+            probabilities[classifier_name] = probs
+            y_pred[classifier_name] = best_classifier.predict(X_test)
+
+    # Calculate performance
+    fpr = []  # false positive rate
+    tpr = []  # true positive rate
+    auc = []  # Area under the ROC Curve
+    for classifier_name in classifier_list:
+        best_classifier = classifier_instances[classifier_name]
+        probs = probabilities[classifier_name]
+
+        fpr_class, tpr_class, auc_class = roc(
+            probs, y_test, which_column=which_column) # I need to improve the which_column here
+        fom_class, thresh_fom_class = FoM(
+            probs, y_test, which_column=which_column,
+            full_output=False) # I need to improve the which_column here
+        print(f'Classifier {classifier_name}: AUC = {auc_class} ; FoM = '
+              f'{fom_class}.')
+        fpr.append(fpr_class)
+        tpr.append(tpr_class)
+        auc.append(auc_class)
+
+        if output_root is not None:  # save results
+            probs_df = pd.DataFrame(probs, columns=np.unique(y_train))
+            probs_df.set_index(y_test.index, inplace=True)
+            probs_df.to_pickle(os.path.join(
+                output_root, f'probs_{classifier_name}.pickle'))
+
+            fpr_tpr = np.array([fpr[0], tpr[0]]).T
+            fpr_tpr = pd.DataFrame(fpr_tpr, columns=['FPR', 'TPR'])
+            fpr_tpr.to_pickle(os.path.join(
+                output_root, f'roc_{classifier_name}.pickle'))
+
+            np.savetxt(os.path.join(
+                output_root, f'auc_{classifier_name}.txt'), auc)
+    fpr = np.array(fpr).T
+    tpr = np.array(tpr).T
+
+    # Make plots
+    plot_roc_curve = kwargs.pop('plot_roc_curve', True)
+    if plot_roc_curve:
+        plot_roc(fpr, tpr, auc, labels=classifier_list, label_size=16,
+                 tick_size=12, line_width=1.5)
+
+    # Construct confusion matrices
+    cms = {}
+    for classifier_name in classifier_list:
+        cm = sklearn.metrics.confusion_matrix(y_true=y_test,
+                                              y_pred=y_pred[classifier_name])
+        # also, I should use the CM that is defined in the utils instead
+        cms[classifier_name] = cm
+
+    print('Time taken to extract features: {:.2f}s.'
+          ''.format(time.time()-initial_time))
+    return classifier_instances, cms
+
+
+def _split_train_test(features, labels, train_set, random_seed):
+    if np.isscalar(train_set):  # `train_set` was the size of training set
+        X_train, X_test, y_train, y_test = model_selection.train_test_split(
+            features, labels, train_size=train_set,
+            random_state=random_seed)
+    else:  # `train_set` was a list of object names
+        X_train = features.loc[train_set]
+        y_train = labels.loc[train_set]
+        is_not_train_set = ~ features.index.isin(train_set)
+        X_test = features[is_not_train_set]
+        y_test = labels[is_not_train_set]
+    return X_train, X_test, y_train, y_test
+
+
+def _run_classifier(classifier_name, X_train, y_train, X_test,
+                    param_grid, scoring, random_seed):
+    """Note this does not have the same inputs as
+    `run_several_classifiers`"""
+
+    # Add to `classifier_map` any classifier implemeted in `snclassifier`
+    classifier_map = {'svm': SVMClassifier,
+                      'knn': KNNClassifier,
+                      'neural_network': NNClassifier,
+                      'random_forest': RFClassifier,
+                      'decision_tree': DTClassifier,
+                      'boost_dt': BoostDTClassifier,
+                      'boost_rf': BoostRFClassifier,
+                      'nb': NBClassifier,
+                      'lgbm': LightGBMClassifier}
+
+    # Initialise classifier instance
+    classifier_instance = classifier_map[classifier_name](
+        classifier_name=classifier_name, random_seed=random_seed)
+
+    # Optimise classifier
+    classifier_instance.optimise(X_train, y_train,
+                                 param_grid=param_grid,
+                                 scoring=scoring,
+                                 number_cv_folds=5, metadata=None)
+    best_classifier = classifier_instance.classifier
+
+    # Predict the class probabilities
+    probs = best_classifier.predict_proba(X_test)
+
+    # Returns the best fitting sklearn classifier object
+    return probs, best_classifier
 
 
 class BaseClassifier():
