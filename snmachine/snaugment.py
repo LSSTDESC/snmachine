@@ -5,36 +5,17 @@ Module handling the data augmentation of a snmachine dataset.
 import copy
 import os
 import pickle
-import sys
 import time
+import warnings
 
-import george
 import numpy as np
 import pandas as pd
-import scipy.optimize as op
 
-# Solve imblearn problems introduced with sklearn version 0.24
-import sklearn
-import sklearn.neighbors, sklearn.utils, sklearn.ensemble
-from sklearn.utils._testing import ignore_warnings
-sys.modules['sklearn.neighbors.base'] = sklearn.neighbors._base
-sys.modules['sklearn.utils.safe_indexing'] = sklearn.utils._safe_indexing
-sys.modules['sklearn.utils.testing'] = sklearn.utils._testing
-sys.modules['sklearn.ensemble.bagging'] = sklearn.ensemble._bagging
-sys.modules['sklearn.ensemble.base'] = sklearn.ensemble._base
-sys.modules['sklearn.ensemble.forest'] = sklearn.ensemble._forest
-sys.modules['sklearn.metrics.classification'] = sklearn.metrics._classification
-
-from astropy.table import Table, vstack
+from astropy.table import Table
 from astropy.cosmology import FlatLambdaCDM
-from collections import Counter
 from functools import partial  # TODO: erase when old sndata is deprecated
-from imblearn.combine import SMOTEENN, SMOTETomek
-from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
 from scipy.special import erf
-from sklearn.linear_model import LogisticRegression
-from sklearn.neural_network import MLPClassifier
-from snmachine import gps, snfeatures
+from snmachine import gps
 
 
 # Functions to choose spectroscopic redshift for `GPAugment`.
@@ -134,208 +115,10 @@ class SNAugment:
         self.original_object_names = dataset.object_names.copy()
 
     def augment(self):
-        pass
-
-    def extract_proxy_features(self, peak_filter='desr', nproc=1,
-                               fit_salt2=False, salt2feats=None,
-                               return_features=False, fix_redshift=False,
-                               which_redshifts='header', sampler='leastsq'):
-        """Extracts the 2D proxy features from raw light curves, e.g.,
-        redshift and peak logflux in a certain band. There are plenty of
-        options for how to get these values, if you should be so inclined.
-        For the peak flux, we take either the maximum flux amongst the
-        observations in the specified band (quick and dirty), or we perform
-        SALT2 fits to the data and extract the peak flux from there (proper
-        and slow). For the redshift, we take either the redshift specified in
-        the header or the fitted SALT2 parameter.
-
-        Parameters:
-        ----------
-        peak_filter : str, optional (default: 'desr')
-            Name of the filter whose peak flux will be used as second column.
-        nproc : int, optional (default: 1)
-            Number of processes for salt2 feature extraction
-        fit_salt2 : boolean, optional (default: False)
-            If True, we compute the peak flux from SALT2 fits; if False, we
-            return the brightest observation
-        salt2feats : astropy.table.Table, optional (default: None)
-            If you already have the features precomputed and do not want to
-            recompute, you can hand them over here.
-        return_features : bool, optional (default: False)
-            If you want to store fitted SALT2 features, you can set this flag
-            to return them
-        fix_redshift : bool, optional (default: False)
-            If True, we fix the redshift in the SALT2 fits to the value found
-            in the table headers; if False, we leave the parameter free for
-            sampling
-        which_redshifts : str, optional (default: 'header')
-            If 'salt2', the first column of proxy features will be the
-            SALT2-fitted redshift; if 'header', we take the redshift from the
-            header, if 'headerfill', we take the header redshift where
-            available and fill with fitted values for the objects without
-            valid redshift.
-        sampler : str, optional (default: 'leastsq')
-            Which sampler do we use to perform the SALT2 fit? 'leastsq' is a
-            simple least squares fit, 'nested' uses nested sampling and
-            requires MultiNest and PyMultiNest to be installed.
-        Returns:
-        -------
-        proxy_features : np.array
-            Nobj x 2 table with the extracted (z,peakflux) proxy features
-        salt2feats : astropy.table.Table
-            fitted SALT2 features for further applications
+        """Augment the dataset.
         """
-
-        # Consistency check: is the specified filter actually in the dataset?
-        if peak_filter not in self.dataset.filter_set:
-            raise RuntimeError('Filter %s not amongst the filters in the'
-                               'dataset!')
-
-        # Consistency check: if we want to return salt2-fitted redshifts, do we actually have features?
-        if which_redshifts == 'headerfill' and all([(isinstance(z, float)) & (z >= 0) for z in self.dataset.get_redshift()]):
-            # Corner case: if 'headerfill' this check should only complain if there are actually invalid z values to fill in
-            which_redshifts = 'header'
-        if not fit_salt2 and which_redshifts in ['salt2', 'headerfill']:
-            print('We need SALT2 features in order to return fitted redshifts!'
-                  'Setting which_redshifts to "header".')
-            which_redshifts = 'header'
-
-        # Consistency check: to return features, we need to have features
-        if return_features and not fit_salt2 and salt2feats is None:
-            print('We need SALT2 features to return features - either provide'
-                  'some or compute them! Setting return_features to False.')
-            return_features = False
-
-        # Fitting new features
-        if fit_salt2:
-            # We use a fit to SALT2 model to extract the r-band peak magnitudes
-            tf = snfeatures.TemplateFeatures(sampler=sampler)
-            if salt2feats is None:
-                salt2feats = tf.extract_features(self.dataset,
-                                                 number_processes=nproc,
-                                                 use_redshift=fix_redshift)
-
-            # Fit models and extract r-peakmags
-            peaklogflux = []
-            for i in range(len(self.dataset.object_names)):
-                model = tf.fit_sn(self.dataset.data[self.dataset.object_names[i]], salt2feats)
-                model = model[model['filter'] == peak_filter]
-                if len(model) > 0:
-                    peaklogflux = np.append(peaklogflux,
-                                            np.log10(np.nanmax(model['flux'])))
-                else:
-                    # Band is missing: do something better than this
-                    peaklogflux = np.append(peaklogflux, -42)
-        else:
-            peaklogflux = []
-            for o in self.dataset.object_names:
-                model = self.dataset.data[o]
-                model = model[model['filter'] == peak_filter]
-                if len(model) > 0:
-                    peaklogflux = np.append(peaklogflux,
-                                            np.log10(np.nanmax(model['flux'])))
-                else:
-                    # Band is missing: do something better
-                    peaklogflux = np.append(peaklogflux, -42)
-
-        # Extracting redshifts
-        if which_redshifts == 'header':
-            z = self.dataset.get_redshift()
-        elif which_redshifts == 'salt2':
-            z = [float(salt2feats[salt2feats['Object'] == o]['[Ia]z']) for o in self.dataset.object_names]
-        elif which_redshifts == 'headerfill':
-            z = self.dataset.get_redshift().astype(float)
-            for i in range(len(z)):
-                if not isinstance(z[i], float) or z[i] < 0:
-                    z[i] = float(salt2feats['[Ia]z'][salt2feats['Object'] == self.dataset.object_names[i]])
-        else:
-            raise RuntimeError('Unknown value %s for argument which_redshifts!' % which_redshifts)
-
-        proxy_features = np.array([z, peaklogflux]).transpose()
-
-        if return_features:
-            return proxy_features, salt2feats
-        else:
-            return proxy_features
-
-    def compute_propensity_scores(self, train_names, algo='logistic', **kwargs):
-        """Wherein we fit a model for the propensity score (the probability of
-        an object to be in the training set) in the proxy-feature parameter
-        space. We then evaluate the model on the full dataset and return the
-        values.
-
-        Parameters:
-        ----------
-        train_names : np.array of str
-            Names of all objects in the training set
-        algo : str, optional
-            Name of the model to fit. 'logistic' is logistic regression,
-            'network' is a simple ANN with two nodes in one hidden layer.
-        kwargs : optional
-            All of these will be handed to `self.extract_proxy_features`. See
-            there for more info.
-
-        Returns:
-        -------
-        propensity_scores : np.array
-             array of all fitted scores
-        """
-        retval = self.extract_proxy_features(**kwargs)
-        if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
-            proxy_features = retval[0]
-            salt2_features = retval[1]
-        else:
-            proxy_features = retval
-        # Logistic regression on proxy_features
-        is_in_training_set = [1 if o in train_names else 0 for o in self.dataset.object_names]
-        if algo == 'logistic':
-            regr = LogisticRegression()
-        elif algo == 'network':
-            regr = MLPClassifier(solver='lbfgs', alpha=1e-5,
-                                 hidden_layer_sizes=(2,))
-        regr.fit(proxy_features, is_in_training_set)
-        propensity_scores = regr.predict_proba(proxy_features)
-        if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
-            return propensity_scores[:, 0], salt2_features
-        else:
-            return propensity_scores[:, 0]
-
-    def divide_into_propensity_percentiles(self, train_names, nclasses,
-                                           **kwargs):
-        """Wherein we fit the propensity scores and divide into
-        equal-percentile classes from lowest to hightest.
-
-        Parameters:
-        ----------
-        train_names : np.array of str
-            Names of objects in the training set
-        nclasses : int
-            Number of classes
-        kwargs : optional
-            All of these will be handed to self.extract_proxy_features. See
-            there for more info.
-        Returns:
-        -------
-        classes : np.array of int
-            classes from 0, ..., nclasses-1, in the same order as
-            `self.dataset.object_names`.
-        """
-        retval = self.compute_propensity_scores(train_names, **kwargs)
-        if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
-            prop = retval[0]
-            salt2_features = retval[1]
-        else:
-            prop = retval
-        sorted_indices = np.argsort(prop)
-        N = len(self.dataset.object_names)
-        classes = np.array([-42] * N)
-        for c in range(len(self.dataset.object_names)):
-            thisclass = (c * nclasses) // N
-            classes[sorted_indices[c]] = thisclass
-        if len(retval) == 2 and 'return_features' in kwargs.keys() and kwargs['return_features']:
-            return classes, salt2_features
-        else:
-            return classes
+        return NotImplementedError('This method should be defined on child '
+                                   'classes.')
 
     @property
     def dataset(self):
@@ -377,165 +160,6 @@ class SNAugment:
         self._random_seed = value
 
 
-class NNAugment(SNAugment):
-    """
-    Derived class that encapsulates data augmentation via Nearest Neighbour
-    inspired algorithms such as SMOTE, ADASYN etc.
-    """
-
-    def __init__(self, dataset, features, method, random_seed=None,
-                 output_root=None, **kwargs):
-        self._dataset = dataset
-        self.aug_method = method
-        self.random_seed = random_seed
-        self.features = features
-        self.output_root = output_root
-        self._kwargs = kwargs
-
-    # TODO : allow for inheritance from SNAugment's constructor
-    # def __init__(self, data, method):
-    #         super().__init__(data)
-    #         self.method = method
-    # TODO : Update docstrings, add references to Notes section on methods
-    """Make directories that will be used for analysis
-
-    Parameters
-    ----------
-    X : numpy.ndarray
-        Collection of data containing features
-    y : numpy.ndarray
-        True labels for data
-    method : string
-        Augmentation method one would like to resample the given data with.
-        List of possible choices include:
-            ['SMOTE', 'ADASYN', 'SVMSMOTE', 'SMOTEENN', 'SMOTETomek']
-
-    Notes
-    -------
-
-
-    """
-    _METHODS = ['SMOTE', 'ADASYN', 'SVMSMOTE', 'SMOTEENN', 'SMOTETomek']
-
-    def augment(self):
-        """Augment the dataset."""
-        print('Augmenting the dataset...')
-        initial_time = time.time()
-
-        method = self.aug_method
-        labels = np.array(self.dataset.labels, dtype=str)
-        features = self._join_features()
-        self._ori_columns = features.columns
-
-        print(f"Before resampling: {sorted(Counter(labels).items())}")
-        try:
-            sampling_strategy = self._kwargs['sampling_strategy']
-        except KeyError:
-            sampling_strategy = 'auto'
-        sm = eval(method)(random_state=self._rs,
-                          sampling_strategy=sampling_strategy)
-        aug_features, aug_labels = sm.fit_resample(features, labels)
-        print(f"After resampling: {sorted(Counter(aug_labels).items())}")
-
-        self._create_aug_metadata(aug_features, aug_labels)
-        self._save_aug_feature_space()
-
-        time_spent = pd.to_timedelta(int(time.time()-initial_time), unit='s')
-        print('Time spent augmenting: {}.'.format(time_spent))
-
-    def _save_aug_feature_space(self):
-        output_root = self.output_root
-        if output_root is not None:
-            path_save_features = os.path.join(output_root,
-                                              'aug_feature_space.pckl')
-            with open(path_save_features, 'wb') as f:
-                pickle.dump(self.aug_features, f, pickle.HIGHEST_PROTOCOL)
-
-    def reconstruct_real_space(self):
-        """Go to real space to generate augmented light curves."""
-        # TODO: do it
-        aug_dataset = copy.deepcopy(self.dataset)
-        aug_dataset.metadata = self.aug_metadata
-        aug_dataset.object_names = self.aug_metadata.object_id
-        # objs = aug_dataset.object_names
-        self.aug_dataset = aug_dataset
-
-    def _create_aug_metadata(self, aug_features, aug_labels):
-        """d"""
-        self.aug_labels = aug_labels
-        aug_features = self._format_features(aug_features)
-
-        metadata = self.dataset.metadata
-        all_cols = metadata.columns
-        cols = all_cols.drop(['hostgal_photoz', 'hostgal_photoz_err', 'target',
-                              'object_id'])
-        aug_metadata = pd.DataFrame(aug_features[['hostgal_photoz',
-                                                  'hostgal_photoz_err']])
-        aug_metadata[cols] = metadata[cols]
-        aug_metadata['target'] = aug_labels
-        aug_metadata['object_id'] = aug_metadata.index
-        aug_metadata = aug_metadata[all_cols]
-        self.aug_metadata = aug_metadata
-        self.aug_features = aug_features.drop(columns=['hostgal_photoz',
-                                                       'hostgal_photoz_err'])
-
-    def _join_features(self):
-        """Join redshift features to the wavelet features."""
-        features = self.features.copy()
-        metadata = self.dataset.metadata
-        photoz = metadata.hostgal_photoz.values.astype(float)
-        photoz_err = metadata.hostgal_photoz_err.values.astype(float)
-        features['hostgal_photoz'] = photoz
-        features['hostgal_photoz_err'] = photoz_err
-        return features
-
-    def _format_features(self, aug_features):
-        """Format the new features into a Dataframe."""
-        ori_features = self.features
-        ori_index = ori_features.index
-
-        aug_features = pd.DataFrame(aug_features)
-        aug_features['object_id'] = None
-        aug_features['object_id'][:len(ori_index)] = ori_index
-        aug_objs_ids = [f'aug_{j}' for j in np.arange(0, (len(aug_features)
-                                                          - len(ori_index)))]
-        aug_features['object_id'][len(ori_index):] = aug_objs_ids
-        aug_features.set_index('object_id', inplace=True)
-        aug_features.columns = self._ori_columns
-        return aug_features
-
-    @classmethod
-    def methods(cls):
-        return cls._METHODS
-
-    @property
-    def aug_method(self):
-        """Return the augmentation method.
-
-        Returns
-        -------
-        str
-            Name of the augmentation method.
-        """
-        return self._aug_method
-
-    @aug_method.setter
-    def aug_method(self, method):
-        """Set the augmentation method.
-
-        Parameters
-        ----------
-        method : str
-            Name of the augmentation method.
-        """
-        if method not in NNAugment.methods():
-            error_message = ('{} is not a possible augmentation method in '
-                             '`snmachine`.'.format(method))
-            raise ValueError(error_message)
-        else:
-            self._aug_method = method
-
-
 class GPAugment(SNAugment):
     """Augment the dataset using the Gaussian Process extrapolation of the
     known events.
@@ -550,7 +174,7 @@ class GPAugment(SNAugment):
 
         Parameters
         ----------
-        dataset : Dataset object (sndata class)
+        dataset : Dataset object (`sndata` class)
             Dataset to augment.
         path_saved_gps: str
             Path to the Gaussian Process files.
@@ -709,10 +333,17 @@ class GPAugment(SNAugment):
             while j < number_tries:
                 aug_obj_metadata = self.create_aug_obj_metadata(aug_obj,
                                                                 obj_metadata)
-                aug_obj_data = self.create_aug_obj_obs(aug_obj_metadata,
-                                                       obj_data, z_obj)
+                if aug_obj_metadata is None:
+                    # If the metadata creation failed, do not try to generate
+                    # observations
+                    aug_obj_data = []
+                else:
+                    aug_obj_data = self.create_aug_obj_obs(aug_obj_metadata,
+                                                           obj_data, z_obj)
+                # Failed attempt at creating observations
                 if len(aug_obj_data) == 0:
                     j += 1
+                # Successful attempt at creating observations
                 else:
                     j = number_tries  # finish the loop
                     aug_objs_data.append(aug_obj_data)
@@ -761,11 +392,12 @@ class GPAugment(SNAugment):
         # time dilation due to the difference between the original and
         # augmented redshifts
         z_scale = (1 + z_ori) / (1 + z_aug)
+
         # Keep the time of the maximum flux invariant so that the interesting
         # part of the light curve remains inside the observing window.
         time_peak = obj_data['mjd'].iloc[np.argmax(obj_data['flux'].values)]
         aug_obj_data['mjd'] = time_peak + z_scale**-1 * (
-            aug_obj_data['ref_mjd'] - time_peak)
+            obj_data['mjd'] - time_peak)
         # Removed any observations outside the observing window
         is_not_seen = aug_obj_data['mjd'] < 0
         aug_obj_data = aug_obj_data[~is_not_seen]  # before 0
@@ -901,6 +533,8 @@ class GPAugment(SNAugment):
         with open(path_saved_obj_gp, 'rb') as input:
             gp_predict = pickle.load(input)
         try:  # old format - TODO: deprecate the old sndata format
+            warnings.warn('This is an old format and it will be removed soon.',
+                          DeprecationWarning)
             obj_flux = self.dataset.data[obj]['flux']
             gp_predict = partial(gp_predict.predict, obj_flux)
         except AttributeError:
@@ -925,33 +559,8 @@ class GPAugment(SNAugment):
         aug_obj_metadata : pandas.DataFrame
             Metadata of the augmented event.
         """
-        aug_obj_metadata = obj_metadata.copy()
-        aug_obj_metadata.name = aug_obj
-        aug_obj_metadata.object_id = aug_obj
-        aug_obj_metadata['augmented'] = True
-        aug_obj_metadata['original_event'] = aug_obj.split('_')[0]
-
-        z_spec = self.choose_z(obj_metadata['hostgal_specz'], **self._kwargs)
-        z_photo, z_photo_error = self.compute_new_z_photo(z_spec)
-        aug_obj_metadata['hostgal_specz'] = z_spec
-        aug_obj_metadata['hostgal_photoz'] = z_photo
-        aug_obj_metadata['hostgal_photoz_err'] = z_photo_error
-
-        # Choose whether the new object will be in the DDF or not. TODO: avo
-        if obj_metadata["ddf"]:
-            # Most observations are WFD observations, so generate more of
-            # those. The DDF and WFD samples are effectively completely
-            # different, so this ratio doesn't really matter.
-            #aug_obj_metadata["ddf"] = True
-            #aug_obj_metadata["ddf"] = False
-            rd_value = self._rs.rand()
-            aug_obj_metadata["ddf"] = rd_value > 0.99  # .99
-        else:
-            # If the reference wasn't a DDF observation, can't simulate a DDF
-            # observation.
-            aug_obj_metadata["ddf"] = False
-
-        return aug_obj_metadata
+        raise NotImplementedError('This method should be defined on child '
+                                  'classes')
 
     def compute_new_z_photo(self, z_spec):
         """Compute a new photometric redshift and error.
@@ -991,8 +600,8 @@ class GPAugment(SNAugment):
 
         are_zs_pos = (zs_photo > 0) & (zs_photo_error > 0)
         try:  # choose the first appropriate value
-            z_photo = zs_photo[are_zs_pos][0]
-            z_photo_error = zs_photo_error[are_zs_pos][0]
+            z_photo = np.array(zs_photo[are_zs_pos])[0]
+            z_photo_error = np.array(zs_photo_error[are_zs_pos])[0]
         except (KeyError, IndexError):
             raise ValueError('The new redshift and respective error must be '
                              'positive and they were not after 100 tries so '
@@ -1143,8 +752,8 @@ class GPAugment(SNAugment):
         """Compute the new observations wavelength at the original redshift.
 
         The observation flux is measured at specific wavelengths. This
-        function calculates the wavelength of the new event as seen by an
-        observer at redshift `z_ori`.
+        function calculates the wavelength of the new event as seen at
+        redshift `z_ori`.
 
         Parameters
         ----------
@@ -1377,9 +986,213 @@ class GPAugment(SNAugment):
     def _choose_target_number_obs(self, aug_obj_metadata):
         """Randomly choose the target number of light curve observations.
 
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+
+        Returns
+        -------
+        target_number_obs : int
+            The target number of observations in the new light curve.
+        """
+        raise NotImplementedError('This method should be defined on child '
+                                  'classes')
+
+    def _compute_obs_uncertainty(self, aug_obj_data, aug_obj_metadata):
+        """Compute and add uncertainty to the light curve observations.
+
+        Following [1]_, we estimate the flux uncertainties for each
+        passband with a lognormal distribution for the Wide-Fast-Deep (WFD)
+        and Deep Drilling Field (DDF) surveys. Each passband in each survey
+        was modeled individually with test set events.
+        The flux uncertanty of the augmented events is the combination of the
+        flux uncertainty of the augmented events predicted by the GP in
+        quadrature with a value drawn from the flux uncertainty distribution
+        described above.
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
+
+        Returns
+        -------
+        aug_obj_data : pandas.DataFrame
+            Observations of the augmented event.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion
+        `PlasticcAugmentor._simulate_light_curve_uncertainties` of
+        `avocado/plasticc.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        raise NotImplementedError('This method should be defined on child '
+                                  'classes')
+
+    def _simulate_detection(self, aug_obj_data, aug_obj_metadata):
+        """Simulate the detection process for a light curve.
+
+        We impose quality cuts on the augmented events. Following [1]_, we
+        require at least two detections: at least two observations above the
+        signal-to-noise (S/N) threshold. [1]_ calculated this threshold by
+        fitting an error function to the observations from the PLAsTiCC
+        dataset to predict the probability of detection as a function of S/N.
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
+
+        Returns
+        -------
+        aug_obj_data : pandas.DataFrame
+            Observations of the augmented event.
+        pass_detection : bool
+            Whether or not the event passes the detection threshold.
+
+        Notes
+        -----
+        This method is adapted from the code developed in [1]_. In particular,
+        the funtion `PlasticcAugmentor._simulate_detection` of
+        `avocado/plasticc.py`.
+        Note that this method should be overridden in child classes if the
+        quality cuts desired are different.
+
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        # Calculate the S/N of the observations
+        s2n = np.abs(aug_obj_data["flux"]) / aug_obj_data["flux_error"]
+
+        # Apply the S/N threshold
+        prob_detected = (erf((s2n - 5.5) / 2) + 1) / 2.0
+        aug_obj_data["detected"] = self._rs.rand(len(s2n)) < prob_detected
+        pass_detection = np.sum(aug_obj_data["detected"]) >= 2
+
+        return aug_obj_data, pass_detection
+
+
+class PlasticcWFDAugment(GPAugment):
+    """Augment the Wide-Fast-Deep (WFD) events in the PLAsTiCC dataset using
+    Gaussian Process extrapolation method (see `snaugment.GPAugment`).
+    """
+
+    def __init__(self, dataset, path_saved_gps, objs_number_to_aug=None,
+                 z_table=None, max_duration=None,
+                 cosmology=FlatLambdaCDM(**{"H0": 70, "Om0": 0.3,
+                                            "Tcmb0": 2.725}),
+                 random_seed=None, **kwargs):
+        """Class enclosing the Gaussian Process augmentation of WFD events.
+
+        This class augments the Wide-Fast-Deep (WFD) events in the PLAsTiCC
+        dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset object (`sndata` class)
+            Dataset to augment.
+        path_saved_gps: str
+            Path to the Gaussian Process files.
+        objs_number_to_aug : {`None`, 'all', dict}, optional
+            Specify which events to augment and by how much. If `None`, the
+            dataset it not augmented. If `all`, all the events are augmented
+            10 times. If a dictionary is provided, it should be in the form of:
+                event: number of times to augment that event.
+        z_table : {None, pandas.DataFrame}, optional
+            Dataset of the spectroscopic and photometric redshift, and
+            photometric redshift error of events. This table is used to
+            generate the photometric redshift and respective error for the
+            augmented events. If `None`, this table is generated from the
+            events in the original dataset.
+        max_duration : {None, float}, optional
+            Maximum duration of the augmented light curves. If `None`, it is
+            set to the length of the longest event in `dataset`.
+        cosmology : astropy.cosmology.core.COSMOLOGY, optional
+            Cosmology from `astropy` with the cosmologic parameters already
+            defined. By default it assumes Flat LambdaCDM with parameters
+            `H0 = 70`, `Om0 = 0.3` and `T_cmb0 = 2.725`.
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        **kwargs : dict, optional
+            Optional keywords to pass arguments into
+            `snamchine.gps.compute_gps`.
+
+        Notes
+        -----
+        This augmentation is based on [1]_.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
+                         objs_number_to_aug=objs_number_to_aug,
+                         choose_z=choose_z_wfd, z_table=z_table,
+                         max_duration=max_duration, cosmology=cosmology,
+                         random_seed=random_seed, **kwargs)
+
+        self._aug_method = 'GP augmentation; PLAsTiCC WFD'
+
+    def create_aug_obj_metadata(self, aug_obj, obj_metadata):
+        """Create metadata for the WFD augmented event.
+
+        The new metadata is based based on the metadata of the original event.
+
+        Parameters
+        ----------
+        aug_obj : str
+            Name of the augmented event in the form
+                `[original event name]_[number of the augmentation]`.
+        obj_metadata: pandas.DataFrame
+            Metadata of the original event.
+
+        Returns
+        -------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        """
+        aug_obj_metadata = obj_metadata.copy()
+        aug_obj_metadata.name = aug_obj
+        aug_obj_metadata.object_id = aug_obj
+        aug_obj_metadata['augmented'] = True
+        aug_obj_metadata['original_event'] = aug_obj.split('_')[0]
+
+        z_spec = self.choose_z(obj_metadata['hostgal_specz'], **self._kwargs)
+        z_photo, z_photo_error = self.compute_new_z_photo(z_spec)
+        aug_obj_metadata['hostgal_specz'] = z_spec
+        aug_obj_metadata['hostgal_photoz'] = z_photo
+        aug_obj_metadata['hostgal_photoz_err'] = z_photo_error
+
+        # The new event will be in WFD regardless of the original event; we
+        # can always degrade DDF events to simulate a WFD event
+        aug_obj_metadata['ddf'] = False
+
+        return aug_obj_metadata
+
+    def _choose_target_number_obs(self, aug_obj_metadata):
+        """Randomly choose the target number of light curve observations.
+
         Using Gaussian mixture models, we model the number of observations in
-        the test set events simulated on the Wide-Fast-Deep (WFD) and Deep
-        Drilling Field (DDF) surveys. Each survey was modeled individually.
+        the test set events simulated on the Wide-Fast-Deep (WFD).
 
         Parameters
         ----------
@@ -1404,22 +1217,8 @@ class GPAugment(SNAugment):
         astronomical transients with gaussian process augmentation." The
         Astronomical Journal 158.6 (2019): 257.
         """
-        if aug_obj_metadata["ddf"]:  # DDF event
-            # Estimate the distribution of number of observations in the
-            # DDF regions with a mixture of 2 gaussian distributions.
-            gauss_choice = self._rs.choice(2, p=[0.34393457, 0.65606543])
-            if gauss_choice == 0:
-                mean = 57.36015146
-                var = np.sqrt(271.58889272)
-            elif gauss_choice == 1:
-                mean = 92.7741619
-                var = np.sqrt(338.53085446)
-            target_number_obs = int(
-                np.clip(self._rs.normal(mean, var), 20, None))
-        else:  # WFD event
-            target_number_obs = (
-                self._rs.normal(24.5006006, np.sqrt(72.5106613)))
-            target_number_obs = int(np.clip(target_number_obs, 3, None))
+        target_number_obs = (self._rs.normal(24.5006006, np.sqrt(72.5106613)))
+        target_number_obs = int(np.clip(target_number_obs, 3, None))
 
         return target_number_obs
 
@@ -1428,8 +1227,7 @@ class GPAugment(SNAugment):
 
         Following [1]_, we estimate the flux uncertainties for each
         passband with a lognormal distribution for the Wide-Fast-Deep (WFD)
-        and Deep Drilling Field (DDF) surveys. Each passband in each survey
-        was modeled individually with test set events.
+        survey. Each passband was modeled individually with test set events.
         The flux uncertanty of the augmented events is the combination of the
         flux uncertainty of the augmented events predicted by the GP in
         quadrature with a value drawn from the flux uncertainty distribution
@@ -1470,14 +1268,9 @@ class GPAugment(SNAugment):
         # The uncertainty levels of the observations in each passband can be
         # modeled with a lognormal distribution. See [1].
         # Lognormal parameters
-        if aug_obj_metadata["ddf"]:  # DDF event
-            pb_noises = {"lsstu": (0.68, 0.26), "lsstg": (0.25, 0.50),
-                         "lsstr": (0.16, 0.36), "lssti": (0.53, 0.27),
-                         "lsstz": (0.88, 0.22), "lssty": (1.76, 0.23)}
-        else:  # WFD event
-            pb_noises = {"lsstu": (2.34, 0.43), "lsstg": (0.94, 0.41),
-                         "lsstr": (1.30, 0.41), "lssti": (1.82, 0.42),
-                         "lsstz": (2.56, 0.36), "lssty": (3.33, 0.37)}
+        pb_noises = {'lsstu': (2.34, 0.43), 'lsstg': (0.94, 0.41),
+                     'lsstr': (1.30, 0.41), 'lssti': (1.82, 0.42),
+                     'lsstz': (2.56, 0.36), 'lssty': (3.33, 0.37)}
 
         # Calculate the new uncertainty levels for each passband
         lognormal_parameters = []
@@ -1501,14 +1294,164 @@ class GPAugment(SNAugment):
                                              + add_stds ** 2)
         return aug_obj_data
 
-    def _simulate_detection(self, aug_obj_data, aug_obj_metadata):
-        """Simulate the detection process for a light curve.
 
-        We impose quality cuts on the augmented events. Following [1]_, we
-        require at least two detections: at least two observations above the
-        signal-to-noise (S/N) threshold. [1]_ calculated this threshold by
-        fitting an error function to the observations from the PLAsTiCC
-        dataset to predict the probability of detection as a function of S/N.
+class PlasticcDDFAugment(GPAugment):
+    """Augment the Deep Drilling Field (DDF) events in the PLAsTiCC dataset using
+    Gaussian Process extrapolation method (see `snaugment.GPAugment`).
+    """
+
+    def __init__(self, dataset, path_saved_gps, objs_number_to_aug=None,
+                 z_table=None, max_duration=None,
+                 cosmology=FlatLambdaCDM(**{"H0": 70, "Om0": 0.3,
+                                            "Tcmb0": 2.725}),
+                 random_seed=None, **kwargs):
+        """Class enclosing the Gaussian Process augmentation of WFD events.
+
+        This class augments the Deep Drilling Field (DDF) events in the
+        PLAsTiCC dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset object (`sndata` class)
+            Dataset to augment.
+        path_saved_gps: str
+            Path to the Gaussian Process files.
+        objs_number_to_aug : {`None`, 'all', dict}, optional
+            Specify which events to augment and by how much. If `None`, the
+            dataset it not augmented. If `all`, all the events are augmented
+            10 times. If a dictionary is provided, it should be in the form of:
+                event: number of times to augment that event.
+        z_table : {None, pandas.DataFrame}, optional
+            Dataset of the spectroscopic and photometric redshift, and
+            photometric redshift error of events. This table is used to
+            generate the photometric redshift and respective error for the
+            augmented events. If `None`, this table is generated from the
+            events in the original dataset.
+        max_duration : {None, float}, optional
+            Maximum duration of the augmented light curves. If `None`, it is
+            set to the length of the longest event in `dataset`.
+        cosmology : astropy.cosmology.core.COSMOLOGY, optional
+            Cosmology from `astropy` with the cosmologic parameters already
+            defined. By default it assumes Flat LambdaCDM with parameters
+            `H0 = 70`, `Om0 = 0.3` and `T_cmb0 = 2.725`.
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        **kwargs : dict, optional
+            Optional keywords to pass arguments into
+            `snamchine.gps.compute_gps`.
+
+        Notes
+        -----
+        This augmentation is based on [1]_.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
+                         objs_number_to_aug=objs_number_to_aug,
+                         choose_z=choose_z_ddf, z_table=z_table,
+                         max_duration=max_duration, cosmology=cosmology,
+                         random_seed=random_seed, **kwargs)
+
+        self._aug_method = 'GP augmentation; PLAsTiCC DDF'
+
+    def create_aug_obj_metadata(self, aug_obj, obj_metadata):
+        """Create metadata for the DDF augmented event.
+
+        The new metadata is based based on the metadata of the original event.
+
+        Parameters
+        ----------
+        aug_obj : str
+            Name of the augmented event in the form
+                `[original event name]_[number of the augmentation]`.
+        obj_metadata: pandas.DataFrame
+            Metadata of the original event.
+
+        Returns
+        -------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        """
+        aug_obj_metadata = obj_metadata.copy()
+        aug_obj_metadata.name = aug_obj
+        aug_obj_metadata.object_id = aug_obj
+        aug_obj_metadata['augmented'] = True
+        aug_obj_metadata['original_event'] = aug_obj.split('_')[0]
+
+        z_spec = self.choose_z(obj_metadata['hostgal_specz'], **self._kwargs)
+        z_photo, z_photo_error = self.compute_new_z_photo(z_spec)
+        aug_obj_metadata['hostgal_specz'] = z_spec
+        aug_obj_metadata['hostgal_photoz'] = z_photo
+        aug_obj_metadata['hostgal_photoz_err'] = z_photo_error
+
+        if obj_metadata['ddf']:
+            aug_obj_metadata['ddf'] = True
+        else:
+            # If the original event was not a DDF observation, cannot simulate
+            # a DDF event.
+            aug_obj_metadata = None
+
+        return aug_obj_metadata
+
+    def _choose_target_number_obs(self, aug_obj_metadata):
+        """Randomly choose the target number of light curve observations.
+
+        Using Gaussian mixture models, we model the number of observations in
+        the test set events simulated on the Deep Drilling Field (DDF).
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+
+        Returns
+        -------
+        target_number_obs : int
+            The target number of observations in the new light curve.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion
+        `PlasticcAugmentor._choose_target_observation_count` of
+        `avocado/plasticc.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        # Estimate the distribution of number of observations in the
+        # DDF regions with a mixture of 2 gaussian distributions.
+        gauss_choice = self._rs.choice(2, p=[0.34393457, 0.65606543])
+        if gauss_choice == 0:
+            mean = 57.36015146
+            var = np.sqrt(271.58889272)
+        elif gauss_choice == 1:
+            mean = 92.7741619
+            var = np.sqrt(338.53085446)
+        target_number_obs = int(
+            np.clip(self._rs.normal(mean, var), 20, None))
+
+        return target_number_obs
+
+    def _compute_obs_uncertainty(self, aug_obj_data, aug_obj_metadata):
+        """Compute and add uncertainty to the light curve observations.
+
+        Following [1]_, we estimate the flux uncertainties for each
+        passband with a lognormal distribution for the Deep Drilling Field
+        (DDF) survey. Each passband was modeled individually with test set
+        events.
+        The flux uncertanty of the augmented events is the combination of the
+        flux uncertainty of the augmented events predicted by the GP in
+        quadrature with a value drawn from the flux uncertainty distribution
+        described above.
 
         Parameters
         ----------
@@ -1521,13 +1464,12 @@ class GPAugment(SNAugment):
         -------
         aug_obj_data : pandas.DataFrame
             Observations of the augmented event.
-        pass_detection : bool
-            Whether or not the event passes the detection threshold.
 
         Notes
         -----
         This function is adapted from the code developed in [1]_. In
-        particular, the funtion `PlasticcAugmentor._simulate_detection` of
+        particular, the funtion
+        `PlasticcAugmentor._simulate_light_curve_uncertainties` of
         `avocado/plasticc.py`.
 
         References
@@ -1536,348 +1478,38 @@ class GPAugment(SNAugment):
         astronomical transients with gaussian process augmentation." The
         Astronomical Journal 158.6 (2019): 257.
         """
-        # Calculate the S/N of the observations
-        s2n = np.abs(aug_obj_data["flux"]) / aug_obj_data["flux_error"]
+        # Make a copy of the original data to avoid modifying it
+        aug_obj_data = aug_obj_data.copy()
 
-        # Apply the S/N threshold
-        prob_detected = (erf((s2n - 5.5) / 2) + 1) / 2.0
-        aug_obj_data["detected"] = self._rs.rand(len(s2n)) < prob_detected
-        pass_detection = np.sum(aug_obj_data["detected"]) >= 2
+        # Skip this function if there are no observations
+        if len(aug_obj_data) == 0:
+            return aug_obj_data
 
-        return aug_obj_data, pass_detection
+        # The uncertainty levels of the observations in each passband can be
+        # modeled with a lognormal distribution. See [1].
+        # Lognormal parameters
+        pb_noises = {'lsstu': (0.68, 0.26), 'lsstg': (0.25, 0.50),
+                     'lsstr': (0.16, 0.36), 'lssti': (0.53, 0.27),
+                     'lsstz': (0.88, 0.22), 'lssty': (1.76, 0.23)}
 
+        # Calculate the new uncertainty levels for each passband
+        lognormal_parameters = []
+        for pb in aug_obj_data['filter']:
+            try:
+                lognormal_parameters.append(pb_noises[pb])
+            except KeyError:
+                raise ValueError(f'The noise properties of the passband {pb} '
+                                 f'are not known. Add them to '
+                                 f'`GPAugment._compute_obs_uncertainty`.')
+        lognormal_parameters = np.array(lognormal_parameters)
 
-class SimpleGPAugment(SNAugment):
-    """Derived class that encapsulates data augmentation via Gaussian Processes.
-    """
-
-    def __init__(self, dataset, stencils=None, cadence_stencils=None,
-                 stencil_weights=None, cadence_stencil_weights=None):
-        """Class constructor.
-
-        Parameters:
-        ----------
-        dataset : Dataset object (sndata class)
-            Dataset.
-        stencils : list of strings
-            If the stencils argument is given (as a list of object names that
-            are in the data set), then the augmentation step will take these
-            light curves to train the GPs on. If not, then every object in the
-            data set is considered fair game.
-        cadence_stencils : list of strings
-            If given, the augmentation will sample the cadence for the new
-            light curves from these objects. If not, every object is fair game.
-        stencil_weights : np.array or list of float
-            If given, these weights are the probabilities with which the
-            respective stencils will be picked in the augmentation step. If
-            not given, we will use uniform weights.
-        cadence_stencil_weights : np.array or list of float
-            Like stencil_weights, but for the cadence stencils.
-        """
-
-        self.dataset = dataset
-        self.meta = {}
-        self.meta['trained_gp'] = {}
-        self.augmentation_method = 'GP augmentation'
-        if stencils is None:
-            self.stencils = dataset.object_names.copy()
-        else:
-            self.stencils = stencils
-        if cadence_stencils is None:
-            self.cadence_stencils = dataset.object_names.copy()
-        else:
-            self.cadence_stencils = cadence_stencils
-
-        if stencil_weights is not None:
-            assert np.all(stencil_weights >= 0.), 'Stencil weights need to be larger than zero!'
-            stencil_weights = np.array(stencil_weights)
-            self.stencil_weights = stencil_weights / sum(stencil_weights)
-        else:
-            self.stencil_weights = np.ones(len(self.stencils)) / len(self.stencils)
-
-        if cadence_stencil_weights is not None:
-            assert np.all(cadence_stencil_weights >= 0.), 'Cadence stencil weights need to be larger than zero!'
-            cadence_stencil_weights = np.array(cadence_stencil_weights)
-            self.cadence_stencil_weights = cadence_stencil_weights / sum(cadence_stencil_weights)
-        else:
-            self.cadence_stencil_weights = np.ones(len(self.cadence_stencils)) / len(self.cadence_stencils)
-
-        self.rng = np.random.RandomState()
-        self.random_seed = self.rng.get_state()
-
-        self.original_object_names = dataset.object_names.copy()
-
-    def train_filter(self, x, y, yerr, initheta=[100, 20]):
-        """Train one Gaussian process on the data from one band. We use the
-        squared-exponential kernel, and we optimise its hyperparameters
-
-        Parameters:
-        -----------
-        x : numpy array
-            `mjd` values for the cadence
-        y : numpy array
-            Flux values
-        yerr : numpy array
-            Errors on the flux
-        initheta : list, optional
-            Initial values for the hyperparameters. They should roughly
-            correspond to the spread in y and x direction.
-
-        Returns:
-        -------
-        g : george.GP
-            the trained GP object
-        """
-        def nll(p):
-            g.set_parameter_vector(p)
-            ll = g.log_likelihood(y, quiet=True)
-            return -ll if np.isfinite(ll) else 1.e25
-
-        def grad_nll(p):
-            g.set_parameter_vector(p)
-            return -g.grad_log_likelihood(y, quiet=True)
-
-        g = george.GP(initheta[0] ** 2 * george.kernels.ExpSquaredKernel(metric=initheta[1]**2))
-        if len(x) == 0:
-            return g
-        g.compute(x, yerr)
-        p0 = g.get_parameter_vector()
-        results = op.minimize(nll, p0, jac=grad_nll, method='L-BFGS-B')
-        g.set_parameter_vector(results.x)
-        return g
-
-    def sample_cadence_filter(self, g, cadence, y, yerr,
-                              add_measurement_noise=True):
-        """Given a trained GP, and a cadence of mjd values, produce a sample from
-        the distribution defined by the GP, on that cadence. The error bars are
-        set to the spread of the GP distribution at the given mjd value.
-
-        Parameters:
-        -----------
-        g : george.GP
-            The trained Gaussian process object
-        cadence : numpy.array
-            The cadence of mjd values.
-        y : numpy array
-            The flux values of the data that the GP has been trained on.
-        yerr : numpy array
-            ??? It was never described here.
-        add_measurement_noise : bool, optional
-            Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i,
-            where f is a gaussianly-distributed function, and where eps_i are
-            iid Normal RVs, and sigma_i are the measurement error bars. If this
-            flag is unset, we return a sample from the GP f and its stddev. If
-            it is set, we return y*_j including the measurement noise (also in
-            the error bar). If this is unclear, please consult
-            Rasmussen/Williams chapter 2.2.
-
-        Returns:
-        --------
-        flux : numpy array
-            Flux values for the new sample
-        fluxerr : numpy array
-            Error bars on the flux for the new sample
-        """
-        if len(cadence) == 0:
-            flux = np.array([])
-            fluxerr = np.array([])
-        else:
-            mu, cov = g.predict(y, cadence)
-            flux = self.rng.multivariate_normal(mu, cov)
-            fluxerr = np.sqrt(np.diag(cov))
-        # Adding measurement error - Cat no need for this comment
-        if add_measurement_noise:
-            flux += self.rng.randn(len(y)) * yerr
-            fluxerr = np.sqrt(fluxerr**2 + yerr**2)
-        return flux, fluxerr
-
-    def produce_new_lc(self, obj, cadence=None, savegp=True, samplez=True,
-                       name='dummy', add_measurement_noise=True):
-        """Assemble a new light curve from a stencil. If the stencil already has
-        been used and the resulting GPs have been saved, then we use those. If
-        not, we train a new GP.
-
-        Parameters:
-        -----------
-        obj : str or astropy.table.Table
-            The object (or name thereof) that we use as a stencil to train the
-            GP on.
-        cadence : str or dict of type {string:numpy.array}, optional.
-            The cadence for the new light curve, defined either by object name
-            or by {filter:mjds}. If none is given, then we pull the cadence of
-            the stencil.
-        savegp : bool, optional
-            Do we save the trained GP in self.meta? This results in a speedup,
-            but costs memory.
-        samplez : bool, optional
-            Do we give the new light curve a random redshift value drawn from a
-            Gaussian of location and width defined by the stencil? If not, we
-            just take the value of the stencil.
-        name : str, optional
-            Object name of the new light curve.
-        add_measurement_noise : bool, optional
-            Usually, the data is modelled as y_i = f(t_i) + sigma_i*eps_i,
-            where f is a gaussianly-distributed function, and where eps_i are
-            iid Normal RVs, and sigma_i are the measurement error bars. If this
-            flag is unset, we return a sample from the GP f and its stddev. If
-            it is set, we return y*_j including the measurement noise (also in
-            the error bar). If this is unclear, please consult
-            Rasmussen/Williams chapter 2.2.
-
-        Returns:
-        --------
-        new_lc: astropy.table.Table
-            The new light curve
-        """
-        if type(obj) is Table:
-            obj_table = obj
-            obj_name = obj.meta['name']
-        elif type(obj) in [str, np.str_]:
-            obj_table = self.dataset.data[obj]
-            obj_name = str(obj)
-        else:
-            print('obj: type %s not recognised in produce_new_lc()!' % type(obj))
-            # TODO: actually throw an error
-
-        if cadence is None:
-            cadence_dict = self.extract_cadence(obj)
-        else:
-            if add_measurement_noise:
-                print('warning: GP sampling does NOT include measurement noise, since sampling is performed on a different cadence!')
-                add_measurement_noise = False
-            if type(cadence) in [str, np.str_]:
-                cadence_dict = self.extract_cadence(cadence)
-            elif type(cadence) is dict:
-                cadence_dict = cadence
-            else:
-                print('cadence: type %s not recognised in produce_new_lc()!' % type(cadence))
-                # TODO: actually throw an error
-
-        # Either train a new set of GP on the stencil obj, or pull from metadata
-        if obj_name in self.meta['trained_gp'].keys():
-            print('fetching')
-            all_g = self.meta['trained_gp'][obj_name]
-        else:
-            print('training')
-            all_g = {}
-            for f in self.dataset.filter_set:
-                obj_f = obj_table[obj_table['filter'] == f]
-                x = np.array(obj_f['mjd'])
-                y = np.array(obj_f['flux'])
-                yerr = np.array(obj_f['flux_error'])
-                g = self.train_filter(x, y, yerr)
-                all_g[f] = g
-            if savegp:
-                self.meta['trained_gp'][obj_name] = all_g
-
-        # Produce new LC based on the set of GP
-        if samplez and 'z_err' in obj_table.meta.keys():
-            newz = obj_table.meta['z'] + obj_table.meta['z_err'] * self.rng.randn()
-        else:
-            newz = obj_table.meta['z']
-        new_lc_meta = obj_table.meta.copy()
-        modified_meta = {'name': name, 'z': newz, 'stencil': obj_name,
-                         'augment_algo': self.augmentation_method}
-        new_lc_meta.update(modified_meta)
-        new_lc = Table(names=['mjd', 'filter', 'flux', 'flux_error'],
-                       dtype=['f', 'U', 'f', 'f'], meta=new_lc_meta)
-        for f in self.dataset.filter_set:
-            obj_f = obj_table[obj_table['filter'] == f]
-            y = obj_f['flux']
-            yerr = obj_f['flux_error']
-            flux, fluxerr = self.sample_cadence_filter(
-                                all_g[f], cadence_dict[f], y, yerr,
-                                add_measurement_noise=add_measurement_noise)
-            filter_col = [str(f)] * len(cadence_dict[f])
-            dummy_table = Table((cadence_dict[f], filter_col, flux, fluxerr),
-                                names=['mjd', 'filter', 'flux', 'flux_error'],
-                                dtype=['f', 'U', 'f', 'f'])
-            new_lc = vstack([new_lc, dummy_table])
-
-        new_lc.sort('mjd')  # Sort by cadence, for cosmetics
-        return new_lc
-
-    def extract_cadence(self, obj):
-        """Given a light curve, we extract the cadence in a format that we can
-        insert into produce_lc and sample_cadence_filter.
-
-        Parameters:
-        -----------
-        obj : str or astropy.table.Table
-            (Name of) the object
-
-        Returns:
-        --------
-        cadence : dict of type {str:numpy.array}
-            The cadence, in the format {filter1:mjd1, filter2:mjd2, ...}
-        """
-        if type(obj) in [str, np.str_]:
-            table = self.dataset.data[obj]
-        elif type(obj) is Table:
-            table = obj
-        else:
-            print('obj: type %s not recognised in extract_cadence()!' % type(obj))
-        cadence = {flt: np.array(table[table['filter'] == flt]['mjd']) for flt in self.dataset.filter_set}
-        return cadence
-
-    def augment(self, numbers, return_names=False, **kwargs):
-        """High-level wrapper of GP augmentation: The dataset will be
-        augmented to the numbers by type.
-
-        Parameters:
-        ----------
-        numbers : dict of type int:int
-            The numbers to which the data set will be augmented, by type. Keys
-            are the types, values are the numbers of light curves pertaining to
-            a type after augmentation. Types that do not appear in this dict
-            will not be touched.
-        return_names : bool
-            If True, we return a list of names of the objects that have been
-            added into the data set
-        kwargs :
-            Additional arguments that will be handed verbatim to
-            `produce_new_lc`. Interesting choices include `savegp=False` and
-            `samplez=True`.
-
-        Returns:
-        --------
-        newobjects : list of str
-            The new object names that have been created by augmentation.
-        """
-        dataset_types = self.dataset.get_types()
-        # dataset_types['Type'][dataset_types['Type']>10]=dataset_types['Type'][dataset_types['Type']>10]//10#NB: this is specific to a particular remapping of indices!!
-
-        types = np.unique(dataset_types['Type'])
-
-        newnumbers = dict()
-        newobjects = []
-        for t in types:
-            thistype_oldnumbers = len(dataset_types['Type'][dataset_types['Type'] == t])
-            newnumbers[t] = numbers[t] - thistype_oldnumbers
-            thistype_stencils = [dataset_types['Object'][i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.stencils and dataset_types['Type'][i] == t]
-            thistype_stencil_weights = [self.stencil_weights[i] for i in range(len(dataset_types)) if dataset_types['Object'][i] in self.stencils and dataset_types['Type'][i] == t]
-
-            if newnumbers[t] < 0:
-                print('There are already %d objects of type %d in the original data set, cannot augment to %d!' % (thistype_oldnumbers, t, numbers[t]))
-                continue
-            elif newnumbers[t] == 0:
-                continue
-            else:
-                # print('now dealing with type: '+str(t))
-                # print('stencils: '+str(thistype_stencils))
-                for i in range(newnumbers[t]):
-                    # Pick random stencil
-                    # thisstencil=thistype_stencils[self.rng.randint(0,len(thistype_stencils))]
-                    thisstencil = self.rng.choice(thistype_stencils, p=thistype_stencil_weights / np.sum(thistype_stencil_weights))
-                    # Pick random cadence
-                    # thiscadence_stencil=self.cadence_stencils[self.rng.randint(0,len(self.cadence_stencils))]
-                    # thiscadence_stencil=thisstencil
-
-                    # cadence=self.extract_cadence(thiscadence_stencil)
-                    # new_name='augm_t%d_%d_'%(t,i) + thisstencil + '_' + thiscadence_stencil + '.DAT'
-                    new_name = 'augm_t%d_%d_' % (t, i) + thisstencil  # + '.DAT'
-                    new_lightcurve = self.produce_new_lc(obj=thisstencil, name=new_name, **kwargs)  # ,cadence=cadence)
-                    self.dataset.insert_lightcurve(new_lightcurve)
-                    # print('types: '+str(new_lightcurve.meta['type'])+' '+str(self.dataset.data[thisstencil].meta['type']))
-                    newobjects = np.append(newobjects, new_name)
-        return newobjects
+        # Combine the flux uncertainty of the augmented events predicted by
+        # the GP in quadrature with a value drawn from the flux uncertainty
+        # distribution of the test set
+        add_stds = self._rs.lognormal(
+            lognormal_parameters[:, 0], lognormal_parameters[:, 1])
+        noise_add = self._rs.normal(loc=0.0, scale=add_stds)
+        aug_obj_data['flux'] += noise_add  # add noise to increase variability
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
+                                             + add_stds ** 2)
+        return aug_obj_data
