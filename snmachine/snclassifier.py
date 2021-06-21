@@ -217,7 +217,7 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
     tick_size: float, optional
         Size of tick labels.
     line_width : float, optional
-        Line width
+        Line width.
     """
 
     # Automatically fill in the colors if not supplied
@@ -457,10 +457,65 @@ def FoM(pr,  Yt, which_column=-1, true_class=1, full_output=False):
 
 
 def run_several_classifiers(classifier_list, features, labels,
-                            scoring, train_set, scale_features,
-                            param_grid, random_seed, output_root,
-                            which_column, **kwargs):
+                            scoring, train_set, scale_features=True,
+                            param_grid=None, random_seed=42, which_column=0,
+                            output_root=None, **kwargs):
     """The features must be pandas DataFrame
+
+    Parameters
+    ----------
+    classifier_list : list
+        Which available ML classifiers to run.
+    features : pandas.DataFrame
+        Features of the dataset events.
+    labels : pandas.DataFrame
+        Labels of the dataset events.
+    scoring : callable, str
+        The metric used to evaluate the predictions on the test or
+        validation sets. See
+        `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
+        how to choose this input.
+        `snmachine` also contains the 'logloss' and 'auc' custom scoring.
+        For more details about these, see `logloss_score` and
+        `auc_score`, respectively.
+    train_set : {float, list-like}
+        If float, it is the fraction of objects that will be used as training
+        set. If list, it is the IDs of the objects to use as training set.
+    scale_features : bool, optional
+        If True (default and recommended), rescale features using sklearn's
+        preprocessing Scalar class.
+    param_grid : {None, dict}, optional
+        Dictionary containing the parameters names (`str`) as keys and lists
+        of their possible settings as values.
+        If `None`, the default `param_grid` is used. This is defined in child
+        classes of `BaseClassifier`.
+    random_seed : {int, RandomState instance}, optional
+        Random seed or random state instance to use. It allows reproducible
+        results.
+    which_column : int, optional
+        The index of the column refering to the desired class (e.g. Ias, which
+        might correspond to class 1, or 90). This allows the user to optimise
+        for different classes.
+    output_root : {None, str}, optional
+        If None, don't save anything. If str, save the classifiers'
+        probability, ROC and AUC there.
+    **kwargs : dict, optional
+        number_processes : int, optional
+            Number of processors to use for parallelisation (shared memory
+            only). By default `number_processes` = 1.
+        plot_roc_curve : bool, optional
+            Whether to plot the ROC curves for the classifiers.
+
+    Returns
+    -------
+    X_train : pandas.DataFrame
+        Features of the events with which to train the classifier.
+    X_test : pandas.DataFrame
+        Features of the events with which to test the classifier.
+    y_train : pandas.core.series.Series
+        Labels of the events with which to train the classifier.
+    y_test : pandas.core.series.Series
+        Labels of the events with which to test the classifier.
     """
     initial_time = time.time()
 
@@ -517,9 +572,8 @@ def run_several_classifiers(classifier_list, features, labels,
 
         fpr_class, tpr_class, auc_class = roc(probs, y_test,
                                               which_column=which_column)
-        fom_class, thresh_fom_class = FoM(probs, y_test,
-                                          which_column=which_column,
-                                          full_output=False)
+        fom_class, _ = FoM(probs, y_test, which_column=which_column,
+                           full_output=False)
         print(f'Classifier {classifier_name}: AUC = {auc_class} ; FoM = '
               f'{fom_class}.')
         fpr.append(fpr_class)
@@ -563,6 +617,32 @@ def run_several_classifiers(classifier_list, features, labels,
 
 
 def _split_train_test(features, labels, train_set, random_seed):
+    """Split the dataset into training and test sets.
+
+    Parameters
+    ----------
+    features : pandas.DataFrame
+        Features of the dataset events.
+    labels : pandas.DataFrame
+        Labels of the dataset events.
+    train_set : {float, list-like}
+        If float, it is the fraction of objects that will be used as training
+        set. If list, it is the IDs of the objects to use as training set.
+    random_seed : {int, RandomState instance}
+        Random seed or random state instance to use. It allows reproducible
+        results.
+
+    Returns
+    -------
+    X_train : pandas.DataFrame
+        Features of the events with which to train the classifier.
+    X_test : pandas.DataFrame
+        Features of the events with which to test the classifier.
+    y_train : pandas.core.series.Series
+        Labels of the events with which to train the classifier.
+    y_test : pandas.core.series.Series
+        Labels of the events with which to test the classifier.
+    """
     if np.isscalar(train_set):  # `train_set` was the size of training set
         X_train, X_test, y_train, y_test = model_selection.train_test_split(
             features, labels, train_size=train_set,
