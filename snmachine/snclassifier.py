@@ -527,18 +527,19 @@ def run_several_classifiers(classifier_list, features, labels,
         auc.append(auc_class)
 
         if output_root is not None:  # save results
+            print(f'Probabilities, AUC and ROC saved on {output_root}.')
             probs_df = pd.DataFrame(probs, columns=np.unique(y_train))
             probs_df.set_index(y_test.index, inplace=True)
-            probs_df.to_pickle(os.path.join(
-                output_root, f'probs_{classifier_name}.pickle'))
+            probs_df.to_pickle(os.path.join(output_root,
+                                            f'probs_{classifier_name}.pickle'))
 
-            fpr_tpr = np.array([fpr[0], tpr[0]]).T
+            fpr_tpr = np.array([fpr_class, tpr_class]).T
             fpr_tpr = pd.DataFrame(fpr_tpr, columns=['FPR', 'TPR'])
-            fpr_tpr.to_pickle(os.path.join(
-                output_root, f'roc_{classifier_name}.pickle'))
+            fpr_tpr.to_pickle(os.path.join(output_root,
+                                           f'roc_{classifier_name}.pickle'))
 
-            np.savetxt(os.path.join(
-                output_root, f'auc_{classifier_name}.txt'), auc)
+            np.save(os.path.join(output_root, f'auc_{classifier_name}.npy'),
+                    auc_class)
     fpr = np.array(fpr).T
     tpr = np.array(tpr).T
 
