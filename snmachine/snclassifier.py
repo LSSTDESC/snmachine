@@ -24,6 +24,7 @@ import pandas as pd
 import sklearn
 import sklearn.naive_bayes  # requires a specific import
 import sklearn.neural_network  # requires a specific import
+import sklearn.ensemble  # requires a specific import
 
 from functools import partial
 from multiprocessing import Pool
@@ -460,12 +461,16 @@ def run_several_classifiers(classifier_list, features, labels,
                             scoring, train_set, scale_features=True,
                             param_grid=None, random_seed=42, which_column=0,
                             output_root=None, **kwargs):
-    """The features must be pandas DataFrame
+    """Run several classifiers.
+
+    This function allows quickly training, optimising and testing several
+    classifiers. The test set is a part of the inputed data.
 
     Parameters
     ----------
     classifier_list : list
-        Which available ML classifiers to run.
+        List of which machine learning classifiers to run. Check the available
+        classifiers by calling `snclassifier.choice_of_classifiers`.
     features : pandas.DataFrame
         Features of the dataset events.
     labels : pandas.DataFrame
@@ -658,8 +663,35 @@ def _split_train_test(features, labels, train_set, random_seed):
 
 def _run_classifier(classifier_name, X_train, y_train, X_test,
                     param_grid, scoring, which_column, random_seed):
-    """Note this does not have the same inputs as
-    `run_several_classifiers`"""
+    """
+
+    Note this does not have the same inputs as
+    `run_several_classifiers`
+
+    Parameters
+    ----------
+    features : pandas.DataFrame
+        Features of the dataset events.
+    labels : pandas.DataFrame
+        Labels of the dataset events.
+    train_set : {float, list-like}
+        If float, it is the fraction of objects that will be used as training
+        set. If list, it is the IDs of the objects to use as training set.
+    random_seed : {int, RandomState instance}
+        Random seed or random state instance to use. It allows reproducible
+        results.
+
+    Returns
+    -------
+    X_train : pandas.DataFrame
+        Features of the events with which to train the classifier.
+    X_test : pandas.DataFrame
+        Features of the events with which to test the classifier.
+    y_train : pandas.core.series.Series
+        Labels of the events with which to train the classifier.
+    y_test : pandas.core.series.Series
+        Labels of the events with which to test the classifier.
+    """
 
     # Add to `classifier_map` any classifier implemeted in `snclassifier`
     classifier_map = {'svm': SVMClassifier,
