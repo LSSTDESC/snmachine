@@ -70,10 +70,6 @@ def classification_test(classifiers_list, featz, types):
     data_labels.set_index('object_id', inplace=True)
     data_labels = data_labels['Type']
 
-    snclassifier.run_pipeline(featz, types, classifiers=classifiers_list,
-                              number_processes=4, plot_roc_curve=False,
-                              output_name=out_dir)
-
     # Run the classifiers
     which_column = 0  # column that corresponds to SN Ia in this dataset
     snclassifier.run_several_classifiers(classifier_list=classifiers_list,
