@@ -40,6 +40,9 @@ choice_of_classifiers = ['svm', 'knn', 'random_forest', 'decision_tree',
                          'lgbm']
 # boost_rf is a set of boosted random forests which Max came up with.
 
+# Print deprecation warnings
+warnings.simplefilter('always', DeprecationWarning)
+
 
 # Custom scoring/metrics functions ##
 def logloss_score(classifier, X_features, y_true):
@@ -195,25 +198,23 @@ def roc(pr, Yt, true_class=0, which_column=-1):
 
 def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
              line_width=3, figsize=(8, 6)):
-    """Plots a ROC curve or multiple curves.
+    """Plots ROC curves.
 
-    The function can plot the results from multiple classifiers if fpr and tpr
-    are arrays where each column corresponds to a different classifier.
+    The function plots the ROC curve from multiple classifiers if `fpr` and
+    `tpr` are arrays where each column corresponds to a different classifier.
 
     Parameters
     ----------
-    fpr : array
-        An array containing the false positive rate at each probability
-        threshold
-    tpr : array
-        An array containing the true positive rate at each probability
-        threshold
+    fpr : numpy.ndarray
+        Array containing the false positive rate at each probability threshold.
+    tpr : numpy.ndarray
+        Array containing the true positive rate at each probability threshold.
     auc : float
-        The area under the ROC curve
+        The area under the ROC curve.
     labels : list, optional
-        Labels of each curve (e.g. ML algorithm names)
+        Labels of each curve (e.g. machine learning algorithm names).
     cols : list, optional
-        Colors of the line(s)
+        Colors of the curves.
     label_size : float, optional
         Size of x and y axis labels.
     tick_size: float, optional
@@ -221,19 +222,18 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
     line_width : float, optional
         Line width.
     """
-
+    warnings.warn("This function will be moved to a plotting util.",
+                  DeprecationWarning)
     # Automatically fill in the colors if not supplied
     if not isinstance(cols, basestring) and len(cols) == 0:
         cols = ['#185aa9', '#008c48', '#ee2e2f', '#f47d23', '#662c91',
                 '#a21d21', '#b43894', '#010202']
 
-    # This should work regardless of whether it's one or many roc curves
-    # fig=plt.figure(figsize=figsize)
+    # Plot the ROC curves
     fig = plt.gcf()
     ax = fig.add_subplot(111)
     ax.set_prop_cycle('color', cols)
     ax.plot(fpr, tpr, lw=line_width)
-    # ax.plot(fpr, tpr)
 
     ax.tick_params(axis='both', which='major', labelsize=tick_size)
 
@@ -242,19 +242,18 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
     plt.xlabel('False positive rate (contamination)', fontsize=label_size)
     plt.ylabel('True positive rate (completeness)', fontsize=label_size)
 
-    # Robust against the possibility of AUC being a single number instead of a
-    # list
+    # AUC is a single number instead of a list
     if not isinstance(auc, collections.Sequence):
         auc = [auc]
 
     if len(labels) > 0:
         labs = []
         for i in range(len(labels)):
-            labs.append(labels[i]+' (%.3f)' % (auc[i]))
+            labs.append(f'{labels[i]} {auc[i]:.3f}')
     else:
         labs = np.array(range(len(ax.lines)), dtype='str')
         for i in range(len(labs)):
-            labs[i] = (labs[i]+' (%.3f)' % (auc[i]))
+            labs[i] = (f'{labs[i]} {auc[i]:.3f}')
     plt.legend(labs, loc='lower right',  bbox_to_anchor=(0.95, 0.05))
     plt.tight_layout()
     plt.show()
@@ -276,7 +275,8 @@ def plot_confusion_matrix(cm, normalise=False, labels=None,
     title : str
        Plot title.
     """
-    warnings.warn("This function will be moved to a plotting util.")
+    warnings.warn("This function will be moved to a plotting util.",
+                  DeprecationWarning)
     if labels is None:
         labels = np.arange(len(cm[:, 0])).tolist()
     plt.figure()
