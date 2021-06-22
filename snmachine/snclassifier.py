@@ -98,99 +98,69 @@ def auc_score(classifier, X_features, y_true, which_column):
         AUC score.
     """
     probs = classifier.predict_proba(X_features)
-    fpr, tpr, auc = roc(pr=probs, Yt=y_true, which_column=which_column)
+    fpr, tpr, auc = compute_roc_values(probs=probs, y_test=y_true,
+                                       which_column=which_column)
     return auc  # symmetric because we want to maximise this output
 
 
-def roc(pr, Yt, true_class=0, which_column=-1):
-    """Produce the false positive rate and true positive rate required to plot
+def compute_roc_values(probs, y_test, which_column):
+    """Calculate the false positive rate, true positive rate, and AUC.
+
+    Produce the false positive rate and true positive rate required to plot
     a ROC curve, and the area under that curve.
 
     Parameters
     ----------
-    pr : array
-        An array of probability scores, either a 1d array of size N_samples or
-        an nd array, in which case the column corresponding to the true class
-        will be used.
-    Yt : array
-        An array of class labels, of size (N_samples,)
-    true_class : int, optional
-        Which class is taken to be the "true class" (e.g. Ia vs everything
-        else). If `which_column`!=-1, `true_class` is overriden. - NOTE this
-        only works for sequential labels (as in SPCC). Should NOT be used for
-        PLAsTiCC!
-    which_column : int, optional
-        Defaults to -1 where `true_class` is used instead. If
-        `which_column`!=-1, `true_class` is overriden and `which_column`
-        selects which column of the probabilities to take as the "true class".
-        - use this instead of `true_class` for PLAsTiCC.
+    probs : list-like of shape (n_samples, n_classes)
+        Class probabilities. The classes must be ordered in the same way as
+        `np.sort(y_test)`.
+    y_test : list-like
+        Labels of the events with which to test the classifier.
+    which_column : int
+        Selects which column of the probabilities to take as the "true class".
+        If `probs` is not a 1D array, `which_column` must be specified.
 
     Returns
     -------
-    fpr : array
-        An array containing the false positive rate at each probability
-        threshold.
-    tpr : array
-        An array containing the true positive rate at each probability
-        threshold.
+    fpr : numpy.ndarray
+        Array containing the false positive rate at each probability threshold.
+    tpr : numpy.ndarray
+        Array containing the true positive rate at each probability threshold.
     auc : float
-        The area under the ROC curve
+        Area under the ROC curve.
     """
-    probs = pr.copy()
-    Y_test = Yt.copy()
+    if which_column >= np.shape(probs)[1]:
+        raise IndexError(f'`which_column` must be -1 or between 0 and '
+                         f'{np.shape(probs)[1]-1}.')
+    prob_true = probs[:, which_column]
 
-    # Deals with starting class assignment at 1.
-    min_class = (int)(Y_test.min())
+    # The classes are in the same order as `probs`
+    unique_labels = np.unique(y_test)
+    true_class = unique_labels[which_column]
 
-    Y_test = Y_test.squeeze()
-    # sequential labels (as in SPCC) case - backwards compatibility
-    if len(pr.shape) > 1 and which_column == -1:
-        try:
-            probs_1 = probs[:, true_class-min_class]
-        except IndexError:
-            raise IndexError('If `which_column` is -1, the `Yt` labels must be'
-                             'sequential and `true_class` must be provided.')
-    # Used by `optimised_classify`
-    elif len(pr.shape) > 1 and which_column != -1:
-        if which_column >= np.shape(probs)[1]:
-            sys.exit(f'`which_column` must be -1 or between 0 and '
-                     f'{np.shape(probs)[1]-1}.')
-            # some error is happening and the raise error bellow does not stop
-            # the code -> TODO: find why and fix it
-            raise IndexError(f'`which_column` must be -1 or between 0 and '
-                             f'{np.shape(probs)[1]-1}.')
-        probs_1 = probs[:, which_column]
+    # Creates an array where each column is the prediction for each threshold
+    threshold = np.linspace(0., 1., 50)
+    threshold_grid = np.tile(threshold, (len(prob_true), 1))
+    prob_true_grid = np.tile(prob_true, (len(threshold), 1)).T
+    is_pred_true = prob_true_grid >= threshold_grid
 
-        # the classes are in the same order as `probs`
-        unique_labels = np.unique(Yt)
+    is_true = (y_test == true_class)
+    is_true = np.tile(is_true, (len(threshold), 1)).T
 
-        true_class = unique_labels[which_column]
-    # We give a 1D array of probability so use it - no ambiguity
-    else:
-        probs_1 = probs
+    # Calculate the number of true/false positives/negatives
+    tp = (is_pred_true & is_true).sum(axis=0)  # true positive
+    fp = (is_pred_true & ~is_true).sum(axis=0)  # false positive
+    tn = (~is_pred_true & ~is_true).sum(axis=0)  # true negative
+    fn = (~is_pred_true & is_true).sum(axis=0)  # false negative
 
-    threshold = np.linspace(0., 1., 50)  # 50 evenly spaced numbers between 0,1
-
-    # This creates an array where each column is the prediction for each
-    # threshold
-    preds = np.tile(probs_1,
-                    (len(threshold), 1)).T >= np.tile(threshold,
-                                                      (len(probs_1), 1))
-    Y_bool = (Y_test == true_class)
-    Y_bool = np.tile(Y_bool, (len(threshold), 1)).T
-
-    TP = (preds & Y_bool).sum(axis=0)
-    FP = (preds & ~Y_bool).sum(axis=0)
-    TN = (~preds & ~Y_bool).sum(axis=0)
-    FN = (~preds & Y_bool).sum(axis=0)
-
-    tpr = np.zeros(len(TP))
-    tpr[TP != 0] = TP[TP != 0]/(TP[TP != 0] + FN[TP != 0])
-    fpr = FP/(FP+TN)
-
+    # Calculate the true/false positive rates
+    tpr = np.zeros(len(tp))  # true positive rate
+    tpr[tp != 0] = tp[tp != 0]/(tp[tp != 0] + fn[tp != 0])
+    fpr = fp/(fp+tn)  # false positive rate
     fpr = np.array(fpr)[::-1]
     tpr = np.array(tpr)[::-1]
 
+    # Calculate the area under the ROC curve
     auc = trapz(tpr, fpr)
 
     return fpr, tpr, auc
@@ -576,9 +546,8 @@ def run_several_classifiers(classifier_list, features, labels,
     for classifier_name in classifier_list:
         best_classifier = classifier_instances[classifier_name]
         probs = probabilities[classifier_name]
-
-        fpr_class, tpr_class, auc_class = roc(probs, y_test,
-                                              which_column=which_column)
+        fpr_class, tpr_class, auc_class = compute_roc_values(
+            probs, y_test, which_column=which_column)
         fom_class, _ = FoM(probs, y_test, which_column=which_column,
                            full_output=False)
         print(f'Classifier {classifier_name}: AUC = {auc_class} ; FoM = '
@@ -986,8 +955,8 @@ class BaseClassifier():
             AUC score.
         """
         probs = classifier.predict_proba(X_features)
-        fpr, tpr, auc = roc(pr=probs, Yt=y_true,
-                            which_column=self.which_column)
+        fpr, tpr, auc = compute_roc_values(probs=probs, y_true=y_true,
+                                           which_column=self.which_column)
         return auc  # symmetric because we want to maximise this output
 
 
