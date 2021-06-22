@@ -70,14 +70,12 @@ def classification_test(classifiers_list, featz, types):
 
     # Run the classifiers
     which_column = 0  # column that corresponds to SN Ia in this dataset
-    snclassifier.run_several_classifiers(classifier_list=classifiers_list,
-                                         features=features, labels=data_labels,
-                                         param_grid=None, scoring='accuracy',
-                                         train_set=.3, scale_features=True,
-                                         which_column=which_column,
-                                         output_root=out_dir, random_seed=42,
-                                         **{'plot_roc_curve': False,
-                                            'number_processes': 4})
+    snclassifier.run_several_classifiers(
+        classifier_list=classifiers_list, features=features,
+        labels=data_labels, param_grid={'lgbm': {'num_leaves': [10, 30, 50]}},
+        scoring='accuracy', train_set=.3, scale_features=True,
+        which_column=which_column, output_root=out_dir, random_seed=42,
+        **{'plot_roc_curve': False, 'number_processes': 4})
 
     # True AUC values
     auc_truth = {'nb': 0.5841146038130118,
@@ -87,12 +85,13 @@ def classification_test(classifiers_list, featz, types):
                  'random_forest': 0.9597353136129243,
                  'boost_dt': 0.9296758265832312,
                  'boost_rf': 0.9615539090674187,
-                 'neural_network': 0.9217849479277842}
+                 'neural_network': 0.9217849479277842,
+                 'lgbm': 0.94423863}
 
     # Check if the classifiers reproduce the true AUC values within tolerance
     for classifier in classifiers_list:
         auc = np.load(os.path.join('classifications', f'auc_{classifier}.npy'))
-        np.testing.assert_allclose(auc, auc_truth[classifier], rtol=0.1)
+        np.testing.assert_allclose(auc, auc_truth[classifier], rtol=0.05)
 
 
 @pytest.mark.slow
