@@ -13,7 +13,6 @@ import collections
 import itertools
 import os
 import pickle
-import sys
 import time
 import warnings
 
@@ -100,7 +99,7 @@ def auc_score(classifier, X_features, y_true, which_column):
     probs = classifier.predict_proba(X_features)
     fpr, tpr, auc = compute_roc_values(probs=probs, y_test=y_true,
                                        which_column=which_column)
-    return auc  # symmetric because we want to maximise this output
+    return auc
 
 
 def compute_roc_values(probs, y_test, which_column):
@@ -140,8 +139,8 @@ def compute_roc_values(probs, y_test, which_column):
 
     # Creates an array where each column is the prediction for each threshold
     threshold = np.linspace(0., 1., 50)
-    threshold_grid = np.tile(threshold, (len(prob_true), 1))
     prob_true_grid = np.tile(prob_true, (len(threshold), 1)).T
+    threshold_grid = np.tile(threshold, (len(prob_true), 1))
     is_pred_true = prob_true_grid >= threshold_grid
 
     is_true = (y_test == true_class)
@@ -164,6 +163,148 @@ def compute_roc_values(probs, y_test, which_column):
     auc = trapz(tpr, fpr)
 
     return fpr, tpr, auc
+
+
+def compute_f1(probs,  y_test, which_column, full_output=False):
+    """Compute the best F1 score.
+
+    Computes the F1 score for many probability threshold increments
+    and selects the best one.
+
+    Parameters
+    ----------
+    probs : list-like of shape (n_samples, n_classes)
+        Class probabilities. The classes must be ordered in the same way as
+        `np.sort(y_test)`.
+    y_test : list-like
+        Labels of the events with which to test the classifier.
+    which_column : int
+        Selects which column of the probabilities to take as the "true class".
+        If `probs` is not a 1D array, `which_column` must be specified.
+    full_output : bool, optional
+        If True returns two vectors corresponding to F1 as a function of
+        threshold, instead of the best value. By deafult, it is False.
+
+    Returns
+    -------
+    best_f1 : float (If `full_output=False`)
+        The largest F1 value.
+    best_threshold : numpy.ndarray (If `full_output=False`)
+        The probability threshold corresponding to `best_f1`.
+    f1  : array (If `full_output=True`)
+        F1 as a function of threshold.
+    threshold  : numpy.ndarray (If `full_output=True`)
+        Vector of thresholds (from 0 to 1).
+    """
+    if which_column >= np.shape(probs)[1]:
+        raise IndexError(f'`which_column` must be -1 or between 0 and '
+                         f'{np.shape(probs)[1]-1}.')
+    prob_true = probs[:, which_column]
+
+    # The classes are in the same order as `probs`
+    unique_labels = np.unique(y_test)
+    true_class = unique_labels[which_column]
+
+    # Creates an array where each column is the prediction for each threshold
+    threshold = np.arange(0, 1, 0.01)
+    prob_true_grid = np.tile(prob_true, (len(threshold), 1)).T
+    threshold_grid = np.tile(threshold, (len(prob_true), 1))
+    is_pred_true = prob_true_grid > threshold_grid
+
+    is_true = (y_test == true_class)
+    is_true = np.tile(is_true, (len(threshold), 1)).T
+
+    # Compute the number of true/false positives/negatives
+    tp = (is_pred_true & is_true).sum(axis=0)  # true positive
+    fp = (is_pred_true & ~is_true).sum(axis=0)  # false positive
+    fn = (~is_pred_true & is_true).sum(axis=0)  # false negative
+
+    # Compute F1
+    f1 = np.zeros(len(tp))
+    f1[tp != 0] = 2*tp[tp != 0]/(2 * tp[tp != 0] + fn[tp != 0] + fp[tp != 0])
+
+    if full_output:
+        return f1, threshold
+    else:
+        best_f1 = f1.max()
+        best_threshold_index = np.argmax(f1)
+        best_threshold = threshold[best_threshold_index]
+        return best_f1, best_threshold
+
+
+def compute_fom(probs,  y_test, which_column, full_output=False):
+    """Compute a Kessler figure of merit.
+
+    Computes a Kessler figure of merit (FoM) for many probability threshold
+    increments and selects the best one.
+
+    FoM is defined as:
+    .. math:: FoM = TP^{2} / ((TP+FN)*(TP+3*FP))
+
+    Parameters
+    ----------
+    probs : list-like of shape (n_samples, n_classes)
+        Class probabilities. The classes must be ordered in the same way as
+        `np.sort(y_test)`.
+    y_test : list-like
+        Labels of the events with which to test the classifier.
+    which_column : int
+        Selects which column of the probabilities to take as the "true class".
+        If `probs` is not a 1D array, `which_column` must be specified.
+    full_output : bool, optional
+        If True returns two vectors corresponding to FoM as a function of
+        threshold, instead of the best value. By deafult, it is False.
+
+    Returns
+    -------
+    best_fom : float (If `full_output=False`)
+        The largest FoM value.
+    best_threshold : numpy.ndarray (If `full_output=False`)
+        The probability threshold corresponding to `best_fom`.
+    fom  : array (If `full_output=True`)
+        FoM as a function of threshold.
+    threshold  : numpy.ndarray (If `full_output=True`)
+        Vector of thresholds (from 0 to 1).
+    """
+    weight = 3.0
+
+    if which_column >= np.shape(probs)[1]:
+        raise IndexError(f'`which_column` must be -1 or between 0 and '
+                         f'{np.shape(probs)[1]-1}.')
+    prob_true = probs[:, which_column]
+
+    # The classes are in the same order as `probs`
+    unique_labels = np.unique(y_test)
+    true_class = unique_labels[which_column]
+
+    # Creates an array where each column is the prediction for each threshold
+    threshold = np.arange(0, 1, 0.01)
+    prob_true_grid = np.tile(prob_true, (len(threshold), 1)).T
+    threshold_grid = np.tile(threshold, (len(prob_true), 1))
+    is_pred_true = prob_true_grid > threshold_grid
+
+    is_true = (y_test == true_class)
+    is_true = np.tile(is_true, (len(threshold), 1)).T
+
+    # Compute the number of true/false positives/negatives
+    tp = (is_pred_true & is_true).sum(axis=0)  # true positive
+    fp = (is_pred_true & ~is_true).sum(axis=0)  # false positive
+    fn = (~is_pred_true & is_true).sum(axis=0)  # false negative
+
+    # Compute FoM
+    fom = np.zeros(len(tp))
+    fom[tp != 0] = (tp[tp != 0]**2
+                    / (tp[tp != 0] + fn[tp != 0])
+                    / (tp[tp != 0] + weight * fp[tp != 0]))
+
+    if full_output:
+        return fom, threshold
+
+    else:
+        best_fom = fom.max()
+        best_threshold_index = np.argmax(fom)
+        best_threshold = threshold[best_threshold_index]
+        return best_fom, best_threshold
 
 
 def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
@@ -266,166 +407,6 @@ def plot_confusion_matrix(cm, normalise=False, labels=None,
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-
-
-def F1(pr,  Yt, true_class, full_output=False):
-    """Calculate an F1 score for many probability threshold increments
-    and select the best one.
-
-    Parameters
-    ----------
-    pr : array
-        An array of probability scores, either a 1d array of size N_samples or
-        an nd array, in which case the column corresponding to the true class
-        will be used.
-    Yt : array
-        An array of class labels, of size (N_samples,)
-    true_class : int
-        which class is taken to be the "true class" (e.g. Ia vs everything
-        else)
-    full_output : bool, optional
-        If true returns two vectors corresponding to F1 as a function of
-        threshold, instead of the best value.
-
-    Returns
-    -------
-    best_F1 : float
-        (If full_output=False) The largest F1 value.
-    best_threshold : array
-        (If full_output=False) The probability threshold corresponding to
-        best_F1.
-    f1  : array
-        (If full_output=True) F1 as a function of threshold.
-    threshold  : array
-        (If full_output=True) Vector of thresholds (from 0 to 1)
-    """
-    probs = pr.copy()
-    Y_test = Yt.copy()
-    min_class = Y_test.min()  # deals with starting class assignment at 1.
-    Y_test = Y_test.squeeze()
-
-    if len(pr.shape) > 1:
-        probs_1 = probs[:, true_class-min_class]
-    else:
-        probs_1 = probs
-
-    threshold = np.arange(0, 1, 0.01)
-
-    # This creates an array where each column is the prediction for each
-    # threshold
-    preds = np.tile(probs_1,
-                    (len(threshold), 1)).T > np.tile(threshold,
-                                                     (len(probs_1), 1))
-    Y_bool = (Y_test == true_class)
-    Y_bool = np.tile(Y_bool, (len(threshold), 1)).T
-
-    TP = (preds & Y_bool).sum(axis=0)
-    FP = (preds & ~Y_bool).sum(axis=0)
-    FN = (~preds & Y_bool).sum(axis=0)
-
-    f1 = np.zeros(len(TP))
-    f1[TP != 0] = 2*TP[TP != 0]/(2 * TP[TP != 0] + FN[TP != 0] + FP[TP != 0])
-
-    if full_output:
-        return f1, threshold
-    else:
-        best_F1 = f1.max()
-        best_threshold_index = np.argmax(f1)
-        best_threshold = threshold[best_threshold_index]
-
-        return best_F1, best_threshold
-
-
-def FoM(pr,  Yt, which_column=-1, true_class=1, full_output=False):
-    """Calculate a Kessler FoM for many probability threshold increments
-    and select the best one.
-
-    FoM is defined as:
-    FoM = TP^2/((TP+FN)(TP+3*FP))
-
-    Parameters
-    ----------
-    pr : array
-        An array of probability scores, either a 1d array of size N_samples or
-        an nd array, in which case the column corresponding to the true class
-        will be used.
-    Yt : array
-        An array of class labels, of size (N_samples,)
-    true_class : int
-        which class is taken to be the "true class" (e.g. Ia vs everything
-        else)
-    full_output : bool, optional
-        If true returns two vectors corresponding to F1 as a function of
-        threshold, instead of the best value.
-
-    Returns
-    -------
-    best_FoM : float
-        (If full_output=False) The largest FoM value.
-    best_threshold : array
-        (If full_output=False) The probability threshold corresponding to
-        best_FoM.
-    fom  : array
-        (If full_output=True) FoM as a function of threshold.
-    threshold  : array
-        (If full_output=True) Vector of thresholds (from 0 to 1).
-    """
-    weight = 3.0
-
-    probs = pr.copy()
-    Y_test = Yt.copy()
-    min_class = Y_test.min()  # deals with starting class assignment at 1.
-    Y_test = Y_test.squeeze()
-
-    # sequential labels (as in SPCC) case - backwards compatibility
-    if len(pr.shape) > 1 and which_column == -1:
-        try:
-            probs_1 = probs[:, true_class-min_class]
-        except IndexError:
-            raise IndexError('If `which_column` is -1, the `Yt` labels must be'
-                             'sequential and `true_class` must be provided.')
-    elif len(pr.shape) > 1 and which_column != -1:
-        if which_column >= np.shape(probs)[1]:
-            raise IndexError(f'`which_column` must be -1 or between 0 and '
-                             f'{np.shape(probs)[1]-1}.')
-        probs_1 = probs[:, which_column]
-
-        # the classes are in the same order as `probs`
-        unique_labels = np.unique(Yt)
-
-        true_class = unique_labels[which_column]
-    # We give a 1D array of probability so use it - no ambiguity
-    else:
-        probs_1 = probs
-
-    threshold = np.arange(0, 1, 0.01)
-
-    # This creates an array where each column is the prediction for each
-    # threshold
-    preds = np.tile(probs_1,
-                    (len(threshold), 1)).T > np.tile(threshold,
-                                                     (len(probs_1), 1))
-    Y_bool = (Y_test == true_class)
-    Y_bool = np.tile(Y_bool, (len(threshold), 1)).T
-
-    TP = (preds & Y_bool).sum(axis=0)
-    FP = (preds & ~Y_bool).sum(axis=0)
-    FN = (~preds & Y_bool).sum(axis=0)
-
-    fom = np.zeros(len(TP))
-    fom[TP != 0] = (TP[TP != 0]**2
-                    / (TP[TP != 0] + FN[TP != 0])
-                    / (TP[TP != 0] + weight * FP[TP != 0]))
-
-    if full_output:
-        return fom, threshold
-
-    else:
-        best_FoM = fom.max()
-        best_threshold_index = np.argmax(fom)
-        best_threshold = threshold[best_threshold_index]
-
-        return best_FoM, best_threshold
 
 
 def run_several_classifiers(classifier_list, features, labels,
@@ -548,8 +529,8 @@ def run_several_classifiers(classifier_list, features, labels,
         probs = probabilities[classifier_name]
         fpr_class, tpr_class, auc_class = compute_roc_values(
             probs, y_test, which_column=which_column)
-        fom_class, _ = FoM(probs, y_test, which_column=which_column,
-                           full_output=False)
+        fom_class, _ = compute_fom(probs, y_test, which_column=which_column,
+                                   full_output=False)
         print(f'Classifier {classifier_name}: AUC = {auc_class} ; FoM = '
               f'{fom_class}.')
         fpr.append(fpr_class)
