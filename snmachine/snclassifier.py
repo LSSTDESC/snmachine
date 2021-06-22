@@ -267,16 +267,16 @@ def plot_confusion_matrix(cm, normalise=False, labels=None,
     Parameters
     ----------
     cm : np.array
-       The confusion matrix, as computed by the
-       snclassifier.compute_confusion_matrix
+       The confusion matrix, as computed by `sklearn.metrics.confusion_matrix`.
     normalise : bool, optional
-       If False, we use the absolute numbers in each matrix entry. If True, we
-       use the fractions within each true class
+       If False, use the absolute numbers in each matrix entry. If True,
+       normalise per true class.
     labels : list of str
-       Labels for each class that appear in the plot
+       Ordered name of each class in the confusion matrix.
     title : str
-       Surprisingly, this is the title for the plot.
+       Plot title.
     """
+    warnings.warn("This function will be moved to a plotting util.")
     if labels is None:
         labels = np.arange(len(cm[:, 0])).tolist()
     plt.figure()
