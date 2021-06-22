@@ -63,11 +63,9 @@ def classification_test(classifiers_list, featz, types):
 
     # Transform the astropy tables into pandas
     features = featz.to_pandas()
-    features.rename(columns={'Object': 'object_id'}, inplace=True)
-    features.set_index('object_id', inplace=True)
+    features.set_index('Object', inplace=True)
     data_labels = types.to_pandas()
-    data_labels.rename(columns={'Object': 'object_id'}, inplace=True)
-    data_labels.set_index('object_id', inplace=True)
+    data_labels.set_index('Object', inplace=True)
     data_labels = data_labels['Type']
 
     # Run the classifiers
