@@ -517,14 +517,12 @@ def run_several_classifiers(classifier_list, features, labels,
 
     Returns
     -------
-    X_train : pandas.DataFrame
-        Features of the events with which to train the classifier.
-    X_test : pandas.DataFrame
-        Features of the events with which to test the classifier.
-    y_train : pandas.core.series.Series
-        Labels of the events with which to train the classifier.
-    y_test : pandas.core.series.Series
-        Labels of the events with which to test the classifier.
+    classifier_instances : dict
+        Dictionary containing the classifier names (`str`) as key and its
+        optimised classifier instance as values.
+    cms : dict
+        Dictionary containing the classifier names (`str`) as key and its
+        confusion matrix as values.
     """
     initial_time = time.time()
 
