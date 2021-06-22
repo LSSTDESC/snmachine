@@ -36,7 +36,8 @@ from utils import plasticc_utils
 
 # This allows the user to easily loop through all possible classifiers
 choice_of_classifiers = ['svm', 'knn', 'random_forest', 'decision_tree',
-                         'boost_dt', 'boost_rf', 'nb', 'neural_network']
+                         'boost_dt', 'boost_rf', 'nb', 'neural_network',
+                         'lgbm']
 # boost_rf is a set of boosted random forests which Max came up with.
 
 
@@ -69,7 +70,7 @@ def logloss_score(classifier, X_features, y_true):
 
 
 def auc_score(classifier, X_features, y_true, which_column):
-    """A Area Under the ROC Curve (AUC) classification score.
+    """Area Under the ROC Curve (AUC) classification score.
 
     ROC stands for Receiver Operating Characteristic Curve
     This custom scoring method can be used in a grid search.
@@ -490,10 +491,13 @@ def run_several_classifiers(classifier_list, features, labels,
         If True (default and recommended), rescale features using sklearn's
         preprocessing Scalar class.
     param_grid : {None, dict}, optional
-        Dictionary containing the parameters names (`str`) as keys and lists
-        of their possible settings as values.
-        If `None`, the default `param_grid` is used. This is defined in child
-        classes of `BaseClassifier`.
+        Dictionary containing the classifier names (`str`) as key and its
+        parameter grid dictionary as values. These inner dictionaries contain
+        the parameters names (`str`) as keys and lists of their possible
+        settings as values.
+        If `None`, the default `param_grid` is used for every classifier. This
+        is defined in the child classe of `BaseClassifier` corresponding to
+        the considered classifier.
     random_seed : {int, RandomState instance}, optional
         Random seed or random state instance to use. It allows reproducible
         results.
@@ -613,7 +617,6 @@ def run_several_classifiers(classifier_list, features, labels,
     for classifier_name in classifier_list:
         cm = sklearn.metrics.confusion_matrix(y_true=y_test,
                                               y_pred=y_pred[classifier_name])
-        # also, I should use the CM that is defined in the utils instead
         cms[classifier_name] = cm
 
     print('Time taken to extract features: {:.2f}s.'
@@ -663,34 +666,49 @@ def _split_train_test(features, labels, train_set, random_seed):
 
 def _run_classifier(classifier_name, X_train, y_train, X_test,
                     param_grid, scoring, which_column, random_seed):
-    """
+    """Run a specific classifier.
 
-    Note this does not have the same inputs as
-    `run_several_classifiers`
+    Note this function does not have the same inputs as
+    `snclassifier.run_several_classifiers`
 
     Parameters
     ----------
-    features : pandas.DataFrame
-        Features of the dataset events.
-    labels : pandas.DataFrame
-        Labels of the dataset events.
-    train_set : {float, list-like}
-        If float, it is the fraction of objects that will be used as training
-        set. If list, it is the IDs of the objects to use as training set.
-    random_seed : {int, RandomState instance}
-        Random seed or random state instance to use. It allows reproducible
-        results.
-
-    Returns
-    -------
+    classifier_name : str
+        Name of the classifier, which is used to save it.
     X_train : pandas.DataFrame
         Features of the events with which to train the classifier.
     X_test : pandas.DataFrame
         Features of the events with which to test the classifier.
     y_train : pandas.core.series.Series
         Labels of the events with which to train the classifier.
-    y_test : pandas.core.series.Series
-        Labels of the events with which to test the classifier.
+    param_grid : {None, dict}, optional
+        Dictionary containing the parameters names (`str`) as keys and lists
+        of their possible settings as values.
+        If `None`, the default `param_grid` is used. This is defined in child
+        classes of `BaseClassifier`.
+    scoring : callable, str
+        The metric used to evaluate the predictions on the test or
+        validation sets. See
+        `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
+        how to choose this input.
+        `snmachine` also contains the 'logloss' and 'auc' custom scoring.
+        For more details about these, see `logloss_score` and
+        `auc_score`, respectively.
+    which_column : int, optional
+        The index of the column refering to the desired class (e.g. Ias, which
+        might correspond to class 1, or 90). This allows the user to optimise
+        for different classes.
+    random_seed : {int, RandomState instance}, optional
+        Random seed or random state instance to use. It allows reproducible
+        results.
+
+    Returns
+    -------
+    probs : list-like of shape (n_samples, n_classes)
+        Class probabilities of `X_test`. The order of the classes corresponds
+        to `best_classifier.classes_`.
+    best_classifier : classifier instance
+        The optimised classifier instance.
     """
 
     # Add to `classifier_map` any classifier implemeted in `snclassifier`
@@ -709,7 +727,14 @@ def _run_classifier(classifier_name, X_train, y_train, X_test,
         classifier_name=classifier_name, random_seed=random_seed)
 
     # Optimise classifier
-    classifier_instance.optimise(X_train, y_train, param_grid=param_grid,
+    try:  # use inputed parameter grid for that classifier
+        param_grid_classifier = param_grid[classifier_name]
+    except (KeyError, TypeError):  # use default parameter grid
+        # KeyError -> Some classifiers have a parameter grid but not this one
+        # TypeError -> No classifiers have parameter grid, so it is None
+        param_grid_classifier = None
+    classifier_instance.optimise(X_train, y_train,
+                                 param_grid=param_grid_classifier,
                                  scoring=scoring, number_cv_folds=5,
                                  metadata=None,
                                  **{'which_column': which_column})
