@@ -12,10 +12,12 @@ import pytest
 from astropy.table import Table
 from snmachine import example_data, sndata, snclassifier
 
-
+# Path to the dataset
 test_data_path = os.path.join(example_data, 'SPCC_SUBSET', '')
 precomp_features_path = os.path.join(example_data, 'output_spcc_no_z',
                                      'features', 'spcc_all_wavelets.dat')
+
+# Separate the slower classifiers
 slow_classifiers = ['boost_dt', 'random_forest', 'boost_rf']
 
 
@@ -54,27 +56,42 @@ def test_module_loading():
                                                  'not be loaded')
 
 
-def classification_test(cls, featz, types):
+def classification_test(classifiers_list, featz, types):
     out_dir = os.path.join('classifications', '')
     if not os.path.exists(out_dir):
         subprocess.call(['mkdir', out_dir])
 
-    snclassifier.run_pipeline(featz, types, classifiers=cls,
-                              number_processes=4, plot_roc_curve=False,
-                              output_name=out_dir)
+    # Transform the astropy tables into pandas
+    features = featz.to_pandas()
+    features.set_index('Object', inplace=True)
+    data_labels = types.to_pandas()
+    data_labels.set_index('Object', inplace=True)
+    data_labels = data_labels['Type']
 
-    auc_truth = {'nb': 5.498296484233418102e-01,
-                 'svm': 9.607832585029829620e-01,
-                 'knn': 8.683540372670807139e-01,
-                 'random_forest': 9.794267790146994335e-01,
-                 'decision_tree': 9.046528076757488490e-01,
-                 'boost_dt': 9.597607478934744307e-01,
-                 'boost_rf': 9.791576972753551766e-01,
-                 'neural_network': 9.637969739836398375e-01}
+    # Run the classifiers
+    which_column = 0  # column that corresponds to SN Ia in this dataset
+    snclassifier.run_several_classifiers(
+        classifier_list=classifiers_list, features=features,
+        labels=data_labels, param_grid={'lgbm': {'num_leaves': [10, 30, 50]}},
+        scoring='accuracy', train_set=.3, scale_features=True,
+        which_column=which_column, output_root=out_dir, random_seed=42,
+        **{'plot_roc_curve': False, 'number_processes': 4})
 
-    for classifier in cls:
-        auc = np.loadtxt(os.path.join('classifications', classifier+'.auc'))
-        np.testing.assert_allclose(auc, auc_truth[classifier], rtol=0.25)
+    # True AUC values
+    auc_truth = {'nb': 0.5841146038130118,
+                 'svm': 0.9233858736560651,
+                 'knn': 0.9538666569300424,
+                 'decision_tree': 0.7431595533136354,
+                 'random_forest': 0.9597353136129243,
+                 'boost_dt': 0.9296758265832312,
+                 'boost_rf': 0.9615539090674187,
+                 'neural_network': 0.9217849479277842,
+                 'lgbm': 0.94423863}
+
+    # Check if the classifiers reproduce the true AUC values within tolerance
+    for classifier in classifiers_list:
+        auc = np.load(os.path.join('classifications', f'auc_{classifier}.npy'))
+        np.testing.assert_allclose(auc, auc_truth[classifier], rtol=0.05)
 
 
 @pytest.mark.slow
