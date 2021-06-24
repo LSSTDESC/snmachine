@@ -654,6 +654,8 @@ class PlasticcData(EmptyDataset):
 
         # add `object_id` column because it is useful to call it
         metadata_pd['object_id'] = metadata_pd.index
+        # snmachine and PLAsTiCC use a different denomination
+        metadata_pd.rename({'ddf_bool': 'ddf'}, axis='columns', inplace=True)
         self.metadata = metadata_pd
 
         # Everything bellow is to conform with `snmachine` version < 2.0
@@ -668,7 +670,7 @@ class PlasticcData(EmptyDataset):
     def set_inner_metadata(self, obj):
         """Set the metadata inside the astropy observation data.
 
-        This inner metadata is only used by `snmachine` version < 2.0 but 
+        This inner metadata is only used by `snmachine` version < 2.0 but
         to have backwards compatibility, we keep it.
 
         Parameters
@@ -796,7 +798,7 @@ class PlasticcData(EmptyDataset):
         current_objs = self.metadata.object_id.astype(str)
         is_new_obj = np.in1d(current_objs, new_objs)
         self.metadata = self.metadata[is_new_obj]
-        
+
         # Reorder the object names to match the metadata
         self.object_names = self.metadata['object_id']
 
