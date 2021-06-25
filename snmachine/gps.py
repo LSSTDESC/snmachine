@@ -440,8 +440,9 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
         all_gp_instances[i] = gp_instance
         all_chisq_over_datapoints[i] = chisq_over_datapoints
         i += 1
-        if ((i == number_diff_kernels) and
-            (chisq_over_datapoints > threshold_chisq_over_datapoints)):
+        is_above_threshold = (
+            chisq_over_datapoints > threshold_chisq_over_datapoints)
+        if ((i == number_diff_kernels) and is_above_threshold):
             # All kernels/parameters are bad for this object
             output = _choose_less_bad_kernel(all_obj_gp, all_gp_instances,
                                              all_chisq_over_datapoints,
