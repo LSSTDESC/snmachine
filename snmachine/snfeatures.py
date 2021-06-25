@@ -853,7 +853,7 @@ class TemplateFeatures(Features):
             Fitted light curve
         """
         obj = lc.meta['name']
-        tab = features[features['Object']==obj]
+        tab = features[features['Object'] == obj]
         params = np.array([tab[c] for c in tab.columns[1:]]).flatten()
 
         if len(params) == 0:
@@ -1227,7 +1227,8 @@ class ParametricFeatures(Features):
                     # as an astropy table
                     iniparams = get_params(starting_point, obj, f)
 
-                pos = [iniparams + walker_spread*np.randn(n_params) for i in range(n_walkers)]
+                pos = [iniparams + walker_spread*np.randn(n_params)
+                       for i in range(n_walkers)]
 
                 sampler = emcee.EnsembleSampler(n_walkers, n_params,
                                                 self.lnprob_emcee,
@@ -1272,8 +1273,9 @@ class ParametricFeatures(Features):
         -------
         """
         # Uniform prior. Directly compares arrays
-        if ((np.any(params > self.model.upper_limit)) or
-            (np.any(params < self.model.upper_limit))):
+        is_not_within_limits = ((np.any(params > self.model.upper_limit))
+                                or (np.any(params < self.model.upper_limit)))
+        if is_not_within_limits:
             return -np.inf
         else:
             ynew = self.model.evaluate(x, params)
@@ -1476,7 +1478,8 @@ class WaveletFeatures(Features):
         self._number_gp = int(sum(obj_gps['filter'] == obj_gps['filter'][0]))
         self._is_wavelet_valid(wavelet_name)
 
-        rec_space = self.reconstruct_feature_space(reduced_features, '.')
+        rec_space = self.reconstruct_feature_space(reduced_features,
+                                                   path_saved_eigendecomp)
         # Feature space has dimensions:
         #  # passbands * # levels * 2 * # gp evaluations
         denominator = 2 * self.number_gp * len(self.filter_set)
