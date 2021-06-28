@@ -370,45 +370,6 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
     plt.show()
 
 
-def plot_confusion_matrix(cm, normalise=False, labels=None,
-                          title='Confusion matrix'):
-    """Make a plot from a pre-computed confusion matrix.
-
-    Parameters
-    ----------
-    cm : np.array
-       The confusion matrix, as computed by `sklearn.metrics.confusion_matrix`.
-    normalise : bool, optional
-       If False, use the absolute numbers in each matrix entry. If True,
-       normalise per true class.
-    labels : list of str
-       Ordered name of each class in the confusion matrix.
-    title : str
-       Plot title.
-    """
-    warnings.warn("This function will be moved to a plotting util.",
-                  DeprecationWarning)
-    if labels is None:
-        labels = np.arange(len(cm[:, 0])).tolist()
-    plt.figure()
-    if normalise:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
-    plt.title(title)
-    plt.colorbar()
-    tick_marks = np.arange(len(labels))
-    plt.xticks(tick_marks, labels, rotation=45)
-    plt.yticks(tick_marks, labels)
-    fmt = '.2f' if normalise else 'd'
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, format(cm[i, j], fmt), horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-
-
 def run_several_classifiers(classifier_list, features, labels,
                             scoring, train_set, scale_features=True,
                             param_grid=None, random_seed=42, which_column=0,
