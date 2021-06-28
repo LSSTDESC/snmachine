@@ -1,5 +1,5 @@
 """
-Module containing most of the analysis tools needed in snmachine
+Module for plotting and associated functions.
 """
 
 import os
@@ -7,9 +7,90 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
+
+from sklearn.metrics import confusion_matrix
+
+dict_label_to_real_plasticc = {15: 'TDE', 42: 'SNII', 52: 'SNIax', 62: 'SNIbc',
+                               64: 'KN', 67: 'SNIa-91bg', 88: 'AGN',
+                               90: 'SNIa', 95: 'SLSN-I'}
 
 
-def plot_chisq_over_pts_per_label(dataset, output_root=None,
+def plot_confusion_matrix(y_true, y_pred, title=None, normalise=None,
+                          dict_label_to_real=None, figsize=None):
+    """Plot a confusion matrix.
+
+    Uses the true and predicted class labels to compute a confusion matrix.
+    This can be non-normalised, normalised by true class/row (the diagonals
+    show the accuracy of each class), and by predicted class/column (the
+    diagonals show the precision).
+
+    Parameters
+    ----------
+    y_true : 1D array-like
+        Ground truth (correct) labels of shape (n_samples,).
+    y_true : 1D array-like
+        Predicted class labels of shape (n_samples,).
+    title : {None, str}, optional
+        Title of the plot.
+    normalise : {None, str}, optional
+       If `None`, use the absolute numbers in each matrix entry. If 'accuracy',
+       normalise per true class. If 'precision', normalise per predicted class.
+    dict_label_to_real : dict, optional
+        Dictionary containing the class labels as key and its real name as
+        values. E.g. for PLAsTiCC
+        `dict_label_to_real = {42: 'SNII', 62: 'SNIbc', 90: 'SNIa'}`.
+        If `None`, the default class labels are used.
+    figsize : {None, tuple}
+        If `None`, use the default `figsize` of the plot. Otherwise, create a
+        figure with the given size.
+
+    Returns
+    -------
+    cm : np.array
+       The confusion matrix, as computed by `sklearn.metrics.confusion_matrix`.
+    """
+    # Make and normalise the confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
+    if normalise == 'accuracy':
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        kwargs = {'vmin': 0, 'vmax': 1}
+        print("Confusion matrix normalised by true class.")
+    elif normalise == 'precision':
+        cm = cm.astype('float') / cm.sum(axis=0)[np.newaxis, :]
+        kwargs = {'vmin': 0, 'vmax': 1}
+        print("Confusion matrix normalised by predicted class.")
+    else:
+        print('Confusion matrix without normalisation')
+
+    # Classes in the dataset
+    target_names = np.unique(y_true)
+    if dict_label_to_real is not None:
+        target_names = np.vectorize(dict_label_to_real.get)(target_names)
+
+    # Plot the confusion matrix
+    if figsize is not None:
+        _, ax = plt.subplots(figsize=figsize)  # good values: (9, 7)
+    else:
+        _, ax = plt.subplots()
+    sns.heatmap(cm, xticklabels=target_names,
+                yticklabels=target_names, cmap='Blues',
+                annot=True, fmt='.2f', lw=0.5,
+                cbar_kws={'label': 'Fraction of events',
+                          'shrink': .82}, **kwargs)
+    ax.set_xlabel('Predicted class')
+    ax.set_ylabel('True class')
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+    ax.set_aspect('equal')
+    if title is not None:
+        plt.title(title)
+
+    return cm
+
+
+# X^2/number of datapoints plot
+def plot_chisq_over_pts_per_label(dataset, dict_label_to_real=None,
+                                  output_root=None,
                                   file_name='chisq_over_pts_plots.pdf'):
     """Plots the X^2/number of datapoints histogram for each class label.
 
@@ -20,6 +101,11 @@ def plot_chisq_over_pts_per_label(dataset, output_root=None,
     ----------
     dataset : Dataset object (sndata class)
         Dataset
+    dict_label_to_real : dict, optional
+        Dictionary containing the class labels as key and its real name as
+        values. E.g. for PLAsTiCC
+        `dict_label_to_real = {42: 'SNII', 62: 'SNIbc', 90: 'SNIa'}`.
+        If `None`, the default class labels are used.
     output_root : {None, str}, optional
         If `None`, don't save the plots. If `str`, it is the output directory,
         so save the plots there.
@@ -41,8 +127,9 @@ def plot_chisq_over_pts_per_label(dataset, output_root=None,
                            figsize=(20, number_rows_plot*3))
     for i in np.arange(len(unique_labels)):
         plt.subplot(number_rows_plot, 3, i+1)
-        make_chisq_over_pts_plot_of_label(dict_chisq_over_pts_per_label,
-                                          unique_labels[i])
+        make_chisq_over_pts_plot_of_label(
+            dict_chisq_over_pts_per_label, unique_labels[i],
+            dict_label_to_real=dict_label_to_real)
 
     # Common x and y labels
     fig.text(0.5, 0.04, '$X^2$/datapoints', ha='center')
@@ -111,7 +198,8 @@ def get_chisq_over_pts_per_obj(dataset):
     return pd.DataFrame.from_dict(dict_chisq_over_pts_per_obj, orient='index')
 
 
-def make_chisq_over_pts_plot_of_label(dict_chisq_over_pts_per_label, label):
+def make_chisq_over_pts_plot_of_label(dict_chisq_over_pts_per_label, label,
+                                      dict_label_to_real=None):
     """Plots X^2/number of datapoints histogram of the objects of a specific label.
 
     Parameters
@@ -122,11 +210,18 @@ def make_chisq_over_pts_plot_of_label(dict_chisq_over_pts_per_label, label):
     label : int, str or float
         The label needs to be the same type as the one in the keys of
         `dict_chisq_over_pts_per_label`.
+    dict_label_to_real : dict, optional
+        Dictionary containing the class labels as key and its real name as
+        values. E.g. for PLAsTiCC
+        `dict_label_to_real = {42: 'SNII', 62: 'SNIbc', 90: 'SNIa'}`.
+        If `None`, the default class labels are used.
 
     Raises
     ------
     KeyError
         `label` needs to be a key in `dict_chisq_over_pts_per_label`.
+    KeyError
+        If `dict_label_to_real` is not None, `label` needs to be a key in it.
     """
     try:
         chisq_over_pts_this_label = dict_chisq_over_pts_per_label[label]
@@ -139,10 +234,13 @@ def make_chisq_over_pts_plot_of_label(dict_chisq_over_pts_per_label, label):
     max_chisq_over_pts = np.max(chisq_over_pts_this_label)
     mean_chisq_over_pts = np.mean(chisq_over_pts_this_label)
 
-    dict_label_to_real = {15: 'TDE', 42: 'SNII', 52: 'SNIax', 62: 'SNIbc',
-                          64: 'KN', 67: 'SNIa-91bg', 88: 'AGN', 90: 'SNIa',
-                          95: 'SLSN-I'}  # to erase later; This is for debug
-    label = dict_label_to_real[label]
+    if dict_label_to_real is not None:
+        try:
+            label = dict_label_to_real[label]
+        except KeyError:
+            raise KeyError(f'{label} must be a key in the dictionary '
+                           f'`dict_label_to_real`. Alternativelly, set this '
+                           f'dictionary to `None`.')
 
     number_objs = len(chisq_over_pts_this_label)
     plot_label = (f'Label {label} ; {number_objs} objs ; <reduced $X^2$> = '
