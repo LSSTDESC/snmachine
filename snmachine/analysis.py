@@ -10,12 +10,16 @@ import pandas as pd
 import seaborn as sns
 
 from sklearn.metrics import confusion_matrix
+from snmachine import snclassifier
 
+# Built-in dictionaries of class labels to their real name
+dict_label_to_real_spcc = {1: 'SNIa', 2: 'SNII', 3: 'SNIbc'}
 dict_label_to_real_plasticc = {15: 'TDE', 42: 'SNII', 52: 'SNIax', 62: 'SNIbc',
                                64: 'KN', 67: 'SNIa-91bg', 88: 'AGN',
                                90: 'SNIa', 95: 'SLSN-I'}
 
 
+# Plotting functions
 def plot_confusion_matrix(y_true, y_pred, title=None, normalise=None,
                           dict_label_to_real=None, figsize=None):
     """Plot a confusion matrix.
@@ -86,6 +90,83 @@ def plot_confusion_matrix(y_true, y_pred, title=None, normalise=None,
         plt.title(title)
 
     return cm
+
+
+def plot_classifier_roc_curve(y_true, y_probs, title=None,
+                              dict_label_to_real=None, figsize=None, **kwargs):
+    """Plot ROC curves of each class vs other classes.
+
+    Parameters
+    ----------
+    y_true : array (N_obj, )
+        An array containing the true class for each object.
+    y_probs : array (# obj, # classes)
+        An array containing probabilities of each class for each object.
+    title : {None, str}, optional
+        Title of the plot.
+    dict_label_to_real : dict, optional
+        Dictionary containing the class labels as key and its real name as
+        values. E.g. for PLAsTiCC
+        `dict_label_to_real = {42: 'SNII', 62: 'SNIbc', 90: 'SNIa'}`.
+        If `None`, the default class labels are used.
+    figsize : {None, tuple}
+        If `None`, use the default `figsize` of the plot. Otherwise, create a
+        figure with the given size.
+    **kwargs : dict, optional
+        colors : dict, default = None
+            Dictionary containing the classes names (`str`) as key and its
+            colour as values. If `None`, it uses the `seaborn` default colours.
+        lines_width: int, default = 3
+            Lines width to print the ROC curves.
+        xlabel : str, deafult = 'False positive rate (contamination)'
+            The x label text.
+        ylabel : str, default = 'True positive rate (completeness)'
+            The y label text.
+    """
+    # Classes in the dataset
+    target_names = np.unique(y_true)
+    if dict_label_to_real is not None:
+        target_names = np.vectorize(dict_label_to_real.get)(target_names)
+
+    # Compute ROC curve and AUC for each class
+    fpr, tpr, auc = {}, {}, {}  # initialize dictionaries
+
+    for i in range(len(target_names)):
+        fpr[i], tpr[i], auc[i] = snclassifier.compute_roc_values(
+            probs=y_probs, y_test=y_true, which_column=i)
+
+    # Plot the ROC curves
+    if figsize is not None:
+        plt.figure(figsize=figsize)  # good values: (10, 6)
+    else:
+        plt.figure()
+
+    linewidth = kwargs.pop('lines_width', 3)
+    colors = kwargs.pop('colors', None)
+    number_classes = len(list(auc.keys()))
+    for i in np.arange(number_classes):
+        true_name = target_names[i]
+        if colors is not None:
+            plt.plot(fpr[i], tpr[i], color=colors[true_name], lw=linewidth,
+                     label='AUC {} = {:0.3f}'.format(true_name, auc[i]))
+        else:
+            plt.plot(fpr[i], tpr[i], lw=linewidth,
+                     label='AUC {} = {:0.3f}'.format(true_name, auc[i]))
+
+    plt.plot([0, 1], [0, 1], 'k--', lw=linewidth)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+
+    xlabel = kwargs.pop('xlabel', 'False positive rate (contamination)')
+    ylabel = kwargs.pop('ylabel', 'True positive rate (completeness)')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
+    if title is not None:
+        plt.title(title)
+    else:
+        plt.title('Multi-Class ROC: 1 vs All')
 
 
 # X^2/number of datapoints plot

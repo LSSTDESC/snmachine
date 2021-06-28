@@ -7,10 +7,6 @@ from __future__ import division
 __all__ = []  # 'roc',
 
 
-from past.builtins import basestring
-
-import collections
-import itertools
 import os
 import pickle
 import time
@@ -307,12 +303,12 @@ def compute_fom(probs,  y_test, which_column, full_output=False):
         return best_fom, best_threshold
 
 
-def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
-             line_width=3, figsize=(8, 6)):
-    """Plots ROC curves.
+def plot_roc_curves(fpr, tpr, auc, labels=[], **kwargs):
+    """Plots ROC curves using false/true positive rates and AUC.
 
-    The function plots the ROC curve from multiple classifiers if `fpr` and
-    `tpr` are arrays where each column corresponds to a different classifier.
+    The function plots the ROC curve from multiple classifiers/ classes. If
+    `tpr` and `fpr` are arrays, these correspond to the false/true positive
+    rate at each probability threshold for different classifiers or classes.
 
     Parameters
     ----------
@@ -320,11 +316,11 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
         Array containing the false positive rate at each probability threshold.
     tpr : numpy.ndarray
         Array containing the true positive rate at each probability threshold.
-    auc : float
+    auc : list of floats
         The area under the ROC curve.
     labels : list, optional
         Labels of each curve (e.g. machine learning algorithm names).
-    cols : list, optional
+    colors : list, optional
         Colors of the curves.
     label_size : float, optional
         Size of x and y axis labels.
@@ -332,42 +328,71 @@ def plot_roc(fpr, tpr, auc, labels=[], cols=[],  label_size=26, tick_size=18,
         Size of tick labels.
     line_width : float, optional
         Line width.
+    **kwargs : dict, optional
+        colors : list-like, default = None
+            Ordered colours to print the ROC curves.
+        lines_width: list-like, default = None
+            Ordered lines width to print the ROC curves.
+        xlabel : str, deafult = 'False positive rate (contamination)'
+            The x label text.
+        ylabel : str, default = 'True positive rate (completeness)'
+            The y label text.
+        tick_size : int, default = None
+            Size of the ticks.
+        font_size : int, default = None
+            Font size of the legend.
     """
-    warnings.warn("This function will be moved to a plotting util.",
-                  DeprecationWarning)
-    # Automatically fill in the colors if not supplied
-    if not isinstance(cols, basestring) and len(cols) == 0:
-        cols = ['#185aa9', '#008c48', '#ee2e2f', '#f47d23', '#662c91',
-                '#a21d21', '#b43894', '#010202']
-
-    # Plot the ROC curves
+    # Initialise the plot
     fig = plt.gcf()
     ax = fig.add_subplot(111)
-    ax.set_prop_cycle('color', cols)
-    ax.plot(fpr, tpr, lw=line_width)
 
-    ax.tick_params(axis='both', which='major', labelsize=tick_size)
+    # Set the kwargs properties
+    colors = kwargs.pop('colors', None)
+    if colors is not None:
+        ax.set_prop_cycle(color=colors)
+
+    lines_width = kwargs.pop('lines_width', None)
+    if lines_width is not None:
+        ax.set_prop_cycle(linewidth=lines_width)
+
+    # Plot the ROC curves
+    ax.plot(fpr, tpr)
+
+    # Other aesthetic settings
+    tick_size = kwargs.pop('tick_size', None)
+    if tick_size is not None:
+        ax.tick_params(axis='both', which='major', labelsize=tick_size)
+    else:
+        ax.tick_params(axis='both', which='major')
 
     ax.xaxis.set_major_locator(plt.MaxNLocator(6))
     ax.yaxis.set_major_locator(plt.MaxNLocator(6))
-    plt.xlabel('False positive rate (contamination)', fontsize=label_size)
-    plt.ylabel('True positive rate (completeness)', fontsize=label_size)
 
-    # AUC is a single number instead of a list
-    if not isinstance(auc, collections.Sequence):
+    xlabel = kwargs.pop('xlabel', 'False positive rate (contamination)')
+    ylabel = kwargs.pop('ylabel', 'True positive rate (completeness)')
+    font_size = kwargs.pop('font_size', None)
+    if font_size is not None:
+        plt.xlabel(xlabel, fontsize=font_size)
+        plt.ylabel(ylabel, fontsize=font_size)
+    else:
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+
+    try:
+        auc[0]
+    except TypeError:  # `auc` was a number and not a list
         auc = [auc]
 
     if len(labels) > 0:
-        labs = []
+        new_labels = []
         for i in range(len(labels)):
-            labs.append(f'{labels[i]} {auc[i]:.3f}')
+            new_labels.append(f'{labels[i]} {auc[i]:.3f}')
     else:
-        labs = np.array(range(len(ax.lines)), dtype='str')
-        for i in range(len(labs)):
-            labs[i] = (f'{labs[i]} {auc[i]:.3f}')
-    plt.legend(labs, loc='lower right',  bbox_to_anchor=(0.95, 0.05))
+        new_labels = np.array(range(len(ax.lines)), dtype='str')
+        for i in range(len(new_labels)):
+            new_labels[i] = (f'{auc[i]:.3f}')
+    plt.legend(new_labels, bbox_to_anchor=(0.95, 0.05))
     plt.tight_layout()
-    plt.show()
 
 
 def run_several_classifiers(classifier_list, features, labels,
@@ -518,8 +543,9 @@ def run_several_classifiers(classifier_list, features, labels,
     # Make plots
     plot_roc_curve = kwargs.pop('plot_roc_curve', True)
     if plot_roc_curve:
-        plot_roc(fpr, tpr, auc, labels=classifier_list, label_size=16,
-                 tick_size=12, line_width=1.5)
+        plot_roc_curves(fpr=fpr, tpr=tpr, auc=auc, labels=classifier_list,
+                        **{'font_size': 16, 'tick_size': 12,
+                           'lines_width': 1.5})
 
     # Construct confusion matrices
     cms = {}
@@ -848,7 +874,7 @@ class BaseClassifier():
             value = logloss_score
         self._scoring = value
 
-    def _set_auc_score_kwargs(self, y_train, **kwargs):
+    def _set_auc_score_roc_cur(self, y_train, **kwargs):
         """Set the parameters needed for the AUC score.
 
         Parameters
