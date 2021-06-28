@@ -716,7 +716,8 @@ class TemplateFeatures(Features):
         use_redshift : bool
             Whether or not to use provided redshift when fitting objects
         number_processes : int, optional
-            Number of processors to use for parallelisation (shared memory only)
+            Number of processors to use for parallelisation (shared memory
+            only).
         restart : bool
             Whether or not to restart from multinest chains
 
@@ -739,7 +740,8 @@ class TemplateFeatures(Features):
             else:
                 self.model = sncosmo.Model(self.templates[mod_name])
                 print(F'MODEL-NAME: {mod_name}')
-            params = ['['+mod_name+']'+pname for pname in self.model.param_names]
+            params = ['['+mod_name+']'+pname
+                      for pname in self.model.param_names]
             labels = ['Object'] + params
             output = Table(names=labels,
                            dtype=['U32'] + ['f'] * (len(labels) - 1))
@@ -899,8 +901,8 @@ class TemplateFeatures(Features):
             sncosmo.registry.register(bp, force=True)
 
     def goodness_of_fit(self, d):
-        """Legacy code - to be deprecated. Use
-        `compute_overall_chisq_over_datapoints` from `chisq.py`.
+        """Legacy code - to be deprecated. Use `compute_overall_chisq_over_pts`
+        from `chisq.py`.
 
         Test (for any feature set) how well the reconstruction from the
         features fits each of the objects in the dataset.
@@ -1283,8 +1285,8 @@ class ParametricFeatures(Features):
             return -chi2/2.
 
     def goodness_of_fit(self, d):
-        """Legacy code - to be deprecated. Use
-        `compute_overall_chisq_over_datapoints` from `chisq.py`.
+        """Legacy code - to be deprecated. Use `compute_overall_chisq_over_pts`
+        from `chisq.py`.
 
         Test (for any feature set) how well the reconstruction from the
         features fits each of the objects in the dataset.
@@ -1992,7 +1994,7 @@ class WaveletFeatures(Features):
 
         Returns
         -------
-        chisq_over_datapoints : pandas.DataFrame
+        chisq_over_pts : pandas.DataFrame
             Table with the X^2/datapoints per object.
 
         Raises
@@ -2018,7 +2020,7 @@ class WaveletFeatures(Features):
                                '`wavelet_name`, respectively.')
             self.reconstruct_real_space(dataset, **kwargs)
 
-        chisq_over_datapoints = np.zeros(len(objs))
+        chisq_over_pts = np.zeros(len(objs))
         for i in range(len(objs)):
             obj = objs[i]
             obj_gps = dataset.models[obj].to_pandas()
@@ -2030,14 +2032,13 @@ class WaveletFeatures(Features):
                 obj_true = obj_data
             else:  # compare with estimated observations
                 obj_true = obj_gps
-            chisq_over_datapoints[i] = (
-                chisq.compute_overall_chisq_over_datapoints(obj_true,
-                                                            obj_reconstruct))
-        chisq_over_datapoints = pd.DataFrame(data=chisq_over_datapoints,
-                                             index=objs,
-                                             columns=['chisq_over_datapoints'])
-        chisq_over_datapoints.index.rename('object_id', inplace=True)
-        return chisq_over_datapoints
+            chisq_over_pts[i] = (
+                chisq.compute_overall_chisq_over_pts(obj_true,
+                                                     obj_reconstruct))
+        chisq_over_pts = pd.DataFrame(data=chisq_over_pts, index=objs,
+                                      columns=['chisq_over_pts'])
+        chisq_over_pts.index.rename('object_id', inplace=True)
+        return chisq_over_pts
 
     def reconstruct_real_space(self, dataset, feature_space, wavelet_name,
                                path_saved_gp_files=None):

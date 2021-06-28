@@ -269,7 +269,7 @@ class EmptyDataset:
         # plt.gca().tick_params(labelsize=8)
         try:
             chi_obj = [fname]
-            chi_2_single_object = self.compute_chisq_over_datapoints(
+            chi_2_single_object = self.compute_chisq_over_pts(
                 chi_obj)[chi_obj[0]]
         except TypeError:
             print('The chisquare over datapoints can not be computed because '
@@ -502,7 +502,7 @@ class EmptyDataset:
             plt.xlabel('Redshift', fontsize=16)
             plt.show()
 
-    def compute_chisq_over_datapoints(self, subset='none'):
+    def compute_chisq_over_pts(self, subset='none'):
         """
         Returns the reduced chi squared for each object, once a model has been
         set.
@@ -529,7 +529,7 @@ class EmptyDataset:
                 data_list = self.object_names
             else:
                 data_list = subset
-            chisq_over_datapoints_dict = {}
+            chisq_over_pts_dict = {}
 
             for obj in data_list:
                 obj_data_pd = self.data[obj].to_pandas()
@@ -540,11 +540,11 @@ class EmptyDataset:
                 obj_data_pd['filter'] = obj_data_pd_pb
                 obj_model_pd['filter'] = obj_model_pd_pb
 
-                chisq_over_pts = cs.compute_overall_chisq_over_datapoints(
+                chisq_over_pts = cs.compute_overall_chisq_over_pts(
                     obj_data_pd, obj_model_pd)
-                chisq_over_datapoints_dict[obj] = chisq_over_pts
+                chisq_over_pts_dict[obj] = chisq_over_pts
 
-            return chisq_over_datapoints_dict
+            return chisq_over_pts_dict
 
 
 class PlasticcData(EmptyDataset):
