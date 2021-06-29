@@ -2,9 +2,8 @@
 Module containing some basic functions that do not depend on any other file
 and that can be imported to all the files needing them.
 
-The X^2 related functions work only for 1 object. If you want to calculate
-them for several, you need to contruct your own function
-to loop through.
+The X^2 related functions work only for one object. If you want to calculate
+them for several, you need to contruct your own function to loop through.
 """
 
 __all__ = []
@@ -14,11 +13,12 @@ import numpy as np
 from scipy import interpolate
 
 
-def compute_overall_chisq_over_datapoints(obj_data_with_passband,
-                                          obj_model_with_passband):
-    """Calculates the X^2/number of points between an objects's observations
-    with different passbands and the interpolated computed data.
+def compute_overall_chisq_over_pts(obj_data_with_passband,
+                                   obj_model_with_passband):
+    """Computes the overall X^2/number of points of an event.
 
+    Computes the X^2/number of points between an objects's observation with
+    different passbands and the interpolated computed data.
     `obj_data_with_passband` is considered the real data and
     `obj_model_with_passband` the data we get from a model we wish to compare
     the goodness of fit using X^2/number of datapoints. The X^2/number of
@@ -42,7 +42,7 @@ def compute_overall_chisq_over_datapoints(obj_data_with_passband,
 
     Returns
     -------
-    chisq_over_datapoints : float
+    chisq_over_pts : float
         X^2/number of datapoints between observations and the interpolated
         computed data over all passbands.
     """
@@ -50,14 +50,15 @@ def compute_overall_chisq_over_datapoints(obj_data_with_passband,
     chisq = compute_overall_chisq(obj_data_with_passband,
                                   obj_model_with_passband)
     number_data_points = np.shape(obj_data_with_passband)[0]
-    chisq_over_datapoints = chisq/number_data_points
-    return chisq_over_datapoints
+    chisq_over_pts = chisq/number_data_points
+    return chisq_over_pts
 
 
 def compute_overall_chisq(obj_data_with_passband, obj_model_with_passband):
-    """Calculates the X^2 statistic between an objects's observations with
-    different passbands and the interpolated computed data.
+    """Computes the overall X^2 statistic of an event.
 
+    Computes the X^2 statistic between an objects's observations with
+    different passbands and the interpolated computed data.
     `obj_data_with_passband` is considered the real data and
     `obj_model_with_passband` the data we get from a model we wish to compare
     the goodness of fit using X^2. The X^2 of the observation is the sum of
@@ -96,10 +97,11 @@ def compute_overall_chisq(obj_data_with_passband, obj_model_with_passband):
     return chisq
 
 
-def compute_chisq_over_datapoints(obj_data, obj_model):
-    """Calculates X^2/number of datapoints between an object's observations
-    and the interpolated computed data.
+def compute_chisq_over_pts(obj_data, obj_model):
+    """Computes X^2/number of datapoints of an event.
 
+    Computes X^2/number of datapoints between an object's observations and the
+    interpolated computed data.
     `obj_data` is considered the real data and `obj_model` the data we get
     from a model we wish to compare the goodness of fit using X^2/number of
     datapoints. The X^2/number of datapoints is calculated as the sum of
@@ -123,7 +125,7 @@ def compute_chisq_over_datapoints(obj_data, obj_model):
 
     Returns
     -------
-    chisq_over_datapoints : float
+    chisq_over_pts : float
         X^2/number of datapoints between observations and the interpolated
         computed data.
 
@@ -133,14 +135,16 @@ def compute_chisq_over_datapoints(obj_data, obj_model):
         Both `obj_data` and `obj_model` need to contain the columns `mjd` and
         `flux`. `obj_data` also needs `flux_error`.
     """
-    number_datapoints = np.shape(obj_data)[0]
+    number_pts = np.shape(obj_data)[0]
     chisq = compute_chisq(obj_data, obj_model)
-    chisq_over_datapoints = chisq/number_datapoints
-    return chisq_over_datapoints
+    chisq_over_pts = chisq/number_pts
+    return chisq_over_pts
 
 
 def compute_chisq(obj_data, obj_model):
-    """Calculates the X^2 statistic between an object's observations and the
+    """Computes the X^2 statistic of an event.
+
+    Computes the X^2 statistic between an object's observations and the
     interpolated computed data.
 
     `obj_data` is considered the real data and `obj_model` the data we get
@@ -178,7 +182,7 @@ def compute_chisq(obj_data, obj_model):
     try:
         assert({'mjd', 'flux', 'flux_error'}.issubset(set(obj_data)))
         assert({'mjd', 'flux'}.issubset(set(obj_model)))
-    except:
+    except AssertionError:
         raise AttributeError('Both `obj_data` and `obj_model` need to contain '
                              'the columns `mjd` and `flux`. `obj_data` also '
                              'needs `flux_error`.')
@@ -223,11 +227,11 @@ def rename_passband_column(obj_obs, original_passband_column_name=None):
         `original_passband_column_name`.
     """
     obj_obs_with_passband = obj_obs.rename(index=str, columns={
-        "pb": "passband", "": "passband", "filter": "passband",
-        "original_passband_column_name": "passband"})
+        'pb': 'passband', "": 'passband', 'filter': 'passband',
+        original_passband_column_name: 'passband'})
     try:
         obj_obs_with_passband.passband
-    except:
+    except AttributeError:
         raise AttributeError('`obj_obs` need to contain the column `passband` '
                              'as: `pb`, `filter` or inputed in '
                              '`original_passband_column_name`.')

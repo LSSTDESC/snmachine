@@ -4,7 +4,6 @@ Tests related to Gaussian Processes module.
 
 import os
 import pickle
-import sys
 
 import numpy as np
 import pytest
@@ -65,14 +64,14 @@ def test_2d_gps():
 
 
 @pytest.mark.gp
-def test_gps_chisq_over_datapoints():
+def test_gps_chisq_over_pts():
     """Test the X^2/number of datapoints values.
 
     Run the Gaussian Processes for `example_data` (the first 5 PLAsTiCC's
     objects) and verify it returns the expected values of X^2/number of
     datapoints.
     """
-    chisq_over_datapoints_true_values = {
+    chisq_over_pts_true_values = {
         '615': 5695.7282978660587, '713': 1.0678220723794234,
         '730': 0.83081717132128197, '745': 1.0721589469244539,
         '1124': 0.77145060447736791
@@ -81,8 +80,8 @@ def test_gps_chisq_over_datapoints():
     gps.compute_gps(example_data, number_gp=100, t_min=0, t_max=1100,
                     kernel_param=[500., 20.], output_root=None,
                     number_processes=1, gp_dim=1)
-    chisq_over_datapoints = example_data.compute_chisq_over_datapoints()
+    chisq_over_pts = example_data.compute_chisq_over_pts()
 
-    for obj in chisq_over_datapoints.keys():
-        np.testing.assert_allclose(chisq_over_datapoints[obj],
-                                   chisq_over_datapoints_true_values[obj])
+    for obj in chisq_over_pts.keys():
+        np.testing.assert_allclose(chisq_over_pts[obj],
+                                   chisq_over_pts_true_values[obj])

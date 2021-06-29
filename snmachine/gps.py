@@ -426,32 +426,32 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
     all_obj_gp = number_diff_kernels*['']  # initializing
     all_gp_instances = number_diff_kernels*['']  # initializing
     # just a random number > 1 to initialize
-    all_chisq_over_datapoints = np.zeros(number_diff_kernels) + 666
-    threshold_chisq_over_datapoints = 2  # because that is a good number
+    all_chisq_over_pts = np.zeros(number_diff_kernels) + 666
+    threshold_chisq_over_pts = 2  # because that is a good number
     while ((i < number_diff_kernels) and
-           (all_chisq_over_datapoints[i-1] > threshold_chisq_over_datapoints)):
+           (all_chisq_over_pts[i-1] > threshold_chisq_over_pts)):
         obj_gp, gp_instance = fit_gp(kernel_name=possible_kernel_names[i],
                                      kernel_param=possible_kernel_params[i],
                                      obj_data=obj_data, gp_times=gp_times)
-        chisq_over_datapoints = cs.compute_chisq_over_datapoints(obj_data,
-                                                                 obj_gp)
+        chisq_over_pts = cs.compute_chisq_over_pts(obj_data, obj_gp)
         kernel_id = possible_kernel_ids[i]
         all_obj_gp[i] = obj_gp
         all_gp_instances[i] = gp_instance
-        all_chisq_over_datapoints[i] = chisq_over_datapoints
+        all_chisq_over_pts[i] = chisq_over_pts
         i += 1
-        if ((i == number_diff_kernels) and
-            (chisq_over_datapoints > threshold_chisq_over_datapoints)):
+        is_above_threshold = (
+            chisq_over_pts > threshold_chisq_over_pts)
+        if ((i == number_diff_kernels) and is_above_threshold):
             # All kernels/parameters are bad for this object
             output = _choose_less_bad_kernel(all_obj_gp, all_gp_instances,
-                                             all_chisq_over_datapoints,
+                                             all_chisq_over_pts,
                                              possible_kernel_ids)
-            obj_gp, gp_instance, chisq_over_datapoints, kernel_id = output
+            obj_gp, gp_instance, chisq_over_pts, kernel_id = output
     return obj_gp, gp_instance, kernel_id
 
 
 def _choose_less_bad_kernel(all_obj_gp, all_gp_instances,
-                            all_chisq_over_datapoints, possible_kernel_ids):
+                            all_chisq_over_pts, possible_kernel_ids):
     """If all kernels give a bad reduced X^2, choose the less bad of them.
 
     Parameters
@@ -461,7 +461,7 @@ def _choose_less_bad_kernel(all_obj_gp, all_gp_instances,
         GP instance in `all_gp_instances`.
     all_gp_instances : list-like
         List of all GP instances used to fit the object.
-    all_chisq_over_datapoints : list-like
+    all_chisq_over_pts : list-like
         List of the X^2/number of datapoints values for each GP instance in
         `all_gp_instances`.
     possible_kernel_ids : list-like
@@ -474,16 +474,16 @@ def _choose_less_bad_kernel(all_obj_gp, all_gp_instances,
     less_bad_gp_instance : george.gp.GP
         The GP instance that was used to fit the object. It is the one that
         gives the lower reduced X^2.
-    less_bad_chisq_over_datapoints : float
+    less_bad_chisq_over_pts : float
         The X^2/number of datapoints given by the Gaussian Process `gp`.
     """
-    index_min = np.argmin(all_chisq_over_datapoints)
+    index_min = np.argmin(all_chisq_over_pts)
     less_bad_obj_gp = all_obj_gp[index_min]
     less_bad_gp_instance = all_gp_instances[index_min]
-    less_bad_chisq_over_datapoints = all_chisq_over_datapoints[index_min]
+    less_bad_chisq_over_pts = all_chisq_over_pts[index_min]
     less_bad_kernel = possible_kernel_ids[index_min]
     return (less_bad_obj_gp, less_bad_gp_instance,
-            less_bad_chisq_over_datapoints, less_bad_kernel)
+            less_bad_chisq_over_pts, less_bad_kernel)
 
 
 def fit_gp(kernel_name, kernel_param, obj_data, gp_times):
