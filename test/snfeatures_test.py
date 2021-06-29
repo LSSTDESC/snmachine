@@ -155,6 +155,7 @@ def test_templates_nested(load_example_data):
 
         np.testing.assert_allclose(np.sort(gof), np.sort(gof_truth), rtol=rtol)
 
+
 """ TODO: this tests fails so we need to discover what changed in the
 # parametric fits with the packages' update
 def test_newling_leastsq(load_example_data):
@@ -264,4 +265,4 @@ def test_reconstruction(dataset=ex_data):
     reconstruct_error = wf.compute_reconstruct_error(
         dataset, **{'feature_space': rec_space, 'wavelet_name': wavelet_name})
 
-    assert np.allclose(reconstruct_error.chisq_over_datapoints, 0)
+    assert np.allclose(reconstruct_error.chisq_over_pts, 0)

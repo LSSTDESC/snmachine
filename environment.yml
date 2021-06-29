@@ -35,3 +35,4 @@ dependencies:
     - schwimmbad
     - cesium
     - tqdm
+    - lightgbm
