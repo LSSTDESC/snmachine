@@ -23,6 +23,9 @@ The list of released versions of this package can be found [here](https://github
 The following people have contributed to snmachine v1.0:
 Michelle Lochner, Robert Schuhmann, Jason McEwen, Hiranya Peiris, Rahul Biswas, Ofer Lahav, Johnny Holland, Max Winter
 
+The following people have contributed to snmachine v2.0:
+Michelle Lochner, Jason McEwen, Hiranya Peiris, Catarina Alves, Tarek Allam Jr, Rahul Biswas, Christian Setzer, Robert Schuhmann
+
 ## Contributing to snmachine
 
 We welcome developers! Simply fork it into your own private repository and submit a pull request when ready. You can contribute by adding new dataset-reading methods, new feature extraction methods or new classification algorithms. Please create an issue if you have any questions or problems with the code.
@@ -34,6 +37,6 @@ Lochner, M., McEwen, J., Peiris, H., Lahav, O., Winter, M. (2016) “Photometric
 
 ## Installation
 
-snmachine is compatible Python3.
+`snmachine` is compatible with Python3.
 
 The installation is detailed in the online documentation. ([Install Guide](https://lsstdesc.github.io/snmachine/install.html)):
