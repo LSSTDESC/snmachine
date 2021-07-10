@@ -23,12 +23,14 @@ The list of released versions of this package can be found [here](https://github
 The following people have contributed to snmachine v1.0:
 Michelle Lochner, Robert Schuhmann, Jason McEwen, Hiranya Peiris, Rahul Biswas, Ofer Lahav, Johnny Holland, Max Winter
 
-The following people have contributed to snmachine v2.0:
+The following people have contributed to snmachine v2.0.0:
 Michelle Lochner, Jason McEwen, Hiranya Peiris, Catarina Alves, Tarek Allam Jr, Rahul Biswas, Christian Setzer, Robert Schuhmann
 
 ## Contributing to snmachine
 
 We welcome developers! Simply fork it into your own private repository and submit a pull request when ready. You can contribute by adding new dataset-reading methods, new feature extraction methods or new classification algorithms. Please create an issue if you have any questions or problems with the code.
+
+See [this page](https://github.com/LSSTDESC/snmachine/blob/dev/CONTRIBUTING.md) for a useful guide to contributing to `snmachine`.
 
 ## Citation
 
