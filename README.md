@@ -12,7 +12,11 @@ Up-to-date documentation of `snmachine` can be found via the following Github Pa
 
 ## Usage Policy
 
-`snmachine` was developed within the DESC, using DESC resources, and so meets the criteria given in the DESC Publication Policy for being a “DESC product” ([DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf)).
+`snmachine` was developed within the DESC, using DESC resources, and so meets the criteria given in the DESC Publication Policy for being a “DESC product” ([DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf)). This software is released with a BSD 3-Clause License.
+
+## Release
+
+The list of released versions of this package can be found [here](https://github.com/LSSTDESC/snmachine/releases), with the `dev` branch including the most recent (non-released) development.
 
 ## Contributors
 
