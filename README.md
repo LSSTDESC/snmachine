@@ -12,7 +12,7 @@ Up-to-date documentation of `snmachine` can be found via the following Github Pa
 
 ## Usage Policy
 
-This code is made available within the LSST DESC Collaboration. `snmachine` was developed within the DESC, using DESC resources, and so meets the criteria given in the DESC Publication Policy for being a “DESC product” ([DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf)). We are aware that the codebase might be useful within other collaborations and welcome requests for access to the code for non-DESC use. If you wish to use the code outside DESC please submit your request [here](https://docs.google.com/forms/d/e/1FAIpQLSfHKNf-GeIGeRWODtwpVz_byXsUDBYISjlQk5lv1W9M0hgB3g/viewform?usp=sf_link).
+`snmachine` was developed within the DESC, using DESC resources, and so meets the criteria given in the DESC Publication Policy for being a “DESC product” ([DESC Publication Policy](http://lsstdesc.org/sites/default/files/LSST_DESC_Publication_Policy.pdf)).
 
 ## Contributors
 
