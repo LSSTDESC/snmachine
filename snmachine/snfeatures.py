@@ -117,8 +117,10 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
                 # redefine (since you can't pass arguments through Minuit)
                 for i in range(len(params)):
                     p = params[i]
-                    if (p < model.limits[model.param_names[i]][0] or
-                        p > model.limits[model.param_names[i]][1]):
+                    is_outside_limits = (
+                        p < model.limits[model.param_names[i]][0] or
+                        p > model.limits[model.param_names[i]][1])
+                    if is_outside_limits:
                         return np.inf
                 ynew = model.evaluate(x, params)
                 chi2 = np.sum((y-ynew)*(y-ynew)/err/err)
@@ -140,11 +142,11 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
                         val = np.random.uniform(model.limits[p][0],
                                                 model.limits[p][1])
                         input_args[p] = val
-                for p in model.param_names:
-                    input_args['limit_'+p] = model.limits[p]
 
-                m = Minuit(mini_func, pedantic=False, print_level=0,
-                           forced_parameters=model.param_names, **input_args)
+                m = Minuit(mini_func,
+                           name=model.param_names, **input_args)
+                for p in model.param_names:
+                    m.limits[p] = model.limits[p]
 
                 m.migrad()
                 parm = []
@@ -377,22 +379,27 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds, seed=-1):
     output = Table(names=labels, dtype=['U32']+['f']*(len(model.param_names)))
 
     row = [obj]
-
-    if use_redshift:
-        model.set(z=lc.meta['z'])
-        prms = model.param_names
-        prms = prms[1:]
-        bnds = bounds.copy()
-        bnds.pop('z', None)
-        res, fitted_model = sncosmo.fit_lc(lc, model, vparam_names=prms,
-                                           bounds=bnds, minsnr=0)
-    else:
-        res, fitted_model = sncosmo.fit_lc(lc, model,
-                                           vparam_names=model.param_names,
-                                           bounds=bounds, minsnr=0)
-    best = res['parameters']
-    best = best.tolist()
-    row += best
+    try:
+        if use_redshift:
+            model.set(z=lc.meta['z'])
+            prms = model.param_names
+            prms = prms[1:]
+            bnds = bounds.copy()
+            bnds.pop('z', None)
+            res, fitted_model = sncosmo.fit_lc(lc, model, vparam_names=prms,
+                                               bounds=bnds, minsnr=0)
+        else:
+            res, fitted_model = sncosmo.fit_lc(lc, model,
+                                               vparam_names=model.param_names,
+                                               bounds=bounds, minsnr=0)
+        best = res['parameters']
+        best = best.tolist()
+        row += best
+    except RuntimeError:  # the event failed
+        output = Table(names=labels,
+                       dtype=['U32']+['f']*(len(model.param_names)))
+        row += [lc.meta['z']]
+        row += (len(model.param_names) - 1) * [None]
     output.add_row(row)
     return output
 
@@ -668,7 +675,7 @@ class TemplateFeatures(Features):
                           'mlcs2k2': 'mlcs2k2', 'II': 'nugent-sn2n',
                           'IIn': 'nugent-sn2n', 'IIp': 'nugent-sn2p',
                           'IIl': 'nugent-sn2l', 'Ibc': 'nugent-sn1bc',
-                          'Ib':'nugent-sn1bc', 'Ic': 'nugent-sn1bc'}
+                          'Ib': 'nugent-sn1bc', 'Ic': 'nugent-sn1bc'}
         # Short names because of limitations in Multinest
         self.short_names = {'Ia': 'salt2', 'mlcs2k2': 'mlcs'}
         if sampler == 'nested':
@@ -783,14 +790,23 @@ class TemplateFeatures(Features):
                             prms = prms[1:]
                             bnds = self.bounds[self.templates[mod_name]].copy()
                             bnds.pop('z', None)
-                            res, fitted_model = sncosmo.fit_lc(
-                                lc, self.model, vparam_names=prms, bounds=bnds,
-                                minsnr=0)
+                            try:
+                                res, fitted_model = sncosmo.fit_lc(
+                                    lc, self.model, vparam_names=prms,
+                                    bounds=bnds, minsnr=0)
+                            except RuntimeError:  # the event failed to fit
+                                print(f'Obj. {obj} failed.')
                         else:
-                            res, fitted_model = sncosmo.fit_lc(
-                                lc, self.model, minsnr=0,
-                                vparam_names=self.model.param_names,
-                                bounds=self.bounds[self.templates[mod_name]])
+                            try:
+                                res, fitted_model = sncosmo.fit_lc(
+                                    lc, self.model, minsnr=0,
+                                    vparam_names=self.model.param_names,
+                                    bounds=self.bounds[
+                                        self.templates[mod_name]])
+                                print(res)
+                            except RuntimeError:  # the event failed to fit
+                                print(f'Obj. {obj} failed.')
+                                res = {}
                         best = res['parameters'].flatten('F').tolist()
                     row = [obj]+best
                     output.add_row(row)
@@ -1421,7 +1437,7 @@ class WaveletFeatures(Features):
         kwarg_gps.pop('normalise_var', None)
         kwarg_gps.pop('path_save_eigendecomp', None)
         gps.compute_gps(dataset=dataset, number_gp=number_gp, t_min=t_min,
-                        t_max=t_max, output_root=self.output_root,
+                        t_max=t_max, output_root=output_root,
                         number_processes=number_processes, gp_dim=gp_dim,
                         **kwarg_gps)
 
@@ -1438,7 +1454,7 @@ class WaveletFeatures(Features):
               ''.format(time.time()-initial_time))
         return reduced_features
 
-    def fit_sn(self, lc, features, lc_gps, wavelet_name,
+    def fit_sn(self, lc, features, dataset, wavelet_name,
                path_saved_eigendecomp, filter_set):
         """Reconstruct the observations in real space from reduced features.
 
@@ -1451,9 +1467,10 @@ class WaveletFeatures(Features):
             Projection of events onto a lower dimensional feature space.
             Shape (# events, `number_comps`), where `number_comps` is the
             # dimensions of lower dimensional feature space.
-        lc_gps : astropy.table.Table
-            Gaussian Process estimated light curve: Time, flux and flux error
-            predictions in each passband of the event.
+        dataset : Dataset object (sndata class)
+            Dataset with the Gaussian process (GP) loaded in the models. These
+            must contain the GP estimated light curve: Time, flux and flux
+            error predictions in each passband of the event.
         wavelet_name : str
             Name of the wavelets used.
         path_saved_eigendecomp : str
@@ -1474,6 +1491,9 @@ class WaveletFeatures(Features):
         obj_data = lc
         obj = obj_data.meta['name']
         reduced_features = features
+        # Obtain the Gaussian process estimated light curve: Time, flux and
+        # flux error predictions in each passband of the event.
+        lc_gps = dataset.models[obj]  # obtain the
         obj_gps = lc_gps.to_pandas()
 
         self._filter_set = filter_set
@@ -2464,7 +2484,7 @@ class AvocadoFeatures(Features):
 
         kwarg_gps = kwargs.copy()
         gps.compute_gps(dataset=dataset, number_gp=number_gp, t_min=t_min,
-                        t_max=t_max, output_root=self.output_root,
+                        t_max=t_max, output_root=output_root,
                         number_processes=number_processes, gp_dim=gp_dim,
                         **kwarg_gps)
 

@@ -57,28 +57,23 @@ def plot_tsne(Xfit, types, loc="upper left", type_dict=None):
     """
     unique_types = np.unique(types)
     colors = iter(cm.rainbow(np.linspace(0, 1, len(unique_types))))
-    if type_dict:
-        legend_names = type_dict.values
-    else:
-        legend_names = np.arange(len(unique_types))
 
     markers = ['o', '^', 's']
     legs = []
     for i in range(len(unique_types))[::-1]:
         inds = np.where(types == unique_types[i])[0]
+        if type_dict is not None:
+            label = type_dict.get(unique_types[i])
+        else:
+            label = unique_types[i]
         leg = plt.scatter(Xfit[inds, 0], Xfit[inds, 1], color=next(colors),
                           alpha=0.5, marker=markers[0], s=16.0, linewidths=0.3,
-                          rasterized=True)
+                          rasterized=True, label=label)
         legs.append(leg)
-    # plt.legend(legs[::-1], legend_names, scatterpoints=1,
-    #            bbox_to_anchor=(1.04,1), loc=loc)
-    # plt.gca().get_legend().get_frame().set_lw(0.2)
     plt.xlabel('Embedded feature 1')
     plt.ylabel('Embedded feature 2')
     plt.gcf().tight_layout()
-    plt.legend(legs[::-1], legend_names, scatterpoints=1,
-               bbox_to_anchor=(1.04, 1), loc=loc)
-    plt.gca().get_legend().get_frame().set_lw(0.2)
+    plt.legend(loc=loc)
     plt.plot()
 
 
@@ -98,4 +93,4 @@ def plot(feats, types, objs=[], seed=-1, type_dict=None):
     if len(objs) == 0:
         objs = feats['Object']
     Xfit = get_tsne(feats, objs, seed=seed)
-    plot_tsne(Xfit, types, type_dict)
+    plot_tsne(Xfit, types, type_dict=type_dict)
