@@ -3,17 +3,17 @@ Tests related to Gaussian Processes module.
 """
 
 import os
-import pickle
 
 import numpy as np
 import pytest
+import pandas as pd
+
 from snmachine import example_data, gps
 
 
 # Import test data
 example_data_path = os.path.join(example_data, 'example_data_for_tests.pckl')
-with open(example_data_path, 'rb') as input:
-    example_data = pickle.load(input)
+example_data = pd.read_pickle(example_data_path)
 
 
 # Start the tests

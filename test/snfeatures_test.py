@@ -3,12 +3,12 @@ Module to test the features in `snfeatures.py`.
 """
 
 import os
-import pickle
 import sys
 import subprocess
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import pytest
 import sncosmo
 
@@ -42,8 +42,7 @@ example_name = 'DES_SN013866.DAT'
 rtol = 0.25
 
 example_data_path = os.path.join(example_data, 'example_data_for_tests.pckl')
-with open(example_data_path, 'rb') as input:
-    ex_data = pickle.load(input)
+ex_data = pd.read_pickle(example_data_path)
 
 
 def setup_module(module):
