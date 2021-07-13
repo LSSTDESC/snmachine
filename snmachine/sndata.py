@@ -33,7 +33,9 @@ colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
 
 sntypes = {1: 'Ia', 2: 'II', 21: 'IIn', 22: 'IIP', 23: 'IIL',
            3: 'Ibc', 32: 'Ib', 33: 'Ic', 66: 'other'}
-markers = {'desg': '^', 'desr': 'o', 'desi': 's', 'desz': '*'}
+markers = {'desg': '^', 'desr': 'o', 'desi': 's', 'desz': '*',
+           'lsstu': 'o', 'lsstg': 'v', 'lsstr': '^',
+           'lssti': '<', 'lsstz': '>', 'lssty': 's'}
 labels = {'desg': 'g', 'desr': 'r', 'desi': 'i', 'desz': 'z'}
 
 
@@ -52,7 +54,6 @@ def plot_lc(lc, show_legend=True):
     """
         @param fname The filename of the supernova (relative to data_root)
     """
-
     # This selects the filters from the possible set that this object has
     # measurements in and maintains the order
     filts = np.unique(lc['filter'])
@@ -951,13 +952,19 @@ class PlasticcData(EmptyDataset):
 
             # Plot the object observations.
             # They are ploted after the models to be on top of these.
+
+            # Get the right marker for the plot
+            try:
+                marker_pb = markers[pb]
+            except KeyError:  # no marker for this passband
+                marker_pb = 'o'
             if axes is None:
                 plt.errorbar(obj_data_pb['mjd'], obj_data_pb['flux'],
-                             obj_data_pb['flux_error'], fmt='o',
+                             obj_data_pb['flux_error'], fmt=marker_pb,
                              color=pb_colors[pb], label=pb[-1])
             else:
                 axes.errorbar(obj_data_pb['mjd'], obj_data_pb['flux'],
-                              obj_data_pb['flux_error'], fmt='o',
+                              obj_data_pb['flux_error'], fmt=marker_pb,
                               color=pb_colors[pb], label=pb[-1])
         if axes is None:
             plt.xlabel('Time (days)')
