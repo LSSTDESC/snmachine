@@ -320,23 +320,15 @@ def plot_roc_curves(fpr, tpr, auc, labels=[], **kwargs):
         The area under the ROC curve.
     labels : list, optional
         Labels of each curve (e.g. machine learning algorithm names).
-    colors : list, optional
-        Colors of the curves.
-    label_size : float, optional
-        Size of x and y axis labels.
-    tick_size: float, optional
-        Size of tick labels.
-    line_width : float, optional
-        Line width.
     **kwargs : dict, optional
         colors : list-like, default = None
             Ordered colours to print the ROC curves.
-        lines_width: list-like, default = None
-            Ordered lines width to print the ROC curves.
         xlabel : str, deafult = 'False positive rate (contamination)'
             The x label text.
         ylabel : str, default = 'True positive rate (completeness)'
             The y label text.
+        linewidth: float, default = None
+            Lines width to print the ROC curves.
         tick_size : int, default = None
             Size of the ticks.
         font_size : int, default = None
@@ -351,12 +343,10 @@ def plot_roc_curves(fpr, tpr, auc, labels=[], **kwargs):
     if colors is not None:
         ax.set_prop_cycle(color=colors)
 
-    lines_width = kwargs.pop('lines_width', None)
-    if lines_width is not None:
-        ax.set_prop_cycle(linewidth=lines_width)
+    linewidth = kwargs.pop('linewidth', 1.5)
 
     # Plot the ROC curves
-    ax.plot(fpr, tpr)
+    ax.plot(fpr, tpr, linewidth=linewidth)
 
     # Other aesthetic settings
     tick_size = kwargs.pop('tick_size', None)
@@ -545,7 +535,7 @@ def run_several_classifiers(classifier_list, features, labels,
     if plot_roc_curve:
         plot_roc_curves(fpr=fpr, tpr=tpr, auc=auc, labels=classifier_list,
                         **{'font_size': 16, 'tick_size': 12,
-                           'lines_width': 1.5})
+                           'linewidth': 1.5})
 
     # Construct confusion matrices
     cms = {}
