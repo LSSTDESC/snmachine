@@ -1,8 +1,8 @@
 # snmachine
 
-| `master`  | `dev` |
-| ------------- | ------------- |
-| [![Build Status](https://dev.azure.com/zcicg57/snmachine/_apis/build/status/LSSTDESC.snmachine?branchName=master)](https://dev.azure.com/zcicg57/snmachine/_build/latest?definitionId=3&branchName=master) | [![Build Status](https://dev.azure.com/zcicg57/snmachine/_apis/build/status/LSSTDESC.snmachine?branchName=dev)](https://dev.azure.com/zcicg57/snmachine/_build/latest?definitionId=3&branchName=dev) |
+| `main`  | `dev` | DOI |
+| ------------- | ------------- | ------------- |
+| [![Build Status](https://dev.azure.com/zcicg57/snmachine/_apis/build/status/LSSTDESC.snmachine?branchName=master)](https://dev.azure.com/zcicg57/snmachine/_build/latest?definitionId=3&branchName=main) | [![Build Status](https://dev.azure.com/zcicg57/snmachine/_apis/build/status/LSSTDESC.snmachine?branchName=dev)](https://dev.azure.com/zcicg57/snmachine/_build/latest?definitionId=3&branchName=dev) | [![DOI](https://zenodo.org/badge/63328700.svg)](https://zenodo.org/badge/latestdoi/63328700) |
 
 Welcome to version 2.0.0 of `snmachine`! As described in ([Lochner et al. (2016)](https://arxiv.org/abs/1603.00882)), this is a flexible python library for reading in photometric supernova light curves, extracting useful features from them and subsequently performing supervised machine learning to classify supernovae based on their light curves. The library is also flexible enough to easily extend to general transient classification.
 
@@ -33,6 +33,8 @@ We welcome developers! Simply fork it into your own private repository and submi
 See [this page](https://github.com/LSSTDESC/snmachine/blob/dev/CONTRIBUTING.md) for a useful guide to contributing to `snmachine`.
 
 ## Citation
+
+[![DOI](https://zenodo.org/badge/63328700.svg)](https://zenodo.org/badge/latestdoi/63328700)
 
 If you use snmachine in your work please cite ([BibTex](http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2016ApJS..225...31L&data_type=BIBTEX&db_key=AST&nocookieset=1)):
 Lochner, M., McEwen, J., Peiris, H., Lahav, O., Winter, M. (2016) “Photometric Supernova Classification with Machine Learning”, The Astrophysical Journal Supplement Series, 225, 31
