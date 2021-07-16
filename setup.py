@@ -26,24 +26,14 @@ class ExtractExampleData(install):
             install_directory = paths[0][0]
             install_directory = os.path.join(install_directory, PACKAGENAME)
 
-            print("I will find the data....")
-            print("The bad part is the `install_directory`!!")
-            print(paths)
-            print('')
             # Find example_data
             example_data = os.path.join(install_directory, 'example_data')
-            spcc_data = os.path.join(example_data, 'SPCC_SUBSET')
-            print("the path should be: ", spcc_data)
+            spcc_data = os.path.join(PACKAGENAME, 'example_data',
+                                     'SPCC_SUBSET')
 
             # Untar example data
-            tar_path = os.path.join(PACKAGENAME, 'example_data','SPCC_SUBSET' )
-            print("The new path is: ", tar_path)
-            print(tar_path + '.tar.gz')
-            #tar = tarfile.open(spcc_data + '.tar.gz')
-            tar = tarfile.open(tar_path + '.tar.gz')  # try something new
-            print("I am untaring the file: ", tar_path + '.tar.gz')
+            tar = tarfile.open(spcc_data + '.tar.gz')
             tar.extractall(example_data)
-            print("I passed this yey!!")
 
 
 setup(
