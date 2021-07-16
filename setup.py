@@ -10,6 +10,7 @@ import tarfile
 PACKAGENAME = 'snmachine'
 __FALLBACK_VERSION__ = '2.0.0'
 
+
 class ExtractExampleData(install):
     """Post-installation data extraction."""
     def run(self):
@@ -24,18 +25,18 @@ class ExtractExampleData(install):
             paths = (site.getsitepackages(),)
             install_directory = paths[0][0]
             install_directory = os.path.join(install_directory, PACKAGENAME)
-	    
-	    print("I will find the data....")
+
+            print("I will find the data....")
             # Find example_data
             example_data = os.path.join(install_directory, 'example_data')
             spcc_data = os.path.join(example_data, 'SPCC_SUBSET')
-	    print("the path should be: ", spcc_data)
+            print("the path should be: ", spcc_data)
 
             # Untar example data
             tar = tarfile.open(spcc_data + '.tar.gz')
-	    print("I am untaring the file: ", spcc_data + '.tar.gz')
+            print("I am untaring the file: ", spcc_data + '.tar.gz')
             tar.extractall(example_data)
-	    print("I passed this yey!!")
+            print("I passed this yey!!")
 
 
 setup(
