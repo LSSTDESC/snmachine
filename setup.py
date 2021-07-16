@@ -45,7 +45,6 @@ setup(
     include_package_data=True,
     package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz', 'example_data/output_spcc_no_z/features/*.dat', 'example_data/example_data_for_tests.pckl']},
     exclude_package_data={'utils': ['archive/*']},
-    cmdclass={'install': ExtractExampleData},
     url='https://github.com/LSSTDESC/snmachine',
     license='BSD-3-Clause License',
     author='Michelle Lochner',
