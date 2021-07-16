@@ -39,8 +39,8 @@ class ExtractExampleData(install):
             tar_path = os.path.join(PACKAGENAME, 'example_data','SPCC_SUBSET' )
             print("The new path is: ", tar_path)
             print(tar_path + '.tar.gz')
-            tar = tarfile.open(spcc_data + '.tar.gz')
-            #tar = tarfile.open(tar_path + '.tar.gz')  # try something new
+            #tar = tarfile.open(spcc_data + '.tar.gz')
+            tar = tarfile.open(tar_path + '.tar.gz')  # try something new
             print("I am untaring the file: ", tar_path + '.tar.gz')
             tar.extractall(example_data)
             print("I passed this yey!!")
