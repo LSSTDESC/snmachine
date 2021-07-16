@@ -27,6 +27,9 @@ class ExtractExampleData(install):
             install_directory = os.path.join(install_directory, PACKAGENAME)
 
             print("I will find the data....")
+            print("The bad part is the `install_directory`!!")
+            print(paths)
+            print('')
             # Find example_data
             example_data = os.path.join(install_directory, 'example_data')
             spcc_data = os.path.join(example_data, 'SPCC_SUBSET')
