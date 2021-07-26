@@ -24,18 +24,22 @@ from past.builtins import basestring
 from random import shuffle, sample
 from snmachine import chisq as cs
 
-# Colours for graphs
+# Colours, markers and names for graphs
 colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
            'sdssi': '#d35c00', 'sdssz': 'k', 'desg': '#007718',
            'desr': '#b30100', 'desi': '#d35c00', 'desz': 'k',
            'lsstu': '#984ea3', 'lsstg': '#377eb8', 'lsstr': '#4daf4a',
-           'lssti': '#e3c530', 'lsstz': '#ff7f00', 'lssty': '#e41a1c'}
+           'lssti': '#e3c530', 'lsstz': '#ff7f00', 'lssty': '#e41a1c',
+           'ZTF_g': '#8da0cb', 'ZTF_r': '#66c2a5', 'ZTF_i': '#fc8d62'}
 
 sntypes = {1: 'Ia', 2: 'II', 21: 'IIn', 22: 'IIP', 23: 'IIL',
            3: 'Ibc', 32: 'Ib', 33: 'Ic', 66: 'other'}
+
 markers = {'desg': '^', 'desr': 'o', 'desi': 's', 'desz': '*',
            'lsstu': 'o', 'lsstg': 'v', 'lsstr': '^',
-           'lssti': '<', 'lsstz': '>', 'lssty': 's'}
+           'lssti': '<', 'lsstz': '>', 'lssty': 's',
+           'ZTF_g': 'v', 'ZTF_r': '^', 'ZTF_i': '<'}
+
 labels = {'desg': 'g', 'desr': 'r', 'desi': 'i', 'desz': 'z'}
 
 
@@ -547,6 +551,39 @@ class EmptyDataset:
 
             return chisq_over_pts_dict
 
+    @staticmethod
+    def print_time_difference(initial_time, final_time):
+        """Print the a time interval.
+
+        Parameters
+        ----------
+        initial_time : float
+            Time at which the time interval starts.
+        final_time : float
+            Time at which the time interval ends.
+        """
+        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time),
+                                                  unit='s')
+        print('This has taken {}\n'.format(time_spent_on_this_task))
+
+    @staticmethod
+    def print_progress(obj_ordinal, number_objs):
+        """Print the percentage of objects already saved.
+
+        This funtion uses a weird formula to know at which percentages to
+        print. This formula was choosen because it looks good.
+
+        Parameters
+        ----------
+        obj_ordinal : int
+            Ordinal number of the object we are currently on.
+        number_objs : int
+            Total number of objects to perform the action on.
+        """
+        percent_to_print = pow(10, -int(np.log10(number_objs)/2))
+        if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
+            print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
+
 
 class PlasticcData(EmptyDataset):
     """Class to read in the PLAsTiCC dataset. This is a simulated LSST catalog.
@@ -759,39 +796,6 @@ class PlasticcData(EmptyDataset):
         """
         self._object_names = np.array(value, dtype='str')
 
-    @staticmethod
-    def print_time_difference(initial_time, final_time):
-        """Print the a time interval.
-
-        Parameters
-        ----------
-        initial_time : float
-            Time at which the time interval starts.
-        final_time : float
-            Time at which the time interval ends.
-        """
-        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time),
-                                                  unit='s')
-        print('This has taken {}\n'.format(time_spent_on_this_task))
-
-    @staticmethod
-    def print_progress(obj_ordinal, number_objs):
-        """Print the percentage of objects already saved.
-
-        This funtion uses a weird formula to know at which percentages to
-        print. This formula was choosen because it looks good.
-
-        Parameters
-        ----------
-        obj_ordinal : int
-            Ordinal number of the object we are currently on.
-        number_objs : int
-            Total number of objects to perform the action on.
-        """
-        percent_to_print = pow(10, -int(np.log10(number_objs)/2))
-        if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
-            print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
-
     def update_dataset(self, new_objs):
         """Update the datset so it only contains a subset of objects.
 
@@ -989,6 +993,463 @@ class PlasticcData(EmptyDataset):
 
     def remove_gaps(self, max_gap_length, verbose=False):
         """Remove the first gap longer than the given threshold.
+
+        To remove all the gaps longer than `max_gap_length`, this function
+        must be called a few times.
+
+        Parameters
+        ----------
+        max_gap_length: float
+            Maximum duration of the gap to allowed in the light curves.
+        verbose: bool, optional
+            Default False. If True prints the ID of the longest event and its
+            length.
+        """
+        obj_names = self.object_names
+        time_transient = np.zeros(len(obj_names))
+        for i in range(len(obj_names)):
+            obj_data = self.data[obj_names[i]]
+            obs_time = obj_data['mjd']
+
+            # time gaps between consecutive observations
+            time_diff = obs_time[1:] - obs_time[:-1]
+
+            if np.max(time_diff) > max_gap_length:
+                index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
+                time_last_obs_before = obs_time[index_gap]
+                obs_time_detected = obs_time[obj_data['detected'] == 1]
+
+                # number of detections before and after the gap
+                number_detections_before = np.sum(
+                    obs_time_detected <= time_last_obs_before)
+                number_detections_after = np.sum(
+                    obs_time_detected > time_last_obs_before)
+
+                # more detections before the gap
+                if number_detections_before > number_detections_after:
+                    is_obs_transient = obs_time <= time_last_obs_before
+
+                # more detections after the gap
+                elif number_detections_before < number_detections_after:
+                    is_obs_transient = obs_time > time_last_obs_before
+
+                # same number of detections on before and after the gap
+                else:
+                    number_obs_before = np.sum(
+                        obs_time <= time_last_obs_before)
+                    number_obs_after = np.sum(
+                        obs_time > time_last_obs_before)
+                    # more observation before the gap
+                    if number_obs_before >= number_obs_after:
+                        is_obs_transient = obs_time <= time_last_obs_before
+                    # more observation after the gap
+                    else:
+                        is_obs_transient = obs_time > time_last_obs_before
+                obs_transient = obj_data[is_obs_transient]
+
+                # introduce uniformity: all transients start at time 0
+                obs_transient['mjd'] -= min(obs_transient['mjd'])
+
+                self.data[obj_names[i]] = obs_transient
+            time_transient[i] = obj_data['mjd'][-1] - obj_data['mjd'][0]
+        if verbose:
+            print(f'The longest event is '
+                  f'{obj_names[np.argmax(time_transient)]} '
+                  f'and its length is {np.max(time_transient):.2f} days.')
+
+
+class ZtfData(EmptyDataset):
+    """Class to read in the ZTF dataset.
+
+    Parameters
+    ----------
+    folder : str
+        Folder where simulations are located.
+    data_file: str
+        Filename of the pandas dataframe which is has the light curve data.
+    metadata_file: str
+        Filename of the pandas dataframe containing the metadata for the light
+        curves.
+    mix : bool, optional
+        Default False. If True, randomly permutes the objects when they are
+        read in.
+
+    Notes
+    -----
+    The central wavelength correspond to the mean wavelength of each ZTF
+    passband presented in [1]_.
+
+    References
+    ----------
+    .. [1] http://svo2.cab.inta-csic.es/svo/theory/fps3/
+    """
+
+    def __init__(self, folder, data_file, metadata_file, mix=False):
+        super().__init__(folder, survey_name='ztf',
+                         filter_set=['ZTF_g', 'ZTF_r', 'ZTF_i'])
+        self.set_data(folder, data_file)
+        self.set_metadata(folder, metadata_file)
+        if mix is True:
+            self.mix()
+        # Set the central wavelength of each passband in angstrom
+        self.pb_wavelengths = {'ZTF_g': 4804.79, 'ZTF_r': 6436.92,
+                               'ZTF_i': 7968.22}
+
+    def set_data(self, folder, data_file):
+        """Reads in simulated data and saves it.
+
+        The data is saved into the `data` method from EmptyDataset.
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located.
+        data_file : str or list-like
+            .csv file of object light curves.
+        """
+        print('Reading data...')
+        time_start_reading = time.time()
+        data = pd.read_csv(folder + '/' + data_file, sep=',')
+
+        # snmachine and ZTF use a different denomination
+        data.rename({'fnu_microJy': 'flux'}, axis='columns', inplace=True)
+        data.rename({'fnu_microJy_unc': 'flux_error'}, axis='columns',
+                    inplace=True)
+        data.rename({'passband': 'filter'}, axis='columns', inplace=True)
+        data.rename({'jd': 'mjd'}, axis='columns', inplace=True)
+        data['mjd'] += 2400000.5  # julian day to modified julian day
+
+        # Abstract column names from dataset
+        for col in data.columns:
+            if re.search('jd', col):  # catches the column that includes `jd`
+                self.mjd_col = col
+            if re.search('_id', col):  # catches the column that includes `id`
+                self.id_col = col
+
+        number_invalid_objs = 0  # Some objects may have empty data
+        number_objs = len(data[self.id_col].unique())
+        object_names = []
+
+        for i, id in enumerate(data[self.id_col].unique()):
+            # Use +1 because the order starts at 0 in python
+            self.print_progress(i+1, number_objs)
+
+            object_names.append(str(id))
+            obj_lc = data[data[self.id_col] == id]
+            lc = self.get_obj_lc_table_starting_from_mjd_zero(pandas_lc=obj_lc)
+            if len(lc[self.mjd_col] > 0):
+                self.data[str(id)] = lc
+            else:
+                number_invalid_objs += 1
+        if number_invalid_objs > 0:
+            print('{} objects were invalid and not added to the dataset.'
+                  ''.format(number_invalid_objs))
+        self.object_names = object_names
+        print('{} objects read into memory.'.format(len(self.data)))
+        self.print_time_difference(time_start_reading, time.time())
+
+    def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
+        """Transform the pandas dataframe into an astropy table starting from mjd=0
+
+        Takes a pandas light curve from the plasticc dataset format
+        and converts it to the astropy table.table format starting from mjd=0.
+
+        Parameters
+        ----------
+        pandas_lc : pandas.core.frame.DataFrame
+            Single object multi-band lightcurve.
+
+        Returns
+        -------
+        lc : astropy.table.table
+            New single object light curve.
+        """
+        lc = Table.from_pandas(pandas_lc)
+        lc[self.mjd_col] -= lc[self.mjd_col].min()
+        return lc
+
+    def set_metadata(self, folder, meta_file):
+        """Reads in simulated metadata and saves it.
+
+        The data is saved into the `metadata` method from EmptyDataset and
+        into a dictonary associated with each `data` method
+        (`.data[obj].meta`).
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located.
+        data_file : str or list-like
+            .csv file of objects metadata.
+        """
+        print('Reading metadata...')
+        time_start_reading = time.time()
+        metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',',
+                                  index_col=self.id_col)
+        metadata_pd.index = metadata_pd.index.astype(str)
+
+        # add `object_id` column because it is useful to call it
+        metadata_pd['object_id'] = metadata_pd.index
+        self.metadata = metadata_pd
+
+        # Everything bellow is to conform with `snmachine` version < 2.0
+        number_objs = len(self.object_names)
+        for i, obj in enumerate(self.object_names):
+            # Use +1 because the order starts at 0 in python
+            self.print_progress(i+1, number_objs)
+
+            self.set_inner_metadata(obj)
+        print(f'Finished getting the metadata for {number_objs} objects.')
+        self.print_time_difference(time_start_reading, time.time())
+
+    def set_inner_metadata(self, obj):
+        """Set the metadata inside the astropy observation data.
+
+        This inner metadata is only used by `snmachine` version < 2.0 but
+        to have backwards compatibility, we keep it.
+
+        Parameters
+        ----------
+        obj : str
+            Name of the object we are working with.
+        """
+        # remove duplicated entry
+        metadata = self.metadata.drop(columns=['object_id'])
+
+        metadata_entry = metadata.loc[obj]
+        columns = metadata_entry.keys()
+        self.data[obj].meta['name'] = obj  # the name is the object id
+        self.data[obj].meta['z'] = None
+        for col in columns:
+            if re.search('type', col):
+                self.data[obj].meta['type'] = str(metadata_entry[col])
+            else:
+                self.data[obj].meta[str(col)] = metadata_entry[col]
+        self._set_metadata_z(obj)
+
+    def _set_metadata_z(self, obj):
+        """Set the redshift as spectroscopic or if not available, photometric.
+
+        This is only used by the old code of `snmachine` but to keep backwards
+        compatibility, we keep it.
+
+        Parameters
+        ----------
+        obj : str
+            Name of the object we are working with.
+        """
+        metadata = self.data[obj].meta
+        columns = metadata.keys()
+        for col in columns:
+            if re.search('redshift', col) and not np.isnan(metadata[col]):
+                self.data[obj].meta['z'] = metadata[col]
+            if re.search('photoz', col) and re.search('err', col) is None:
+                photoz = metadata[col]
+        if self.data[obj].meta['z'] is None:  # if no spec z -> z = photo z
+            self.data[obj].meta['z'] = photoz
+
+    @property
+    def labels(self):
+        """Returns the labels of the objects, if they are known."""
+        try:
+            labels = self.metadata.target
+        except AttributeError:  # We don't know the objects' labels
+            labels = None
+        return labels
+
+    @property
+    def object_names(self):
+        """Returns the name of the objects to work with.
+
+        Not always this corresponds to the whole dataset.
+        """
+        return self._object_names
+
+    @object_names.setter
+    def object_names(self, value):
+        """Set the name of the objects to work with.
+
+        Parameters
+        ----------
+        value: list-like
+            Name of the objects to work with.
+        """
+        self._object_names = np.array(value, dtype='str')
+
+    def update_dataset(self, new_objs):
+        """Update the datset so it only contains a subset of objects.
+
+        Parameters
+        ----------
+        new_objs : list-like
+            The id of the objects we want to have in our dataset.
+
+        Raises
+        ------
+        ValueError
+            All the objects in `new_objs` need to already exist in the dataset.
+        """
+        if np.sum(~np.in1d(new_objs, self.object_names)) != 0:
+            raise ValueError('All the objects in `new_objs` need to exist in '
+                             'the original dataset.')
+
+        self.object_names = new_objs
+        self.data = {objects: self.data[objects] for objects in
+                     self.object_names}
+
+        current_objs = self.metadata.object_id.astype(str)
+        is_new_obj = np.in1d(current_objs, new_objs)
+        self.metadata = self.metadata[is_new_obj]
+
+        # Reorder the object names to match the metadata
+        self.object_names = self.metadata['object_id']
+
+    @staticmethod
+    def plot_obj_and_model(obj_data, obj_model=None, **kwargs):
+        """Plot an object observations and the model fitted to them.
+
+        If `obj_model` is not provided, the function only plots the light
+        curve observations.
+
+        Parameters
+        ----------
+        obj_data : pandas.core.frame.DataFrame or astropy.table.Table
+            Time, flux, flux error and passbands of the object.
+        obj_model : {None, astropy.table.Table, pandas.core.frame.DataFrame},
+                    optional
+            If `None`, only plots `obj_data`. Otherwise, `obj_model` has the
+            time, flux, flux error (optional) and passbands of the model
+            fitted to the object.
+        **kwargs : dict
+            Additional keyword arguments that can replace default parameters in
+            other funtions:
+            - axes : {None, matplotlib.axes}, optional
+                If the axes are provided, the figure is plotted on the axes.
+                Otherwise, it is plotted directly with `matplotlib`.
+            - pb_colors : dict, optional
+                Mapping between the passband names and the colours with which
+                they are represented. If none mapping is provided, the
+                passbands are represented with the default colours.
+            - show_title : Bool, default = False
+                Whether to show the plot title.
+            - title : str, optional
+                The title for the plot.
+            - show_legend : Bool, default = True
+                Whether to show the plot legend.
+
+        Raises
+        ------
+        AttributeError
+            There is a default title if `obj_data` contains the object id and
+            redshift accessible through `obj_data.meta['name']` and
+            `obj_data.meta['hostgal_photoz']`, respectively.
+            Otherwise, if the kwarg `show_title` is `True` a title must be
+            provided in the kwarg `title`.
+        """
+        # Extra plotting parameters passed as kwargs
+        if 'axes' in kwargs:
+            axes = kwargs['axes']
+        else:
+            axes = None
+        if 'pb_colors' in kwargs:
+            pb_colors = kwargs['pb_colors']
+        else:
+            pb_colors = colours
+        if 'show_title' in kwargs:
+            show_title = kwargs['show_title']
+        else:
+            show_title = False
+        if 'title' in kwargs:
+            title = kwargs['title']
+        elif show_title is True:
+            try:
+                title = 'Object ID: {}\nPhoto-z = {:.3f}'.format(
+                    obj_data.meta['name'], obj_data.meta['hostgal_photoz'])
+            except AttributeError:
+                raise AttributeError('No default title available. Provide the'
+                                     ' desired title in the kwarg `title`.')
+        if 'show_legend' in kwargs:
+            show_legend = kwargs['show_legend']
+        else:
+            show_legend = True
+
+        passbands = ['ZTF_g', 'ZTF_r', 'ZTF_i']
+        for pb in passbands:
+            # Get the light curve observations in the chosen passband `pb`
+            obj_data_pb = obj_data[obj_data['filter'] == pb]
+
+            # Skip this code block and plot only the light curve observations
+            # if no `obj_model` was inputed.
+            if obj_model is not None:
+                # Get the model observations in the chosen passband `pb`
+                obj_model_pb = obj_model[obj_model['filter'] == pb]
+                model_flux = obj_model_pb['flux']
+
+                # Plot the model values
+                if axes is None:
+                    plt.plot(obj_model_pb['mjd'], model_flux,
+                             color=pb_colors[pb], alpha=.7, label='')
+                else:
+                    axes.plot(obj_model_pb['mjd'], model_flux,
+                              color=pb_colors[pb], alpha=.7, label='')
+                try:  # if the model has error information, plot it
+                    model_flux_error = obj_model_pb['flux_error']
+                    if axes is None:
+                        plt.fill_between(x=obj_model_pb['mjd'],
+                                         y1=model_flux-model_flux_error,
+                                         y2=model_flux+model_flux_error,
+                                         color=pb_colors[pb], alpha=.15,
+                                         label=None)
+                    else:
+                        axes.fill_between(x=obj_model_pb['mjd'],
+                                          y1=model_flux-model_flux_error,
+                                          y2=model_flux+model_flux_error,
+                                          color=pb_colors[pb], alpha=.15,
+                                          label=None)
+                except KeyError:  # the model has no error information
+                    pass
+
+            # Plot the object observations.
+            # They are ploted after the models to be on top of these.
+
+            # Get the right marker for the plot
+            try:
+                marker_pb = markers[pb]
+            except KeyError:  # no marker for this passband
+                marker_pb = 'o'
+            if axes is None:
+                plt.errorbar(obj_data_pb['mjd'], obj_data_pb['flux'],
+                             obj_data_pb['flux_error'], fmt=marker_pb,
+                             color=pb_colors[pb], label=pb[-1])
+            else:
+                axes.errorbar(obj_data_pb['mjd'], obj_data_pb['flux'],
+                              obj_data_pb['flux_error'], fmt=marker_pb,
+                              color=pb_colors[pb], label=pb[-1])
+        if axes is None:
+            plt.xlabel('Time (days)')
+            plt.ylabel('Flux units')
+        else:
+            axes.set_xlabel('Time (days)')
+            axes.set_ylabel('Flux units')
+
+        if show_title:
+            if axes is None:
+                plt.title(title)
+            else:
+                axes.set_title(title)
+
+        if show_legend:
+            if axes is None:
+                plt.legend(ncol=2, handletextpad=.3, borderaxespad=.3,
+                           labelspacing=.2, borderpad=.3, columnspacing=.4)
+            else:
+                axes.legend(ncol=2, handletextpad=.3, borderaxespad=.3,
+                            labelspacing=.2, borderpad=.3, columnspacing=.4)
+
+    def remove_gaps(self, max_gap_length, verbose=False):
+        """TODO: Modify for ZTF
+
+        Remove the first gap longer than the given threshold.
 
         To remove all the gaps longer than `max_gap_length`, this function
         must be called a few times.
