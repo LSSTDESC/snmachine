@@ -1,10 +1,12 @@
 # snmachine
 
+<a href="https://ascl.net/2107.006"><img src="https://img.shields.io/badge/ascl-2107.006-blue.svg?colorB=262255" alt="ascl:2107.006" /></a>
+
 | `master`  | `dev` |
 | ------------- | ------------- |
 | [![Build Status](https://dev.azure.com/zcicg57/snmachine/_apis/build/status/LSSTDESC.snmachine?branchName=master)](https://dev.azure.com/zcicg57/snmachine/_build/latest?definitionId=3&branchName=master) | [![Build Status](https://dev.azure.com/zcicg57/snmachine/_apis/build/status/LSSTDESC.snmachine?branchName=dev)](https://dev.azure.com/zcicg57/snmachine/_build/latest?definitionId=3&branchName=dev) |
 
-Welcome to version 2.0.0 of `snmachine`! As described in ([Lochner et al. (2016)](https://arxiv.org/abs/1603.00882)), this is a flexible python library for reading in photometric supernova light curves, extracting useful features from them and subsequently performing supervised machine learning to classify supernovae based on their light curves. The library is also flexible enough to easily extend to general transient classification.
+Welcome to version 1.0 of `snmachine`! As described in ([Lochner et al. (2016)](https://arxiv.org/abs/1603.00882)), this is a flexible python library for reading in photometric supernova light curves, extracting useful features from them and subsequently performing supervised machine learning to classify supernovae based on their light curves. The library is also flexible enough to easily extend to general transient classification.
 
 Up-to-date documentation of `snmachine` can be found via the following Github Pages link.
 
