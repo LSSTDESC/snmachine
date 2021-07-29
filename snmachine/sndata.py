@@ -2123,42 +2123,41 @@ class SnanaData(EmptyDataset):
         Folder where simulations are located.
     model_list: list
         Name of the folders/models containing the simulations to read in.
-    file_structure: str
-        Name structure of the
+    pb_wavelengths: dict
+        Mapping between the passband names and their associated central
+        wavelengths.
     mix : bool, optional
         Default False. If True, randomly permutes the objects when they are
         read in.
-    """
-    def __init__(self, folder='', list_of_files=[], subset='none',
-                 filter_set=['sdssu', 'sdssg', 'sdssr', 'sdssi', 'sdssz'],
-                 subset_length=False):
-        """Initialisation
 
-        Parameters
-        ----------
-        folder : str
-            Folder where simulations are located
-        subset : str or list-like, optional
-            List of a subset of object names. If not supplied, the full
-            dataset will be used
-        filter_set : list-like, optional
-            Set of possible filters
-        subset_length : bool or int, optional
-            If supplied, will return this many random objects (can be used in
-            conjunction with subset="spectro")
-        classification : str, optional
-            Can return one specific type of supernova.
-        """
-        self.filter_set = filter_set
-        if len(list_of_files) == 0:
-            if len(folder) == 0:
-                print('WARNING: No files or folder provided')
-            else:
-                fls = os.listdir(folder)
-                list_of_files = []
-                for f in fls:
-                    if 'HEAD' in f and ('FITS' in f or 'fits' in f):
-                        list_of_files.append(os.path.join(folder, f))
+    Raises
+    ------
+    ValueError
+        At least one model/folder must be provided in `model_list`.
+    """
+    def __init__(self, folder, model_list, pb_wavelengths, mix=False):
+        filter_set = list(pb_wavelengths.keys())
+        print(f'The passbands are {filter_set}')
+        super().__init__(folder, survey_name='lsst', filter_set=filter_set)
+
+        self.set_data(folder, model_list)  #TODO not yet implemented
+        self.set_metadata(folder, model_list)  #TODO not yet implemented
+        if mix is True:
+            self.mix()
+        # Set the central wavelength of each passband
+        self.pb_wavelengths = pb_wavelengths
+
+        if len(model_list) == 0:
+            raise ValueError('At least one model/folder must be provided in '
+                             '`model_list`.')
+
+
+        else:
+            fls = os.listdir(folder)
+            list_of_files = []
+            for f in fls:
+                if 'HEAD' in f and ('FITS' in f or 'fits' in f):
+                    list_of_files.append(os.path.join(folder, f))
         self.list_of_files = list_of_files
         # Get all the data as a list of astropy tables (this should not be
         # memory intensive, even for large numbers of light curves)
