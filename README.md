@@ -38,8 +38,12 @@ See [this page](https://github.com/LSSTDESC/snmachine/blob/dev/CONTRIBUTING.md) 
 
 [![DOI](https://zenodo.org/badge/63328700.svg)](https://zenodo.org/badge/latestdoi/63328700)
 
-If you use snmachine in your work please cite ([BibTex](http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2016ApJS..225...31L&data_type=BIBTEX&db_key=AST&nocookieset=1)):
+If you use snmachine in your work please cite:
+
+- [BibTex](http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2016ApJS..225...31L&data_type=BIBTEX&db_key=AST&nocookieset=1):
 Lochner, M., McEwen, J., Peiris, H., Lahav, O., Winter, M. (2016) “Photometric Supernova Classification with Machine Learning”, The Astrophysical Journal Supplement Series, 225, 31
+
+- [BibTex](https://ui.adsabs.harvard.edu/abs/2021arXiv210707531A/abstract): Alves, C. S., Peiris, H. V., Lochner, M., McEwen, J. D., Allam Jr, T., & Biswas, R. (2021) "Considerations for optimizing photometric classification of supernovae from the Rubin Observatory", arXiv preprint arXiv:2107.07531.
 
 ## Installation
 
