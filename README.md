@@ -50,3 +50,5 @@ Lochner, M., McEwen, J., Peiris, H., Lahav, O., Winter, M. (2016) “Photometric
 `snmachine` is compatible with Python3.
 
 The installation is detailed in the online documentation. ([Install Guide](https://lsstdesc.github.io/snmachine/install.html)):
+
+Alternativelly, use `pip` to install `snmachine`.
