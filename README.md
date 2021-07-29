@@ -1,5 +1,7 @@
 # snmachine
 
+<a href="https://ascl.net/2107.006"><img src="https://img.shields.io/badge/ascl-2107.006-blue.svg?colorB=262255" alt="ascl:2107.006" /></a>
+
 | `main`  | `dev` | DOI |
 | ------------- | ------------- | ------------- |
 | [![Build Status](https://dev.azure.com/zcicg57/snmachine/_apis/build/status/LSSTDESC.snmachine?branchName=master)](https://dev.azure.com/zcicg57/snmachine/_build/latest?definitionId=3&branchName=main) | [![Build Status](https://dev.azure.com/zcicg57/snmachine/_apis/build/status/LSSTDESC.snmachine?branchName=dev)](https://dev.azure.com/zcicg57/snmachine/_build/latest?definitionId=3&branchName=dev) | [![DOI](https://zenodo.org/badge/63328700.svg)](https://zenodo.org/badge/latestdoi/63328700) |
