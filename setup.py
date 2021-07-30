@@ -8,7 +8,8 @@ import tarfile
 
 
 PACKAGENAME = 'snmachine'
-__FALLBACK_VERSION__ = '1.6'
+__FALLBACK_VERSION__ = '2.0.0'
+
 
 class ExtractExampleData(install):
     """Post-installation data extraction."""
@@ -27,7 +28,8 @@ class ExtractExampleData(install):
 
             # Find example_data
             example_data = os.path.join(install_directory, 'example_data')
-            spcc_data = os.path.join(example_data, 'SPCC_SUBSET')
+            spcc_data = os.path.join(PACKAGENAME, 'example_data',
+                                     'SPCC_SUBSET')
 
             # Untar example data
             tar = tarfile.open(spcc_data + '.tar.gz')
@@ -43,12 +45,15 @@ setup(
     setup_requires=['setuptools_scm>=3.2.0'],
     packages=['snmachine', 'utils'],
     include_package_data=True,
-    package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz', 'example_data/output_spcc_no_z/features/*.dat', 'example_data/example_data_for_tests.pckl']},
+    package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz',
+                                'example_data/output_spcc_no_z/features/*.dat',
+                                'example_data/example_data_for_tests.pckl']},
     exclude_package_data={'utils': ['archive/*']},
     cmdclass={'install': ExtractExampleData},
-    url='',
-    license='MIT',
+    url='https://github.com/LSSTDESC/snmachine',
+    license='BSD-3-Clause License',
     author='Michelle Lochner',
     author_email='dr.michelle.lochner@gmail.com',
-    description='Machine learning code for photometric supernova classification'
+    description='Machine learning code for photometric supernova '
+                'classification'
 )
