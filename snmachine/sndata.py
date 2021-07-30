@@ -2121,7 +2121,7 @@ class SnanaData(EmptyDataset):
     ----------
     folder : str
         Folder where simulations are located.
-    model_list: list
+    model_list: list TODO maybe combine with above
         Name of the folders/models containing the simulations to read in.
     pb_wavelengths: dict
         Mapping between the passband names and their associated central
