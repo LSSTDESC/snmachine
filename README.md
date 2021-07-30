@@ -27,7 +27,7 @@ The following people have contributed to snmachine v1.0:
 Michelle Lochner, Robert Schuhmann, Jason McEwen, Hiranya Peiris, Rahul Biswas, Ofer Lahav, Johnny Holland, Max Winter
 
 The following people have contributed to snmachine v2.0.0:
-Michelle Lochner, Catarina Alves, Hiranya Peiris, Jason McEwen, Tarek Allam Jr, Rahul Biswas, Christian Setzer, Robert Schuhmann
+Catarina Alves, Hiranya Peiris, Michelle Lochner, Jason McEwen, Tarek Allam Jr, Rahul Biswas, Christian Setzer, Robert Schuhmann
 
 ## Contributing to snmachine
 
