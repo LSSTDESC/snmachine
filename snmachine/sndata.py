@@ -2602,7 +2602,7 @@ class PreprocessSnana(PreprocessData):
                     path_head_file = os.path.join(folder, file)
                     data_head = Table.read(path_head_file, format='fits')
                     data_head = self.clean_dataframe(data_head.to_pandas())
-                    path_phot_file = self._compute_phot_file(path_head_file)
+                    path_phot_file = self.compute_phot_file(path_head_file)
                     data_sncosmo = sncosmo.read_snana_fits(
                         head_file=path_head_file, phot_file=path_phot_file)
                     data_train, data_test, objs_train, _ = (
