@@ -547,6 +547,39 @@ class EmptyDataset:
 
             return chisq_over_pts_dict
 
+    @staticmethod
+    def print_time_difference(initial_time, final_time):
+        """Print the a time interval.
+
+        Parameters
+        ----------
+        initial_time : float
+            Time at which the time interval starts.
+        final_time : float
+            Time at which the time interval ends.
+        """
+        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time),
+                                                  unit='s')
+        print('This has taken {}\n'.format(time_spent_on_this_task))
+
+    @staticmethod
+    def print_progress(obj_ordinal, number_objs):
+        """Print the percentage of objects already saved.
+
+        This funtion uses a weird formula to know at which percentages to
+        print. This formula was choosen because it looks good.
+
+        Parameters
+        ----------
+        obj_ordinal : int
+            Ordinal number of the object we are currently on.
+        number_objs : int
+            Total number of objects to perform the action on.
+        """
+        percent_to_print = pow(10, -int(np.log10(number_objs)/2))
+        if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
+            print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
+
 
 class PlasticcData(EmptyDataset):
     """Class to read in the PLAsTiCC dataset. This is a simulated LSST catalog.
@@ -758,39 +791,6 @@ class PlasticcData(EmptyDataset):
             Name of the objects to work with.
         """
         self._object_names = np.array(value, dtype='str')
-
-    @staticmethod
-    def print_time_difference(initial_time, final_time):
-        """Print the a time interval.
-
-        Parameters
-        ----------
-        initial_time : float
-            Time at which the time interval starts.
-        final_time : float
-            Time at which the time interval ends.
-        """
-        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time),
-                                                  unit='s')
-        print('This has taken {}\n'.format(time_spent_on_this_task))
-
-    @staticmethod
-    def print_progress(obj_ordinal, number_objs):
-        """Print the percentage of objects already saved.
-
-        This funtion uses a weird formula to know at which percentages to
-        print. This formula was choosen because it looks good.
-
-        Parameters
-        ----------
-        obj_ordinal : int
-            Ordinal number of the object we are currently on.
-        number_objs : int
-            Total number of objects to perform the action on.
-        """
-        percent_to_print = pow(10, -int(np.log10(number_objs)/2))
-        if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
-            print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
 
     def update_dataset(self, new_objs):
         """Update the datset so it only contains a subset of objects.
