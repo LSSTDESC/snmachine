@@ -2458,3 +2458,326 @@ class SNANA_Data(EmptyDataset):
                           'initial_observation_time': start_mjd,
                           'peak flux': peak_flux})
         return tab
+
+
+class PreprocessData:
+    """Class to preprocess data files before reading into `snmachine`.
+
+    Data files from different sources/at different times require a different
+    preprocessing. This is an class to deal with it. Since this process is
+    very data-specific, each child class has different inputs.
+    """
+    @staticmethod
+    def flatten_list(list_list):
+        """Flatten a list of lists.
+
+        Parameters
+        ----------
+        list_list : list
+            List with inner lists.
+
+        Returns
+        -------
+        list
+            List without inner lists.
+        """
+        return [item for sublist in list_list for item in sublist]
+
+    @staticmethod
+    def clean_dataframe(df):
+        """Cleans the pandas DataFrame.
+
+        This function transforms any `object` type column into a `str` column.
+
+        Parameters
+        ----------
+        df : pandas.core.frame.DataFrame
+            DataFrame in which some columns have an `object` type.
+
+        Returns
+        -------
+        df : pandas.core.frame.DataFrame
+            DataFrame in which no columns have an `object` type.
+        """
+        for col, dtype in df.dtypes.items():
+            if dtype == object:  # only process object columns.
+                # decode, or return original value if decode return Nan
+                df[col] = df[col].str.decode('utf-8').fillna(df[col])
+        return df
+
+    @staticmethod
+    def compute_phot_file(head_file):
+        """Construct the PHOT file associated with the HEAD file.
+
+        Parameters
+        ----------
+        head_file : str
+            Path or name of the HEAD `.FITS` file from `SNANA`.
+
+        Returns
+        -------
+        phot_file : str
+            Path or name of the PHOT `.FITS` file from `SNANA`.
+        """
+        components = head_file.split('HEAD')
+        phot_file = components[0] + 'PHOT' + components[1]
+        return phot_file
+
+    @staticmethod
+    def print_time_difference(initial_time, final_time):
+        """Print the a time interval.
+
+        Parameters
+        ----------
+        initial_time : float
+            Time at which the time interval starts.
+        final_time : float
+            Time at which the time interval ends.
+        """
+        EmptyDataset.print_time_difference(initial_time, final_time)
+
+    def preprocess_data(self):
+        """Preproces the data to be `snmachine` compatible.
+        """
+        raise NotImplementedError('This method must be implemented in child '
+                                  'classes.')
+
+
+class PreprocessSnana(PreprocessData):
+    """Class to preprocess SNANA data files before reading into `snmachine`.
+
+    Parameters
+    ----------
+    data_folders : list of str
+        List of paths to the folders that contain all the `.FITS` files to
+        preprocess.
+    """
+    def __init__(self, data_folders):
+        self.data_folders = data_folders
+
+    def preprocess_data(self, number_train_test_files, path_to_save='.',
+                        extra_name_to_save=''):
+        '''Preproces the data to be `snmachine` compatible.
+
+        Parameters
+        ----------
+        number_train_test_files : list
+            Number of files in which to divide the train and test data,
+            respectively first and second entries.
+        path_to_save : str, optional
+            Path to save the `.csv` files containing the preprocessed data. By
+            default, it is save the the current directory.
+        extra_name_to_save : str, optional
+            Additional name for the file to be saved (`train`/`test` and
+            `metadata` are always included). By default, no name is added.
+            However, it is recommended to add names such as `DDF`/`WFD`.
+
+        Raises
+        ------
+        ValueError
+            To generate more than 1000 files for either train or test set,
+            generate a new `PreprocessData` data class or modify the one
+            currently in use.
+        '''
+        time_start = time.time()
+        data_folders = self.data_folders
+
+        number_train_files = number_train_test_files[0]
+        number_test_files = number_train_test_files[1]
+        if (number_train_files > 1000) or (number_test_files > 1000):
+            raise ValueError('To generate more than 1000 files for either '
+                             'train or test set, generate a new '
+                             '`PreprocessData` data class or modify the'
+                             'one currently in use.')
+        # Initialize the dictionaries where to save the data
+        file_id_train, file_id_test = self._initialise_dict(number_train_files,
+                                                            number_test_files)
+
+        # Divide up the data and save it to the dictionaries
+        for folder in data_folders:
+            files = os.listdir(folder)  # all files in that directory
+            i = 0
+            for file in files:
+                if 'HEAD' in file:
+                    path_head_file = os.path.join(folder, file)
+                    data_head = Table.read(path_head_file, format='fits')
+                    data_head = self._clean_dataframe(data_head.to_pandas())
+                    path_phot_file = self._compute_phot_file(path_head_file)
+                    data_sncosmo = sncosmo.read_snana_fits(
+                        head_file=path_head_file, phot_file=path_phot_file)
+                    data_train, data_test, objs_train, _ = (
+                        self._divide_train_test(data_sncosmo))
+                    # transform the data into pandas DataFrames
+                    data_train = self._clean_obj_data(data_train)
+                    data_test = self._clean_obj_data(data_test)
+
+                    # Separate the metadata
+                    objs_train = [x.decode('utf-8') for x in objs_train]
+                    objs_all = [x.rstrip() for x in data_head['SNID']]
+                    is_train = np.isin(objs_all, objs_train)
+                    data_head.rename({'SNID': 'object_id'}, axis='columns',
+                                     inplace=True)
+                    metadata_train = data_head[is_train]
+                    metadata_test = data_head[~is_train]
+
+                    # Save to the appropriate dictionary
+                    index_save_train = (i % number_train_files)
+                    file_id_train[index_save_train].append(data_train)
+                    file_id_train[f'meta_{index_save_train}'].append(
+                        metadata_train)
+                    index_save_test = (i % number_test_files)
+                    file_id_test[index_save_test].append(data_test)
+                    file_id_test[f'meta_{index_save_test}'].append(
+                        metadata_test)
+                    i += 1
+
+        # Merge the DataFrames stored in each entry of the dictionaries and
+        # save them into `.csv` files
+        if extra_name_to_save != '':
+            name_to_save_train = f'train_{extra_name_to_save}'
+            name_to_save_test = f'test_{extra_name_to_save}'
+        else:
+            name_to_save_train = 'train'
+            name_to_save_test = 'test'
+        self._save_obj_data(number_files=number_train_files,
+                            file_id=file_id_train,
+                            name_to_save=name_to_save_train,
+                            path_to_save=path_to_save)  # train data
+        self._save_obj_data(number_files=number_test_files,
+                            file_id=file_id_test,
+                            name_to_save=name_to_save_test,
+                            path_to_save=path_to_save)  # test data
+        self.print_time_difference(time_start, time.time())
+
+    @staticmethod
+    def _initialise_dict(number_train_files, number_test_files):
+        """Initialise dictionaries to store the train and test events.
+
+        Parameters
+        ----------
+        number_train_files : int
+            Number of files in which to divide the train data.
+        number_test_files : int
+            Number of files in which to divide the test data.
+
+        Returns
+        -------
+        file_id_train : dict
+            Initialised dictionary with numbers between 0 and
+            `number_train_files` as keys, and empty lists as values. The
+            metadata of the events will be saved as `metadata_i`, where `i` is
+            the number correspondent to the dictionary key where the light
+            curves will be saved.
+        file_id_test : dict
+            Initialised dictionary with numbers between 0 and
+            `number_test_files` as keys, and empty lists as values. The
+            metadata of the events will be saved as `metadata_i`, where `i` is
+            the number correspondent to the dictionary key where the light
+            curves will be saved.
+        """
+        file_id_train = {}
+        file_id_test = {}
+        for i in np.arange(number_train_files):
+            file_id_train[i] = []
+            file_id_train[f'meta_{i}'] = []
+        for i in np.arange(number_test_files):
+            file_id_test[i] = []
+            file_id_test[f'meta_{i}'] = []
+        return file_id_train, file_id_test
+
+    @staticmethod
+    def _divide_train_test(data_list):
+        """Divide the events into train and test data.
+
+        Parameters
+        ----------
+        data_list : list of astropy.table.table
+            Data of both train and test set events.
+
+        Returns
+        -------
+        data_train : list of astropy.table.table
+            Data of the events in the train set.
+        data_test : list of astropy.table.table
+            Data of the events in the test set.
+        objs_train : list of astropy.table.table
+            Name/ID of the events in the train set.
+        objs_test : list of astropy.table.table
+            Name/ID of the events in the test set.
+        """
+        data_train = []
+        data_test = []
+        objs_train = []
+        objs_test = []
+        for obj_data in data_list:
+            sne_data_type = obj_data.meta['SNTYPE']
+            if sne_data_type < 100:  # train set event
+                data_train.append(obj_data)
+                objs_train.append(obj_data.meta['SNID'])
+            else:  # test set event
+                data_test.append(obj_data)
+                objs_test.append(obj_data.meta['SNID'])
+        return data_train, data_test, objs_train, objs_test
+
+    def _clean_obj_data(self, data_list):
+        """Clean light curve data and transform it into pandas DataFrames.
+
+        Parameters
+        ----------
+        data_list : list of astropy.table.table
+            Data in astropy format with badly formated column types.
+
+        Returns
+        -------
+        clean_data_list : list of pandas.core.frame.DataFrame
+            Data in pandas DataFrame format.
+        """
+        clean_data_list = []
+        for obj_data in data_list:
+            obj_id = obj_data.meta['SNID']
+            obj_data = obj_data.to_pandas()
+            obj_data['object_id'] = obj_id
+
+            # Transform `object` columns to `str`
+            obj_data = self.clean_dataframe(obj_data)
+            # Reorder columns so `object_id` is the first
+            cols = obj_data.columns.tolist()
+            cols = cols[-1:] + cols[:-1]
+            obj_data = obj_data[cols]
+            clean_data_list.append(obj_data)
+        return clean_data_list
+
+    def _save_obj_data(self, number_files, file_id, name_to_save,
+                       path_to_save):
+        """Save the events light curve and their metadata as `.csv` files.
+
+        Parameters
+        ----------
+        number_files : int
+            Number of files in which to divide the data.
+        file_id : dict
+            Dictionary with numbers between 0 and `number_files` as keys, and
+            lists of light curves as values. The metadata of the events is
+            saved as `metadata_i`, where `i` is the number correspondent to the
+            dictionary key where the light curves are saved.
+        name_to_save : str
+            Name format to save the `.csv` files.
+        path_to_save : str
+            Path to save the `.csv` files containing the preprocessed data.
+        """
+        for i in np.arange(number_files):
+            obj_data_s = file_id[i]
+            obj_data_s = self.flatten_list(obj_data_s)  # flatten the list
+            obj_data_s = pd.concat(obj_data_s)
+            obj_metadata_s = file_id[f'meta_{i}']
+            obj_metadata_s = pd.concat(obj_metadata_s)
+
+            # Name the files where the data will be saved
+            data_file_name = f'{name_to_save}_{i:03}.csv'
+            metadata_file_name = f'{name_to_save}_metadata_{i:03}.csv'
+
+            # Save the data in `.csv` files
+            obj_data_s.to_csv(os.path.join(path_to_save, data_file_name),
+                              index=False)
+            obj_metadata_s.to_csv(
+                os.path.join(path_to_save, metadata_file_name), index=False)
