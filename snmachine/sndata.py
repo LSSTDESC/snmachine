@@ -2413,8 +2413,8 @@ class SnanaData(EmptyDataset):
         self.data[obj].meta['z'] = None
         for col in columns:
             if (re.search('type', col)) or (re.search('TYPE', col)):
-                if metadata_entry[col] > 100:  # test set type
-                    true_type = str(100 - metadata_entry[col])
+                if eval(metadata_entry[col]) > 100:  # test set type
+                    true_type = str(100 - eval(metadata_entry[col]))
                     self.data[obj].meta['type'] = true_type
                 else:
                     self.data[obj].meta['type'] = str(metadata_entry[col])
