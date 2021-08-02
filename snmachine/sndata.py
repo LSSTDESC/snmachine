@@ -2416,7 +2416,7 @@ class SnanaData(EmptyDataset):
         self.data[obj].meta['name'] = obj  # the name is the object id
         self.data[obj].meta['z'] = None
         for col in columns:
-            if (re.search('type', col)) or (re.search('TYPE', col)):
+            if col == 'sntype':
                 if metadata_entry[col] > 100:  # test set type
                     true_type = str(100 - metadata_entry[col])
                     self.data[obj].meta['type'] = true_type
