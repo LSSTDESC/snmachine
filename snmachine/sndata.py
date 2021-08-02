@@ -2415,6 +2415,7 @@ class SnanaData(EmptyDataset):
             if (re.search('type', col)) or (re.search('TYPE', col)):
                 print(metadata_entry[col])
                 print(type(metadata_entry[col]))
+                print(metadata_entry[col] > 100)
                 print(eval(metadata_entry[col]))
                 if eval(metadata_entry[col]) > 100:  # test set type
                     true_type = str(100 - eval(metadata_entry[col]))
