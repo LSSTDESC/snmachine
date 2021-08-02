@@ -2322,6 +2322,10 @@ class SnanaData(EmptyDataset):
                      'BAND': 'filter', 'MJD': 'mjd'},
                     axis='columns', inplace=True)
 
+        # Set detected flag in the observations; corresponds to the flag 13
+        is_detected = [('{0:020b}'.format(i))[-13] for i in data['PHOTFLAG']]
+        data['detected'] = np.array(is_detected, dtype=bool)
+
         # Abstract column names from dataset
         for col in data.columns:
             if re.search('jd', col):  # catches the column that includes `jd`
