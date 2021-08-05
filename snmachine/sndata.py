@@ -2326,6 +2326,7 @@ class SnanaData(EmptyDataset):
 
         # Set detected flag in the observations; corresponds to the flag 13
         is_detected = [('{0:020b}'.format(i))[-13] for i in data['PHOTFLAG']]
+        is_detected = np.array(is_detected, dtype=int)  # so the bool workss
         data['detected'] = np.array(is_detected, dtype=bool)
 
         # Abstract column names from dataset
