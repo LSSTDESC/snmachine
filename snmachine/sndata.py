@@ -33,9 +33,11 @@ colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
 
 sntypes = {1: 'Ia', 2: 'II', 21: 'IIn', 22: 'IIP', 23: 'IIL',
            3: 'Ibc', 32: 'Ib', 33: 'Ic', 66: 'other'}
+
 markers = {'desg': '^', 'desr': 'o', 'desi': 's', 'desz': '*',
            'lsstu': 'o', 'lsstg': 'v', 'lsstr': '^',
            'lssti': '<', 'lsstz': '>', 'lssty': 's'}
+
 labels = {'desg': 'g', 'desr': 'r', 'desi': 'i', 'desz': 'z'}
 
 
