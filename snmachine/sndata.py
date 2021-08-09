@@ -2458,34 +2458,6 @@ class SnanaData(EmptyDataset):
         if self.data[obj].meta['z'] is None:  # if no spec z -> z = photo z
             self.data[obj].meta['z'] = photoz
 
-    @property
-    def labels(self):
-        """Returns the labels of the objects, if they are known."""
-        try:
-            labels = self.metadata.target
-        except AttributeError:  # We don't know the objects' labels
-            labels = None
-        return labels
-
-    @property
-    def object_names(self):
-        """Returns the name of the objects to work with.
-
-        Not always this corresponds to the whole dataset.
-        """
-        return self._object_names
-
-    @object_names.setter
-    def object_names(self, value):
-        """Set the name of the objects to work with.
-
-        Parameters
-        ----------
-        value: list-like
-            Name of the objects to work with.
-        """
-        self._object_names = np.array(value, dtype='str')
-
     def update_dataset(self, new_objs):
         """Update the datset so it only contains a subset of objects.
 
