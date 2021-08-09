@@ -2284,7 +2284,7 @@ class SnanaData(EmptyDataset):
     pb_wavelengths : dict
         Mapping between the passband names and their central wavelength. Note
         that `snmachine` has the default some default maps in
-        `snmachine.sndata.default_pb_wavelengths`. TODO this dict
+        `snmachine.sndata.default_pb_wavelengths`.
     mix : bool, optional
         Default False. If True, randomly permutes the objects when they are
         read in.
@@ -2301,8 +2301,8 @@ class SnanaData(EmptyDataset):
         super().__init__(folder, survey_name=survey_name,
                          filter_set=filter_set)
 
-        self.set_data(folder, data_file)  # TODO not yet implemented
-        self.set_metadata(folder, metadata_file)  # TODO not yet implemented
+        self.set_data(folder, data_file)
+        self.set_metadata(folder, metadata_file)
         if mix is True:
             self.mix()
         # Set the central wavelength of each passband
@@ -2392,8 +2392,12 @@ class SnanaData(EmptyDataset):
             map_cols[col] = col.lower()
         metadata_pd.rename(map_cols, axis='columns', inplace=True)
 
-        # TODO: modify this:::::
-        metadata_pd.rename({'sntype': 'type'}, axis='columns', inplace=False)
+        # Rename `sntype` as target as per `snmachine` convention
+        metadata_pd.rename({'sntype': 'target'}, axis='columns', inplace=False)
+        # If `target` > 100, it is the test set and to obtain the true value,
+        # we must subtract 100 to the target value.
+        is_larger_100 = metadata_pd['target'] > 100
+        metadata_pd.loc[is_larger_100, 'target'] -= 100
 
         # Save in the data instance
         self.metadata = metadata_pd
