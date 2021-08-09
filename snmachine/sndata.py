@@ -24,7 +24,7 @@ from past.builtins import basestring
 from random import shuffle, sample
 from snmachine import chisq as cs
 
-# Colours for graphs
+# Colours, labels, and markers for graphs
 colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
            'sdssi': '#d35c00', 'sdssz': 'k', 'desg': '#007718',
            'desr': '#b30100', 'desi': '#d35c00', 'desz': 'k',
@@ -39,6 +39,12 @@ markers = {'desg': '^', 'desr': 'o', 'desi': 's', 'desz': '*',
            'lssti': '<', 'lsstz': '>', 'lssty': 's'}
 
 labels = {'desg': 'g', 'desr': 'r', 'desi': 'i', 'desz': 'z'}
+
+# Default passband - central wavelength maps
+default_pb_wavelengths = {
+    'lsst': {'lsstu': 3685, 'lsstg': 4802, 'lsstr': 6231,
+             'lssti': 7542, 'lsstz': 8690, 'lssty': 9736},
+    'ztf': {'ZTF_g': 4804.79, 'ZTF_r': 6436.92, 'ZTF_i': 7968.22}}
 
 
 def plot_lc(lc, show_legend=True):
@@ -776,6 +782,7 @@ class EmptyDataset:
         """
         self._object_names = np.array(value, dtype='str')
 
+
 class PlasticcData(EmptyDataset):
     """Class to read in the PLAsTiCC dataset. This is a simulated LSST catalog.
 
@@ -802,8 +809,7 @@ class PlasticcData(EmptyDataset):
         if mix is True:
             self.mix()
         # Set the central wavelength of each passband
-        self.pb_wavelengths = {'lsstu': 3685, 'lsstg': 4802, 'lsstr': 6231,
-                               'lssti': 7542, 'lsstz': 8690, 'lssty': 9736}
+        self.pb_wavelengths = default_pb_wavelengths['lsst']
 
     def set_data(self, folder, data_file):
         """Reads in simulated data and saves it.
