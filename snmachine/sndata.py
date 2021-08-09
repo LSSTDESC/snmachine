@@ -2330,7 +2330,7 @@ class SnanaData(EmptyDataset):
                     axis='columns', inplace=True)
         # Rename `filter` values as per `snmachine` convention
         data['filter'] = (self.survey_name
-                          + data['filter'].str.lower().strip(' '))
+                          + data['filter'].str.lower().str.strip(' '))
 
         # Set detected flag in the observations; corresponds to the flag 13
         is_detected = [('{0:020b}'.format(i))[-13] for i in data['PHOTFLAG']]
