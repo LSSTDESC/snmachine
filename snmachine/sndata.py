@@ -2393,7 +2393,7 @@ class SnanaData(EmptyDataset):
         metadata_pd.rename(map_cols, axis='columns', inplace=True)
 
         # Rename `sntype` as target as per `snmachine` convention
-        metadata_pd.rename({'sntype': 'target'}, axis='columns', inplace=False)
+        metadata_pd.rename({'sntype': 'target'}, axis='columns', inplace=True)
         # If `target` > 100, it is the test set and to obtain the true value,
         # we must subtract 100 to the target value.
         is_larger_100 = metadata_pd['target'] > 100
