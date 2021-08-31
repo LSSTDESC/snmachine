@@ -38,6 +38,12 @@ class ExtractExampleData(install):
 
 setup(
     name='snmachine',
+    author='Michelle Lochner',
+    author_email='dr.michelle.lochner@gmail.com',
+    description='Machine learning code for photometric supernova '
+                'classification',
+    url='https://github.com/LSSTDESC/snmachine',
+    license='BSD-3-Clause License',
     use_scm_version={
         "root": ".",
         "relative_to": __file__,
@@ -50,10 +56,32 @@ setup(
                                 'example_data/example_data_for_tests.pckl']},
     exclude_package_data={'utils': ['archive/*']},
     cmdclass={'install': ExtractExampleData},
-    url='https://github.com/LSSTDESC/snmachine',
-    license='BSD-3-Clause License',
-    author='Michelle Lochner',
-    author_email='dr.michelle.lochner@gmail.com',
-    description='Machine learning code for photometric supernova '
-                'classification'
+    install_requires=['astropy>=1.1.2', 
+                      'jupyter>=1.0.0', 
+                      'matplotlib>=1.5.1', 
+                      'numpy>=1.18.4', 
+                      'scikit-learn=0.20.0', 
+                      'scipy>=0.17.0', 
+                      'george>=0.3.0', 
+                      'iminuit==1.2', 
+                      'pandas>=0.23.0', 
+                      'extinction>=0.3.0', 
+                      'imbalanced-learn>=0.4.3', 
+                      'python=3.7', 
+                      'pip>=20.1', 
+                      'emcee>=2.1.0', 
+                      'numpydoc>=0.6.0', 
+                      'pytest-remotedata>=0.3.1', 
+                      'pywavelets>=0.4.0', 
+                      'sncosmo==2.1.0', 
+                      'nose>=1.3.7', 
+                      'future>=0.16', 
+                      'pyyaml>=3.13', 
+                      'pytest-xdist>=1.26.1', 
+                      'seaborn', 
+                      'schwimmbad', 
+                      'cesium', 
+                      'tqdm', 
+                      'lightgbm'
+                     ]
 )
