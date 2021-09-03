@@ -59,7 +59,7 @@ setup(
     install_requires=['astropy>=1.1.2',
                       'matplotlib>=1.5.1',
                       'numpy>=1.18.4',
-                      'scikit-learn==0.20.0',
+                      'scikit-learn',
                       'scipy>=0.17.0',
                       'george>=0.3.0',
                       'iminuit',
@@ -71,5 +71,5 @@ setup(
                       'pyyaml>=3.13',
                       'seaborn',
                       'lightgbm',
-                      "setuptools_scm"]
+                      'setuptools_scm']
 )
