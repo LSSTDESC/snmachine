@@ -1115,7 +1115,6 @@ class ZtfData(EmptyDataset):
         data.rename({'fnu_microJy': 'flux', 'fnu_microJy_unc': 'flux_error',
                      'passband': 'filter', 'jd': 'mjd'},
                      axis='columns', inplace=True)
-        data['mjd'] += 2400000.5  # julian day to modified julian day
 
         # Abstract column names from dataset
         for col in data.columns:
@@ -1127,6 +1126,7 @@ class ZtfData(EmptyDataset):
         number_invalid_objs = 0  # Some objects may have empty data
         number_objs = len(data[self.id_col].unique())
         object_names = []
+        min_mjd = np.zeros(number_objs, dtype=float)
 
         for i, id in enumerate(data[self.id_col].unique()):
             # Use +1 because the order starts at 0 in python
@@ -1134,6 +1134,8 @@ class ZtfData(EmptyDataset):
 
             object_names.append(str(id))
             obj_lc = data[data[self.id_col] == id]
+            # Save the minimum mjd to then update the metadata
+            min_mjd[i] = np.min(obj_lc['mjd'])
             lc = self.get_obj_lc_table_starting_from_mjd_zero(pandas_lc=obj_lc)
             if len(lc[self.mjd_col] > 0):
                 self.data[str(id)] = lc
@@ -1144,6 +1146,7 @@ class ZtfData(EmptyDataset):
                   ''.format(number_invalid_objs))
         self.object_names = object_names
         print('{} objects read into memory.'.format(len(self.data)))
+        self.min_mjd = pd.DataFrame(index=object_names, data=min_mjd)
         self.print_time_difference(time_start_reading, time.time())
 
     def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
@@ -1197,6 +1200,9 @@ class ZtfData(EmptyDataset):
 
         # Rename `sntype` as target as per `snmachine` convention
         metadata_pd.rename({'type': 'target'}, axis='columns', inplace=True)
+
+        # Update the values that depend on mjd
+        metadata_pd['peakt'] -= self.min_mjd
 
         # Save in the data instance
         self.metadata = metadata_pd
