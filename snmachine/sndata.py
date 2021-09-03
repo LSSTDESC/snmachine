@@ -1114,7 +1114,7 @@ class ZtfData(EmptyDataset):
         # snmachine and ZTF use a different denomination
         data.rename({'fnu_microJy': 'flux', 'fnu_microJy_unc': 'flux_error',
                      'passband': 'filter', 'jd': 'mjd'},
-                     axis='columns', inplace=True)
+                    axis='columns', inplace=True)
 
         # Abstract column names from dataset
         for col in data.columns:
@@ -1202,6 +1202,10 @@ class ZtfData(EmptyDataset):
         metadata_pd.rename({'type': 'target'}, axis='columns', inplace=True)
 
         # Update the values that depend on mjd
+        print(metadata_pd.head(3))
+        print('')
+        print(metadata_pd['peakt'].head(3))
+        print(self.min_mjd.head(3))
         metadata_pd['peakt'] -= self.min_mjd
 
         # Save in the data instance
