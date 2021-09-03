@@ -1112,11 +1112,9 @@ class ZtfData(EmptyDataset):
         data = pd.read_csv(folder + '/' + data_file, sep=',')
 
         # snmachine and ZTF use a different denomination
-        data.rename({'fnu_microJy': 'flux'}, axis='columns', inplace=True)
-        data.rename({'fnu_microJy_unc': 'flux_error'}, axis='columns',
-                    inplace=True)
-        data.rename({'passband': 'filter'}, axis='columns', inplace=True)
-        data.rename({'jd': 'mjd'}, axis='columns', inplace=True)
+        data.rename({'fnu_microJy': 'flux', 'fnu_microJy_unc': 'flux_error',
+                     'passband': 'filter', 'jd': 'mjd'},
+                     axis='columns', inplace=True)
         data['mjd'] += 2400000.5  # julian day to modified julian day
 
         # Abstract column names from dataset
@@ -1190,6 +1188,17 @@ class ZtfData(EmptyDataset):
 
         # add `object_id` column because it is useful to call it
         metadata_pd['object_id'] = metadata_pd.index
+
+        # Convert all column names to lower case
+        map_cols = {}
+        for col in metadata_pd.columns:
+            map_cols[col] = col.lower()
+        metadata_pd.rename(map_cols, axis='columns', inplace=True)
+
+        # Rename `sntype` as target as per `snmachine` convention
+        metadata_pd.rename({'type': 'target'}, axis='columns', inplace=True)
+
+        # Save in the data instance
         self.metadata = metadata_pd
 
         # Everything bellow is to conform with `snmachine` version < 2.0
