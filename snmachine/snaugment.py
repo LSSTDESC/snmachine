@@ -92,6 +92,62 @@ def choose_z_ddf(z_ori, pb_wavelengths, random_state):
     return z_new
 
 
+def choose_z_same(z_ori, sn_class, random_state):
+    """Choose the new spectroscopic redshift for an DDF augmented event.
+
+    The new spectroscopic redshift is based on the redhsift of the original
+    event.
+    This target distribution of the redshift is class-agnostic and modeled
+    after the PLAsTiCC supernovae simulated in the Deep Drilling Field Survey.
+
+    Parameters
+    ----------
+    z_ori : float
+        Redshift of the original event.
+    pb_wavelengths : dict
+        Mapping between the passbands name and central wavelength.
+    random_state : numpy.random.mtrand.RandomState
+        Container for the slow Mersenne Twister pseudo-random number generator.
+        It allows reproducible results.
+
+    Returns
+    -------
+    z_new: float
+        Redshift of the new event.
+    """
+    rs = random_state
+    if sn_class == 'SN Ia':
+        gauss_choice = rs.choice(2, p=[0.46993767, 0.53006233])
+        if gauss_choice == 0:
+            mean = 0.04256031
+            var = np.sqrt(0.0001652)
+        elif gauss_choice == 1:
+            mean = 0.07471462
+            var = np.sqrt(0.0002305)
+        z_new = np.clip(rs.normal(mean, var), 0, None)
+
+    elif sn_class == 'SN Ibc':
+        gauss_choice = rs.choice(2, p=[0.82820709, 0.17179291])
+        if gauss_choice == 0:
+            mean = 0.02905788
+            var = np.sqrt(8.93376808e-05)
+        elif gauss_choice == 1:
+            mean = 0.05510657
+            var = np.sqrt(3.44870141e-04)
+        z_new = np.clip(rs.normal(mean, var), 0, None)
+
+    elif sn_class == 'SN II':
+        gauss_choice = rs.choice(2, p=[0.2520905, 0.7479095])
+        if gauss_choice == 0:
+            mean = 0.05197194
+            var = np.sqrt(2.61108535e-04)
+        elif gauss_choice == 1:
+            mean = 0.02879286
+            var = np.sqrt(9.11474480e-05)
+        z_new = np.clip(rs.normal(mean, var), 0, None)
+    return z_new
+
+
 class SNAugment:
     """Base class outlining the structure for the augmentation of a sndata
     instance. Classes that encapsulate a specific data augmentation procedure
@@ -1395,6 +1451,219 @@ class PlasticcDDFAugment(GPAugment):
             # If the original event was not a DDF observation, cannot simulate
             # a DDF event.
             aug_obj_metadata = None
+
+        return aug_obj_metadata
+
+    def _choose_target_number_obs(self, aug_obj_metadata):
+        """Randomly choose the target number of light curve observations.
+
+        Using Gaussian mixture models, we model the number of observations in
+        the test set events simulated on the Deep Drilling Field (DDF).
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+
+        Returns
+        -------
+        target_number_obs : int
+            The target number of observations in the new light curve.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion
+        `PlasticcAugmentor._choose_target_observation_count` of
+        `avocado/plasticc.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        # Estimate the distribution of number of observations in the
+        # DDF regions with a mixture of 2 gaussian distributions.
+        gauss_choice = self._rs.choice(2, p=[0.34393457, 0.65606543])
+        if gauss_choice == 0:
+            mean = 57.36015146
+            var = np.sqrt(271.58889272)
+        elif gauss_choice == 1:
+            mean = 92.7741619
+            var = np.sqrt(338.53085446)
+        target_number_obs = int(
+            np.clip(self._rs.normal(mean, var), 20, None))
+
+        return target_number_obs
+
+    def _compute_obs_uncertainty(self, aug_obj_data, aug_obj_metadata):
+        """Compute and add uncertainty to the light curve observations.
+
+        Following [1]_, we estimate the flux uncertainties for each
+        passband with a lognormal distribution for the Deep Drilling Field
+        (DDF) survey. Each passband was modeled individually with test set
+        events.
+        The flux uncertanty of the augmented events is the combination of the
+        flux uncertainty of the augmented events predicted by the GP in
+        quadrature with a value drawn from the flux uncertainty distribution
+        described above.
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
+
+        Returns
+        -------
+        aug_obj_data : pandas.DataFrame
+            Observations of the augmented event.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion
+        `PlasticcAugmentor._simulate_light_curve_uncertainties` of
+        `avocado/plasticc.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        # Make a copy of the original data to avoid modifying it
+        aug_obj_data = aug_obj_data.copy()
+
+        # Skip this function if there are no observations
+        if len(aug_obj_data) == 0:
+            return aug_obj_data
+
+        # The uncertainty levels of the observations in each passband can be
+        # modeled with a lognormal distribution. See [1].
+        # Lognormal parameters
+        pb_noises = {'lsstu': (0.68, 0.26), 'lsstg': (0.25, 0.50),
+                     'lsstr': (0.16, 0.36), 'lssti': (0.53, 0.27),
+                     'lsstz': (0.88, 0.22), 'lssty': (1.76, 0.23)}
+
+        # Calculate the new uncertainty levels for each passband
+        lognormal_parameters = []
+        for pb in aug_obj_data['filter']:
+            try:
+                lognormal_parameters.append(pb_noises[pb])
+            except KeyError:
+                raise ValueError(f'The noise properties of the passband {pb} '
+                                 f'are not known. Add them to '
+                                 f'`GPAugment._compute_obs_uncertainty`.')
+        lognormal_parameters = np.array(lognormal_parameters)
+
+        # Combine the flux uncertainty of the augmented events predicted by
+        # the GP in quadrature with a value drawn from the flux uncertainty
+        # distribution of the test set
+        add_stds = self._rs.lognormal(
+            lognormal_parameters[:, 0], lognormal_parameters[:, 1])
+        noise_add = self._rs.normal(loc=0.0, scale=add_stds)
+        aug_obj_data['flux'] += noise_add  # add noise to increase variability
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
+                                             + add_stds ** 2)
+        return aug_obj_data
+
+
+class ZTFRepresAugment(GPAugment):
+    """Augment the Deep Drilling Field (DDF) events in the PLAsTiCC dataset using
+    Gaussian Process extrapolation method (see `snaugment.GPAugment`).
+    """
+
+    def __init__(self, dataset, path_saved_gps, objs_number_to_aug=None,
+                 z_table=None, max_duration=None,
+                 cosmology=FlatLambdaCDM(**{"H0": 70, "Om0": 0.3,
+                                            "Tcmb0": 2.725}),
+                 random_seed=None, **kwargs):
+        """Class enclosing the Gaussian Process augmentation of WFD events.
+
+        This class augments the Deep Drilling Field (DDF) events in the
+        PLAsTiCC dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset object (`sndata` class)
+            Dataset to augment.
+        path_saved_gps: str
+            Path to the Gaussian Process files.
+        objs_number_to_aug : {`None`, 'all', dict}, optional
+            Specify which events to augment and by how much. If `None`, the
+            dataset it not augmented. If `all`, all the events are augmented
+            10 times. If a dictionary is provided, it should be in the form of:
+                event: number of times to augment that event.
+        z_table : {None, pandas.DataFrame}, optional
+            Dataset of the spectroscopic and photometric redshift, and
+            photometric redshift error of events. This table is used to
+            generate the photometric redshift and respective error for the
+            augmented events. If `None`, this table is generated from the
+            events in the original dataset.
+        max_duration : {None, float}, optional
+            Maximum duration of the augmented light curves. If `None`, it is
+            set to the length of the longest event in `dataset`.
+        cosmology : astropy.cosmology.core.COSMOLOGY, optional
+            Cosmology from `astropy` with the cosmologic parameters already
+            defined. By default it assumes Flat LambdaCDM with parameters
+            `H0 = 70`, `Om0 = 0.3` and `T_cmb0 = 2.725`.
+        random_seed : int, optional
+            Random seed used. Saving this seed allows reproducible results.
+            If given, it must be between 0 and 2**32 - 1.
+        **kwargs : dict, optional
+            Optional keywords to pass arguments into
+            `snamchine.gps.compute_gps`.
+
+        Notes
+        -----
+        This augmentation is based on [1]_.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
+                         objs_number_to_aug=objs_number_to_aug,
+                         choose_z=choose_z_same, z_table=z_table,
+                         max_duration=max_duration, cosmology=cosmology,
+                         random_seed=random_seed, **kwargs)
+
+        self._aug_method = 'GP augmentation; ZTF representative'
+
+    def create_aug_obj_metadata(self, aug_obj, obj_metadata):
+        """Create metadata for the DDF augmented event.
+
+        The new metadata is based based on the metadata of the original event.
+
+        Parameters
+        ----------
+        aug_obj : str
+            Name of the augmented event in the form
+                `[original event name]_[number of the augmentation]`.
+        obj_metadata: pandas.DataFrame
+            Metadata of the original event.
+
+        Returns
+        -------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        """
+        aug_obj_metadata = obj_metadata.copy()
+        aug_obj_metadata.name = aug_obj
+        aug_obj_metadata.object_id = aug_obj
+        aug_obj_metadata['augmented'] = True
+        aug_obj_metadata['original_event'] = aug_obj.split('_')[0]
+
+        z_spec = self.choose_z(obj_metadata['hostgal_specz'], **self._kwargs)
+        z_photo, z_photo_error = self.compute_new_z_photo(z_spec)
+        aug_obj_metadata['hostgal_specz'] = z_spec
+        aug_obj_metadata['hostgal_photoz'] = z_photo
+        aug_obj_metadata['hostgal_photoz_err'] = z_photo_error
 
         return aug_obj_metadata
 
