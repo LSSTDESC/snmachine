@@ -1461,19 +1461,27 @@ class ZtfData(EmptyDataset):
                 axes.legend(ncol=2, handletextpad=.3, borderaxespad=.3,
                             labelspacing=.2, borderpad=.3, columnspacing=.4)
 
-    def cut_transient(self, remove_poor_obs=True):
+    def cut_transient(self, remove_poor_obs=True, t_before_peak=100,
+                      t_after_peak=150):
         """Select the transient part of the event.
 
         Selects the transient part of the event and removes the observations
         in poor conditions.
+        We define the transient as between `t_before_peak` days before the
+        peak and `t_after_peak` days after.
 
         Parameters
         ----------
         remove_poor_obs: bool, optional
             Default True. If True removes the observations in poor conditions.
+        t_before_peak : float, optional
+            We cut the transient after `t_before_peak` days before the peak.
+        t_after_peak : float, optional
+            We cut the transient after `t_after_peak` days after the peak.
         """
         # Select the maximum time away from the peak to select observations
-        t_from_peak = 150
+        t_after_peak = 150
+        t_before_peak = -100
 
         obj_names = self.object_names
         t_peak = self.metadata['peakt']
@@ -1485,8 +1493,10 @@ class ZtfData(EmptyDataset):
             # Select the observations less than `t_from_peak` from peak and
             # that are not poorly observed
             is_poor = obj_data['poor_conditions']
-            is_close_peak = np.abs(obs_time - obj_t_peak) <= t_from_peak
-            new_obj_data = obj_data[is_close_peak & (~is_poor)]
+            is_close_after_peak = obs_time - obj_t_peak <= t_after_peak
+            is_close_before_peak = obs_time - obj_t_peak >= t_before_peak
+            new_obj_data = obj_data[is_close_after_peak & is_close_before_peak
+                                    & (~is_poor)]
             new_obj_data['mjd'] -= obj_t_peak
             new_obj_data.reset_index(inplace=True)
 
