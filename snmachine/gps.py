@@ -21,8 +21,9 @@ from snmachine import chisq as cs
 
 
 # Central passbands wavelengths
-pb_wavelengths = {"lsstu": 3685., "lsstg": 4802., "lsstr": 6231.,
-                  "lssti": 7542., "lsstz": 8690., "lssty": 9736.}
+pb_wavelengths = {'lsstu': 3685., 'lsstg': 4802., 'lsstr': 6231.,
+                  'lssti': 7542., 'lsstz': 8690., 'lssty': 9736.,
+                  'ZTF_g': 4804.79, 'ZTF_r': 6436.92, 'ZTF_i': 7968.22}
 wavelengths_pb = {v: k for k, v in pb_wavelengths.items()}  # inverted map
 
 
