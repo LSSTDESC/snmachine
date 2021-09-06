@@ -1476,19 +1476,21 @@ class ZtfData(EmptyDataset):
         t_from_peak = 150
 
         obj_names = self.object_names
-        t_peak = self.metadata['t_peak']
-        for obj, i in enumerate(obj_names):
-            obj_data = self.data[obj]
+        t_peak = self.metadata['peakt']
+        for i, obj in enumerate(obj_names):
+            obj_data = self.data[obj].to_pandas()
             obs_time = obj_data['mjd']
-            obj_peak = t_peak.loc[obj]
+            obj_t_peak = t_peak.loc[obj]
 
             # Select the observations less than `t_from_peak` from peak and
             # that are not poorly observed
             is_poor = obj_data['poor_conditions']
-            is_close_peak = np.abs(obs_time - obj_peak) <= t_from_peak
+            is_close_peak = np.abs(obs_time - obj_t_peak) <= t_from_peak
             new_obj_data = obj_data[is_close_peak & (~is_poor)]
+            new_obj_data['mjd'] -= obj_t_peak
+            new_obj_data.reset_index(inplace=True)
 
-            self.data[obj] = new_obj_data
+            self.data[obj] = Table.from_pandas(new_obj_data)
 
 
 class Dataset(EmptyDataset):
