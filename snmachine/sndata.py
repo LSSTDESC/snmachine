@@ -1477,7 +1477,7 @@ class ZtfData(EmptyDataset):
 
         obj_names = self.object_names
         t_peak = self.metadata['t_peak']
-        for obj, i in enumerate(obj_names)):
+        for obj, i in enumerate(obj_names):
             obj_data = self.data[obj]
             obs_time = obj_data['mjd']
             obj_peak = t_peak.loc[obj]
