@@ -1201,12 +1201,8 @@ class ZtfData(EmptyDataset):
         # Rename `sntype` as target as per `snmachine` convention
         metadata_pd.rename({'type': 'target'}, axis='columns', inplace=True)
 
-        # Update the values that depend on mjd
-        print(metadata_pd.head(3))
-        print('')
-        print(metadata_pd['peakt'].head(3))
-        print(self.min_mjd.head(3))
-        metadata_pd['peakt'] -= self.min_mjd
+        # Update the values that depend on mjd - there is an offset of 200 days
+        metadata_pd['peakt'] -= 200
 
         # Save in the data instance
         self.metadata = metadata_pd
