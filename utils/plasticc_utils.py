@@ -64,7 +64,8 @@ def plasticc_log_loss(y_true, probs):
     weights_dict = {6: 1/18, 15: 1/9, 16: 1/18, 42: 1/18, 52: 1/18, 53: 1/18,
                     62: 1/18, 64: 1/9, 65: 1/18, 67: 1/18, 88: 1/18, 90: 1/18,
                     92: 1/18, 95: 1/18, 99: 1/19,
-                    1: 1/18, 2: 1/18, 3: 1/18}
+                    1: 1/18, 2: 1/18, 3: 1/18,
+                    'SN Ia': 1/18, 'SN Ibc': 1/18, 'SN II': 1/18}
 
     # sanitize predictions
     epsilon = sys.float_info.epsilon  # machine dependent but prevents log(0)
