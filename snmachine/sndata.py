@@ -1461,73 +1461,34 @@ class ZtfData(EmptyDataset):
                 axes.legend(ncol=2, handletextpad=.3, borderaxespad=.3,
                             labelspacing=.2, borderpad=.3, columnspacing=.4)
 
-    def remove_gaps(self, max_gap_length, verbose=False):
-        """TODO: Modify for ZTF
+    def cut_transient(self, remove_poor_obs=True):
+        """Select the transient part of the event.
 
-        Remove the first gap longer than the given threshold.
-
-        To remove all the gaps longer than `max_gap_length`, this function
-        must be called a few times.
+        Selects the transient part of the event and removes the observations
+        in poor conditions.
 
         Parameters
         ----------
-        max_gap_length: float
-            Maximum duration of the gap to allowed in the light curves.
-        verbose: bool, optional
-            Default False. If True prints the ID of the longest event and its
-            length.
+        remove_poor_obs: bool, optional
+            Default True. If True removes the observations in poor conditions.
         """
+        # Select the maximum time away from the peak to select observations
+        t_from_peak = 150
+
         obj_names = self.object_names
-        time_transient = np.zeros(len(obj_names))
-        for i in range(len(obj_names)):
-            obj_data = self.data[obj_names[i]]
+        t_peak = self.metadata['t_peak']
+        for obj, i in enumerate(obj_names)):
+            obj_data = self.data[obj]
             obs_time = obj_data['mjd']
+            obj_peak = t_peak.loc[obj]
 
-            # time gaps between consecutive observations
-            time_diff = obs_time[1:] - obs_time[:-1]
+            # Select the observations less than `t_from_peak` from peak and
+            # that are not poorly observed
+            is_poor = obj_data['poor_conditions']
+            is_close_peak = np.abs(obs_time - obj_peak) <= t_from_peak
+            new_obj_data = obj_data[is_close_peak & (~is_poor)]
 
-            if np.max(time_diff) > max_gap_length:
-                index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
-                time_last_obs_before = obs_time[index_gap]
-                obs_time_detected = obs_time[obj_data['detected'] == 1]
-
-                # number of detections before and after the gap
-                number_detections_before = np.sum(
-                    obs_time_detected <= time_last_obs_before)
-                number_detections_after = np.sum(
-                    obs_time_detected > time_last_obs_before)
-
-                # more detections before the gap
-                if number_detections_before > number_detections_after:
-                    is_obs_transient = obs_time <= time_last_obs_before
-
-                # more detections after the gap
-                elif number_detections_before < number_detections_after:
-                    is_obs_transient = obs_time > time_last_obs_before
-
-                # same number of detections on before and after the gap
-                else:
-                    number_obs_before = np.sum(
-                        obs_time <= time_last_obs_before)
-                    number_obs_after = np.sum(
-                        obs_time > time_last_obs_before)
-                    # more observation before the gap
-                    if number_obs_before >= number_obs_after:
-                        is_obs_transient = obs_time <= time_last_obs_before
-                    # more observation after the gap
-                    else:
-                        is_obs_transient = obs_time > time_last_obs_before
-                obs_transient = obj_data[is_obs_transient]
-
-                # introduce uniformity: all transients start at time 0
-                obs_transient['mjd'] -= min(obs_transient['mjd'])
-
-                self.data[obj_names[i]] = obs_transient
-            time_transient[i] = obj_data['mjd'][-1] - obj_data['mjd'][0]
-        if verbose:
-            print(f'The longest event is '
-                  f'{obj_names[np.argmax(time_transient)]} '
-                  f'and its length is {np.max(time_transient):.2f} days.')
+            self.data[obj] = new_obj_data
 
 
 class Dataset(EmptyDataset):
