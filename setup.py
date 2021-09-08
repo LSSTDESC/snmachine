@@ -38,6 +38,12 @@ class ExtractExampleData(install):
 
 setup(
     name='snmachine',
+    author='Michelle Lochner',
+    author_email='dr.michelle.lochner@gmail.com',
+    description='Machine learning code for photometric supernova '
+                'classification',
+    url='https://github.com/LSSTDESC/snmachine',
+    license='BSD-3-Clause License',
     use_scm_version={
         "root": ".",
         "relative_to": __file__,
@@ -50,10 +56,20 @@ setup(
                                 'example_data/example_data_for_tests.pckl']},
     exclude_package_data={'utils': ['archive/*']},
     cmdclass={'install': ExtractExampleData},
-    url='https://github.com/LSSTDESC/snmachine',
-    license='BSD-3-Clause License',
-    author='Michelle Lochner',
-    author_email='dr.michelle.lochner@gmail.com',
-    description='Machine learning code for photometric supernova '
-                'classification'
+    install_requires=['astropy>=1.1.2',
+                      'matplotlib>=1.5.1',
+                      'numpy>=1.18.4',
+                      'scikit-learn',
+                      'scipy>=0.17.0',
+                      'george>=0.3.0',
+                      'iminuit',
+                      'pandas>=0.23.0',
+                      'pywavelets>=0.4.0',
+                      'sncosmo==2.1.0',
+                      'nose>=1.3.7',
+                      'future>=0.16',
+                      'pyyaml>=3.13',
+                      'seaborn',
+                      'lightgbm',
+                      'setuptools_scm']
 )
