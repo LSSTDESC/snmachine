@@ -92,13 +92,14 @@ def choose_z_ddf(z_ori, pb_wavelengths, random_state):
     return z_new
 
 
-def choose_z_same(z_ori, sn_class, random_state):
-    """Choose the new spectroscopic redshift for an DDF augmented event.
+def choose_z_repr(z_ori, sn_class, random_state):
+    """New spectroscopic redshift for a representative ZTF augmented event.
 
     The new spectroscopic redshift is based on the redhsift of the original
     event.
     This target distribution of the redshift is class-agnostic and modeled
-    after the PLAsTiCC supernovae simulated in the Deep Drilling Field Survey.
+    after all ZTF supernovae with spectroscopic redshift. Note this function
+    assumes the dataset is already representative.
 
     Parameters
     ----------
@@ -117,33 +118,46 @@ def choose_z_same(z_ori, sn_class, random_state):
     """
     rs = random_state
     if sn_class == 'SN Ia':
-        gauss_choice = rs.choice(2, p=[0.46993767, 0.53006233])
+        gauss_choice = rs.choice(2, p=[0.43293761, 0.56706239])
         if gauss_choice == 0:
-            mean = 0.04256031
-            var = np.sqrt(0.0001652)
+            mean = 0.0456964
+            var = np.sqrt(0.00024838)
         elif gauss_choice == 1:
-            mean = 0.07471462
-            var = np.sqrt(0.0002305)
+            mean = 0.07840424
+            var = np.sqrt(0.00023372)
         z_new = np.clip(rs.normal(mean, var), 0, None)
 
     elif sn_class == 'SN Ibc':
-        gauss_choice = rs.choice(2, p=[0.82820709, 0.17179291])
+        gauss_choice = rs.choice(2, p=[0.79266097, 0.20733903])
         if gauss_choice == 0:
-            mean = 0.02905788
-            var = np.sqrt(8.93376808e-05)
+            mean = 0.03178746
+            var = np.sqrt(0.0001407)
         elif gauss_choice == 1:
-            mean = 0.05510657
-            var = np.sqrt(3.44870141e-04)
+            mean = 0.07010364
+            var = np.sqrt(0.00088603)
         z_new = np.clip(rs.normal(mean, var), 0, None)
 
     elif sn_class == 'SN II':
-        gauss_choice = rs.choice(2, p=[0.2520905, 0.7479095])
+        gauss_choice = rs.choice(2, p=[0.82793413, 0.17206587])
         if gauss_choice == 0:
-            mean = 0.05197194
-            var = np.sqrt(2.61108535e-04)
+            mean = 0.0001606
+            var = np.sqrt(0.00016962)
         elif gauss_choice == 1:
-            mean = 0.02879286
-            var = np.sqrt(9.11474480e-05)
+            mean = 0.06833641
+            var = np.sqrt(0.0006971)
+        z_new = np.clip(rs.normal(mean, var), 0, None)
+
+    elif sn_class == 'Other':
+        gauss_choice = rs.choice(3, p=[0.52639971, 0.17110452, 0.30249577])
+        if gauss_choice == 0:
+            mean = 0.05090119
+            var = np.sqrt(0.00035803)
+        elif gauss_choice == 1:
+            mean = 0.21845162
+            var = np.sqrt(0.0046525)
+        elif gauss_choice == 2:
+            mean = 0.1041686
+            var = np.sqrt(0.00040157)
         z_new = np.clip(rs.normal(mean, var), 0, None)
     return z_new
 
@@ -1581,10 +1595,9 @@ class ZTFRepresAugment(GPAugment):
                  cosmology=FlatLambdaCDM(**{"H0": 70, "Om0": 0.3,
                                             "Tcmb0": 2.725}),
                  random_seed=None, **kwargs):
-        """Class enclosing the Gaussian Process augmentation of WFD events.
+        """Class enclosing the Gaussian Process augmentation of ZTF events.
 
-        This class augments the Deep Drilling Field (DDF) events in the
-        PLAsTiCC dataset.
+        This class augments the ZTF events in a representative dataset.
 
         Parameters
         ----------
@@ -1629,7 +1642,7 @@ class ZTFRepresAugment(GPAugment):
         """
         super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
                          objs_number_to_aug=objs_number_to_aug,
-                         choose_z=choose_z_same, z_table=z_table,
+                         choose_z=choose_z_repr, z_table=z_table,
                          max_duration=max_duration, cosmology=cosmology,
                          random_seed=random_seed, **kwargs)
 
@@ -1671,7 +1684,7 @@ class ZTFRepresAugment(GPAugment):
         """Randomly choose the target number of light curve observations.
 
         Using Gaussian mixture models, we model the number of observations in
-        the test set events simulated on the Deep Drilling Field (DDF).
+        all ZTF supernovae with spectroscopic redshift.
 
         Parameters
         ----------
@@ -1697,16 +1710,20 @@ class ZTFRepresAugment(GPAugment):
         Astronomical Journal 158.6 (2019): 257.
         """
         # Estimate the distribution of number of observations in the
-        # DDF regions with a mixture of 2 gaussian distributions.
-        gauss_choice = self._rs.choice(2, p=[0.34393457, 0.65606543])
+        # ZTF regions with a mixture of 3 gaussian distributions.
+        gauss_choice = self._rs.choice(3, p=[0.29190268, 0.08764422,
+                                             0.62045311])
         if gauss_choice == 0:
-            mean = 57.36015146
-            var = np.sqrt(271.58889272)
+            mean = 364.69782992
+            var = np.sqrt(15687.86384548)
         elif gauss_choice == 1:
-            mean = 92.7741619
-            var = np.sqrt(338.53085446)
+            mean = 710.2091036
+            var = np.sqrt(84504.72995106)
+        elif gauss_choice == 1:
+            mean = 135.90902974
+            var = np.sqrt(4270.19169361)
         target_number_obs = int(
-            np.clip(self._rs.normal(mean, var), 20, None))
+            np.clip(self._rs.normal(mean, var), 10, None))
 
         return target_number_obs
 
@@ -1714,9 +1731,9 @@ class ZTFRepresAugment(GPAugment):
         """Compute and add uncertainty to the light curve observations.
 
         Following [1]_, we estimate the flux uncertainties for each
-        passband with a lognormal distribution for the Deep Drilling Field
-        (DDF) survey. Each passband was modeled individually with test set
-        events.
+        passband with a lognormal distribution for the ZTF survey. Each
+        passband was modeled individually with all ZTF supernovae with
+        spectroscopic redshift.
         The flux uncertanty of the augmented events is the combination of the
         flux uncertainty of the augmented events predicted by the GP in
         quadrature with a value drawn from the flux uncertainty distribution
@@ -1757,9 +1774,9 @@ class ZTFRepresAugment(GPAugment):
         # The uncertainty levels of the observations in each passband can be
         # modeled with a lognormal distribution. See [1].
         # Lognormal parameters
-        pb_noises = {'lsstu': (0.68, 0.26), 'lsstg': (0.25, 0.50),
-                     'lsstr': (0.16, 0.36), 'lssti': (0.53, 0.27),
-                     'lsstz': (0.88, 0.22), 'lssty': (1.76, 0.23)}
+        pb_noises = {'ZTF_g': (1.48342863, np.sqrt(0.29887786)),
+                     'ZTF_r': (1.64760619, np.sqrt(0.2546572)),
+                     'ZTF_i': (2.00466019, np.sqrt(0.19445635))}
 
         # Calculate the new uncertainty levels for each passband
         lognormal_parameters = []
@@ -1782,3 +1799,159 @@ class ZTFRepresAugment(GPAugment):
         aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
                                              + add_stds ** 2)
         return aug_obj_data
+
+    def _choose_obs_times(self, aug_obj_metadata, obj_data, z_ori):
+        """Choose the times at which mock observations will be made.
+
+        TODO: Update this for ZTF
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
+        z_ori : float
+            Redshift of the original event.
+
+        Returns
+        -------
+        aug_obj_data : pandas.DataFrame
+            Table containing the times and passbands of the augmented event
+            observations. The other columns contain the information relative
+            to the original event.
+
+        Notes
+        -----
+        This function is adapted from the code developed in [1]_. In
+        particular, the funtion `Augmentor._choose_sampling_times` of
+        `avocado/augment.py`.
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        z_aug = aug_obj_metadata['hostgal_specz']
+
+        # Generate a copy of the original event
+        aug_obj_data = obj_data.copy()
+        aug_obj_data['object_id'] = aug_obj_metadata['object_id']
+        aug_obj_data['ref_mjd'] = aug_obj_data['mjd'].copy()
+
+        # Stretch the observed epochs of the original event to account for the
+        # time dilation due to the difference between the original and
+        # augmented redshifts
+        z_scale = (1 + z_ori) / (1 + z_aug)
+
+        # Keep the time of the maximum flux invariant so that the interesting
+        # part of the light curve remains inside the observing window.
+        time_peak = obj_data['mjd'].iloc[np.argmax(obj_data['flux'].values)]
+        aug_obj_data['mjd'] = time_peak + z_scale**-1 * (
+            obj_data['mjd'] - time_peak)
+        # Removed any observations outside the observing window
+        is_not_seen = aug_obj_data['mjd'] < 0
+        aug_obj_data = aug_obj_data[~is_not_seen]  # before 0
+        aug_obj_data = self.trim_obj(aug_obj_data, self.max_duration)  # after
+
+        # Ensure the augmented event still has observations. If not, stop this
+        # augmentation
+        if len(aug_obj_data) == 0:
+            print('obj {} failed.'.format(aug_obj_metadata['object_id']))
+            return None
+
+        # Randomly choose a target number of observations for the new event.
+        target_number_obs = self._choose_target_number_obs(aug_obj_metadata)
+
+        # Events shifted to higher redshifts have a lower density of
+        # observations than the events observed at those redshifts. In order
+        # to account for this, we add more observations to these higher
+        # redshift events.
+        num_fill = int(target_number_obs * (z_scale**-1 - 1))
+        if num_fill > 0:
+            # At the most, create 50% more data; It prevents augmented events
+            # with many observations that provide no extra information
+            if num_fill > len(obj_data)/2:
+                num_fill = int(len(obj_data)/2)
+            new_indices = self._rs.choice(aug_obj_data.index, num_fill,
+                                          replace=True)
+            new_rows = aug_obj_data.loc[new_indices]
+
+            # Choose new passbands randomly
+            obj_pbs = np.unique(aug_obj_data['filter'])
+            new_rows['filter'] = self._rs.choice(obj_pbs, num_fill,
+                                                 replace=True)
+            aug_obj_data = pd.concat([aug_obj_data, new_rows])
+
+            # Reorder observations in chronological order
+            aug_obj_data.sort_values(by=['mjd'], ignore_index=True,
+                                     inplace=True)
+
+        # If the augmented event has more observations than the target number
+        # of observations, randomly drop the difference. In any case, to
+        # introduce additional variability, randomly drop at least 10% of the
+        # synthetic observations.
+        drop_fraction = 0.1
+        number_drop = int(max(len(aug_obj_data) - target_number_obs,
+                              drop_fraction * len(aug_obj_data)))
+        drop_indices = self._rs.choice(aug_obj_data.index, number_drop,
+                                       replace=False)
+        aug_obj_data = aug_obj_data.drop(drop_indices).copy()
+
+        # For consistency between all datasets, the first observation is at t=0
+        aug_obj_data['mjd'] -= np.min(aug_obj_data['mjd'])
+
+        aug_obj_data.reset_index(inplace=True, drop=True)
+        return aug_obj_data
+
+    def _simulate_detection(self, aug_obj_data, aug_obj_metadata):
+        """Simulate the detection process for a light curve.
+
+        TODO: Update this for ZTF
+
+        We impose quality cuts on the augmented events. Following [1]_, we
+        require at least two detections: at least two observations above the
+        signal-to-noise (S/N) threshold. [1]_ calculated this threshold by
+        fitting an error function to the observations from the PLAsTiCC
+        dataset to predict the probability of detection as a function of S/N.
+
+        Parameters
+        ----------
+        aug_obj_metadata : pandas.DataFrame
+            Metadata of the augmented event.
+        obj_data : pandas.DataFrame
+            Observations of the original event.
+
+        Returns
+        -------
+        aug_obj_data : pandas.DataFrame
+            Observations of the augmented event.
+        pass_detection : bool
+            Whether or not the event passes the detection threshold.
+
+        Notes
+        -----
+        This method is adapted from the code developed in [1]_. In particular,
+        the funtion `PlasticcAugmentor._simulate_detection` of
+        `avocado/plasticc.py`.
+        Note that this method should be overridden in child classes if the
+        quality cuts desired are different.
+
+
+        References
+        ----------
+        .. [1] Boone, Kyle. "Avocado: Photometric classification of
+        astronomical transients with gaussian process augmentation." The
+        Astronomical Journal 158.6 (2019): 257.
+        """
+        # Calculate the S/N of the observations
+        s2n = np.abs(aug_obj_data["flux"]) / aug_obj_data["flux_error"]
+
+        # Apply the S/N threshold
+        prob_detected = (erf((s2n - 5.5) / 2) + 1) / 2.0
+        aug_obj_data["detected"] = self._rs.rand(len(s2n)) < prob_detected
+        pass_detection = np.sum(aug_obj_data["detected"]) >= 2
+
+        return aug_obj_data, pass_detection
+
