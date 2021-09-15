@@ -1136,7 +1136,7 @@ class ZtfData(EmptyDataset):
             obj_lc = data[data[self.id_col] == id]
             # Save the minimum mjd to then update the metadata
             min_mjd[i] = np.min(obj_lc['mjd'])
-            lc = self.get_obj_lc_table_starting_from_mjd_zero(pandas_lc=obj_lc)
+            lc = self.get_obj_lc_table_starting_from_1_1_2018(pandas_lc=obj_lc)
             if len(lc[self.mjd_col] > 0):
                 self.data[str(id)] = lc
             else:
@@ -1149,11 +1149,11 @@ class ZtfData(EmptyDataset):
         self.min_mjd = pd.DataFrame(index=object_names, data=min_mjd)
         self.print_time_difference(time_start_reading, time.time())
 
-    def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
-        """Transform the pandas dataframe into an astropy table starting from mjd=0
+    def get_obj_lc_table_starting_from_1_1_2018(self, pandas_lc):
+        """Change pandas dataframe to astropy table starting from 1/1/2018.
 
-        Takes a pandas light curve from the plasticc dataset format
-        and converts it to the astropy table.table format starting from mjd=0.
+        Takes a pandas light curve from the ZTF dataset in julian days and
+        converts it to an astropy table.table with the day 0 being 1/1/2018.
 
         Parameters
         ----------
@@ -1165,8 +1165,9 @@ class ZtfData(EmptyDataset):
         lc : astropy.table.table
             New single object light curve.
         """
+        start_jd = 2458119.5  # the first day will be 1/1/2018
         lc = Table.from_pandas(pandas_lc)
-        lc[self.mjd_col] -= lc[self.mjd_col].min()
+        lc[self.mjd_col] -= start_jd
         return lc
 
     def set_metadata(self, folder, meta_file):
@@ -1201,8 +1202,8 @@ class ZtfData(EmptyDataset):
         # Rename `sntype` as target as per `snmachine` convention
         metadata_pd.rename({'type': 'target'}, axis='columns', inplace=True)
 
-        # Update the values that depend on mjd - there is an offset of 200 days
-        metadata_pd['peakt'] -= 200
+        # Update the values that depend on jd - there is an offset of 120 days
+        metadata_pd['peakt'] -= 120
 
         # Save in the data instance
         self.metadata = metadata_pd
