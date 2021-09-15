@@ -1462,8 +1462,8 @@ class ZtfData(EmptyDataset):
                 axes.legend(ncol=2, handletextpad=.3, borderaxespad=.3,
                             labelspacing=.2, borderpad=.3, columnspacing=.4)
 
-    def cut_transient(self, remove_poor_obs=True, t_before_peak=100,
-                      t_after_peak=150):
+    def cut_transient(self, remove_poor_obs=True, remove_undf_obs=True,
+                      t_before_peak=100, t_after_peak=150):
         """Select the transient part of the event.
 
         Selects the transient part of the event and removes the observations
@@ -1475,6 +1475,10 @@ class ZtfData(EmptyDataset):
         ----------
         remove_poor_obs: bool, optional
             Default True. If True removes the observations in poor conditions.
+        remove_undf_obs: bool, optional
+            Default True. If True removes the undefined observations; they
+            have negative flux uncertanty. These observations usually have
+            flux and flux uncertainty = -999.
         t_before_peak : float, optional
             We cut the transient after `t_before_peak` days before the peak.
         t_after_peak : float, optional
@@ -1492,12 +1496,13 @@ class ZtfData(EmptyDataset):
             obj_t_peak = t_peak.loc[obj]
 
             # Select the observations less than `t_from_peak` from peak and
-            # that are not poorly observed
+            # that are not poorly observed nor undefined
             is_poor = obj_data['poor_conditions']
+            is_undf = obj_data['flux_error'] < 0
             is_close_after_peak = obs_time - obj_t_peak <= t_after_peak
             is_close_before_peak = obs_time - obj_t_peak >= t_before_peak
             new_obj_data = obj_data[is_close_after_peak & is_close_before_peak
-                                    & (~is_poor)]
+                                    & (~is_poor) & (~is_undf)]
             new_obj_data['mjd'] -= obj_t_peak
             new_obj_data.reset_index(inplace=True)
 
