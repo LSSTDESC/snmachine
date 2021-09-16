@@ -1586,8 +1586,9 @@ class PlasticcDDFAugment(GPAugment):
 
 
 class ZTFRepresAugment(GPAugment):
-    """Augment the Deep Drilling Field (DDF) events in the PLAsTiCC dataset using
-    Gaussian Process extrapolation method (see `snaugment.GPAugment`).
+    """Augment the ZTF events using Gaussian Process extrapolation method
+    (see `snaugment.GPAugment`). In this case, we assume the training set is
+    representative.
     """
 
     def __init__(self, dataset, path_saved_gps, objs_number_to_aug=None,
@@ -1803,7 +1804,7 @@ class ZTFRepresAugment(GPAugment):
     def _choose_obs_times(self, aug_obj_metadata, obj_data, z_ori):
         """Choose the times at which mock observations will be made.
 
-        TODO: Update this for ZTF
+        This method is optimised for ZTF events.
 
         Parameters
         ----------
@@ -1847,13 +1848,14 @@ class ZTFRepresAugment(GPAugment):
 
         # Keep the time of the maximum flux invariant so that the interesting
         # part of the light curve remains inside the observing window.
-        time_peak = obj_data['mjd'].iloc[np.argmax(obj_data['flux'].values)]
+        # The time of maximum flux is around t = 0
+        time_peak = 0
         aug_obj_data['mjd'] = time_peak + z_scale**-1 * (
             obj_data['mjd'] - time_peak)
         # Removed any observations outside the observing window
-        is_not_seen = aug_obj_data['mjd'] < 0
-        aug_obj_data = aug_obj_data[~is_not_seen]  # before 0
-        aug_obj_data = self.trim_obj(aug_obj_data, self.max_duration)  # after
+        is_not_seen = ((aug_obj_data['mjd'] < -100)
+                       | (aug_obj_data['mjd'] > 150))
+        aug_obj_data = aug_obj_data[~is_not_seen]
 
         # Ensure the augmented event still has observations. If not, stop this
         # augmentation
@@ -1899,22 +1901,15 @@ class ZTFRepresAugment(GPAugment):
                                        replace=False)
         aug_obj_data = aug_obj_data.drop(drop_indices).copy()
 
-        # For consistency between all datasets, the first observation is at t=0
-        aug_obj_data['mjd'] -= np.min(aug_obj_data['mjd'])
-
         aug_obj_data.reset_index(inplace=True, drop=True)
         return aug_obj_data
 
     def _simulate_detection(self, aug_obj_data, aug_obj_metadata):
         """Simulate the detection process for a light curve.
 
-        TODO: Update this for ZTF
-
-        We impose quality cuts on the augmented events. Following [1]_, we
-        require at least two detections: at least two observations above the
-        signal-to-noise (S/N) threshold. [1]_ calculated this threshold by
-        fitting an error function to the observations from the PLAsTiCC
-        dataset to predict the probability of detection as a function of S/N.
+        We impose quality cuts on the augmented events. Based on the ZTF
+        events, we require that any observation has signal-to-noise ratio
+        above 10^-5. Moreover, we require at least 10 observations.
 
         Parameters
         ----------
@@ -1929,29 +1924,13 @@ class ZTFRepresAugment(GPAugment):
             Observations of the augmented event.
         pass_detection : bool
             Whether or not the event passes the detection threshold.
-
-        Notes
-        -----
-        This method is adapted from the code developed in [1]_. In particular,
-        the funtion `PlasticcAugmentor._simulate_detection` of
-        `avocado/plasticc.py`.
-        Note that this method should be overridden in child classes if the
-        quality cuts desired are different.
-
-
-        References
-        ----------
-        .. [1] Boone, Kyle. "Avocado: Photometric classification of
-        astronomical transients with gaussian process augmentation." The
-        Astronomical Journal 158.6 (2019): 257.
         """
         # Calculate the S/N of the observations
         s2n = np.abs(aug_obj_data["flux"]) / aug_obj_data["flux_error"]
 
         # Apply the S/N threshold
-        prob_detected = (erf((s2n - 5.5) / 2) + 1) / 2.0
-        aug_obj_data["detected"] = self._rs.rand(len(s2n)) < prob_detected
-        pass_detection = np.sum(aug_obj_data["detected"]) >= 2
+        is_detected = s2n > 1E-5
+        aug_obj_data = aug_obj_data[is_detected]
+        pass_detection = len(aug_obj_data["flux"]) >= 10
 
         return aug_obj_data, pass_detection
-
