@@ -753,7 +753,7 @@ class BaseClassifier():
                   for elem in set(metadata.original_event)]
         y_original = metadata.target[sorted(output)]
         y_original.index = metadata.original_event[sorted(output)]
-        y_original = y_original.astype(int)
+        # y_original = y_original.astype(int)
 
         indices_split = cv_fold.split(np.zeros_like(y_original), y_original)
         # Add augmented objects corresponding to the added originals
