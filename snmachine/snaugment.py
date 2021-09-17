@@ -92,7 +92,7 @@ def choose_z_ddf(z_ori, pb_wavelengths, random_state):
     return z_new
 
 
-def choose_z_repr(z_ori, sn_class, random_state):
+def choose_z_repr(z_ori, sn_class, random_state, **kwargs):
     """New spectroscopic redshift for a representative ZTF augmented event.
 
     The new spectroscopic redshift is based on the redhsift of the original
@@ -1672,8 +1672,10 @@ class ZTFRepresAugment(GPAugment):
         aug_obj_metadata.object_id = aug_obj
         aug_obj_metadata['augmented'] = True
         aug_obj_metadata['original_event'] = aug_obj.split('_')[0]
+        aug_obj_class = aug_obj_metadata['target']
 
-        z_spec = self.choose_z(obj_metadata['hostgal_specz'], **self._kwargs)
+        z_spec = self.choose_z(obj_metadata['hostgal_specz'],
+                               sn_class=aug_obj_class, **self._kwargs)
         z_photo, z_photo_error = self.compute_new_z_photo(z_spec)
         aug_obj_metadata['hostgal_specz'] = z_spec
         aug_obj_metadata['hostgal_photoz'] = z_photo
@@ -1720,7 +1722,7 @@ class ZTFRepresAugment(GPAugment):
         elif gauss_choice == 1:
             mean = 710.2091036
             var = np.sqrt(84504.72995106)
-        elif gauss_choice == 1:
+        elif gauss_choice == 2:
             mean = 135.90902974
             var = np.sqrt(4270.19169361)
         target_number_obs = int(
