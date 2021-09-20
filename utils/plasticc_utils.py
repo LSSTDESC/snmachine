@@ -12,7 +12,8 @@ from sklearn.metrics import confusion_matrix
 from snmachine import snclassifier
 
 
-def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
+def plot_confusion_matrix(y_true, y_pred, title, target_names,
+                          normalize=False):
     cm = confusion_matrix(y_true, y_pred, labels=target_names)
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -23,10 +24,11 @@ def plot_confusion_matrix(y_true, y_pred, title, target_names, normalize=False):
 
     annot = np.around(cm, 2)
 
+    # TODO: erase later; This dict_label_to_real is just for de-bug
     dict_label_to_real = {15: 'TDE', 42: 'SNII', 52: 'SNIax', 62: 'SNIbc',
                           64: 'KN', 67: 'SNIa-91bg',
                           88: 'AGN', 90: 'SNIa', 95: 'SLSN-I',
-                          1: 'SNIa', 2: 'SNII', 3: 'SNIbc'}  # to erase later; This is just for de-bug
+                          1: 'SNIa', 2: 'SNII', 3: 'SNIbc'}
     target_names = np.vectorize(dict_label_to_real.get)(target_names)
 
     fig, ax = plt.subplots(figsize=(9, 7))
@@ -65,7 +67,8 @@ def plasticc_log_loss(y_true, probs):
                     62: 1/18, 64: 1/9, 65: 1/18, 67: 1/18, 88: 1/18, 90: 1/18,
                     92: 1/18, 95: 1/18, 99: 1/19,
                     1: 1/18, 2: 1/18, 3: 1/18,
-                    'SN Ia': 1/18, 'SN Ibc': 1/18, 'SN II': 1/18}
+                    'SN Ia': 1/18, 'SN Ibc': 1/18, 'SN II': 1/18,
+                    'Other': 1/18}
 
     # sanitize predictions
     epsilon = sys.float_info.epsilon  # machine dependent but prevents log(0)
@@ -73,7 +76,7 @@ def plasticc_log_loss(y_true, probs):
     predictions = predictions / np.sum(predictions, axis=1)[:, np.newaxis]
 
     predictions = np.log(predictions)  # logarithm because we want a log loss
-    class_logloss, weights = [], []  # initialize the classes logloss and weights
+    class_logloss, weights = [], []  # initialize the classes logloss & weights
     for i in range(np.shape(predictions)[1]):  # run for each class
         current_label = labels[i]
         is_right_class = y_true == current_label  # only events from that class
@@ -94,10 +97,11 @@ def plot_roc_curve(y_probs, y_true):
         An array containing the true class for each object.
     auc : float
     """
+    # TODO: erase later; This dict_label_to_real is just for de-bug
     dict_label_to_real = {15: 'TDE', 42: 'SNII', 52: 'SNIax', 62: 'SNIbc',
                           64: 'KN', 67: 'SNIa-91bg',
                           88: 'AGN', 90: 'SNIa', 95: 'SLSN-I',
-                          1: 'SNIa', 2: 'SNII', 3: 'SNIbc'}  # to erase later; This is just for de-bug
+                          1: 'SNIa', 2: 'SNII', 3: 'SNIbc'}
     target_names = np.unique(y_true)
     target_true_names = np.vectorize(dict_label_to_real.get)(target_names)
     plt.figure(figsize=(10, 6))
