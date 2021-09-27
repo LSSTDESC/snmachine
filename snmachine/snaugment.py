@@ -1759,7 +1759,7 @@ class BaselineNexp2V17DDFAugment(GPAugment):
 
             # Store the new uncertainty levels for each observation
             add_stds[is_pb] = gmm_sample
-        add_stds[is_pb] = np.exp(add_stds)
+        add_stds = np.exp(add_stds)
 
         # Combine the flux uncertainty of the augmented events predicted by
         # the GP in quadrature with a value drawn from the flux uncertainty
