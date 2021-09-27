@@ -2496,9 +2496,6 @@ class SnanaData(EmptyDataset):
     def remove_gaps(self, max_gap_length, verbose=False):
         """Remove the first gap longer than the given threshold.
 
-        TODO this function might needs modifications due to the detected flag
-        in SNANA
-
         To remove all the gaps longer than `max_gap_length`, this function
         must be called a few times.
 
@@ -2516,46 +2513,47 @@ class SnanaData(EmptyDataset):
             obj_data = self.data[obj_names[i]]
             obs_time = obj_data['mjd']
 
-            # time gaps between consecutive observations
-            time_diff = obs_time[1:] - obs_time[:-1]
+            if len(obs_time) >= 2:  # at least 2 observations
+                # time gaps between consecutive observations
+                time_diff = obs_time[1:] - obs_time[:-1]
 
-            if np.max(time_diff) > max_gap_length:
-                index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
-                time_last_obs_before = obs_time[index_gap]
-                obs_time_detected = obs_time[obj_data['detected'] == 1]
+                if np.max(time_diff) > max_gap_length:
+                    index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
+                    time_last_obs_before = obs_time[index_gap]
+                    obs_time_detected = obs_time[obj_data['detected'] == 1]
 
-                # number of detections before and after the gap
-                number_detections_before = np.sum(
-                    obs_time_detected <= time_last_obs_before)
-                number_detections_after = np.sum(
-                    obs_time_detected > time_last_obs_before)
+                    # number of detections before and after the gap
+                    number_detections_before = np.sum(
+                        obs_time_detected <= time_last_obs_before)
+                    number_detections_after = np.sum(
+                        obs_time_detected > time_last_obs_before)
 
-                # more detections before the gap
-                if number_detections_before > number_detections_after:
-                    is_obs_transient = obs_time <= time_last_obs_before
-
-                # more detections after the gap
-                elif number_detections_before < number_detections_after:
-                    is_obs_transient = obs_time > time_last_obs_before
-
-                # same number of detections on before and after the gap
-                else:
-                    number_obs_before = np.sum(
-                        obs_time <= time_last_obs_before)
-                    number_obs_after = np.sum(
-                        obs_time > time_last_obs_before)
-                    # more observation before the gap
-                    if number_obs_before >= number_obs_after:
+                    # more detections before the gap
+                    if number_detections_before > number_detections_after:
                         is_obs_transient = obs_time <= time_last_obs_before
-                    # more observation after the gap
-                    else:
+
+                    # more detections after the gap
+                    elif number_detections_before < number_detections_after:
                         is_obs_transient = obs_time > time_last_obs_before
-                obs_transient = obj_data[is_obs_transient]
 
-                # introduce uniformity: all transients start at time 0
-                obs_transient['mjd'] -= min(obs_transient['mjd'])
+                    # same number of detections on before and after the gap
+                    else:
+                        number_obs_before = np.sum(
+                            obs_time <= time_last_obs_before)
+                        number_obs_after = np.sum(
+                            obs_time > time_last_obs_before)
+                        # more observation before the gap
+                        if number_obs_before >= number_obs_after:
+                            is_obs_transient = obs_time <= time_last_obs_before
+                        # more observation after the gap
+                        else:
+                            is_obs_transient = obs_time > time_last_obs_before
+                    obs_transient = obj_data[is_obs_transient]
 
-                self.data[obj_names[i]] = obs_transient
+                    # introduce uniformity: all transients start at time 0
+                    obs_transient['mjd'] -= min(obs_transient['mjd'])
+
+                    self.data[obj_names[i]] = obs_transient
             time_transient[i] = obj_data['mjd'][-1] - obj_data['mjd'][0]
         if verbose:
             print(f'The longest event is '
