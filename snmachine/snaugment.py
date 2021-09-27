@@ -1305,7 +1305,7 @@ class PlasticcDDFAugment(GPAugment):
                  cosmology=FlatLambdaCDM(**{"H0": 70, "Om0": 0.3,
                                             "Tcmb0": 2.725}),
                  random_seed=None, **kwargs):
-        """Class enclosing the Gaussian Process augmentation of WFD events.
+        """Class enclosing the Gaussian Process augmentation of DDF events.
 
         This class augments the Deep Drilling Field (DDF) events in the
         PLAsTiCC dataset.
