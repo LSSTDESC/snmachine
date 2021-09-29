@@ -1483,10 +1483,6 @@ class ZtfData(EmptyDataset):
         t_after_peak : float, optional
             We cut the transient after `t_after_peak` days after the peak.
         """
-        # Select the maximum time away from the peak to select observations
-        t_after_peak = 150
-        t_before_peak = -100
-
         obj_names = self.object_names
         t_peak = self.metadata['peakt']
         for i, obj in enumerate(obj_names):
