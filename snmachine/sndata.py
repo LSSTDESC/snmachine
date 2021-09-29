@@ -1495,7 +1495,7 @@ class ZtfData(EmptyDataset):
             is_poor = obj_data['poor_conditions']
             is_undf = obj_data['flux_error'] < 0
             is_close_after_peak = obs_time - obj_t_peak <= t_after_peak
-            is_close_before_peak = obs_time - obj_t_peak >= t_before_peak
+            is_close_before_peak = obs_time - obj_t_peak >= -t_before_peak
             new_obj_data = obj_data[is_close_after_peak & is_close_before_peak
                                     & (~is_poor) & (~is_undf)]
             new_obj_data['mjd'] -= obj_t_peak
