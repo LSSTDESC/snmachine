@@ -2962,10 +2962,10 @@ class PreprocessSnana(PreprocessData):
             metadata_file_name = f'{name_to_save}_metadata_{i:03}.pckl'
 
             # Save the data in pickle files
-            path_to_save = os.path.join(path_to_save, data_file_name)
-            with open(path_to_save, 'wb') as path:
+            path_to_save_data = os.path.join(path_to_save, data_file_name)
+            with open(path_to_save_data, 'wb') as path:
                 pickle.dump(obj_data_s, path)
 
-            path_to_save = os.path.join(path_to_save, metadata_file_name)
-            with open(path_to_save, 'wb') as path:
+            path_to_save_meta = os.path.join(path_to_save, metadata_file_name)
+            with open(path_to_save_meta, 'wb') as path:
                 pickle.dump(obj_metadata_s, path)
