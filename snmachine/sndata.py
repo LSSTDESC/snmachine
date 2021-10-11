@@ -2713,7 +2713,7 @@ class SnanaData(EmptyDataset):
         metadata_pd.rename(columns=str.lower, inplace=True)
 
         # Add `object_id` column because it is useful to call it
-        col_object_id = list(metadata['snid'])
+        col_object_id = list(metadata['SNID'])
         col_object_id = [x.strip() for x in col_object_id]
         metadata_pd['object_id'] = col_object_id
 
