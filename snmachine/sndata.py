@@ -2665,7 +2665,7 @@ class SnanaData(EmptyDataset):
             self.print_progress(i+1, number_objs)
 
             obj_data = data[i]
-            if len(obj_data[self.mjd_col] > 0):
+            if len(obj_data[self.mjd_col.upper()] > 0):  # MJD not modified yet
                 obj_data, obj_name = self._clean_obj_data(obj_data)
                 obj_names.append(obj_name)
                 self.data[obj_name] = obj_data
@@ -3162,7 +3162,7 @@ class PreprocessSnana(PreprocessData):
 
     def preprocess_data(self, number_train_test_files, path_to_save='.',
                         extra_name_to_save=''):
-        '''Preproces the data to be `snmachine` compatible.
+        """Preproces the data to be `snmachine` compatible.
 
         Parameters
         ----------
@@ -3183,7 +3183,7 @@ class PreprocessSnana(PreprocessData):
             To generate more than 1000 files for either train or test set,
             generate a new `PreprocessData` data class or modify the one
             currently in use.
-        '''
+        """
         time_start = time.time()
         data_folders = self.data_folders
 
@@ -3227,8 +3227,7 @@ class PreprocessSnana(PreprocessData):
                         metadata_test)
                     i += 1
 
-        # Merge the DataFrames stored in each entry of the dictionaries and
-        # save them into `.csv` files
+        # Save the astropy tables into `.pckl` files
         if extra_name_to_save != '':
             name_to_save_train = f'file_train_{extra_name_to_save}'
             name_to_save_test = f'file_test_{extra_name_to_save}'
