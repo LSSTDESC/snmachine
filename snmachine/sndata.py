@@ -2682,34 +2682,32 @@ class SnanaData(EmptyDataset):
     def set_metadata(self, folder, meta_file):
         """Reads in simulated metadata and saves it.
 
-        The data is saved into the `metadata` method from EmptyDataset and
-        into a dictonary associated with each `data` method
-        (`.data[obj].meta`).
+        The data is saved into the `metadata` method from EmptyDataset.
 
         Parameters
         ----------
         folder : str
             Folder where simulations are located.
-        data_file : str or list-like
-            .csv file of objects metadata.
+        meta_file : str
+            .pckl file of the objects metadata saved as astropy Table.
         """
         print('Reading metadata...')
         time_start_reading = time.time()
-        metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',',
-                                  index_col=self.id_col)
-        metadata_pd.index = metadata_pd.index.astype(str)
+        # Load the metadata and trnsform it into pandas DataFrame
+        with open(folder + '/' + meta_file, 'rb') as input:
+            metadata = pickle.load(input)
+        metadata_pd = metadata.to_pandas()
 
         # Add `object_id` column because it is useful to call it
-        metadata_pd['object_id'] = metadata_pd.index
+        col_object_id = list(metadata['SNID'])
+        col_object_id = [x.strip() for x in col_object_id]
+        metadata_pd['object_id'] = col_object_id
 
-        # Convert all column names to lower case
-        map_cols = {}
-        for col in metadata_pd.columns:
-            map_cols[col] = col.lower()
-        metadata_pd.rename(map_cols, axis='columns', inplace=True)
+        # Set the object ids as the metadata index
+        metadata_pd.set_index(keys='object_id', drop=False, inplace=True)
 
         # Rename `sntype` as target as per `snmachine` convention
-        metadata_pd.rename({'sntype': 'target'}, axis='columns', inplace=True)
+        metadata_pd.rename({'SNTYPE': 'target'}, axis='columns', inplace=True)
         # If `target` > 100, it is the test set and to obtain the true value,
         # we must subtract 100 to the target value.
         is_larger_100 = metadata_pd['target'] > 100
@@ -2718,65 +2716,7 @@ class SnanaData(EmptyDataset):
         # Save in the data instance
         self.metadata = metadata_pd
 
-        # Everything bellow is to conform with `snmachine` version < 2.0
-        number_objs = len(self.object_names)
-        for i, obj in enumerate(self.object_names):
-            # Use +1 because the order starts at 0 in python
-            self.print_progress(i+1, number_objs)
-
-            self.set_inner_metadata(obj)
-        print(f'Finished getting the metadata for {number_objs} objects.')
         self.print_time_difference(time_start_reading, time.time())
-
-    def set_inner_metadata(self, obj):
-        """Set the metadata inside the astropy observation data.
-
-        This inner metadata is only used by `snmachine` version < 2.0 but
-        to have backwards compatibility, we keep it.
-
-        Parameters
-        ----------
-        obj : str
-            Name of the object we are working with.
-        """
-        # remove duplicated entry
-        metadata = self.metadata.drop(columns=['object_id'])
-
-        metadata_entry = metadata.loc[obj]
-        columns = metadata_entry.keys()
-        self.data[obj].meta['name'] = obj  # the name is the object id
-        self.data[obj].meta['z'] = None
-        for col in columns:
-            if col == 'sntype':
-                if metadata_entry[col] > 100:  # test set type
-                    true_type = str(100 - metadata_entry[col])
-                    self.data[obj].meta['type'] = true_type
-                else:
-                    self.data[obj].meta['type'] = str(metadata_entry[col])
-            else:
-                self.data[obj].meta[str(col)] = metadata_entry[col]
-        self._set_metadata_z(obj)
-
-    def _set_metadata_z(self, obj):
-        """Set the redshift as spectroscopic or if not available, photometric.
-
-        This is only used by the old code of `snmachine` but to keep backwards
-        compatibility, we keep it.
-
-        Parameters
-        ----------
-        obj : str
-            Name of the object we are working with.
-        """
-        metadata = self.data[obj].meta
-        columns = metadata.keys()
-        for col in columns:
-            if (col == 'redshift_final') and not np.isnan(metadata[col]):
-                self.data[obj].meta['z'] = metadata[col]
-            if re.search('photoz', col) and re.search('err', col) is None:
-                photoz = metadata[col]
-        if self.data[obj].meta['z'] is None:  # if no spec z -> z = photo z
-            self.data[obj].meta['z'] = photoz
 
     def update_dataset(self, new_objs):
         """Update the datset so it only contains a subset of objects.
