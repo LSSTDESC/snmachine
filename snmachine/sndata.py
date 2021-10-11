@@ -2611,7 +2611,17 @@ class SnanaData(EmptyDataset):
     def _clean_obj_data(obj_data):
         """Make the event data consistent with snmachine.
 
-        TODO: complete docstring
+        Parameters
+        ----------
+        obj_data :  astropy.table.table
+            Observations of the event.
+
+        Returns
+        -------
+        obj_data :  astropy.table.table
+            Observations of the event.
+        obj_name : str
+            Name of the event.
         """
         # snmachine and SNANA use a different denomination
         obj_data.rename_columns(names=['FLUXCAL', 'FLUXCALERR', 'MJD'],
@@ -2641,8 +2651,8 @@ class SnanaData(EmptyDataset):
         ----------
         folder : str
             Folder where simulations are located.
-        data_file : str or list-like
-            .csv file of object light curves.
+        data_file : str
+            .pckl file of light curves saved as a list of astropy Tables.
         """
         print('Reading data...')
         time_start_reading = time.time()
@@ -2682,7 +2692,8 @@ class SnanaData(EmptyDataset):
     def set_metadata(self, folder, meta_file):
         """Reads in simulated metadata and saves it.
 
-        The data is saved into the `metadata` method from EmptyDataset.
+        The metadata is saved into the `metadata` method from EmptyDataset. It
+        is saved as a pandas DataFrame.
 
         Parameters
         ----------
@@ -2698,8 +2709,11 @@ class SnanaData(EmptyDataset):
             metadata = pickle.load(input)
         metadata_pd = metadata.to_pandas()
 
+        # Set all column names to lower case for consistency
+        metadata_pd.rename(columns=str.lower, inplace=True)
+
         # Add `object_id` column because it is useful to call it
-        col_object_id = list(metadata['SNID'])
+        col_object_id = list(metadata['snid'])
         col_object_id = [x.strip() for x in col_object_id]
         metadata_pd['object_id'] = col_object_id
 
@@ -2707,7 +2721,7 @@ class SnanaData(EmptyDataset):
         metadata_pd.set_index(keys='object_id', drop=False, inplace=True)
 
         # Rename `sntype` as target as per `snmachine` convention
-        metadata_pd.rename({'SNTYPE': 'target'}, axis='columns', inplace=True)
+        metadata_pd.rename({'sntype': 'target'}, axis='columns', inplace=True)
         # If `target` > 100, it is the test set and to obtain the true value,
         # we must subtract 100 to the target value.
         is_larger_100 = metadata_pd['target'] > 100
