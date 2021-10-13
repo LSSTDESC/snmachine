@@ -3161,20 +3161,27 @@ class PreprocessSnana(PreprocessData):
                     path_head_file = os.path.join(folder, file)
                     data_head = Table.read(path_head_file, format='fits')
 
-                    # Separate train and test data
+                    # Separate train and test metadata
                     is_train = data_head['SNTYPE'] < 100
                     metadata_train = data_head[is_train]
                     metadata_test = data_head[~is_train]
-                    #data_train = self._read_objs_data(
-                    #    metadata=metadata_train, path_head_file=path_head_file)
-                    #data_test = self._read_objs_data(
-                    #    metadata=metadata_test, path_head_file=path_head_file)
+
+                    # Load the data into memory
+                    # Note that using sncosmo to read the training and test set
+                    # separately leads to memory issues because in each call,
+                    # the entire data in loaded. Hence we these two types of
+                    # events will be separated afterwards
                     path_phot_file = path_head_file.replace('HEAD', 'PHOT')
                     data_objs = sncosmo.read_snana_fits(
                         head_file=path_head_file, phot_file=path_phot_file)
+
+                    # Separate train and test data
                     data_train = []
                     data_test = []
                     for j in np.arange(len(is_train)):
+                        # the data and metadata store the events in the same
+                        # order so we can make use of that information and
+                        # simply check if event j belongs to the train set
                         if is_train[j]:
                             data_train.append(data_objs[j])
                         else:
