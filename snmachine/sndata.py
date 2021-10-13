@@ -3165,10 +3165,20 @@ class PreprocessSnana(PreprocessData):
                     is_train = data_head['SNTYPE'] < 100
                     metadata_train = data_head[is_train]
                     metadata_test = data_head[~is_train]
-                    data_train = self._read_objs_data(
-                        metadata=metadata_train, path_head_file=path_head_file)
-                    data_test = self._read_objs_data(
-                        metadata=metadata_test, path_head_file=path_head_file)
+                    #data_train = self._read_objs_data(
+                    #    metadata=metadata_train, path_head_file=path_head_file)
+                    #data_test = self._read_objs_data(
+                    #    metadata=metadata_test, path_head_file=path_head_file)
+                    path_phot_file = path_head_file.replace('HEAD', 'PHOT')
+                    data_objs = sncosmo.read_snana_fits(
+                        head_file=path_head_file, phot_file=path_phot_file)
+                    data_train = []
+                    data_test = []
+                    for j in np.arange(len(is_train)):
+                        if is_train[j]:
+                            data_train.append(data_objs[j])
+                        else:
+                            data_test.append(data_objs[j])
 
                     # Save to the appropriate dictionary
                     index_save_train = (i % number_train_files)
