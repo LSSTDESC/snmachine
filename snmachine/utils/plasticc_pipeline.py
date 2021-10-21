@@ -27,7 +27,7 @@ from astropy.table import Table
 #from imblearn.metrics import classification_report_imbalanced  # not used at the moment
 #from imblearn.over_sampling import SMOTE  # not used at the moment
 #from imblearn.pipeline import make_pipeline  # not used at the moment
-from utils.plasticc_utils import plasticc_log_loss, plot_confusion_matrix
+from snmachine.utils.plasticc_utils import plasticc_log_loss, plot_confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 

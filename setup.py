@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools.command.install import install
 import sys
 import os
@@ -49,7 +49,7 @@ setup(
         "relative_to": __file__,
         "fallback_version": __FALLBACK_VERSION__},
     setup_requires=['setuptools_scm>=3.2.0'],
-    packages=['snmachine', 'utils'],
+    packages=find_packages(),
     include_package_data=True,
     package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz',
                                 'example_data/output_spcc_no_z/features/*.dat',
