@@ -1873,7 +1873,7 @@ class WaveletFeatures(Features):
         -----------
         matrix : array
             Matrix of shape (# samples, # features).
-        normalise_var: bool, optional
+        normalise_var: bool, optional TODO I modified it to simply scale
             If True, `matrix` is scaled so that each feature has unit variance.
 
         Returns
@@ -1909,7 +1909,8 @@ class WaveletFeatures(Features):
 
         scales = None
         if normalise_var:  # L2 normalization
-            scales = np.sqrt(np.sum(matrix_new**2, axis=0)).values
+            # scales = np.sqrt(np.sum(matrix_new**2, axis=0)).values
+            scales = np.std(matrix_new, axis=0)
             matrix_new /= scales
 
         return matrix_new, means.values, scales
