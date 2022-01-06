@@ -27,7 +27,7 @@ from scipy.integrate import trapz
 from sklearn import model_selection
 from sklearn.model_selection import PredefinedSplit, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
-from . utils import plasticc_utils
+from snmachine.utils import plasticc_utils
 
 # This allows the user to easily loop through all possible classifiers
 choice_of_classifiers = ['svm', 'knn', 'random_forest', 'decision_tree',
