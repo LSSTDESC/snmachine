@@ -835,6 +835,7 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
 def compute_lc_length(dataset):
     """Computes the length of the light curves.
 
+    TODO: Can't this be simplified by puting max(mjd)-min(mjd)?
     Computes the length of each individual light curve in `dataset`.
 
     Parameters
