@@ -2069,8 +2069,8 @@ class BaselineV20WFDAugment(GPAugment):
             # Store the lognormal parameters to later use
             means = pb_unc_vals['means'][gauss_choice]
             covars = pb_unc_vals['covars'][gauss_choice]
-            lognormal_parameters[0, is_pb] = means
-            lognormal_parameters[1, is_pb] = np.sqrt(covars)
+            lognormal_parameters[is_pb, 0] = means
+            lognormal_parameters[is_pb, 1] = np.sqrt(covars)
 
         # Combine the flux uncertainty of the augmented events predicted by
         # the GP in quadrature with a value drawn from the flux uncertainty
