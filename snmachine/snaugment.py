@@ -1964,26 +1964,32 @@ class BaselineV20WFDAugment(GPAugment):
             return aug_obj_data
 
         # The uncertainty levels of the observations in each passband can be
-        # modeled with a lognormal distribution. See [1].
+        # modeled with the logaritm of a Gaussian mixture model.
+        '''
         # Lognormal parameters from GMM: weights, means, standard deviation
-        pb_noises = {'lsstu': (np.array([0.68, 0.32]),
-                               np.array([1.91, 2.20]),
-                               np.array([np.sqrt(0.09), np.sqrt(0.33)])),
-                     'lsstg': (np.array([0.85, 0.15]),
-                               np.array([1.24, 1.72]),
-                               np.array([np.sqrt(0.10), np.sqrt(0.57)])),
-                     'lsstr': (np.array([0.65, 0.35]),
-                               np.array([1.55, 1.84]),
-                               np.array([np.sqrt(0.08), np.sqrt(0.22)])),
-                     'lssti': (np.array([0.37, 0.63]),
-                               np.array([2.48, 1.97]),
-                               np.array([np.sqrt(0.16), np.sqrt(0.08)])),
-                     'lsstz': (np.array([1.]),
-                               np.array([2.71]),
-                               np.array([np.sqrt(0.13)])),
-                     'lssty': (np.array([1.]),
-                               np.array([3.27]),
-                               np.array([np.sqrt(0.15)]))}
+        pb_noises = {'lsstu': {'weights': np.array([0.68, 0.32]),
+                               'means': np.array([1.91, 2.20]),
+                               'covars': np.array([np.sqrt(0.09),
+                                                   np.sqrt(0.33)])},
+                     'lsstg': {'weights': np.array([0.85, 0.15]),
+                               'means': np.array([1.24, 1.72]),
+                               'covars': np.array([np.sqrt(0.10),
+                                                   np.sqrt(0.57)])},
+                     'lsstr': {'weights': np.array([0.65, 0.35]),
+                               'means': np.array([1.55, 1.84]),
+                               'covars': np.array([np.sqrt(0.08),
+                                                   np.sqrt(0.22)])},
+                     'lssti': {'weights': np.array([0.37, 0.63]),
+                               'means': np.array([2.48, 1.97]),
+                               'covars': np.array([np.sqrt(0.16),
+                                                   np.sqrt(0.08)])},
+                     'lsstz': {'weights': np.array([1.]),
+                               'means': np.array([2.71]),
+                               'covars': np.array([np.sqrt(0.13)])},
+                     'lssty': {'weights': np.array([1.]),
+                               'means': np.array([3.27]),
+                               'covars': np.array([np.sqrt(0.15)])}}
+
 
         # Calculate the new uncertainty levels for each passband
         lognormal_parameters = []
@@ -1992,8 +1998,9 @@ class BaselineV20WFDAugment(GPAugment):
                 params_pb = pb_noises[pb]
                 # For passbands fitted with a GMM with at least 2 components,
                 # choose which distribution to use
-                gauss_choice = self._rs.choice(a=len(params_pb[0]),
-                                               p=params_pb[0])
+                weights_pb = params_pb['weights']
+                gauss_choice = self._rs.choice(a=len(weights_pb),
+                                               p=weights_pb)
                 lognormal_parameters.append((params_pb[1][gauss_choice],
                                              params_pb[2][gauss_choice]))
             except KeyError:
@@ -2007,6 +2014,65 @@ class BaselineV20WFDAugment(GPAugment):
         # distribution of the test set
         add_stds = self._rs.lognormal(
             lognormal_parameters[:, 0], lognormal_parameters[:, 1])
+        noise_add = self._rs.normal(loc=0.0, scale=add_stds)
+        aug_obj_data['flux'] += noise_add  # add noise to increase variability
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
+                                             + add_stds ** 2)
+        return aug_obj_data
+        '''
+        # Lognormal parameters from GMM:
+        pb_noises = {'lsstu': {'weights': np.array([0.68, 0.32]),
+                               'means': np.array([1.91, 2.20]),
+                               'covars': np.array([0.09, 0.33])},
+                     'lsstg': {'weights': np.array([0.85, 0.15]),
+                               'means': np.array([1.24, 1.72]),
+                               'covars': np.array([0.10, 0.57])},
+                     'lsstr': {'weights': np.array([0.65, 0.35]),
+                               'means': np.array([1.55, 1.84]),
+                               'covars': np.array([0.08, 0.22])},
+                     'lssti': {'weights': np.array([0.37, 0.63]),
+                               'means': np.array([2.48, 1.97]),
+                               'covars': np.array([0.16, 0.08])},
+                     'lsstz': {'weights': np.array([1.]),
+                               'means': np.array([2.71]),
+                               'covars': np.array([0.13])},
+                     'lssty': {'weights': np.array([1.]),
+                               'means': np.array([3.27]),
+                               'covars': np.array([0.15])}}
+
+        # Calculate the new uncertainty levels for each passband
+        # Initialize the variable to store the mean and standard deviation
+        lognormal_parameters = np.zeros((2, len(aug_obj_data)))  # mean, std
+
+        filter_set = self.dataset.filter_set
+        for pb in filter_set:  # go through each passband
+            is_pb = aug_obj_data['filter'] == pb
+            aug_obj_data_pb = aug_obj_data[is_pb]
+
+            # Generate new uncertainty levels for each observation
+            try:
+                pb_unc_vals = pb_noises[pb]
+            except KeyError:
+                raise ValueError(f'The noise properties of the passband {pb} '
+                                 f'are not known. Add them to '
+                                 f'`GPAugment._compute_obs_uncertainty`.')
+            # For each event, choose from which gaussian the unc. will come
+            number_comps = len(pb_unc_vals['weights'])
+            number_obs_pb = len(aug_obj_data_pb)
+            gauss_choice = self._rs.choice(number_comps, size=number_obs_pb,
+                                           p=pb_unc_vals['weights'])
+
+            # Store the lognormal parameters to later use
+            means = pb_unc_vals['means'][gauss_choice]
+            covars = pb_unc_vals['covars'][gauss_choice]
+            lognormal_parameters[0, :][is_pb] = means
+            lognormal_parameters[1, :][is_pb] = np.sqrt(covars)
+
+        # Combine the flux uncertainty of the augmented events predicted by
+        # the GP in quadrature with a value drawn from the flux uncertainty
+        # distribution of the test set
+        add_stds = self._rs.lognormal(lognormal_parameters[:, 0],
+                                      lognormal_parameters[:, 1])
         noise_add = self._rs.normal(loc=0.0, scale=add_stds)
         aug_obj_data['flux'] += noise_add  # add noise to increase variability
         aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
