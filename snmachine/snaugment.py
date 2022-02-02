@@ -532,10 +532,10 @@ class GPAugment(SNAugment):
         with open(path_saved_obj_gp, 'rb') as input:
             gp_predict = pickle.load(input)
         try:  # old format - TODO: deprecate the old sndata format
-            warnings.warn('This is an old format and it will be removed soon.',
-                          DeprecationWarning)
             obj_flux = self.dataset.data[obj]['flux']
             gp_predict = partial(gp_predict.predict, obj_flux)
+            warnings.warn('This is an old format and it will be removed soon.',
+                          DeprecationWarning)
         except AttributeError:
             pass
         return gp_predict
