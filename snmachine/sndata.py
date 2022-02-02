@@ -21,6 +21,7 @@ import sncosmo
 
 from astropy.io import fits
 from astropy.table import Column, Table, vstack
+from copy import deepcopy
 from past.builtins import basestring
 from random import shuffle, sample
 from snmachine import chisq as cs
@@ -783,6 +784,68 @@ class EmptyDataset:
         """
         self._object_names = np.array(value, dtype='str')
 
+    @staticmethod
+    def merge_dataset(dataset_1, dataset_2, join_same_name=False):
+        """Merge two datasets.
+
+        Create a new dataset that results from merging two datasets of the same
+        class. If the datasets have events with the same name, this method will
+        fail unless `join_same_name` is True.
+
+        Parameters
+        ----------
+        dataset_1 : Dataset object (`sndata` class)
+            Dataset to join with other.
+        dataset_2 : Dataset object (`sndata` class)
+            Dataset to join with other.
+        join_same_name : Bool, default = False
+            If False, do not merge the datasets unless they do not have any
+            event in common. If true, change the name of the events in common
+            in `dataset_2`, and then merge the datasets.
+
+        Returns
+        -------
+        new_dataset : Dataset object (`sndata` class)
+            Merged dataset.
+
+        Raises
+        ------
+        TypeError
+            Both datasets must have the same class.
+        ValueError
+            To merge with events in common, set `join_same_name` to True.
+        """
+        # Cheeck the datasets have the same class
+        if type(dataset_1) != type(dataset_2):
+            raise TypeError('Both datasets must have the same class.')
+
+        # Check there are no event IDs in common
+        obj_names_1 = dataset_1.object_names
+        obj_names_2 = dataset_2.object_names
+        is_common = np.sum(np.in1d(obj_names_1, obj_names_2))
+        if (np.sum(is_common) != 0) and (join_same_name is False):
+            raise ValueError('There are events in common. To proceed with the '
+                             'merge, either change the the object IDs or set '
+                             '`join_same_name` to True.')
+        if join_same_name is True:
+            raise NotImplementedError('Not yet implemented')
+
+        # Create placeholder for new dataset
+        new_dataset = deepcopy(dataset_1)
+
+        # Join metadatas
+        new_metadata = pd.concat([dataset_1.metadata, dataset_2.metadata])
+        new_dataset.metadata = new_metadata
+
+        # Add the rest of the data
+        new_dataset.data.update({obj: dataset_2.data[obj] for obj in
+                                 dataset_2.object_names})
+
+        # Reorder the object names to match the metadata
+        new_dataset.object_names = new_dataset.metadata['object_id']
+
+        return new_dataset
+
 
 class PlasticcData(EmptyDataset):
     """Class to read in the PLAsTiCC dataset. This is a simulated LSST catalog.
@@ -796,9 +859,8 @@ class PlasticcData(EmptyDataset):
     metadata_file: str
         Filename of the pandas dataframe containing the metadata for the light
         curves.
-    mix : bool, optional
-        Default False. If True, randomly permutes the objects when they are
-        read in.
+    mix : Bool, default = False
+        If True, randomly permutes the objects when they are read in.
     """
 
     def __init__(self, folder, data_file, metadata_file, mix=False):
