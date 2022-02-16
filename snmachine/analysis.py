@@ -70,7 +70,11 @@ def plot_confusion_matrix(y_true, y_pred, title=None, normalise=None,
 
     # Classes in the dataset
     target_names = np.unique(y_true)
+    target_names_ori = np.copy(target_names)  # the labels might be strings
     if dict_label_to_real is not None:
+        target_names = np.vectorize(dict_label_to_real.get)(target_names)
+        if target_names[0] is None:  # fix the names being strings
+            target_names = list(map(int, target_names_ori))
         target_names = np.vectorize(dict_label_to_real.get)(target_names)
 
     # Plot the confusion matrix
