@@ -2220,7 +2220,7 @@ class BaselineV20WFDAugment(GPAugment):
         """
         # Estimate the distribution of number of observations in WFD
         # with a mixture of 4 gaussian distributions.
-        gauss_choice = self._rs.choice(3, p=[0.209, 0.234, 0.155, 0.402])
+        gauss_choice = self._rs.choice(4, p=[0.209, 0.234, 0.155, 0.402])
         if gauss_choice == 0:
             mean = 74.45
             var = np.sqrt(122.48)
