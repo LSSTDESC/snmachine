@@ -2290,7 +2290,7 @@ class BaselineV20WFDAugment(GPAugment):
                      'lsstg': {'weights': np.array([0.88, 0.12]),
                                'means': np.array([1.27, 1.95]),
                                'covars': np.array([0.11, 0.82])},
-                     'lsstr': {'weights': np.array([0.32, 0.69]),
+                     'lsstr': {'weights': np.array([0.31, 0.69]),
                                'means': np.array([1.86, 1.57]),
                                'covars': np.array([0.30, 0.08])},
                      'lssti': {'weights': np.array([0.63, 0.37]),
