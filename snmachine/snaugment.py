@@ -56,6 +56,44 @@ def choose_z_wfd(z_ori, pb_wavelengths, random_state):
     return z_new
 
 
+def choose_z_wfd_base(z_ori, pb_wavelengths, random_state):
+    """Choose the new spectroscopic redshift for an WFD augmented event.
+
+    The new spectroscopic redshift is based on the redhsift of the original
+    event.
+    This target distribution of the redshift is class-agnostic and modeled
+    after the PLAsTiCC supernovae simulated in the Wide-Fast-Deep Survey.
+
+    Parameters
+    ----------
+    z_ori : float
+        Redshift of the original event.
+    pb_wavelengths : dict
+        Mapping between the passbands name and central wavelength.
+    random_state : numpy.random.mtrand.RandomState
+        Container for the slow Mersenne Twister pseudo-random number generator.
+        It allows reproducible results.
+
+    Returns
+    -------
+    z_new : float
+        Redshift of the new event.
+    """
+    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
+                                         / pb_wavelengths['lssty'])**(-1) - 1)
+    z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg']
+                            / pb_wavelengths['lsstu'])**(-1) - 1)
+
+    z_new = np.exp(random_state.uniform(low=np.log(z_min),
+                                        high=np.log(z_max)))
+    #log_z_star = random_state.triangular(left=np.log(z_min),
+    #                                     mode=np.log(z_min),
+    #                                     right=np.log(z_max))
+    #z_new = - np.exp(log_z_star) + z_min + z_max
+
+    return z_new
+
+
 def choose_z_ddf(z_ori, pb_wavelengths, random_state):
     """Choose the new spectroscopic redshift for an DDF augmented event.
 
@@ -2147,7 +2185,7 @@ class BaselineV20WFDAugment(GPAugment):
         """
         super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
                          objs_number_to_aug=objs_number_to_aug,
-                         choose_z=choose_z_wfd, z_table=z_table,
+                         choose_z=choose_z_wfd_base, z_table=z_table,
                          max_duration=max_duration, cosmology=cosmology,
                          random_seed=random_seed, **kwargs)
 
