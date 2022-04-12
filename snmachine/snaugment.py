@@ -84,8 +84,15 @@ def choose_z_wfd_base(z_ori, pb_wavelengths, random_state):
     z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg']
                             / pb_wavelengths['lsstu'])**(-1) - 1)
 
-    z_new = np.exp(random_state.uniform(low=np.log(z_min),
-                                        high=np.log(z_max)))
+    log_z_star = random_state.triangular(left=np.log(z_min),
+                                         mode=np.log(z_min),
+                                         right=np.log(z_max))
+    z_new = np.exp(log_z_star)
+
+    # Does not work
+    #z_new = np.exp(random_state.uniform(low=np.log(z_min),
+    #                                    high=np.log(z_max)))
+
     #log_z_star = random_state.triangular(left=np.log(z_min),
     #                                     mode=np.log(z_min),
     #                                     right=np.log(z_max))
