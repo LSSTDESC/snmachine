@@ -66,6 +66,7 @@ def trapezoid(left, right, right_val, random_state, size=None):
                     \\left(\\frac{d - x}{d - c} \\right)^{n-1}, &
                         \\text{for } c \\leq x \\leq d
                 \\end{cases}
+    https://github.com/numpy/numpy/pull/3770
 
     """
     dx = right - left
