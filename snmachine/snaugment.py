@@ -68,43 +68,6 @@ def choose_z_wfd_plasticc(z_ori, pb_wavelengths, random_state):
     return z_new
 
 
-def choose_z_wfd_base(z_ori, pb_wavelengths, random_state):
-    """Choose the new spectroscopic redshift for an WFD augmented event.
-
-    The new spectroscopic redshift is based on the redhsift of the original
-    event.
-    This target distribution of the redshift is class-agnostic and modeled
-    after the PLAsTiCC supernovae simulated in the Wide-Fast-Deep Survey.
-
-    Parameters
-    ----------
-    z_ori : float
-        Redshift of the original event.
-    pb_wavelengths : dict
-        Mapping between the passbands name and central wavelength.
-    random_state : numpy.random.mtrand.RandomState
-        Container for the slow Mersenne Twister pseudo-random number generator.
-        It allows reproducible results.
-
-    Returns
-    -------
-    z_new : float
-        Redshift of the new event.
-    """
-    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
-                                         / pb_wavelengths['lssty'])**(-1) - 1)
-    z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg']
-                            / pb_wavelengths['lsstu'])**(-1) - 1)
-
-    number_unif = random_state.uniform()
-    log_z_star = vinv_cdf_trap(number_unif, xmin=np.log(z_min),
-                               xmax=np.log(z_max),
-                               b=.1*2/(np.log(z_max)-np.log(z_min)))
-    z_new = - np.exp(log_z_star) + z_min + z_max
-
-    return z_new
-
-
 def choose_z_ddf_plasticc(z_ori, pb_wavelengths, random_state):
     """Choose the new spectroscopic redshift for an DDF augmented event.
 
@@ -136,6 +99,43 @@ def choose_z_ddf_plasticc(z_ori, pb_wavelengths, random_state):
     log_z_star = random_state.triangular(left=np.log(z_min),
                                          mode=np.log(z_min),
                                          right=np.log(z_max))
+    z_new = - np.exp(log_z_star) + z_min + z_max
+
+    return z_new
+
+
+def choose_z_wfd_baseV2(z_ori, pb_wavelengths, random_state):
+    """Choose the new spectroscopic redshift for an WFD augmented event.
+
+    The new spectroscopic redshift is based on the redhsift of the original
+    event.
+    This target distribution of the redshift is class-agnostic and modeled
+    after the PLAsTiCC supernovae simulated in the Wide-Fast-Deep Survey.
+
+    Parameters
+    ----------
+    z_ori : float
+        Redshift of the original event.
+    pb_wavelengths : dict
+        Mapping between the passbands name and central wavelength.
+    random_state : numpy.random.mtrand.RandomState
+        Container for the slow Mersenne Twister pseudo-random number generator.
+        It allows reproducible results.
+
+    Returns
+    -------
+    z_new : float
+        Redshift of the new event.
+    """
+    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
+                                         / pb_wavelengths['lssty'])**(-1) - 1)
+    z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg']
+                            / pb_wavelengths['lsstu'])**(-1) - 1)
+
+    number_unif = random_state.uniform()
+    log_z_star = vinv_cdf_trap(number_unif, xmin=np.log(z_min),
+                               xmax=np.log(z_max),
+                               b=.1*2/(np.log(z_max)-np.log(z_min)))
     z_new = - np.exp(log_z_star) + z_min + z_max
 
     return z_new
