@@ -17,18 +17,76 @@ from functools import partial  # TODO: erase when old sndata is deprecated
 from scipy.special import erf
 from snmachine import gps
 
-def inv_cdf_trap(y, xmin, xmax, b):
-    '''Build a trapezoidal inverse cdf to draw numbers from this distr.
-    b is the right side y value'''
-    dx = xmax - xmin
-    a = 2/dx - b  # left side y value
-    aa = b - a
-    bb = 2*(a*xmax - b*xmin)
-    cc = - (2*dx*y + xmin * (2*a*xmax - xmin*(a+b)))
+
+def trapezoid(left, right, right_val, random_state, size=None):
+    """Draw samples from a trapezoid distribution over an interval.
+
+    TODO: finish this docstring (maths + raises section) and add units for this function
+
+    This trapezoid distribution is a continuous probability distribution with
+    lower limit `left` and upper limit `right`, and whose paralel sides are in
+    the lower and upper limits (not a generalized trapezoidal distribution). To
+    define the shape of the probability density function, we add the value of
+    the distribution at the upper limit, `right_val`. This trapezoid
+    distribution simplifies to a triangular distribution when `right_val == 0`
+    or `right_val == 2/(right-left)`, and to a uniform distribution when
+    `right_val == 1/(right-left)`.
+
+    Parameters
+    ----------
+    left : float
+        Lower limit.
+    right : float
+        Upper limit.
+    right_val : float
+        Value of the trapezoid distribution at the upper limit `right`.
+    size : float, optional
+        Default is None, in which case a single value is returned.
+
+    Returns
+    -------
+    samples : ndarray or float
+        The returned samples all lie in the interval [`left`, `right`].
+
+    Notes
+    -----
+    This function contains the analytical formula for the inverse of the
+    cumulative distribution function of the trapezoid distribution.
+
+    The probability density function for the trapezoid distribution is
+
+    .. math::
+            f{\\scriptscriptstyle X}(x\\mid\\theta) =
+                \\mathcal{C}(\\Theta) \\times
+                \\begin{cases}
+                    \\alpha \\left(\\frac{x - \\alpha}{b - \\alpha}
+                        \\right)^{m - 1}, & \\text{for } a \\leq x < b \\\\
+                    (1 - \\alpha) \\left(\\frac{x - b}{c - b} \\right) +
+                        \\alpha, & \\text{for } b \\leq x < c \\\\
+                    \\left(\\frac{d - x}{d - c} \\right)^{n-1}, &
+                        \\text{for } c \\leq x \\leq d
+                \\end{cases}
+
+    """
+    dx = right - left
+    if dx <= 0 :
+        raise ValueError('The lower limit `left` must be smaller than the '
+                         'upper limit `right`.')
+    if (right_val < 0) or (right_val > 2/dx):
+        raise ValueError('The value of the distribution at the upper limit '
+                         'must be non-negative and smaller or equal than'
+                         '2/(`right`-`left`).')
+
+    number_unif = random_state.uniform(size=size)
+    y = number_unif
+
+    a = 2/dx - right_val  # left side y value
+    aa = right_val - a
+    bb = 2*(a*right - right_val*left)
+    cc = - (2*dx*y + left * (2*a*right - left*(a+right_val)))
     x = (-bb + np.sqrt(bb**2 - 4*aa*cc))/(2*aa)  # quadratic formula
     return x
 
-vinv_cdf_trap = np.vectorize(inv_cdf_trap, otypes=[np.float])  # vectorize
 
 # Functions to choose spectroscopic redshift for `GPAugment`.
 # They are inputed as the parameter `choose_z` and their arguments as `*kwargs`
@@ -133,10 +191,10 @@ def choose_z_wfd_basev2(z_ori, pb_wavelengths, random_state):
     z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg']
                             / pb_wavelengths['lsstu'])**(-1) - 1)
 
-    number_unif = random_state.uniform()
-    log_z_star = vinv_cdf_trap(number_unif, xmin=np.log(z_min),
-                               xmax=np.log(z_max),
-                               b=.1*2/(np.log(z_max)-np.log(z_min)))
+    # Draw a value from a custom trapezoid distribution
+    log_z_star = trapezoid(left=np.log(z_min), right=np.log(z_max),
+                           right_val=.1*2/(np.log(z_max)-np.log(z_min)),
+                           random_state=random_state)
     z_new = - np.exp(log_z_star) + z_min + z_max
 
     return z_new
