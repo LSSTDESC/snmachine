@@ -32,7 +32,7 @@ vinv_cdf_trap = np.vectorize(inv_cdf_trap, otypes=[np.float])  # vectorize
 
 # Functions to choose spectroscopic redshift for `GPAugment`.
 # They are inputed as the parameter `choose_z` and their arguments as `*kwargs`
-def choose_z_wfd(z_ori, pb_wavelengths, random_state):
+def choose_z_wfd_plasticc(z_ori, pb_wavelengths, random_state):
     """Choose the new spectroscopic redshift for an WFD augmented event.
 
     The new spectroscopic redshift is based on the redhsift of the original
@@ -102,57 +102,10 @@ def choose_z_wfd_base(z_ori, pb_wavelengths, random_state):
                                b=.1*2/(np.log(z_max)-np.log(z_min)))
     z_new = - np.exp(log_z_star) + z_min + z_max
 
-    # Does not work
-    #log_z_star = vinv_cdf_trap(number_unif, xmin=np.log(z_min),
-    #                           xmax=np.log(z_max),
-    #                           b=.05*2/(np.log(z_max)-np.log(z_min)))  # start to deviate
-
-    #log_z_star = vinv_cdf_trap(number_unif, xmin=np.log(z_min),
-    #                           xmax=np.log(z_max),
-    #                           b=.1*2/(np.log(z_max)-np.log(z_min)))  # best so far
-
-    #log_z_star = vinv_cdf_trap(number_unif, xmin=np.log(z_min),
-    #                           xmax=np.log(z_max),
-    #                           b=.2*2/(np.log(z_max)-np.log(z_min)))  # better
-
-    #number_unif = random_state.uniform()
-    #log_z_star = vinv_cdf_trap(number_unif, xmin=np.log(z_min),
-    #                           xmax=np.log(z_max),
-    #                           b=.8*2/(np.log(z_max)-np.log(z_min))) # very bad
-
-    # log_z_star = random_state.triangular(left=np.log(z_min),
-    #                                     mode=3*(np.log(z_max)+np.log(z_min))/4,
-    #                                     right=np.log(z_max)) # no
-
-    #log_z_star = random_state.triangular(left=np.log(z_min),
-    #                                     mode=np.log(z_max),
-    #                                     right=np.log(z_max)) # very bad
-
-    #log_z_star = random_state.triangular(left=np.log(z_min),
-    #                                     mode=(np.log(z_max)+np.log(z_min))/2,
-    #                                     right=np.log(z_max)) # midway
-
-    #log_z_star = random_state.uniform(low=np.log(z_min),
-    #                                  high=np.log(z_max))
-    #z_new = - np.exp(log_z_star) + z_min + z_max # best so far
-
-    #log_z_star = random_state.triangular(left=np.log(z_min),
-    #                                     mode=np.log(z_min),
-    #                                     right=np.log(z_max))
-    #z_new = np.exp(log_z_star)
-
-    #z_new = np.exp(random_state.uniform(low=np.log(z_min),
-    #                                    high=np.log(z_max)))
-
-    #log_z_star = random_state.triangular(left=np.log(z_min),
-    #                                     mode=np.log(z_min),
-    #                                     right=np.log(z_max))
-    #z_new = - np.exp(log_z_star) + z_min + z_max
-
     return z_new
 
 
-def choose_z_ddf(z_ori, pb_wavelengths, random_state):
+def choose_z_ddf_plasticc(z_ori, pb_wavelengths, random_state):
     """Choose the new spectroscopic redshift for an DDF augmented event.
 
     The new spectroscopic redshift is based on the redhsift of the original
@@ -1241,7 +1194,7 @@ class PlasticcWFDAugment(GPAugment):
         """
         super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
                          objs_number_to_aug=objs_number_to_aug,
-                         choose_z=choose_z_wfd, z_table=z_table,
+                         choose_z=choose_z_wfd_plasticc, z_table=z_table,
                          max_duration=max_duration, cosmology=cosmology,
                          random_seed=random_seed, **kwargs)
 
@@ -1478,7 +1431,7 @@ class PlasticcDDFAugment(GPAugment):
         """
         super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
                          objs_number_to_aug=objs_number_to_aug,
-                         choose_z=choose_z_ddf, z_table=z_table,
+                         choose_z=choose_z_ddf_plasticc, z_table=z_table,
                          max_duration=max_duration, cosmology=cosmology,
                          random_seed=random_seed, **kwargs)
 
@@ -1731,7 +1684,7 @@ class BaselineV20PlasticcWFDAugment(GPAugment):
         """
         super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
                          objs_number_to_aug=objs_number_to_aug,
-                         choose_z=choose_z_ddf, z_table=z_table,
+                         choose_z=choose_z_wfd_plasticc, z_table=z_table,
                          max_duration=max_duration, cosmology=cosmology,
                          random_seed=random_seed, **kwargs)
 
@@ -1987,7 +1940,7 @@ class BaselineV20DDFAugment(GPAugment):
         """
         super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
                          objs_number_to_aug=objs_number_to_aug,
-                         choose_z=choose_z_ddf, z_table=z_table,
+                         choose_z=choose_z_ddf_plasticc, z_table=z_table,
                          max_duration=max_duration, cosmology=cosmology,
                          random_seed=random_seed, **kwargs)
 
@@ -2500,7 +2453,7 @@ class SniabciiDDFAugment(GPAugment):
         """
         super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
                          objs_number_to_aug=objs_number_to_aug,
-                         choose_z=choose_z_ddf, z_table=z_table,
+                         choose_z=choose_z_ddf_plasticc, z_table=z_table,
                          max_duration=max_duration, cosmology=cosmology,
                          random_seed=random_seed, **kwargs)
 
