@@ -104,13 +104,14 @@ def choose_z_ddf_plasticc(z_ori, pb_wavelengths, random_state):
     return z_new
 
 
-def choose_z_wfd_baseV2(z_ori, pb_wavelengths, random_state):
+def choose_z_wfd_basev2(z_ori, pb_wavelengths, random_state):
     """Choose the new spectroscopic redshift for an WFD augmented event.
 
     The new spectroscopic redshift is based on the redhsift of the original
     event.
     This target distribution of the redshift is class-agnostic and modeled
-    after the PLAsTiCC supernovae simulated in the Wide-Fast-Deep Survey.
+    after the supernovae simulated in the Wide-Fast-Deep Survey with the
+    Baseline v2.0 cadence.
 
     Parameters
     ----------
@@ -1940,7 +1941,7 @@ class BaselineV20WFDAugment(GPAugment):
         """
         super().__init__(dataset=dataset, path_saved_gps=path_saved_gps,
                          objs_number_to_aug=objs_number_to_aug,
-                         choose_z=choose_z_wfd_base, z_table=z_table,
+                         choose_z=choose_z_wfd_basev2, z_table=z_table,
                          max_duration=max_duration, cosmology=cosmology,
                          random_seed=random_seed, **kwargs)
 
