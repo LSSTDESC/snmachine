@@ -97,10 +97,10 @@ def choose_z_wfd_base(z_ori, pb_wavelengths, random_state):
                             / pb_wavelengths['lsstu'])**(-1) - 1)
 
     number_unif = random_state.uniform()
-    log_z_star = vinv_cdf_trap(number_unif, xmin=z_min, xmax=z_max,
-                               b=.8*2/(z_max-z_min))
+    log_z_star = vinv_cdf_trap(number_unif, xmin=np.log(z_min),
+                               xmax=np.log(z_max),
+                               b=.8*2/(np.log(z_max)-np.log(z_min)))
     z_new = - np.exp(log_z_star) + z_min + z_max
-    print(z_min, z_max, z_ori, z_new)
 
     # Does not work
     # log_z_star = random_state.triangular(left=np.log(z_min),
