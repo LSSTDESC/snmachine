@@ -17,6 +17,18 @@ from functools import partial  # TODO: erase when old sndata is deprecated
 from scipy.special import erf
 from snmachine import gps
 
+def inv_cdf_trap(y, xmin, xmax, b):
+    '''Build a trapezoidal inverse cdf to draw numbers from this distr.
+    b is the right side y value'''
+    dx = xmax - xmin
+    a = 2/dx - b  # left side y value
+    aa = b - a
+    bb = 2*(a*xmax - b*xmin)
+    cc = - (2*dx*y + xmin * (2*a*xmax - xmin*(a+b)))
+    x = (-bb + np.sqrt(bb**2 - 4*aa*cc))/(2*aa)  # quadratic formula
+    return x
+
+vinv_cdf_trap = np.vectorize(inv_cdf_trap, otypes=[np.float])  # vectorize
 
 # Functions to choose spectroscopic redshift for `GPAugment`.
 # They are inputed as the parameter `choose_z` and their arguments as `*kwargs`
@@ -84,12 +96,16 @@ def choose_z_wfd_base(z_ori, pb_wavelengths, random_state):
     z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg']
                             / pb_wavelengths['lsstu'])**(-1) - 1)
 
-    log_z_star = random_state.triangular(left=np.log(z_min),
-                                         mode=(3*np.log(z_max)+np.log(z_min))/2,
-                                         right=np.log(z_max))
+    number_unif = random_state.uniform()
+    log_z_star = vinv_cdf_trap(number_unif, xmin=z_min, xmax=z_max,
+                               b=.8*2/(z_max-z_min))
     z_new = - np.exp(log_z_star) + z_min + z_max
 
     # Does not work
+    # log_z_star = random_state.triangular(left=np.log(z_min),
+    #                                     mode=(3*np.log(z_max)+np.log(z_min))/2,
+    #                                     right=np.log(z_max)) # wait for result
+
     # log_z_star = random_state.triangular(left=np.log(z_min),
     #                                     mode=3*(np.log(z_max)+np.log(z_min))/4,
     #                                     right=np.log(z_max)) # no
