@@ -194,7 +194,7 @@ def choose_z_wfd_basev2(z_ori, pb_wavelengths, random_state):
 
     # Draw a value from a custom trapezoid distribution
     log_z_star = trapezoid(left=np.log(z_min), right=np.log(z_max),
-                           right_val=.2*2/(np.log(z_max)-np.log(z_min)),
+                           right_val=.05*2/(np.log(z_max)-np.log(z_min)),
                            random_state=random_state)
     z_new = - np.exp(log_z_star) + z_min + z_max
 
