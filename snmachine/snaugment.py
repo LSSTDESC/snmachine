@@ -21,7 +21,7 @@ from snmachine import gps
 def trapezoid(left, right, right_val, random_state, size=None):
     """Draw samples from a trapezoid distribution over an interval.
 
-    TODO: finish this docstring (maths + raises section) and add units for this function
+    TODO: add unit tests for this function
 
     This trapezoid distribution is a continuous probability distribution with
     lower limit `left` and upper limit `right`, and whose paralel sides are in
@@ -48,26 +48,32 @@ def trapezoid(left, right, right_val, random_state, size=None):
     samples : ndarray or float
         The returned samples all lie in the interval [`left`, `right`].
 
+    Raises
+    ------
+    ValueError
+        The lower limit `left` must be smaller than the upper limit `right`.
+    ValueError
+        The value of the distribution at the upper limit `right_val` must be '
+        'non-negative and smaller or equal than 2/(`right`-`left`).'
+
     Notes
     -----
     This function contains the analytical formula for the inverse of the
     cumulative distribution function of the trapezoid distribution.
 
-    The probability density function for the trapezoid distribution is
+    With `left`, `right`, and `right_val` parameterised as
+    :math:`a, b, \\text{ and } c`, respectively, the probability density
+    function for the trapezoid distribution is
 
-    .. math::
-            f{\\scriptscriptstyle X}(x\\mid\\theta) =
-                \\mathcal{C}(\\Theta) \\times
-                \\begin{cases}
-                    \\alpha \\left(\\frac{x - \\alpha}{b - \\alpha}
-                        \\right)^{m - 1}, & \\text{for } a \\leq x < b \\\\
-                    (1 - \\alpha) \\left(\\frac{x - b}{c - b} \\right) +
-                        \\alpha, & \\text{for } b \\leq x < c \\\\
-                    \\left(\\frac{d - x}{d - c} \\right)^{n-1}, &
-                        \\text{for } c \\leq x \\leq d
-                \\end{cases}
-    https://github.com/numpy/numpy/pull/3770
+    .. math:: P(x;a, b, c) = \\begin{cases}
+                  \\frac{2x}{b-a} \\left(c-\\frac{1}{b-a}\\right)
+                    + \\frac{2b}{\\left(b-a\\right)^{2}}-c
+                    & \\text{for $a \\leq x \\leq b$},\\\\
+                  0& \\text{otherwise}.
+                  \\end{cases}
 
+    For a generalised trapezoid distribution see the PR at
+        https://github.com/numpy/numpy/pull/3770
     """
     dx = right - left
     if dx <= 0 :
@@ -75,17 +81,25 @@ def trapezoid(left, right, right_val, random_state, size=None):
                          'upper limit `right`.')
     if (right_val < 0) or (right_val > 2/dx):
         raise ValueError('The value of the distribution at the upper limit '
-                         'must be non-negative and smaller or equal than'
-                         '2/(`right`-`left`).')
+                         '`right_val` must be non-negative and smaller or '
+                         'equal than 2/(`right`-`left`).')
 
+    # Numbers from unif. dist. to transform into trapez. distr.
     number_unif = random_state.uniform(size=size)
+    # The numbers correespond to independent coordinate y and we want to know
+    # the dependent x
     y = number_unif
 
-    a = 2/dx - right_val  # left side y value
-    aa = right_val - a
-    bb = 2*(a*right - right_val*left)
-    cc = - (2*dx*y + left * (2*a*right - left*(a+right_val)))
-    x = (-bb + np.sqrt(bb**2 - 4*aa*cc))/(2*aa)  # quadratic formula
+    left_val = 2/dx - right_val  # value of trapez. distr. at the lower limit
+
+    # Components of the quadratic formula: ax^2 + bx + c = 0
+    a = right_val - left_val
+    b = 2 * (left_val * right - right_val * left)
+    c = - (2 * dx * y + left * (2 * left_val * right
+                                - left * (left_val + right_val)))
+
+    # Formula for the inverse of the cdf of the triangular distribution
+    x = (-b + np.sqrt(b**2 - 4*a*c))/(2*a)  # quadratic formula
     return x
 
 
