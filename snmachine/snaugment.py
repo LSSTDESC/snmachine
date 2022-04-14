@@ -122,9 +122,9 @@ def choose_z_wfd_basev2(z_ori, pb_wavelengths, random_state):
                             / pb_wavelengths['lsstu'])**(-1) - 1)
 
     # Draw a value from a custom trapezoid distribution
+    right_val = .1 * 2/(np.log(z_max) - np.log(z_min))  # 10% of triang. peak
     log_z_star = trapezoid(left=np.log(z_min), right=np.log(z_max),
-                           right_val=.05*2/(np.log(z_max)-np.log(z_min)),
-                           random_state=random_state)
+                           right_val=right_val, random_state=random_state)
     z_new = - np.exp(log_z_star) + z_min + z_max
 
     return z_new
