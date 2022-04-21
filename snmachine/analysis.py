@@ -835,7 +835,7 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
             plt.fill_between(bins_j, y1=y_ci[:, 0], y2=y_ci[:, 1], alpha=.3)
 
 
-# Recall and precision tools
+# Calculate commonly used light curve quantities
 def compute_lc_length(dataset):
     """Compute the length of the light curves.
 
@@ -893,3 +893,41 @@ def compute_median_internight_gap(dataset):
         is_gap = time_diff >= .5  # different visits are in different nights
         median_gap_s[i] = np.median(time_diff[is_gap])
     return median_gap_s
+
+
+def compute_max_and_threshold_gaps(dataset, threshold=10):
+    """Compute the longest gap and the number of gaps above a threshold.
+
+    Computes the duration of the longest gap and the number of gaps above
+    `threshold` for each individual light curve in `dataset`.
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    threshold : float
+        Count the number of gaps above this threshold (in days). By default, it
+        is 10.
+
+    Returns
+    -------
+    max_gap : numpy.ndarray
+        Duration of the longest gap for each individual light curve.
+    number_big_gap : numpy.ndarray
+        Number of gaps above `threshold` for each individual light curve.
+    """
+    obj_names = dataset.object_names
+
+    max_gap = np.zeros(len(obj_names))
+    number_big_gap = np.zeros(len(obj_names))
+    for i in np.arange(len(obj_names)):
+        obj = obj_names[i]
+        obj_data = dataset.data[obj].to_pandas()
+        obj_data.sort_values(by=['mjd'], ignore_index=True,
+                             inplace=True)  # sort by mjd
+
+        obs_time = np.array(obj_data['mjd'])
+        time_diff = obs_time[1:] - obs_time[:-1]
+        max_gap[i] = np.max(time_diff)
+        number_big_gap[i] = np.sum(time_diff > threshold)
+    return max_gap, number_big_gap
