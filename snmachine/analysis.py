@@ -882,7 +882,7 @@ def compute_median_internight_gap(dataset):
     obj_names = dataset.object_names
 
     median_gap_s = np.zeros(len(obj_names))
-    for i in np.arange(len(obj_names[:3])):
+    for i in np.arange(len(obj_names)):
         obj = obj_names[i]
         obj_data = dataset.data[obj].to_pandas()
         obj_data.sort_values(by=['mjd'], ignore_index=True,
