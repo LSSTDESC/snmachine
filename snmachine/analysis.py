@@ -839,7 +839,6 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
 def compute_lc_length(dataset):
     """Computes the length of the light curves.
 
-    TODO: Can't this be simplified by puting max(mjd)-min(mjd)?
     Computes the length of each individual light curve in `dataset`.
 
     Parameters
@@ -857,9 +856,8 @@ def compute_lc_length(dataset):
     lc_length = np.zeros(len(obj_names))
     for i in np.arange(len(obj_names)):
         obj = obj_names[i]
-        obj_data = dataset.data[obj].to_pandas()
-        obj_data = obj_data.sort_values(by='mjd')
-        mjd_times = np.array(obj_data.mjd)
-        time_diff = mjd_times[-1] - mjd_times[0]
-        lc_length[i] = np.median(time_diff)
+        obj_data = dataset.data[obj]
+
+        obs_time = np.array(obj_data['mjd'])
+        lc_length[i] = np.max(obs_time) - np.min(obs_time)
     return lc_length
