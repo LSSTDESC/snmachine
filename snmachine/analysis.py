@@ -931,3 +931,122 @@ def compute_max_and_threshold_gaps(dataset, threshold=10):
         max_gap[i] = np.max(time_diff)
         number_big_gap[i] = np.sum(time_diff > threshold)
     return max_gap, number_big_gap
+
+
+def compute_number_obs_peak(dataset, t_peak_s):
+    """Compute the number of observations near the event peak.
+
+    Computes the number of observations near the event peak in four settings:
+        - Observation-frame 10 days before peak
+        - Observation-frame 30 days after peak
+        - Rest-frame 10 days before peak
+        - Rest-frame 30 days after peak
+    The dataset observations are in the observation-frame. The rest-frame is
+    calculated as t_peak + (obj_mjd-t_peak)/(1+z) .
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    t_peak_s : numpy.ndarray
+        Estimated peak flux time for each event.
+
+    Returns
+    -------
+    number_obs_peak_all : pandas.core.frame.DataFrame
+        DataFrame with the object names and their number of observations near
+        the event peak in four settings described in this docstring.
+    """
+    obj_names = dataset.object_names
+    metadata = dataset.metadata
+
+    #pre normal; post normal; pre rest-frame; post rest-frame
+    number_obs = np.zeros((len(obj_names), 4))
+    for i in np.arange(len(obj_names)):
+        obj = obj_names[i]
+        obj_data = dataset.data[obj].to_pandas()
+        obj_data_ori = obj_data.copy()
+        t_peak = float(t_peak_s.loc[obj])
+
+        z = metadata.loc[obj]['hostgal_specz']
+        if z < 0: # the event does not have spec-z
+            z = metadata.loc[obj]['hostgal_photoz']
+
+        # observation-frame data
+        obj_mjd_ori = obj_data_ori['mjd']
+        ## pre-peak
+        is_interval = ((obj_mjd_ori >= t_peak - 10) &
+                       (obj_mjd_ori < t_peak))
+        number_obs[i, 0] = np.sum(is_interval)
+        ## post-peak
+        is_interval = ((obj_mjd_ori > t_peak) &
+                       (obj_mjd_ori <= t_peak + 30))
+        number_obs[i, 1] = np.sum(is_interval)
+
+        # rest-frame data
+        obj_mjd = obj_data['mjd']
+        obj_mjd_rest_frame = t_peak + (obj_mjd-t_peak)/(1+z)
+        ## pre-peak
+        is_interval = ((obj_mjd_rest_frame >= t_peak - 10) &
+                       (obj_mjd_rest_frame < t_peak))
+        number_obs[i, 2] = np.sum(is_interval)
+        ## post-peak
+        is_interval = ((obj_mjd_rest_frame > t_peak) &
+                       (obj_mjd_rest_frame <= t_peak + 30))
+        number_obs[i, 3] = np.sum(is_interval)
+
+    number_obs_peak_names = ['prepeak_10', 'postpeak_30',
+                             'prepeak_rest_10', 'postpeak_rest_30']
+    number_obs_peak_all = pd.DataFrame(number_obs, index=obj_names,
+                                       columns=number_obs_peak_names)
+    return number_obs
+
+
+def compute_t_max(dataset, path_saved_gps):
+    """Estimate the peak time using Gaussian processes.
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    path_saved_gps : str
+        Path to the Gaussian Process files.
+
+    Returns
+    -------
+    t_peak_s : numpy.ndarray
+        Estimated peak flux time for each event.
+    """
+    pb_wavelengths = dataset.pb_wavelengths
+
+    obj_names = dataset.object_names
+    filter_set = np.asarray(dataset.filter_set)
+    gp_wavelengths = np.vectorize(pb_wavelengths.get)(filter_set)
+    t_peak_s = np.zeros(len(obj_names))
+
+    for i in np.arange(len(obj_names)):
+        obj = obj_names[i]
+
+        # Load the GPs
+        path_obj_gps = path_saved_gps+f'/used_gp_{obj}.pckl'
+        with open(path_obj_gps, 'rb') as input:
+            gp_predict = pickle.load(input)
+
+        # Compute the minimum and maximum of the light curve
+        obj_data = dataset.data[obj]
+        obs_time = np.array(obj_data['mjd'])
+        obs_min, obs_max = np.min(obs_time), np.max(obs_time)
+
+        # Estimate the flux everyday between 105 days before and 300 after
+        gp_start_time = obs_min - 105
+        gp_end_time = obs_max + 300
+        gp_times = np.arange(gp_start_time, gp_end_time + 1)
+        obj_gps = gps.predict_2d_gp(gp_predict, gp_times,
+                                    gp_wavelengths).to_pandas()
+
+        # Estimate the peak as the day with the highest flux
+        t_peak = obj_gps['mjd'][np.argmax(obj_gps['flux'])]
+        t_peak_s[i] = t_peak
+
+    print(np.sum(t_peak_s<0), np.sum(t_peak_s<0)/len(t_peak_s))
+    return t_peak_s
