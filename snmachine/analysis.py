@@ -837,9 +837,9 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
 
 # Recall and precision tools
 def compute_lc_length(dataset):
-    """Computes the length of the light curves.
+    """Compute the length of the light curves.
 
-    Computes the length of each individual light curve in `dataset`.
+    Computes the length/duration of each individual light curve in `dataset`.
 
     Parameters
     ----------
@@ -861,3 +861,35 @@ def compute_lc_length(dataset):
         obs_time = np.array(obj_data['mjd'])
         lc_length[i] = np.max(obs_time) - np.min(obs_time)
     return lc_length
+
+
+def compute_median_internight_gap(dataset):
+    """Compute the median inter-night gap.
+
+    Computes the median inter-night gap of each individual light curve in
+    `dataset`. An inter-night gap is a gap of more than 12h (0.5 days).
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+
+    Returns
+    -------
+    median_gap_s : numpy.ndarray
+        Median inter-night gap of each individual light curve.
+    """
+    obj_names = dataset.object_names
+
+    median_gap_s = np.zeros(len(obj_names))
+    for i in np.arange(len(obj_names[:3])):
+        obj = obj_names[i]
+        obj_data = dataset.data[obj].to_pandas()
+        obj_data.sort_values(by=['mjd'], ignore_index=True,
+                             inplace=True)  # sort by mjd
+
+        obs_time = np.array(obj_data['mjd'])
+        time_diff = obs_time[1:] - obs_time[:-1]
+        is_gap = time_diff >= .5  # different visits are in different nights
+        median_gap_s[i] = np.median(time_diff[is_gap])
+    return median_gap_s
