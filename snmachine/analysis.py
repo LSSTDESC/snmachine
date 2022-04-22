@@ -1002,8 +1002,8 @@ def compute_number_obs_peak(dataset, t_peak_s):
     return number_obs
 
 
-def compute_t_max(dataset, path_saved_gps):
-    """Estimate the peak time using Gaussian processes.
+def compute_t_peak(dataset, path_saved_gps):
+    """Estimate the peak time using Gaussian processes around detections.
 
     Parameters
     ----------
@@ -1034,8 +1034,10 @@ def compute_t_max(dataset, path_saved_gps):
 
         # Compute the minimum and maximum of the light curve
         obj_data = dataset.data[obj]
-        obs_time = np.array(obj_data['mjd'])
-        obs_min, obs_max = np.min(obs_time), np.max(obs_time)
+        obs_time = obj_data['mjd']
+        obs_time_detect = obs_time[obj_data['obs_min'] == 1]
+        obs_min = np.min(obs_time_detect)
+        obs_max = np.max(obs_time_detect)
 
         # Estimate the flux everyday between 105 days before and 300 after
         gp_start_time = obs_min - 105
