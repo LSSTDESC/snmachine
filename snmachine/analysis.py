@@ -927,9 +927,13 @@ def compute_max_and_threshold_gaps(dataset, threshold=10):
                              inplace=True)  # sort by mjd
 
         obs_time = np.array(obj_data['mjd'])
-        time_diff = obs_time[1:] - obs_time[:-1]
-        max_gap[i] = np.max(time_diff)
-        number_big_gap[i] = np.sum(time_diff > threshold)
+        try:
+            time_diff = obs_time[1:] - obs_time[:-1]
+            max_gap[i] = np.max(time_diff)
+            number_big_gap[i] = np.sum(time_diff > threshold)
+        except ValueError:  # there is only 1 observation
+            max_gap[i] = np.nan
+            number_big_gap[i] = np.nan
     return max_gap, number_big_gap
 
 
