@@ -1039,7 +1039,7 @@ def compute_t_peak(dataset, path_saved_gps):
         # Compute the minimum and maximum of the light curve
         obj_data = dataset.data[obj]
         obs_time = obj_data['mjd']
-        obs_time_detect = obs_time[obj_data['obs_min'] == 1]
+        obs_time_detect = obs_time[obj_data['detected'] == 1]
         obs_min = np.min(obs_time_detect)
         obs_max = np.max(obs_time_detect)
 
