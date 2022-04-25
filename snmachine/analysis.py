@@ -1003,7 +1003,7 @@ def compute_number_obs_peak(dataset, t_peak_s):
                              'prepeak_rest_10', 'postpeak_rest_30']
     number_obs_peak_all = pd.DataFrame(number_obs, index=obj_names,
                                        columns=number_obs_peak_names)
-    return number_obs
+    return number_obs_peak_all
 
 
 def compute_t_peak(dataset, path_saved_gps):
