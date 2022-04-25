@@ -2921,7 +2921,14 @@ class SnanaData(EmptyDataset):
             obs_time = obj_data['mjd']
 
             # Select the rolling part of the light curves
-            is_window = (obs_time > time_min) & (obs_time < time_max)
+            if time_min is not None:
+                is_window = obs_time > time_min
+                if time_max is not None:
+                    is_window = is_window & (obs_time < time_max)
+            elif time_max is not None:
+                is_window = obs_time < time_max
+            else:
+                raise ValueError('It should have at least one restriction')
             obj_data_window = obj_data[is_window]
 
             # Update dataset
