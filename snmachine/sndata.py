@@ -2883,11 +2883,56 @@ class SnanaData(EmptyDataset):
                     obs_transient['mjd'] -= min(obs_transient['mjd'])
 
                     self.data[obj_names[i]] = obs_transient
-            time_transient[i] = obj_data['mjd'][-1] - obj_data['mjd'][0]
+            time_transient[i] = (obs_transient['mjd'][-1]
+                                 - obs_transient['mjd'][0])
         if verbose:
             print(f'The longest event is '
                   f'{obj_names[np.argmax(time_transient)]} '
                   f'and its length is {np.max(time_transient):.2f} days.')
+
+    def select_window(self, window, verbose=False):
+        """Select the rolling part of the cadence.
+
+        TODO
+
+        Remove the first gap longer than the given threshold.
+
+        To remove all the gaps longer than `max_gap_length`, this function
+        must be called a few times.
+
+        We generated the events between days 60220 and 61325. Since the rolling cadence starts in year 1.5,
+        I will cut all the light curves to be after 60220+548=60768 days.
+
+        Parameters
+        ----------
+        max_gap_length: float
+            Maximum duration of the gap to allowed in the light curves.
+        verbose: bool, optional
+            Default False. If True prints the ID of the longest event and its
+            length.
+        """
+        time_min = window[0]
+        time_max = window[1]
+
+        obj_names = self.object_names
+        time_obj = np.zeros(len(obj_names))
+        for i in range(len(obj_names)):
+            obj_data = self.data[obj_names[i]]
+            obs_time = obj_data['mjd']
+
+            # Select the rolling part of the light curves
+            is_window = (obs_time > time_min) & (obs_time < time_max)
+            obj_data_window = obj_data[is_window]
+
+            # Update dataset
+            self.data[obj_names[i]] = obj_data_window
+
+            time_obj[i] = (obj_data_window['mjd'][-1]
+                           - obj_data_window['mjd'][0])
+        if verbose:
+            print(f'The longest event is '
+                  f'{obj_names[np.argmax(time_obj)]} '
+                  f'and its length is {np.max(time_obj):.2f} days.')
 
 
 class SNANA_Data(EmptyDataset):
