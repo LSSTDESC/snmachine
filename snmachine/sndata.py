@@ -2879,12 +2879,14 @@ class SnanaData(EmptyDataset):
                             is_obs_transient = obs_time > time_last_obs_before
                     obs_transient = obj_data[is_obs_transient]
 
-                    # introduce uniformity: all transients start at time 0
-                    obs_transient['mjd'] -= min(obs_transient['mjd'])
+                    obj_data = obs_transient
+            # introduce uniformity: all transients start at time 0
+            obj_data['mjd'] -= min(obj_data['mjd'])
 
-                    self.data[obj_names[i]] = obs_transient
-            time_transient[i] = (obs_transient['mjd'][-1]
-                                 - obs_transient['mjd'][0])
+            self.data[obj_names[i]] = obj_data
+
+            time_transient[i] = (obj_data['mjd'][-1]
+                                 - obj_data['mjd'][0])
         if verbose:
             print(f'The longest event is '
                   f'{obj_names[np.argmax(time_transient)]} '
@@ -2911,6 +2913,7 @@ class SnanaData(EmptyDataset):
             Default False. If True prints the ID of the longest event and its
             length.
         """
+        time_start = time.time()
         time_min = window[0]
         time_max = window[1]
 
@@ -2940,6 +2943,7 @@ class SnanaData(EmptyDataset):
             print(f'The longest event is '
                   f'{obj_names[np.argmax(time_obj)]} '
                   f'and its length is {np.max(time_obj):.2f} days.')
+        self.print_time_difference(time_start, time.time())
 
 
 class SNANA_Data(EmptyDataset):
