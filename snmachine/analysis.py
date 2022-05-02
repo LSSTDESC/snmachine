@@ -817,11 +817,17 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
 
     for j in np.arange(len(is_true_type_list)):
         sn_type = sn_order[j]
+        # Values for the class
+        try:
+            y_vals = something_s[:, j]
+            y_ci = boot_has_something_ci[j]
+        except IndexError:  # plot only 1 class
+            y_vals = something_s
+            y_ci = boot_has_something_ci
+
         # Remove NaN values
-        y_vals = something_s[:, j]
         index_not_none = ~np.isnan(y_vals)
         y_vals = y_vals[index_not_none]
-        y_ci = boot_has_something_ci[j]
         y_ci = y_ci[index_not_none]
         y_ci = np.array(list(y_ci))
         bins_j = bins[index_not_none]
