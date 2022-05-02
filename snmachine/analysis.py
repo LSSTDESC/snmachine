@@ -813,6 +813,7 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
             Lines width to print the plots.
     """
     colors = kwargs.pop('colors', None)
+    linewidth = kwargs.pop('linewidth', 3)
 
     for j in np.arange(len(is_true_type_list)):
         sn_type = sn_order[j]
@@ -825,7 +826,6 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
         y_ci = np.array(list(y_ci))
         bins_j = bins[index_not_none]
 
-        linewidth = kwargs.pop('linewidth', 3)
         if colors is not None:  # use inputed colors
             plt.plot(bins_j, y_vals, label=sn_type, color=colors[j],
                      linewidth=linewidth)
