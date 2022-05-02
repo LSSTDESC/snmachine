@@ -811,9 +811,12 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
             If `None`, it uses the `seaborn` default colours.
         linewidth: int, default = 3
             Lines width to print the plots.
+        linestyle: str, default = '-'
+            Lines style to print the plots.
     """
     colors = kwargs.pop('colors', None)
     linewidth = kwargs.pop('linewidth', 3)
+    linestyle = kwargs.pop('linestyle', '-')
 
     for j in np.arange(len(is_true_type_list)):
         sn_type = sn_order[j]
@@ -834,11 +837,12 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
 
         if colors is not None:  # use inputed colors
             plt.plot(bins_j, y_vals, label=sn_type, color=colors[j],
-                     linewidth=linewidth)
+                     linewidth=linewidth, linestyle=linestyle)
             plt.fill_between(bins_j, y1=y_ci[:, 0], y2=y_ci[:, 1],
                              color=colors[j], alpha=.3)
         else:  # use `seaborn` default colors
-            plt.plot(bins_j, y_vals, label=sn_type, linewidth=linewidth)
+            plt.plot(bins_j, y_vals, label=sn_type, linewidth=linewidth,
+                     linestyle=linestyle)
             plt.fill_between(bins_j, y1=y_ci[:, 0], y2=y_ci[:, 1], alpha=.3)
 
 
