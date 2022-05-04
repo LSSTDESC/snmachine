@@ -12,7 +12,7 @@ import pickle
 import seaborn as sns
 
 from sklearn.metrics import confusion_matrix
-from snmachine import snclassifier
+from snmachine import gps, snclassifier
 
 # Built-in dictionaries of class labels to their real name
 dict_label_to_real_spcc = {1: 'SNIa', 2: 'SNII', 3: 'SNIbc'}
