@@ -975,7 +975,7 @@ def compute_number_obs_peak(dataset, t_peak_s):
     obj_names = dataset.object_names
     metadata = dataset.metadata
 
-    #pre normal; post normal; pre rest-frame; post rest-frame
+    # Pre normal; post normal; pre rest-frame; post rest-frame
     number_obs = np.zeros((len(obj_names), 4))
     for i in np.arange(len(obj_names)):
         obj = obj_names[i]
@@ -984,28 +984,28 @@ def compute_number_obs_peak(dataset, t_peak_s):
         t_peak = float(t_peak_s.loc[obj])
 
         z = metadata.loc[obj]['hostgal_specz']
-        if z < 0: # the event does not have spec-z
+        if z < 0:  # the event does not have spec-z
             z = metadata.loc[obj]['hostgal_photoz']
 
-        # observation-frame data
+        # observation-frame data
         obj_mjd_ori = obj_data_ori['mjd']
-        ## pre-peak
+        # # pre-peak
         is_interval = ((obj_mjd_ori >= t_peak - 10) &
                        (obj_mjd_ori < t_peak))
         number_obs[i, 0] = np.sum(is_interval)
-        ## post-peak
+        # # post-peak
         is_interval = ((obj_mjd_ori > t_peak) &
                        (obj_mjd_ori <= t_peak + 30))
         number_obs[i, 1] = np.sum(is_interval)
 
-        # rest-frame data
+        # rest-frame data
         obj_mjd = obj_data['mjd']
         obj_mjd_rest_frame = t_peak + (obj_mjd-t_peak)/(1+z)
-        ## pre-peak
+        # # pre-peak
         is_interval = ((obj_mjd_rest_frame >= t_peak - 10) &
                        (obj_mjd_rest_frame < t_peak))
         number_obs[i, 2] = np.sum(is_interval)
-        ## post-peak
+        # # post-peak
         is_interval = ((obj_mjd_rest_frame > t_peak) &
                        (obj_mjd_rest_frame <= t_peak + 30))
         number_obs[i, 3] = np.sum(is_interval)
@@ -1065,5 +1065,5 @@ def compute_t_peak(dataset, path_saved_gps):
         t_peak = obj_gps['mjd'][np.argmax(obj_gps['flux'])]
         t_peak_s[i] = t_peak
 
-    print(np.sum(t_peak_s<0), np.sum(t_peak_s<0)/len(t_peak_s))
+    print(np.sum(t_peak_s < 0), np.sum(t_peak_s < 0)/len(t_peak_s))
     return t_peak_s
