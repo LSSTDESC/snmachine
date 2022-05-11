@@ -679,7 +679,7 @@ def compute_recall_has_something(has_something, is_pred_right,
 
             number_in_bin = np.sum(is_in_bin)  # # objs in our population
 
-            is_pred_right_in_bin = y[is_in_bin]  # size = number_in_bin_i
+            is_pred_right_in_bin = y[is_in_bin]  # size = number_in_bin
             if number_in_bin != 0:  # there are events in this bin
                 prop_pred_right_ks = []
                 for k in range(300):  # 300 for bootstrapping the values
@@ -735,14 +735,12 @@ def compute_precision_has_something(has_something, is_pred_right,
             y = is_pred_right
 
         precision_i = []
-        number_in_bin_i = []
         for i in np.arange(len(has_something)):  # choose something
             is_in_bin = is_subset & has_something[i]  # our population
 
             number_in_bin = np.sum(is_in_bin)  # # objs in our population
-            number_in_bin_i.append(number_in_bin)
 
-            is_pred_right_in_bin = y[is_in_bin]  # size = number_in_bin_i
+            is_pred_right_in_bin = y[is_in_bin]  # size = number_in_bin
             precision_ks = []
             for k in range(300):  # 300 for bootstrapping the values
                 is_pred_right_in_k = np.random.choice(is_pred_right_in_bin,
