@@ -2902,7 +2902,8 @@ class SnanaData(EmptyDataset):
         To remove all the gaps longer than `max_gap_length`, this function
         must be called a few times.
 
-        We generated the events between days 60220 and 61325. Since the rolling cadence starts in year 1.5,
+        We generated the events between days 60220 and 61325. Since the
+        rolling cadence starts in year 1.5,
         I will cut all the light curves to be after 60220+548=60768 days.
 
         Parameters
