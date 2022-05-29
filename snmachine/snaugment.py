@@ -188,7 +188,7 @@ def trapezoid(left, right, right_val, random_state, size=None):
         https://github.com/numpy/numpy/pull/3770
     """
     dx = right - left
-    if dx <= 0 :
+    if dx <= 0:
         raise ValueError('The lower limit `left` must be smaller than the '
                          'upper limit `right`.')
     if (right_val < 0) or (right_val > 2/dx):
@@ -2718,7 +2718,7 @@ class PrestoV20WFDAugment(GPAugment):
 class BaselineV20SubsetWFDAugment(GPAugment):
     """Augment the Wide-Fast-Deep (WFD) events in the LSST-like dataset
     corresponding to the years 1.5 to 3 in the  `baseline_v2.0_10yrs.db`
-    cadence. The augmentation uses Gaussian Process extrapolation method (see vv gv g gv
+    cadence. The augmentation uses Gaussian Process extrapolation method (see
     `snaugment.GPAugment`).
     """
 
