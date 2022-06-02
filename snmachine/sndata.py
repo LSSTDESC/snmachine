@@ -1269,6 +1269,47 @@ class PlasticcData(EmptyDataset):
                   f'{obj_names[np.argmax(time_transient)]} '
                   f'and its length is {np.max(time_transient):.2f} days.')
 
+    def select_transients(self, max_distance, verbose=False):
+        """Select observations within a maximum distance from the detections.
+
+        Select all observations between the detections or within `max_distance`
+        days before the first detection or after the last.
+
+        Parameters
+        ----------
+        max_gap_length: float
+            Maximum distance from the first or last detection that any
+            observation in the edges of the light curve can have.
+        verbose: bool, optional
+            Default False. If True prints the ID of the longest event and its
+            length.
+        """
+        obj_names = self.object_names
+        time_transient = np.zeros(len(obj_names))
+        i = 0
+        for obj in obj_names:
+            obs = self.data[obj]
+            obs_time = obs['mjd']
+            obs_detected_time = obs_time[obs['detected'] == 1]
+            is_obs_transient = (
+                (obs_time > obs_detected_time[0] - max_distance)
+                & (obs_time < obs_detected_time[-1] + max_distance))
+            obs_transient = obs[is_obs_transient]
+
+            # Introduce uniformity: all transients start at time 0
+            obs_transient['mjd'] -= min(obs_transient['mjd'])
+
+            # Update the transient data
+            self.data[obj] = obs_transient
+
+            time_transient[i] = (np.max(obs_transient['mjd'])
+                                 - np.min(obs_transient['mjd']))
+            i += 1
+        if verbose:
+            print(f'The longest event is '
+                  f'{obj_names[np.argmax(time_transient)]} '
+                  f'and its length is {np.max(time_transient):.2f} days.')
+
 
 class Dataset(EmptyDataset):
     """
