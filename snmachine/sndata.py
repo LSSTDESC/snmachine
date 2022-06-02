@@ -2954,11 +2954,14 @@ class SnanaData(EmptyDataset):
         for obj in obj_names:
             obs = self.data[obj]
             obs_time = obs['mjd']
-            obs_detected_time = obs_time[obs['detected'] == 1]
-            is_obs_transient = (
-                (obs_time > obs_detected_time[0] - max_distance)
-                & (obs_time < obs_detected_time[-1] + max_distance))
-            obs_transient = obs[is_obs_transient]
+            if len(obs_time) >= 2:  # at least 2 observations
+                obs_detected_time = obs_time[obs['detected'] == 1]
+                is_obs_transient = (
+                    (obs_time > obs_detected_time[0] - max_distance)
+                    & (obs_time < obs_detected_time[-1] + max_distance))
+                obs_transient = obs[is_obs_transient]
+            else:  # possible had 0 observations
+                obs_transient = obs
 
             # Introduce uniformity: all transients start at time 0
             obs_transient['mjd'] -= min(obs_transient['mjd'])
