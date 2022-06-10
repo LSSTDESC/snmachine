@@ -2589,16 +2589,13 @@ class PrestoV20WFDAugment(GPAugment):
         """
         # Estimate the distribution of number of observations in WFD
         # with a mixture of 3 gaussian distributions.
-        gauss_choice = self._rs.choice(3, p=[0.308, 0.218, 0.474])
+        gauss_choice = self._rs.choice(2, p=[0.626, 0.374])
         if gauss_choice == 0:
-            mean = 29.84
-            var = np.sqrt(126.43)
+            mean = 27.11
+            var = np.sqrt(125.04)
         elif gauss_choice == 1:
-            mean = 86.13
-            var = np.sqrt(66.93)
-        elif gauss_choice == 2:
-            mean = 49.55
-            var = np.sqrt(76.86)
+            mean = 53.72
+            var = np.sqrt(252.05)
         target_number_obs = int(
             np.clip(self._rs.normal(mean, var), 3, None))
 
@@ -2650,23 +2647,23 @@ class PrestoV20WFDAugment(GPAugment):
         # The uncertainty levels of the observations in each passband can be
         # modeled with the logaritm of a Gaussian mixture model.
         # Lognormal parameters from GMM:
-        pb_noises = {'lsstu': {'weights': np.array([0.63, 0.37]),
-                               'means': np.array([1.98, 2.37]),
-                               'covars': np.array([0.09, 0.30])},
+        pb_noises = {'lsstu': {'weights': np.array([0.64, 0.36]),
+                               'means': np.array([1.96, 2.35]),
+                               'covars': np.array([0.09, 0.28])},
                      'lsstg': {'weights': np.array([0.10, 0.90]),
-                               'means': np.array([2.09, 1.40]),
-                               'covars': np.array([0.91, 0.14])},
-                     'lsstr': {'weights': np.array([0.22, 0.46, 0.32]),
-                               'means': np.array([2.83, 1.58, 2.16]),
-                               'covars': np.array([0.27, 0.08, 0.11])},
-                     'lssti': {'weights': np.array([0.65, 0.35]),
-                               'means': np.array([1.96, 2.46]),
-                               'covars': np.array([0.09, 0.25])},
+                               'means': np.array([2.12, 1.41]),
+                               'covars': np.array([0.98, 0.14])},
+                     'lsstr': {'weights': np.array([0.23, 0.45, 0.32]),
+                               'means': np.array([2.82, 1.60, 2.20]),
+                               'covars': np.array([0.30, 0.08, 0.12])},
+                     'lssti': {'weights': np.array([0.66, 0.34]),
+                               'means': np.array([1.96, 2.48]),
+                               'covars': np.array([0.10, 0.26])},
                      'lsstz': {'weights': np.array([1.]),
-                               'means': np.array([2.69]),
+                               'means': np.array([2.68]),
                                'covars': np.array([0.17])},
-                     'lssty': {'weights': np.array([0.63, 0.37]),
-                               'means': np.array([3.08, 3.55]),
+                     'lssty': {'weights': np.array([0.62, 0.38]),
+                               'means': np.array([3.07, 3.52]),
                                'covars': np.array([0.07, 0.13])}}
 
         # Calculate the new uncertainty levels for each passband
