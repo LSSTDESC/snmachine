@@ -2839,17 +2839,20 @@ class NorollV20SubsetWFDAugment(GPAugment):
         Astronomical Journal 158.6 (2019): 257.
         """
         # Estimate the distribution of number of observations in WFD
-        # with a mixture of 3 gaussian distributions.
-        gauss_choice = self._rs.choice(3, p=[0.694, 0.177, 0.129])
+        # with a mixture of 4 gaussian distributions.
+        gauss_choice = self._rs.choice(4, p=[0.289, 0.215, 0.181, 0.315])
         if gauss_choice == 0:
-            mean = 70.63
-            var = np.sqrt(59.74)
+            mean = 31.93
+            var = np.sqrt(30.23)
         elif gauss_choice == 1:
-            mean = 49.18
-            var = np.sqrt(102.43)
+            mean = 18.07
+            var = np.sqrt(42.76)
         elif gauss_choice == 2:
-            mean = 22.54
-            var = np.sqrt(118.17)
+            mean = 59.65
+            var = np.sqrt(75.83)
+        elif gauss_choice == 4:
+            mean = 45.35
+            var = np.sqrt(34.96)
         target_number_obs = int(
             np.clip(self._rs.normal(mean, var), 3, None))
 
@@ -2901,23 +2904,23 @@ class NorollV20SubsetWFDAugment(GPAugment):
         # The uncertainty levels of the observations in each passband can be
         # modeled with the logaritm of a Gaussian mixture model.
         # Lognormal parameters from GMM:
-        pb_noises = {'lsstu': {'weights': np.array([0.85, 0.15]),
-                               'means': np.array([1.98, 2.42]),
-                               'covars': np.array([0.11, 0.62])},
-                     'lsstg': {'weights': np.array([0.10, 0.90]),
-                               'means': np.array([2.10, 1.28]),
-                               'covars': np.array([1.04, 0.12])},
-                     'lsstr': {'weights': np.array([0.69, 0.31]),
-                               'means': np.array([1.58, 1.86]),
-                               'covars': np.array([0.08, 0.31])},
-                     'lssti': {'weights': np.array([0.62, 0.38]),
-                               'means': np.array([1.97, 2.44]),
-                               'covars': np.array([0.08, 0.21])},
+        pb_noises = {'lsstu': {'weights': np.array([0.25, 0.75]),
+                               'means': np.array([2.29, 1.95]),
+                               'covars': np.array([0.45, 0.10])},
+                     'lsstg': {'weights': np.array([0.11, 0.89]),
+                               'means': np.array([2.13, 1.27]),
+                               'covars': np.array([1.08, 0.12])},
+                     'lsstr': {'weights': np.array([0.76, 0.24]),
+                               'means': np.array([1.59, 1.92]),
+                               'covars': np.array([0.09, 0.40])},
+                     'lssti': {'weights': np.array([0.63, 0.37]),
+                               'means': np.array([1.98, 2.44]),
+                               'covars': np.array([0.08, 0.23])},
                      'lsstz': {'weights': np.array([1.]),
-                               'means': np.array([2.67]),
+                               'means': np.array([2.65]),
                                'covars': np.array([0.14])},
                      'lssty': {'weights': np.array([1.]),
-                               'means': np.array([3.23]),
+                               'means': np.array([3.22]),
                                'covars': np.array([0.14])}}
 
         # Calculate the new uncertainty levels for each passband
