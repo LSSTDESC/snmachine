@@ -2850,7 +2850,7 @@ class NorollV20SubsetWFDAugment(GPAugment):
         elif gauss_choice == 2:
             mean = 59.65
             var = np.sqrt(75.83)
-        elif gauss_choice == 4:
+        elif gauss_choice == 3:
             mean = 45.35
             var = np.sqrt(34.96)
         target_number_obs = int(
