@@ -2346,7 +2346,7 @@ class PrestoV20WFDAugment(GPAugment):
             mean = 53.72
             var = np.sqrt(252.05)
         target_number_obs = int(
-            np.clip(self._rs.normal(mean, var), 3, None))
+            np.clip(self._rs.normal(mean, var)+9, 3, None))
 
         return target_number_obs
 
