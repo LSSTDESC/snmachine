@@ -786,7 +786,7 @@ def compute_boot_ci(boot_data):
 
 
 def plot_sne_has_something(something_s, boot_has_something_ci,
-                           bins, is_true_type_list, sn_order, **kwargs):
+                           bins, sn_order, **kwargs):
     """Plots the recall or precision and confidence interval for each class.
 
     Parameters
@@ -798,8 +798,6 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
         each class, and in each quantity bin.
     bins : numpy.ndarray
         Bins used to compute `something_s` and `boot_has_something_ci`.
-    is_true_type_list : list
-        List of lists where each masks a different *true* class of events.
     sn_order : list
         Ordered list of the names of the classes. The fist name should
         correspond to the first column of `something_s`.
@@ -807,16 +805,22 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
         colors : list, default = None
             Ordered list of the colours with which to plot the classes results.
             If `None`, it uses the `seaborn` default colours.
-        linewidth: int, default = 3
+        linewidth : int, default = 3
             Lines width to print the plots.
-        linestyle: str, default = '-'
+        linestyle : str, default = '-'
             Lines style to print the plots.
+        number_in_bin_s : numpy.ndarray, default = None
+            Number of events of each class in each quantity bin.
+        threshold : int, default = None
+            Number of events in each bin above which to plot the `something_s`.
     """
     colors = kwargs.pop('colors', None)
     linewidth = kwargs.pop('linewidth', 3)
     linestyle = kwargs.pop('linestyle', '-')
+    number_in_bin_s = kwargs.pop('number_in_bin_s', None)
+    threshold = kwargs.pop('threshold', None)
 
-    for j in np.arange(len(is_true_type_list)):
+    for j in np.arange(len(sn_order)):
         sn_type = sn_order[j]
         # Values for the class
         try:
@@ -825,13 +829,25 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
         except IndexError:  # plot only 1 class
             y_vals = something_s
             y_ci = boot_has_something_ci
+        show_bins = bins
+
+        # Plot only bins with above a minimum # events
+        if (threshold is not None) and (number_in_bin_s is not None):
+            try:
+                number_in_bin = number_in_bin_s[:, j]
+            except IndexError:  # plot only 1 class
+                number_in_bin = number_in_bin_s
+            is_good = number_in_bin > threshold
+            y_vals = y_vals[is_good]
+            y_ci = y_ci[is_good]
+            show_bins = bins[is_good]
 
         # Remove NaN values
         index_not_none = ~np.isnan(y_vals)
         y_vals = y_vals[index_not_none]
         y_ci = y_ci[index_not_none]
         y_ci = np.array(list(y_ci))
-        bins_j = bins[index_not_none]
+        bins_j = show_bins[index_not_none]
 
         if colors is not None:  # use inputed colors
             plt.plot(bins_j, y_vals, label=sn_type, color=colors[j],
