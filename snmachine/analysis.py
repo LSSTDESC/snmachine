@@ -816,7 +816,7 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
     """
     colors = kwargs.pop('colors', None)
     linewidth = kwargs.pop('linewidth', 3)
-    linestyle = kwargs.pop('linestyle', np.shape(something_s)[1]*['-'])
+    linestyle = kwargs.pop('linestyle', len(sn_order))
     number_in_bin_s = kwargs.pop('number_in_bin_s', None)
     threshold = kwargs.pop('threshold', None)
 
