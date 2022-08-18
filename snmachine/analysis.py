@@ -807,7 +807,7 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
             If `None`, it uses the `seaborn` default colours.
         linewidth : int, default = 3
             Lines width to print the plots.
-        linestyle : str, default = '-'
+        linestyle : list, default = ['-', ..., '-']
             Lines style to print the plots.
         number_in_bin_s : numpy.ndarray, default = None
             Number of events of each class in each quantity bin.
@@ -816,7 +816,7 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
     """
     colors = kwargs.pop('colors', None)
     linewidth = kwargs.pop('linewidth', 3)
-    linestyle = kwargs.pop('linestyle', '-')
+    linestyle = kwargs.pop('linestyle', np.shape(something_s)[1]*['-'])
     number_in_bin_s = kwargs.pop('number_in_bin_s', None)
     threshold = kwargs.pop('threshold', None)
 
@@ -851,12 +851,12 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
 
         if colors is not None:  # use inputed colors
             plt.plot(bins_j, y_vals, label=sn_type, color=colors[j],
-                     linewidth=linewidth, linestyle=linestyle)
+                     linewidth=linewidth, linestyle=linestyle[j])
             plt.fill_between(bins_j, y1=y_ci[:, 0], y2=y_ci[:, 1],
                              color=colors[j], alpha=.3)
         else:  # use `seaborn` default colors
             plt.plot(bins_j, y_vals, label=sn_type, linewidth=linewidth,
-                     linestyle=linestyle)
+                     linestyle=linestyle[j])
             plt.fill_between(bins_j, y1=y_ci[:, 0], y2=y_ci[:, 1], alpha=.3)
 
 
