@@ -30,25 +30,26 @@ from snmachine import gps, chisq
 try:
     import pymultinest
     has_multinest = True
-    print('Module pymultinest found')
+    # print('Module pymultinest found')
 except (ImportError, SystemExit) as exception:
-    print(exception)
+    # print(exception)
     if str(exception) == "No module named 'pymultinest'":
-        errmsg = """
+        multinest_errmsg = """
                 PyMultinest not found. If you would like to use, please install
                 Mulitnest with 'sh install/multinest_install.sh; source
                 install/setup.sh'
                 """
-        print(errmsg)
-        has_multinest = False
+        
     else:
-        errmsg = """
+        multinest_errmsg = """
                 Multinest installed but not linked.
                 Please ensure $LD_LIBRARY_PATH set correctly with:
 
                     source install/setup.sh
                 """
-        raise OSError(errmsg) from exception
+    # Most of the time you won't need multinest so remove this warning
+    # print(errmsg)
+    has_multinest = False
 
 try:
     import emcee
@@ -1002,6 +1003,8 @@ class ParametricFeatures(Features):
         if sampler == 'nested' and not has_multinest:
             print('Nested sampling selected but pymultinest is not installed. '
                   'Defaulting to least squares.')
+            print('Multinest error message:')
+            print(multinest_errmsg)
             sampler = 'leastsq'
 
         elif sampler == 'mcmc' and not has_emcee:
