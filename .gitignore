@@ -142,6 +142,9 @@ snmachine/example_data/output_*
 # Mac OS files
 .DS_Store
 
+# VSCode settings 
+.vscode/
+
 classifications/
 out
 tsne_plot_test.png

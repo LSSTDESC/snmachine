@@ -8,10 +8,11 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pickle
 import seaborn as sns
 
 from sklearn.metrics import confusion_matrix
-from snmachine import snclassifier
+from snmachine import gps, snclassifier
 
 # Built-in dictionaries of class labels to their real name
 dict_label_to_real_spcc = {1: 'SNIa', 2: 'SNII', 3: 'SNIbc'}
@@ -70,7 +71,11 @@ def plot_confusion_matrix(y_true, y_pred, title=None, normalise=None,
 
     # Classes in the dataset
     target_names = np.unique(y_true)
+    target_names_ori = np.copy(target_names)  # the labels might be strings
     if dict_label_to_real is not None:
+        target_names = np.vectorize(dict_label_to_real.get)(target_names)
+        if target_names[0] is None:  # fix the names being strings
+            target_names = list(map(int, target_names_ori))
         target_names = np.vectorize(dict_label_to_real.get)(target_names)
 
     # Plot the confusion matrix
@@ -674,7 +679,7 @@ def compute_recall_has_something(has_something, is_pred_right,
 
             number_in_bin = np.sum(is_in_bin)  # # objs in our population
 
-            is_pred_right_in_bin = y[is_in_bin]  # size = number_in_bin_i
+            is_pred_right_in_bin = y[is_in_bin]  # size = number_in_bin
             if number_in_bin != 0:  # there are events in this bin
                 prop_pred_right_ks = []
                 for k in range(300):  # 300 for bootstrapping the values
@@ -730,14 +735,12 @@ def compute_precision_has_something(has_something, is_pred_right,
             y = is_pred_right
 
         precision_i = []
-        number_in_bin_i = []
         for i in np.arange(len(has_something)):  # choose something
             is_in_bin = is_subset & has_something[i]  # our population
 
             number_in_bin = np.sum(is_in_bin)  # # objs in our population
-            number_in_bin_i.append(number_in_bin)
 
-            is_pred_right_in_bin = y[is_in_bin]  # size = number_in_bin_i
+            is_pred_right_in_bin = y[is_in_bin]  # size = number_in_bin
             precision_ks = []
             for k in range(300):  # 300 for bootstrapping the values
                 is_pred_right_in_k = np.random.choice(is_pred_right_in_bin,
@@ -783,7 +786,7 @@ def compute_boot_ci(boot_data):
 
 
 def plot_sne_has_something(something_s, boot_has_something_ci,
-                           bins, is_true_type_list, sn_order, **kwargs):
+                           bins, sn_order, **kwargs):
     """Plots the recall or precision and confidence interval for each class.
 
     Parameters
@@ -795,8 +798,6 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
         each class, and in each quantity bin.
     bins : numpy.ndarray
         Bins used to compute `something_s` and `boot_has_something_ci`.
-    is_true_type_list : list
-        List of lists where each masks a different *true* class of events.
     sn_order : list
         Ordered list of the names of the classes. The fist name should
         correspond to the first column of `something_s`.
@@ -804,38 +805,66 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
         colors : list, default = None
             Ordered list of the colours with which to plot the classes results.
             If `None`, it uses the `seaborn` default colours.
-        linewidth: int, default = 3
+        linewidth : int, default = 3
             Lines width to print the plots.
+        linestyle : list, default = ['-', ..., '-']
+            Lines style to print the plots.
+        number_in_bin_s : numpy.ndarray, default = None
+            Number of events of each class in each quantity bin.
+        threshold : int, default = None
+            Number of events in each bin above which to plot the `something_s`.
     """
     colors = kwargs.pop('colors', None)
+    linewidth = kwargs.pop('linewidth', 3)
+    linestyle = kwargs.pop('linestyle', len(sn_order))
+    number_in_bin_s = kwargs.pop('number_in_bin_s', None)
+    threshold = kwargs.pop('threshold', None)
 
-    for j in np.arange(len(is_true_type_list)):
+    for j in np.arange(len(sn_order)):
         sn_type = sn_order[j]
+        # Values for the class
+        try:
+            y_vals = something_s[:, j]
+            y_ci = boot_has_something_ci[j]
+        except IndexError:  # plot only 1 class
+            y_vals = something_s
+            y_ci = boot_has_something_ci
+        show_bins = bins
+
+        # Plot only bins with above a minimum # events
+        if (threshold is not None) and (number_in_bin_s is not None):
+            try:
+                number_in_bin = number_in_bin_s[:, j]
+            except IndexError:  # plot only 1 class
+                number_in_bin = number_in_bin_s
+            is_good = number_in_bin > threshold
+            y_vals = y_vals[is_good]
+            y_ci = y_ci[is_good]
+            show_bins = bins[is_good]
+
         # Remove NaN values
-        y_vals = something_s[:, j]
         index_not_none = ~np.isnan(y_vals)
         y_vals = y_vals[index_not_none]
-        y_ci = boot_has_something_ci[j]
         y_ci = y_ci[index_not_none]
         y_ci = np.array(list(y_ci))
-        bins_j = bins[index_not_none]
+        bins_j = show_bins[index_not_none]
 
-        linewidth = kwargs.pop('linewidth', 3)
         if colors is not None:  # use inputed colors
             plt.plot(bins_j, y_vals, label=sn_type, color=colors[j],
-                     linewidth=linewidth)
+                     linewidth=linewidth, linestyle=linestyle[j])
             plt.fill_between(bins_j, y1=y_ci[:, 0], y2=y_ci[:, 1],
                              color=colors[j], alpha=.3)
         else:  # use `seaborn` default colors
-            plt.plot(bins_j, y_vals, label=sn_type, linewidth=linewidth)
+            plt.plot(bins_j, y_vals, label=sn_type, linewidth=linewidth,
+                     linestyle=linestyle[j])
             plt.fill_between(bins_j, y1=y_ci[:, 0], y2=y_ci[:, 1], alpha=.3)
 
 
-# Recall and precision tools
+# Calculate commonly used light curve quantities
 def compute_lc_length(dataset):
-    """Computes the length of the light curves.
+    """Compute the length of the light curves.
 
-    Computes the length of each individual light curve in `dataset`.
+    Computes the length/duration of each individual light curve in `dataset`.
 
     Parameters
     ----------
@@ -852,9 +881,203 @@ def compute_lc_length(dataset):
     lc_length = np.zeros(len(obj_names))
     for i in np.arange(len(obj_names)):
         obj = obj_names[i]
-        obj_data = dataset.data[obj].to_pandas()
-        obj_data = obj_data.sort_values(by='mjd')
-        mjd_times = np.array(obj_data.mjd)
-        time_diff = mjd_times[-1] - mjd_times[0]
-        lc_length[i] = np.median(time_diff)
+        obj_data = dataset.data[obj]
+
+        obs_time = np.array(obj_data['mjd'])
+        lc_length[i] = np.max(obs_time) - np.min(obs_time)
     return lc_length
+
+
+def compute_median_internight_gap(dataset):
+    """Compute the median inter-night gap.
+
+    Computes the median inter-night gap of each individual light curve in
+    `dataset`. An inter-night gap is a gap of more than 12h (0.5 days).
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+
+    Returns
+    -------
+    median_gap_s : numpy.ndarray
+        Median inter-night gap of each individual light curve.
+    """
+    obj_names = dataset.object_names
+
+    median_gap_s = np.zeros(len(obj_names))
+    for i in np.arange(len(obj_names)):
+        obj = obj_names[i]
+        obj_data = dataset.data[obj].to_pandas()
+        obj_data.sort_values(by=['mjd'], ignore_index=True,
+                             inplace=True)  # sort by mjd
+
+        obs_time = np.array(obj_data['mjd'])
+        time_diff = obs_time[1:] - obs_time[:-1]
+        is_gap = time_diff >= .5  # different visits are in different nights
+        median_gap_s[i] = np.median(time_diff[is_gap])
+    return median_gap_s
+
+
+def compute_max_and_threshold_gaps(dataset, threshold=10):
+    """Compute the longest gap and the number of gaps above a threshold.
+
+    Computes the duration of the longest gap and the number of gaps above
+    `threshold` for each individual light curve in `dataset`.
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    threshold : float
+        Count the number of gaps above this threshold (in days). By default, it
+        is 10.
+
+    Returns
+    -------
+    max_gap : numpy.ndarray
+        Duration of the longest gap for each individual light curve.
+    number_big_gap : numpy.ndarray
+        Number of gaps above `threshold` for each individual light curve.
+    """
+    obj_names = dataset.object_names
+
+    max_gap = np.zeros(len(obj_names))
+    number_big_gap = np.zeros(len(obj_names))
+    for i in np.arange(len(obj_names)):
+        obj = obj_names[i]
+        obj_data = dataset.data[obj].to_pandas()
+        obj_data.sort_values(by=['mjd'], ignore_index=True,
+                             inplace=True)  # sort by mjd
+
+        obs_time = np.array(obj_data['mjd'])
+        try:
+            time_diff = obs_time[1:] - obs_time[:-1]
+            max_gap[i] = np.max(time_diff)
+            number_big_gap[i] = np.sum(time_diff > threshold)
+        except ValueError:  # there is only 1 observation
+            max_gap[i] = np.nan
+            number_big_gap[i] = np.nan
+    return max_gap, number_big_gap
+
+
+def compute_number_obs_peak(dataset, t_peak_s):
+    """Compute the number of observations near the event peak.
+
+    Computes the number of observations near the event peak in four settings:
+        - Observation-frame 10 days before peak
+        - Observation-frame 30 days after peak
+        - Rest-frame 10 days before peak
+        - Rest-frame 30 days after peak
+    The dataset observations are in the observation-frame. The rest-frame is
+    calculated as t_peak + (obj_mjd-t_peak)/(1+z) .
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    t_peak_s : numpy.ndarray
+        Estimated peak flux time for each event.
+
+    Returns
+    -------
+    number_obs_peak_all : pandas.core.frame.DataFrame
+        DataFrame with the object names and their number of observations near
+        the event peak in four settings described in this docstring.
+    """
+    obj_names = dataset.object_names
+    metadata = dataset.metadata
+
+    # Pre normal; post normal; pre rest-frame; post rest-frame
+    number_obs = np.zeros((len(obj_names), 4))
+    for i in np.arange(len(obj_names)):
+        obj = obj_names[i]
+        obj_data = dataset.data[obj].to_pandas()
+        obj_data_ori = obj_data.copy()
+        t_peak = float(t_peak_s.loc[obj])
+
+        z = metadata.loc[obj]['hostgal_specz']
+        if z < 0:  # the event does not have spec-z
+            z = metadata.loc[obj]['hostgal_photoz']
+
+        # observation-frame data
+        obj_mjd_ori = obj_data_ori['mjd']
+        # # pre-peak
+        is_interval = ((obj_mjd_ori >= t_peak - 10) &
+                       (obj_mjd_ori < t_peak))
+        number_obs[i, 0] = np.sum(is_interval)
+        # # post-peak
+        is_interval = ((obj_mjd_ori > t_peak) &
+                       (obj_mjd_ori <= t_peak + 30))
+        number_obs[i, 1] = np.sum(is_interval)
+
+        # rest-frame data
+        obj_mjd = obj_data['mjd']
+        obj_mjd_rest_frame = t_peak + (obj_mjd-t_peak)/(1+z)
+        # # pre-peak
+        is_interval = ((obj_mjd_rest_frame >= t_peak - 10) &
+                       (obj_mjd_rest_frame < t_peak))
+        number_obs[i, 2] = np.sum(is_interval)
+        # # post-peak
+        is_interval = ((obj_mjd_rest_frame > t_peak) &
+                       (obj_mjd_rest_frame <= t_peak + 30))
+        number_obs[i, 3] = np.sum(is_interval)
+
+    number_obs_peak_names = ['prepeak_10', 'postpeak_30',
+                             'prepeak_rest_10', 'postpeak_rest_30']
+    number_obs_peak_all = pd.DataFrame(number_obs, index=obj_names,
+                                       columns=number_obs_peak_names)
+    return number_obs_peak_all
+
+
+def compute_t_peak(dataset, path_saved_gps):
+    """Estimate the peak time using Gaussian processes around detections.
+
+    Parameters
+    ----------
+    dataset : Dataset object (sndata class)
+        Dataset.
+    path_saved_gps : str
+        Path to the Gaussian Process files.
+
+    Returns
+    -------
+    t_peak_s : numpy.ndarray
+        Estimated peak flux time for each event.
+    """
+    pb_wavelengths = dataset.pb_wavelengths
+
+    obj_names = dataset.object_names
+    filter_set = np.asarray(dataset.filter_set)
+    gp_wavelengths = np.vectorize(pb_wavelengths.get)(filter_set)
+    t_peak_s = np.zeros(len(obj_names))
+
+    for i in np.arange(len(obj_names)):
+        obj = obj_names[i]
+
+        # Load the GPs
+        path_obj_gps = path_saved_gps+f'/used_gp_{obj}.pckl'
+        with open(path_obj_gps, 'rb') as input:
+            gp_predict = pickle.load(input)
+
+        # Compute the minimum and maximum of the light curve
+        obj_data = dataset.data[obj]
+        obs_time = obj_data['mjd']
+        obs_time_detect = obs_time[obj_data['detected'] == 1]
+        obs_min = np.min(obs_time_detect)
+        obs_max = np.max(obs_time_detect)
+
+        # Estimate the flux everyday between 105 days before and 300 after
+        gp_start_time = obs_min - 105
+        gp_end_time = obs_max + 300
+        gp_times = np.arange(gp_start_time, gp_end_time + 1)
+        obj_gps = gps.predict_2d_gp(gp_predict, gp_times,
+                                    gp_wavelengths).to_pandas()
+
+        # Estimate the peak as the day with the highest flux
+        t_peak = obj_gps['mjd'][np.argmax(obj_gps['flux'])]
+        t_peak_s[i] = t_peak
+
+    print(np.sum(t_peak_s < 0), np.sum(t_peak_s < 0)/len(t_peak_s))
+    return t_peak_s
