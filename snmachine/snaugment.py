@@ -1416,36 +1416,6 @@ class PlasticcWFDAugment(GPAugment):
                                              + add_stds ** 2)
         return aug_obj_data
 
-    def _add_augment_objs_to_dataset(self, aug_objs_data, aug_objs_metadata):
-        """Add the new events to the dataset.
-
-        There are two new datasets created:
-            - aug_dataset: original + augmented events
-            - only_new_dataset: augmented events
-
-        Parameters
-        ----------
-        aug_objs_data : list of pandas.DataFrame
-            List containing the observations of each augmentation of each
-            event.
-        aug_objs_metadata : list of pandas.DataFrame
-            Ordered list containing the metadata of each augmentation of each
-            event.
-
-        Notes
-        -----
-        This method further adds an inner metadata to the events. This was used
-        in snmachine < v2.0.
-        """
-        super(PlasticcWFDAugment, self)._add_augment_objs_to_dataset()
-        for obj_data in aug_objs_data:
-            try:
-                obj = obj_data['object_id'].iloc[0]
-                self.dataset.set_inner_metadata(obj)
-            except (IndexError, TypeError):
-                print(obj_data)
-                print('Failed attempt.')
-
 
 class PlasticcDDFAugment(GPAugment):
     """Augment the Deep Drilling Field (DDF) events in the PLAsTiCC dataset using
