@@ -65,7 +65,7 @@ setup(
                       'iminuit',
                       'pandas>=0.23.0',
                       'pywavelets>=0.4.0',
-                      'sncosmo==2.1.0',
+                      'sncosmo>=2.1.0',
                       'nose>=1.3.7',
                       'future>=0.16',
                       'pyyaml>=3.13',
