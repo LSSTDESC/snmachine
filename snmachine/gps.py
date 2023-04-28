@@ -88,7 +88,7 @@ def compute_gps(dataset, number_gp, t_min, t_max, output_root=None,
                               number_processes, gp_dim, **kwargs)
 
     print('Time taken for Gaussian process regression: {:.2f}s.'
-          ''.format(time.time()-initial_time))
+          ''.format(time.time() - initial_time))
 
 
 def is_dataset_in_t_range(dataset, t_min, t_max):
@@ -135,7 +135,7 @@ def read_gp_files_into_models(dataset, path_saved_gp_files):
     print('Restarting from stored Gaussian Processes...')
     time_start_reading = time.time()
     for obj in dataset.object_names:
-        obj_saved_gps_file = os.path.join(path_saved_gp_files, 'gp_'+obj)
+        obj_saved_gps_file = os.path.join(path_saved_gp_files, 'gp_' + obj)
         try:
             obj_saved_gps = Table.read(obj_saved_gps_file, format='ascii')
         except UnicodeDecodeError:
@@ -364,7 +364,7 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
         else:
             obj_gp_pb_array = np.zeros([number_gp, 3])
         obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
-                           obj_gp_pb_array[:, 2], [pb]*number_gp],
+                           obj_gp_pb_array[:, 2], [pb] * number_gp],
                           names=['mjd', 'flux', 'flux_error', 'filter'])
         if len(obj_gps) == 0:  # initialize the table for 1st passband
             obj_gps = obj_gp_pb
@@ -372,7 +372,7 @@ def _compute_gp_all_passbands_1D(obj, dataset, number_gp, t_min, t_max,
             obj_gps = vstack((obj_gps, obj_gp_pb))
 
     if output_root is not None:
-        obj_gps.write(os.path.join(output_root, 'gp_'+obj), format='fits',
+        obj_gps.write(os.path.join(output_root, 'gp_' + obj), format='fits',
                       overwrite=True)
         path_save_gps = os.path.join(output_root, 'used_gp_dict_{}.pckl'
                                      ''.format(obj))
@@ -423,13 +423,13 @@ def fit_best_gp(kernel_param, obj_data, gp_times):
                               [19., 9., 2., 4., 4., 6., 6.]]
     number_diff_kernels = len(possible_kernel_names)
     i = 0  # initializing the while loop
-    all_obj_gp = number_diff_kernels*['']  # initializing
-    all_gp_instances = number_diff_kernels*['']  # initializing
+    all_obj_gp = number_diff_kernels * ['']  # initializing
+    all_gp_instances = number_diff_kernels * ['']  # initializing
     # just a random number > 1 to initialize
     all_chisq_over_pts = np.zeros(number_diff_kernels) + 666
     threshold_chisq_over_pts = 2  # because that is a good number
     while ((i < number_diff_kernels) and
-           (all_chisq_over_pts[i-1] > threshold_chisq_over_pts)):
+           (all_chisq_over_pts[i - 1] > threshold_chisq_over_pts)):
         obj_gp, gp_instance = fit_gp(kernel_name=possible_kernel_names[i],
                                      kernel_param=possible_kernel_params[i],
                                      obj_data=obj_data, gp_times=gp_times)
@@ -487,7 +487,8 @@ def _choose_less_bad_kernel(all_obj_gp, all_gp_instances,
 
 
 def fit_gp(kernel_name, kernel_param, obj_data, gp_times):
-    """Fit a Gaussian process curve at evenly spaced points along a light curve.
+    """Fit a Gaussian process curve at evenly spaced points along a light
+    curve.
 
     Parameters
     ----------
@@ -532,7 +533,7 @@ def fit_gp(kernel_name, kernel_param, obj_data, gp_times):
     if np.sum(np.isnan(results.x)) != 0:
         # The minimiser reaches a local minimum.
         # Change a bit initial conditions so we don't go to that minima
-        kernel_param[4] = kernel_param[4]+.1
+        kernel_param[4] = kernel_param[4] + 0.1
         kernel = get_kernel(kernel_name, kernel_param)
         gp = george.GP(kernel)
         gp.compute(obj_times, obj_flux_error)
@@ -841,7 +842,7 @@ def predict_2d_gp(gp_predict, gp_times, gp_wavelengths):
         obj_gp_pb_array = np.column_stack((gp_times, pb_pred,
                                            np.sqrt(pb_pred_var)))
         obj_gp_pb = Table([obj_gp_pb_array[:, 0], obj_gp_pb_array[:, 1],
-                           obj_gp_pb_array[:, 2], [wavelength]*number_gp],
+                           obj_gp_pb_array[:, 2], [wavelength] * number_gp],
                           names=['mjd', 'flux', 'flux_error', 'filter'])
 
         if len(obj_gps) == 0:  # initialize the table for 1st passband
@@ -865,5 +866,5 @@ def print_time_difference(initial_time, final_time):
     final_time : float
         Time at which the time interval ends.
     """
-    time_spent = pd.to_timedelta(int(final_time-initial_time), unit='s')
+    time_spent = pd.to_timedelta(int(final_time - initial_time), unit='s')
     print('Time spent: {}.'.format(time_spent))

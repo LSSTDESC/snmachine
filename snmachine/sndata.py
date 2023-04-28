@@ -100,8 +100,8 @@ def plot_lc(lc, show_legend=True):
         if tdelt.max() > max_x:
             max_x = tdelt.max()
 
-    ext = 0.05*(max_x-min_x)
-    plt.xlim([min_x-ext, max_x+ext])
+    ext = 0.05 * (max_x - min_x)
+    plt.xlim([min_x - ext, max_x + ext])
     plt.xlabel('Time (days)', fontsize=16)
     plt.ylabel('Flux', fontsize=16)
 
@@ -182,7 +182,7 @@ class EmptyDataset:
         self.data[name] = lc
         for flt in np.unique(lc['filter']):
             if not str(flt) in self.filter_set:
-                print('Adding filter '+str(flt)+' ...')
+                print('Adding filter ' + str(flt) + ' ...')
                 self.filter_set.append(str(flt))
 
     def __plot_this(self, fname, title=True, loc='best'):
@@ -219,8 +219,8 @@ class EmptyDataset:
             F = lc['flux'][inds]
             F_err = lc['flux_error'][inds]
             if self.sep_detect:
-                inds_d = np.where((lc['filter'] == filts[j])
-                                  & (lc['detected'] == 1))[0]
+                inds_d = np.where((lc['filter'] == filts[j]) & 
+                                  (lc['detected'] == 1))[0]
                 t_d = lc['mjd'][inds_d]
                 F_d = lc['flux'][inds_d]
                 F_err_d = lc['flux_error'][inds_d]
@@ -248,14 +248,14 @@ class EmptyDataset:
                         t_mod, F_mod = mod['mjd'][inds], mod['flux'][inds]
                         plt.plot(t_mod, F_mod, color=colours[filts[j]])
 
-            line = plt.errorbar(tdelt, F, yerr=F_err,  marker=mkr,
+            line = plt.errorbar(tdelt, F, yerr=F_err, marker=mkr,
                                 linestyle='none', color=colours[filts[j]],
                                 markersize=4)
             lines.append(line)
 
             if self.sep_detect and detect_in_band:
                 l_d = plt.errorbar(tdelt_d, F_d, yerr=F_err_d, marker=mkr_d,
-                                   linestyle='none',  color=colours[filts[j]],
+                                   linestyle='none', color=colours[filts[j]],
                                    markersize=7)
                 lines.append(l_d)
 
@@ -273,8 +273,8 @@ class EmptyDataset:
                 if self.sep_detect and detect_in_band:
                     labs.append(f + ' detected')
 
-        ext = 0.05*(max_x-min_x)
-        plt.xlim([min_x-ext, max_x+ext])
+        ext = 0.05 * (max_x - min_x)
+        plt.xlim([min_x - ext, max_x + ext])
         plt.xlabel('Time (days)')
         plt.ylabel('Flux')
         # plt.gca().tick_params(labelsize=8)
@@ -331,7 +331,7 @@ class EmptyDataset:
         """
 
         event.canvas.figure.clear()
-        if event.key == 'right' and self.__ind < len(self.object_names)-1:
+        if event.key == 'right' and self.__ind < len(self.object_names) - 1:
             self.__ind += 1
         elif event.key == 'left' and self.__ind > 0:
             self.__ind -= 1
@@ -394,7 +394,7 @@ class EmptyDataset:
         # The folder name is the second to last item in the list
         folder_name = outpath.split(os.path.sep)[-2]
         if listname is None:
-            object_list_path = os.path.join(outpath, (folder_name+'.LIST'))
+            object_list_path = os.path.join(outpath, (folder_name + '.LIST'))
         else:
             object_list_path = os.path.join(outpath, listname)
         if overwrite or not os.path.exists(object_list_path):
@@ -412,7 +412,7 @@ class EmptyDataset:
         max_obs = 0
         for n in self.object_names:
             times = self.data[n]['mjd']
-            dif = times.max()-times.min()
+            dif = times.max() - times.min()
             if dif > max_obs:
                 max_obs = dif
         return max_obs
@@ -568,8 +568,8 @@ class EmptyDataset:
         final_time : float
             Time at which the time interval ends.
         """
-        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time),
-                                                  unit='s')
+        time_diff = int(final_time - initial_time)
+        time_spent_on_this_task = pd.to_timedelta(time_diff, unit='s')
         print('This has taken {}\n'.format(time_spent_on_this_task))
 
     @staticmethod
@@ -586,12 +586,13 @@ class EmptyDataset:
         number_objs : int
             Total number of objects to perform the action on.
         """
-        percent_to_print = pow(10, -int(np.log10(number_objs)/2))
-        if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
-            print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
+        percent_to_print = pow(10, -int(np.log10(number_objs) / 2))
+        if int(math.fmod(obj_ordinal, number_objs * percent_to_print)) == 0:
+            print('{}%'.format(int(obj_ordinal / (number_objs * 0.01))))
 
     def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
-        """Transform the pandas dataframe into an astropy table starting from mjd=0
+        """Transform the pandas dataframe into an astropy table starting from 
+        mjd=0
 
         Takes a pandas light curve from the plasticc dataset format
         and converts it to the astropy table.table format starting from mjd=0.
@@ -706,15 +707,15 @@ class EmptyDataset:
                     model_flux_error = obj_model_pb['flux_error']
                     if axes is None:
                         plt.fill_between(x=obj_model_pb['mjd'],
-                                         y1=model_flux-model_flux_error,
-                                         y2=model_flux+model_flux_error,
-                                         color=pb_colors[pb], alpha=.15,
+                                         y1=model_flux - model_flux_error,
+                                         y2=model_flux + model_flux_error,
+                                         color=pb_colors[pb], alpha=0.15,
                                          label=None)
                     else:
                         axes.fill_between(x=obj_model_pb['mjd'],
-                                          y1=model_flux-model_flux_error,
-                                          y2=model_flux+model_flux_error,
-                                          color=pb_colors[pb], alpha=.15,
+                                          y1=model_flux - model_flux_error,
+                                          y2=model_flux + model_flux_error,
+                                          color=pb_colors[pb], alpha=0.15,
                                           label=None)
                 except KeyError:  # the model has no error information
                     pass
@@ -910,7 +911,7 @@ class PlasticcData(EmptyDataset):
 
         for i, id in enumerate(data[self.id_col].unique()):
             # Use +1 because the order starts at 0 in python
-            self.print_progress(i+1, number_objs)
+            self.print_progress(i + 1, number_objs)
 
             object_names.append(str(id))
             obj_lc = data.query('{0} == {1}'.format(self.id_col, id))
@@ -956,7 +957,7 @@ class PlasticcData(EmptyDataset):
         number_objs = len(self.object_names)
         for i, obj in enumerate(self.object_names):
             # Use +1 because the order starts at 0 in python
-            self.print_progress(i+1, number_objs)
+            self.print_progress(i + 1, number_objs)
 
             self.set_inner_metadata(obj)
         print(f'Finished getting the metadata for {number_objs} objects.')
@@ -1153,15 +1154,15 @@ class PlasticcData(EmptyDataset):
                     model_flux_error = obj_model_pb['flux_error']
                     if axes is None:
                         plt.fill_between(x=obj_model_pb['mjd'],
-                                         y1=model_flux-model_flux_error,
-                                         y2=model_flux+model_flux_error,
-                                         color=pb_colors[pb], alpha=.15,
+                                         y1=model_flux - model_flux_error,
+                                         y2=model_flux + model_flux_error,
+                                         color=pb_colors[pb], alpha=0.15,
                                          label=None)
                     else:
                         axes.fill_between(x=obj_model_pb['mjd'],
-                                          y1=model_flux-model_flux_error,
-                                          y2=model_flux+model_flux_error,
-                                          color=pb_colors[pb], alpha=.15,
+                                          y1=model_flux - model_flux_error,
+                                          y2=model_flux + model_flux_error,
+                                          color=pb_colors[pb], alpha=0.15,
                                           label=None)
                 except KeyError:  # the model has no error information
                     pass
@@ -1293,8 +1294,8 @@ class PlasticcData(EmptyDataset):
             obs_detected_time = obs_time[obs['detected'] == 1]
             if len(obs_detected_time) >= 2:  # at least 2 detections
                 is_obs_transient = (
-                    (obs_time > obs_detected_time[0] - max_distance)
-                    & (obs_time < obs_detected_time[-1] + max_distance))
+                    (obs_time > obs_detected_time[0] - max_distance) & 
+                    (obs_time < obs_detected_time[-1] + max_distance))
                 obs_transient = obs[is_obs_transient]
             else:  # 1 or 0 detections; will be cut out in other funtion
                 obs_transient = obs
@@ -1305,8 +1306,8 @@ class PlasticcData(EmptyDataset):
             # Update the transient data
             self.data[obj] = obs_transient
 
-            time_transient[i] = (np.max(obs_transient['mjd'])
-                                 - np.min(obs_transient['mjd']))
+            time_transient[i] = (np.max(obs_transient['mjd']) - 
+                                 np.min(obs_transient['mjd']))
             i += 1
         if verbose:
             print(f'The longest event is '
@@ -1379,17 +1380,17 @@ class Dataset(EmptyDataset):
         """
         if isinstance(subset, basestring):
             if subset == 'spectro':
-                object_names = np.genfromtxt(self.rootdir+'DES_spectro.list',
+                object_names = np.genfromtxt(self.rootdir + 'DES_spectro.list',
                                              dtype='U').flatten()
             else:
-                file_name = self.rootdir+self.survey_name+'.LIST'
+                file_name = self.rootdir + self.survey_name + '.LIST'
                 object_names = np.genfromtxt(file_name, dtype='U')
-        elif all(isinstance(l, basestring) for l in subset):
+        elif all(isinstance(obj_nm, basestring) for obj_nm in subset):
             # We assume subset is a list of strings containing object names
             object_names = subset
         else:
             # Otherwise it must be a list of indices. Otherwise raise an error.
-            names = np.genfromtxt(self.rootdir+self.survey_name+'.LIST',
+            names = np.genfromtxt(self.rootdir + self.survey_name + '.LIST',
                                   dtype='U')
             try:
                 object_names = names[subset]
@@ -1414,7 +1415,7 @@ class Dataset(EmptyDataset):
         astropy.table.Table
             Light curve
         """
-        fl = open(self.rootdir+flname, 'r')
+        fl = open(self.rootdir + flname, 'r')
         mjd = []
         flt = []
         flux = []
@@ -1430,7 +1431,7 @@ class Dataset(EmptyDataset):
                     z_err = (float)(s[3])
                 elif s[0] == 'OBS:':
                     mjd.append((float)(s[1]))
-                    flt.append('des'+s[2])
+                    flt.append('des' + s[2])
                     flux.append((float)(s[4]))
                     fluxerr.append((float)(s[5]))
                 elif s[0] == 'SIM_COMMENT:':
@@ -1439,8 +1440,8 @@ class Dataset(EmptyDataset):
                             type = (int)(k)
 
         # Zeropoint
-        zp = np.array([27.5]*len(mjd))
-        zpsys = ['ab']*len(mjd)
+        zp = np.array([27.5] * len(mjd))
+        zpsys = ['ab'] * len(mjd)
 
         # Make everything arrays
         mjd = np.array(mjd)
@@ -1451,7 +1452,7 @@ class Dataset(EmptyDataset):
         # We shift the times of the observations to all start at zero. If
         # required, the mjd of the initial observation is stored in the
         # metadata.
-        mjd = mjd-start_mjd
+        mjd = mjd - start_mjd
         # Note: obviously this will only zero the observations in one filter
         # passband, the others have to be zeroed if fitting functions.
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys],
@@ -1485,8 +1486,8 @@ class Dataset(EmptyDataset):
 
         # For SPCC we might just want the types and not subtypes
         if show_subtypes is False:
-            tab['Type'][np.floor(tab['Type']/10) == 2] = 2
-            tab['Type'][np.floor(tab['Type']/10) == 3] = 3
+            tab['Type'][np.floor(tab['Type'] / 10) == 2] = 2
+            tab['Type'][np.floor(tab['Type'] / 10) == 3] = 3
         return tab
 
 
@@ -1535,7 +1536,8 @@ class OpsimDataset(EmptyDataset):
 
         """
         is_basestring = isinstance(subset, basestring)
-        is_all_in_subset = (all(isinstance(l, basestring) for l in subset))
+        is_all_in_subset = (all(isinstance(obj_nm, basestring) 
+                            for obj_nm in subset))
         if (~is_basestring and is_all_in_subset):
             # We have to deal with separate Ia and nIa fits files
             Ia_head = os.path.join(folder, 'LSST_Ia_HEAD.FITS')
@@ -1570,7 +1572,7 @@ class OpsimDataset(EmptyDataset):
         elif isinstance(subset, basestring) and subset == 'nIa':
             all_data = data_nIa
         else:
-            all_data = data_Ia+data_nIa
+            all_data = data_Ia + data_nIa
         self.data = {}
         self.object_names = []
 
@@ -1607,7 +1609,7 @@ class OpsimDataset(EmptyDataset):
         tab_new = tab['MJD', 'FLUXCAL', 'FLUXCALERR', 'FLT']
         tab_new.rename_column('MJD', 'mjd')
         start_mjd = (tab_new['mjd']).min()
-        tab_new['mjd'] = tab_new['mjd']-start_mjd
+        tab_new['mjd'] = tab_new['mjd'] - start_mjd
         tab_new.rename_column('FLUXCAL', 'flux')
         tab_new.rename_column('FLUXCALERR', 'flux_error')
         tab_new.rename_column('FLT', 'filter')
@@ -1616,8 +1618,8 @@ class OpsimDataset(EmptyDataset):
         for f in range(len(old_filts)):
             new_is_old = tab_new['filter'] == old_filts[f]
             tab_new['filter'][new_is_old] = self.filter_set[f]
-        zp = Column(name='zp', data=np.array([27.5]*len(tab_new['mjd'])))
-        zpsys = Column(name='zpsys', data=['ab']*len(tab_new['mjd']))
+        zp = Column(name='zp', data=np.array([27.5] * len(tab_new['mjd'])))
+        zpsys = Column(name='zpsys', data=['ab'] * len(tab_new['mjd']))
         tab_new.add_column(zp)
         tab_new.add_column(zpsys)
 
@@ -1679,7 +1681,8 @@ class LSSTCadenceSimulations(OpsimDataset):
         for i in self.indices:
             print(f'chunk {i:02d}')
             is_basestring = isinstance(subset, basestring)
-            is_all_in_subset = (all(isinstance(l, basestring) for l in subset))
+            is_all_in_subset = (all(isinstance(obj_nm, basestring) 
+                                for obj_nm in subset))
             if (not is_basestring) and is_all_in_subset:
                 # We have to deal with separate Ia and nIa fits files
                 Ia_head = os.path.join(folder,
@@ -1723,7 +1726,7 @@ class LSSTCadenceSimulations(OpsimDataset):
         elif isinstance(subset, basestring) and subset == 'nIa':
             all_data = data_nIa
         else:
-            all_data = data_Ia+data_nIa
+            all_data = data_Ia + data_nIa
         self.data = {}
         self.object_names = []
 
@@ -1731,7 +1734,7 @@ class LSSTCadenceSimulations(OpsimDataset):
 
         for i in range(len(all_data)):
             if i % 1e4 == 0:
-                number_to_print = i//1e3
+                number_to_print = i // 1e3
                 print(f'{number_to_print}k')
             snid = all_data[i].meta['SNID'].decode('UTF-8')
             is_basestring = isinstance(subset, basestring)
@@ -1817,15 +1820,15 @@ class SDSS_Data(EmptyDataset):
         list-like
             List of object names
         """
-        fl = open(self.rootdir+self.survey_name+'.LIST')
+        fl = open(self.rootdir + self.survey_name + '.LIST')
         SN = []
         for line in fl:
             s = line.split()
-            is_sn_name = (s[5] == "SNIa" or s[5] == "SNIb" or s[5] == "SNIc"
-                          or s[5] == "SNII" or s[5] == "SNIa?"
-                          or s[5] == "pSNIa" or s[5] == "pSNIbc"
-                          or s[5] == "pSNII" or s[5] == "zSNIa"
-                          or s[5] == "zSNIbc" or s[5] == "zSNII")
+            is_sn_name = (s[5] == "SNIa" or s[5] == "SNIb" or s[5] == "SNIc" or
+                          s[5] == "SNII" or s[5] == "SNIa?" or
+                          s[5] == "pSNIa" or s[5] == "pSNIbc" or
+                          s[5] == "pSNII" or s[5] == "zSNIa" or
+                          s[5] == "zSNIbc" or s[5] == "zSNII")
             if is_sn_name:
                 if len(str(s[0])) == 3:
                     SN.append("SMP_000%s.dat" % s[0])
@@ -1857,13 +1860,13 @@ class SDSS_Data(EmptyDataset):
         list-like
             List of object names
         """
-        fl = open(self.rootdir+self.survey_name+'.LIST')
+        fl = open(self.rootdir + self.survey_name + '.LIST')
         SN = []
         classes = []
         for line in fl:
             s = line.split()
-            is_sn_name = (s[5] == "SNIa" or s[5] == "SNIb" or s[5] == "SNIc"
-                          or s[5] == "SNII")
+            is_sn_name = (s[5] == "SNIa" or s[5] == "SNIb" or s[5] == "SNIc" or
+                          s[5] == "SNII")
             if is_sn_name:
                 classes.append(s[5])
                 if len(str(s[0])) == 3:
@@ -1920,15 +1923,15 @@ class SDSS_Data(EmptyDataset):
         list-like
             List of object names
         """
-        fl = open(self.rootdir+self.survey_name+'.LIST')
+        fl = open(self.rootdir + self.survey_name + '.LIST')
         SN = []
         classes = []
         for line in fl:
             s = line.split()
-            is_sn_name = (s[5] == "pSNIa" or s[5] == "pSNIbc"
-                          or s[5] == "pSNII" or s[5] == "zSNIa"
-                          or s[5] == 'zSNIbc' or s[5] == 'zSNII'
-                          or s[5] == 'SNIa?')
+            is_sn_name = (s[5] == "pSNIa" or s[5] == "pSNIbc" or
+                          s[5] == "pSNII" or s[5] == "zSNIa" or
+                          s[5] == 'zSNIbc' or s[5] == 'zSNII' or
+                          s[5] == 'SNIa?')
             if is_sn_name:
                 classes.append(s[5])
                 if len(str(s[0])) == 3:
@@ -1949,8 +1952,8 @@ class SDSS_Data(EmptyDataset):
         if classification != 'none':
             if classification == 'Ia' or classification == 'SNIa':
                 SN = [SN[i] for i in range(len(SN))
-                      if classes[i] == 'SNIa?' or classes[i] == 'pSNIa'
-                      or classes[i] == 'zSNIa']
+                      if classes[i] == 'SNIa?' or classes[i] == 'pSNIa' or
+                      classes[i] == 'zSNIa']
             elif classification == 'Ibc' or classification == 'SNIbc':
                 SN = [SN[i] for i in range(len(SN))
                       if classes[i] == 'pSNIbc' or classes[i] == 'zSNIbc']
@@ -1995,12 +1998,12 @@ class SDSS_Data(EmptyDataset):
                 return np.array(self.get_SNe(subset_length))
                 # loads random sample of SNe from whole master file - sample
                 # defaulted to whole
-        elif all(isinstance(l, basestring) for l in subset):
+        elif all(isinstance(obj_nm, basestring) for obj_nm in subset):
             # We assume subset is a list of strings containing object names
             return subset
         else:
             # Otherwise it must be a list of indices. Otherwise raise an error.
-            names = np.genfromtxt(self.rootdir+self.survey_name+'.LIST',
+            names = np.genfromtxt(self.rootdir + self.survey_name + '.LIST',
                                   dtype='str')
             try:
                 return names[subset]
@@ -2022,7 +2025,7 @@ class SDSS_Data(EmptyDataset):
         list-like
             Redshift, redshift error, type
         """
-        fl = open(self.rootdir+self.survey_name+'.LIST')
+        fl = open(self.rootdir + self.survey_name + '.LIST')
         # z_hel is spectroscopic heliocentric redshift and z_psnid uses zspec
         # as prior but has many more??
         z = {'z_hel': float('nan'), 'z_phot': float('nan')}
@@ -2030,9 +2033,9 @@ class SDSS_Data(EmptyDataset):
         t = -9
         for line in fl:
             s = line.split()
-            is_good_name = ("SMP_000%s.dat" % s[0] == flname
-                            or "SMP_00%s.dat" % s[0] == flname
-                            or "SMP_0%s.dat" % s[0] == flname)
+            is_good_name = ("SMP_000%s.dat" % s[0] == flname or
+                            "SMP_00%s.dat" % s[0] == flname or
+                            "SMP_0%s.dat" % s[0] == flname)
             if is_good_name:  # is this a bit slow?
                 if s[103] != "\\N":
                     z['z_phot'] = float(s[103])
@@ -2051,10 +2054,10 @@ class SDSS_Data(EmptyDataset):
                 else:
                     z_err['z_hel_err'] = -9
                 # All classifications of type Ia SNe - includes probable SNeIa
-                is_snia = (s[5] == 'SNIa' or s[5] == 'pSNIa' or s[5] == 'zSNIa'
-                           or s[5] == 'SNIa?')
-                is_snibc = (s[5] == 'SNIb' or s[5] == 'SNIc'
-                            or s[5] == 'pSNIbc' or s[5] == 'zSNIbc')
+                is_snia = (s[5] == 'SNIa' or s[5] == 'pSNIa' or 
+                           s[5] == 'zSNIa' or s[5] == 'SNIa?')
+                is_snibc = (s[5] == 'SNIb' or s[5] == 'SNIc' or
+                            s[5] == 'pSNIbc' or s[5] == 'zSNIbc')
                 if is_snia:
                     t = 1
                 elif is_snibc:
@@ -2078,7 +2081,7 @@ class SDSS_Data(EmptyDataset):
             Light curve
         """
         print(flname)
-        fl = open(self.rootdir+flname, 'r')
+        fl = open(self.rootdir + flname, 'r')
         mjd = []
         flt = []  # band
         flux = []
@@ -2124,8 +2127,8 @@ class SDSS_Data(EmptyDataset):
             z_err = -9  # returns values of -9 if no redshift is available
 
         # Zeropoint
-        zp = np.array([27.5]*len(mjd))
-        zpsys = ['ab']*len(mjd)
+        zp = np.array([27.5] * len(mjd))
+        zpsys = ['ab'] * len(mjd)
 
         # Make everything arrays
         mjd = np.array(mjd)
@@ -2144,7 +2147,7 @@ class SDSS_Data(EmptyDataset):
         # We shift the times of the observations to all start at zero. If
         # required, the mjd of the initial observation is stored in the
         # metadata.
-        mjd = mjd-start_mjd
+        mjd = mjd - start_mjd
         # Note: obviously this will only zero the observations in one filter
         # passband, the others have to be zeroed if fitting functions.
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr],
@@ -2291,13 +2294,13 @@ class SDSS_Simulations(EmptyDataset):
         flt = np.array(['sdss' + lc['FLT'][i] for i in range(len(lc['FLT']))
                         if lc['FLUXCAL'][i] > 0])
         # Ignore negative flux values
-        flux = np.array([(lc['FLUXCAL'][i]*math.pow(10, -1.44))
+        flux = np.array([(lc['FLUXCAL'][i] * math.pow(10, -1.44))
                          for i in range(len(lc['FLUXCAL']))
                          if lc['FLUXCAL'][i] > 0])
         # FLUX: MULTIPLY BY 10^-1.44 (FLUX IN SDSS IS CALCULATED AS
         # 10^(-0.4MAG +9.56) WHEREAS SIMULATED FLUXES ARE CALCULATED AS
         # 10^(-0.4MAG + 11)- WE USE THE SDSS CONVENTION).
-        fluxerr = np.array([(lc['FLUXCALERR'][i]*math.pow(10, -1.44))
+        fluxerr = np.array([(lc['FLUXCALERR'][i] * math.pow(10, -1.44))
                             for i in range(len(lc['FLUXCALERR']))
                             if lc['FLUXCAL'][i] > 0])
         mag = np.array([lc['MAG'][i] for i in range(len(lc['MAGERR']))
@@ -2314,7 +2317,7 @@ class SDSS_Simulations(EmptyDataset):
         # We shift the times of the observations to all start at zero. If
         # required, the mjd of the initial observation is stored in the
         # metadata.
-        mjd = mjd-start_mjd
+        mjd = mjd - start_mjd
         # Note: obviously this will only zero the observations in one filter
         # passband, the others have to be zeroed if fitting functions.
 
@@ -2344,8 +2347,8 @@ class SDSS_Simulations(EmptyDataset):
         # simulated heliocentric redshift is used
         z = -9
         z_err = -9
-        exists_z = (lc.meta['REDSHIFT_HELIO'] != -9
-                    and lc.meta['REDSHIFT_HELIO_ERR'] != -9)
+        exists_z = (lc.meta['REDSHIFT_HELIO'] != -9 and 
+                    lc.meta['REDSHIFT_HELIO_ERR'] != -9)
         if exists_z:
             z = lc.meta['REDSHIFT_HELIO']
             z_err = lc.meta['REDSHIFT_HELIO_ERR']
@@ -2357,8 +2360,8 @@ class SDSS_Simulations(EmptyDataset):
         snid = lc.meta['SNID']
 
         # Zeropoint
-        zp = np.array([27.5]*len(mjd))
-        zpsys = ['ab']*len(mjd)
+        zp = np.array([27.5] * len(mjd))
+        zpsys = ['ab'] * len(mjd)
 
         # form astropy table
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr],
@@ -2436,8 +2439,8 @@ class SnanaDataOri(EmptyDataset):
                      'BAND': 'filter', 'MJD': 'mjd'},
                     axis='columns', inplace=True)
         # Rename `filter` values as per `snmachine` convention
-        data['filter'] = (self.survey_name
-                          + data['filter'].str.lower().str.strip(' '))
+        data['filter'] = (self.survey_name + 
+                          data['filter'].str.lower().str.strip(' '))
 
         # Set detected flag in the observations; corresponds to the flag 13
         is_detected = [('{0:020b}'.format(i))[-13] for i in data['PHOTFLAG']]
@@ -2457,7 +2460,7 @@ class SnanaDataOri(EmptyDataset):
 
         for i, id in enumerate(data[self.id_col].unique()):
             # Use +1 because the order starts at 0 in python
-            self.print_progress(i+1, number_objs)
+            self.print_progress(i + 1, number_objs)
 
             object_names.append(str(id))
             obj_lc = data[data[self.id_col] == id]
@@ -2516,7 +2519,7 @@ class SnanaDataOri(EmptyDataset):
         number_objs = len(self.object_names)
         for i, obj in enumerate(self.object_names):
             # Use +1 because the order starts at 0 in python
-            self.print_progress(i+1, number_objs)
+            self.print_progress(i + 1, number_objs)
 
             self.set_inner_metadata(obj)
         print(f'Finished getting the metadata for {number_objs} objects.')
@@ -2778,7 +2781,7 @@ class SnanaData(EmptyDataset):
         # Load each event to the data class
         for i in np.arange(number_objs):
             # Use +1 because the order starts at 0 in python
-            self.print_progress(i+1, number_objs)
+            self.print_progress(i + 1, number_objs)
 
             obj_data = data[i]
             if len(obj_data[self.mjd_col.upper()] > 0):  # MJD not modified yet
@@ -2929,8 +2932,8 @@ class SnanaData(EmptyDataset):
 
             self.data[obj_names[i]] = obj_data
 
-            time_transient[i] = (obj_data['mjd'][-1]
-                                 - obj_data['mjd'][0])
+            time_transient[i] = (obj_data['mjd'][-1] - 
+                                 obj_data['mjd'][0])
         if verbose:
             print(f'The longest event is '
                   f'{obj_names[np.argmax(time_transient)]} '
@@ -2960,8 +2963,8 @@ class SnanaData(EmptyDataset):
             obs_detected_time = obs_time[obs['detected'] == 1]
             if len(obs_detected_time) >= 2:  # at least 2 detections
                 is_obs_transient = (
-                    (obs_time > obs_detected_time[0] - max_distance)
-                    & (obs_time < obs_detected_time[-1] + max_distance))
+                    (obs_time > obs_detected_time[0] - max_distance) & 
+                    (obs_time < obs_detected_time[-1] + max_distance))
                 obs_transient = obs[is_obs_transient]
             else:  # 1 or 0 detections; will be cut out in other funtion
                 obs_transient = obs
@@ -2972,8 +2975,8 @@ class SnanaData(EmptyDataset):
             # Update the transient data
             self.data[obj] = obs_transient
 
-            time_transient[i] = (np.max(obs_transient['mjd'])
-                                 - np.min(obs_transient['mjd']))
+            time_transient[i] = (np.max(obs_transient['mjd']) - 
+                                 np.min(obs_transient['mjd']))
             i += 1
         if verbose:
             print(f'The longest event is '
@@ -3022,8 +3025,8 @@ class SnanaData(EmptyDataset):
             # Update dataset
             self.data[obj_names[i]] = obj_data_window
 
-            time_obj[i] = (obj_data_window['mjd'][-1]
-                           - obj_data_window['mjd'][0])
+            time_obj[i] = (obj_data_window['mjd'][-1] - 
+                           obj_data_window['mjd'][0])
         if verbose:
             print(f'The longest event is '
                   f'{obj_names[np.argmax(time_obj)]} '
@@ -3117,7 +3120,7 @@ class SNANA_Data(EmptyDataset):
                 ind = f.index('HEAD')
                 fl_prefix = f[:ind]
                 print('Reading data from the', fl_prefix, 'files')
-                phot_file = fl_prefix+'PHOT'+f[ind+4:]
+                phot_file = fl_prefix + 'PHOT' + f[ind + 4:]
                 try:
                     sne = sncosmo.read_snana_fits(f, phot_file)
                 except FileNotFoundError:
@@ -3159,7 +3162,7 @@ class SNANA_Data(EmptyDataset):
         # We shift the times of the observations to all start at zero. If
         # required, the mjd of the initial observation is stored in the
         # metadata.
-        mjd = mjd-start_mjd
+        mjd = mjd - start_mjd
         # Note: obviously this will only zero the observations in one filter
         # passband, the others have to be zeroed if fitting functions.
 
@@ -3173,8 +3176,8 @@ class SNANA_Data(EmptyDataset):
         # simulated heliocentric redshift is used
         z = -9
         z_err = -9
-        exists_z = (lc.meta['REDSHIFT_HELIO'] != -9
-                    and lc.meta['REDSHIFT_HELIO_ERR'] != -9)
+        exists_z = (lc.meta['REDSHIFT_HELIO'] != -9 and 
+                    lc.meta['REDSHIFT_HELIO_ERR'] != -9)
         if exists_z:
             z = lc.meta['REDSHIFT_HELIO']
             z_err = lc.meta['REDSHIFT_HELIO_ERR']
@@ -3186,8 +3189,8 @@ class SNANA_Data(EmptyDataset):
         snid = lc.meta['SNID'].decode()
 
         # Zeropoint
-        zp = np.array([27.5]*len(mjd))
-        zpsys = ['ab']*len(mjd)
+        zp = np.array([27.5] * len(mjd))
+        zpsys = ['ab'] * len(mjd)
 
         # form astropy table
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys],

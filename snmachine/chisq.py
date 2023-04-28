@@ -50,7 +50,7 @@ def compute_overall_chisq_over_pts(obj_data_with_passband,
     chisq = compute_overall_chisq(obj_data_with_passband,
                                   obj_model_with_passband)
     number_data_points = np.shape(obj_data_with_passband)[0]
-    chisq_over_pts = chisq/number_data_points
+    chisq_over_pts = chisq / number_data_points
     return chisq_over_pts
 
 
@@ -137,7 +137,7 @@ def compute_chisq_over_pts(obj_data, obj_model):
     """
     number_pts = np.shape(obj_data)[0]
     chisq = compute_chisq(obj_data, obj_model)
-    chisq_over_pts = chisq/number_pts
+    chisq_over_pts = chisq / number_pts
     return chisq_over_pts
 
 
@@ -180,8 +180,8 @@ def compute_chisq(obj_data, obj_model):
         `flux`. `obj_data` also needs `flux_error`.
     """
     try:
-        assert({'mjd', 'flux', 'flux_error'}.issubset(set(obj_data)))
-        assert({'mjd', 'flux'}.issubset(set(obj_model)))
+        assert ({'mjd', 'flux', 'flux_error'}.issubset(set(obj_data)))
+        assert ({'mjd', 'flux'}.issubset(set(obj_model)))
     except AssertionError:
         raise AttributeError('Both `obj_data` and `obj_model` need to contain '
                              'the columns `mjd` and `flux`. `obj_data` also '
@@ -192,8 +192,8 @@ def compute_chisq(obj_data, obj_model):
                                                            kind='cubic')
     interpolated_model_flux = interpolate_model_flux_at_times(obj_data.mjd)
 
-    chisq = np.sum(((obj_data.flux-interpolated_model_flux)
-                    / obj_data.flux_error)**2)
+    flux_diff = obj_data.flux - interpolated_model_flux
+    chisq = np.sum(((flux_diff) / obj_data.flux_error)**2)
     return chisq
 
 

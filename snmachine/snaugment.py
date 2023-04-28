@@ -43,10 +43,10 @@ def choose_z_wfd_plasticc(z_ori, pb_wavelengths, random_state):
     z_new : float
         Redshift of the new event.
     """
-    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
-                                         / pb_wavelengths['lssty'])**(-1) - 1)
-    z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg']
-                            / pb_wavelengths['lsstu'])**(-1) - 1)
+    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz'] /
+                pb_wavelengths['lssty'])**(-1) - 1)
+    z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg'] / 
+             pb_wavelengths['lsstu'])**(-1) - 1)
 
     log_z_star = random_state.triangular(left=np.log(z_min),
                                          mode=np.log(z_min),
@@ -79,10 +79,10 @@ def choose_z_ddf_plasticc(z_ori, pb_wavelengths, random_state):
     z_new: float
         Redshift of the new event.
     """
-    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
-                                         / pb_wavelengths['lssty'])**(-1) - 1)
-    z_max = 1.4*((1 + z_ori) * (2 - pb_wavelengths['lsstg']
-                                / pb_wavelengths['lsstu'])**(-1) - 1)
+    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz'] /
+                                         pb_wavelengths['lssty'])**(-1) - 1)
+    z_max = 1.4 * ((1 + z_ori) * (2 - pb_wavelengths['lsstg'] / 
+                                  pb_wavelengths['lsstu'])**(-1) - 1)
 
     log_z_star = random_state.triangular(left=np.log(z_min),
                                          mode=np.log(z_min),
@@ -116,13 +116,13 @@ def choose_z_wfd_basev2(z_ori, pb_wavelengths, random_state):
     z_new : float
         Redshift of the new event.
     """
-    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz']
-                                         / pb_wavelengths['lssty'])**(-1) - 1)
-    z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg']
-                            / pb_wavelengths['lsstu'])**(-1) - 1)
+    z_min = max(10**(-4), (1 + z_ori) * (2 - pb_wavelengths['lsstz'] /
+                                         pb_wavelengths['lssty'])**(-1) - 1)
+    z_max = ((1 + z_ori) * (2 - pb_wavelengths['lsstg'] / 
+                            pb_wavelengths['lsstu'])**(-1) - 1)
 
     # Draw a value from a custom trapezoid distribution
-    right_val = .1 * 2/(np.log(z_max) - np.log(z_min))  # 10% of triang. peak
+    right_val = .1 * 2 / (np.log(z_max) - np.log(z_min))  # 10% of triang. peak
     log_z_star = trapezoid(left=np.log(z_min), right=np.log(z_max),
                            right_val=right_val, random_state=random_state)
     z_new = - np.exp(log_z_star) + z_min + z_max
@@ -191,7 +191,7 @@ def trapezoid(left, right, right_val, random_state, size=None):
     if dx <= 0:
         raise ValueError('The lower limit `left` must be smaller than the '
                          'upper limit `right`.')
-    if (right_val < 0) or (right_val > 2/dx):
+    if (right_val < 0) or (right_val > 2 / dx):
         raise ValueError('The value of the distribution at the upper limit '
                          '`right_val` must be non-negative and smaller or '
                          'equal than 2/(`right`-`left`).')
@@ -202,16 +202,16 @@ def trapezoid(left, right, right_val, random_state, size=None):
     # the dependent x
     y = number_unif
 
-    left_val = 2/dx - right_val  # value of trapez. distr. at the lower limit
+    left_val = 2 / dx - right_val  # value of trapez. distr. at the lower limit
 
     # Components of the quadratic formula: ax^2 + bx + c = 0
     a = right_val - left_val
     b = 2 * (left_val * right - right_val * left)
-    c = - (2 * dx * y + left * (2 * left_val * right
-                                - left * (left_val + right_val)))
+    c = - (2 * dx * y + left * (2 * left_val * right - 
+                                left * (left_val + right_val)))
 
     # Formula for the inverse of the cdf of the triangular distribution
-    x = (-b + np.sqrt(b**2 - 4*a*c))/(2*a)  # quadratic formula
+    x = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)  # quadratic formula
     return x
 
 
@@ -378,7 +378,7 @@ class GPAugment(SNAugment):
 
         self._add_augment_objs_to_dataset(aug_objs_data, aug_objs_metadata)
 
-        time_spent = pd.to_timedelta(int(time.time()-initial_time), unit='s')
+        time_spent = pd.to_timedelta(int(time.time() - initial_time), unit='s')
         print('Time spent augmenting: {}.'.format(time_spent))
 
     def _add_augment_objs_to_dataset(self, aug_objs_data, aug_objs_metadata):
@@ -542,8 +542,8 @@ class GPAugment(SNAugment):
         if num_fill > 0:
             # At the most, create 50% more data; It prevents augmented events
             # with many observations that provide no extra information
-            if num_fill > len(obj_data)/2:
-                num_fill = int(len(obj_data)/2)
+            if num_fill > len(obj_data) / 2:
+                num_fill = int(len(obj_data) / 2)
             new_indices = self._rs.choice(aug_obj_data.index, num_fill,
                                           replace=True)
             new_rows = aug_obj_data.loc[new_indices]
@@ -614,8 +614,8 @@ class GPAugment(SNAugment):
 
         # Redshift flux values
         z_scale = (1 + z_ori) / (1 + z_aug)
-        dist_scale = (self.cosmology.luminosity_distance(z_ori)
-                      / self.cosmology.luminosity_distance(z_aug))**2
+        dist_scale = (self.cosmology.luminosity_distance(z_ori) / 
+                      self.cosmology.luminosity_distance(z_aug))**2
         aug_obj_data['flux'] = flux_pred * z_scale * dist_scale
         aug_obj_data['flux_error'] = flux_pred_error * z_scale * dist_scale
 
@@ -651,7 +651,7 @@ class GPAugment(SNAugment):
         """
         # The name format of the saved Gaussian Processes is hard coded
         path_saved_obj_gp = os.path.join(self.path_saved_gps,
-                                         'used_gp_'+obj+'.pckl')
+                                         'used_gp_' + obj + '.pckl')
         with open(path_saved_obj_gp, 'rb') as input:
             gp_predict = pickle.load(input)
         try:  # old format - TODO: deprecate the old sndata format
@@ -715,10 +715,10 @@ class GPAugment(SNAugment):
         rd_zs_triple = z_table.sample(random_state=self._rs, n=number_tries,
                                       replace=True)
         zs_diff = rd_zs_triple['z_diff']
-        zs_photo = z_spec + (self._rs.choice([-1, 1], size=number_tries)
-                             * zs_diff)
-        zs_photo_error = (rd_zs_triple['hostgal_photoz_err']
-                          * self._rs.normal(1, .05, size=number_tries))
+        zs_photo = z_spec + (self._rs.choice([-1, 1], size=number_tries) * 
+                             zs_diff)
+        zs_photo_error = (rd_zs_triple['hostgal_photoz_err'] * 
+                          self._rs.normal(1, .05, size=number_tries))
 
         are_zs_pos = (zs_photo > 0) & (zs_photo_error > 0)
         try:  # choose the first appropriate value
@@ -828,13 +828,13 @@ class GPAugment(SNAugment):
         obj_duration = np.max(obj_data['mjd'])
         while obj_duration > max_duration:
             diff_duration = max_duration - obj_duration
-            number_days_remove = np.max([5., diff_duration/3])  # >= 5 days
+            number_days_remove = np.max([5., diff_duration / 3])  # >= 5 days
 
             index_initial_obs = obj_data['mjd'] < number_days_remove
             mean_initial_flux = np.mean(obj_data['flux'][index_initial_obs])
 
-            index_final_obs = obj_data['mjd'] < (obj_duration
-                                                 - number_days_remove)
+            index_final_obs = obj_data['mjd'] < (obj_duration - 
+                                                 number_days_remove)
             mean_final_flux = np.mean(obj_data['flux'][index_final_obs])
 
             if np.abs(mean_initial_flux) > np.abs(mean_final_flux):
@@ -949,8 +949,8 @@ class GPAugment(SNAugment):
             metadata = self.dataset.metadata
             z_table = metadata[['hostgal_specz', 'hostgal_photoz',
                                 'hostgal_photoz_err']]
-            z_table['z_diff'] = (z_table['hostgal_photoz']
-                                 - z_table['hostgal_specz'])
+            z_table['z_diff'] = (z_table['hostgal_photoz'] - 
+                                 z_table['hostgal_specz'])
         else:
             z_table = self._standardise_z_table(value)
         self._z_table = z_table
@@ -982,8 +982,8 @@ class GPAugment(SNAugment):
                                'and either `z_diff` or `hostgal_specz` and '
                                '`hostgal_photoz`.')
             return z_table
-        z_table['z_diff'] = (z_table['hostgal_photoz']
-                             - z_table['hostgal_specz'])
+        z_table['z_diff'] = (z_table['hostgal_photoz'] - 
+                             z_table['hostgal_specz'])
         return z_table
 
     @staticmethod
@@ -1412,14 +1412,14 @@ class PlasticcWFDAugment(GPAugment):
             lognormal_parameters[:, 0], lognormal_parameters[:, 1])
         noise_add = self._rs.normal(loc=0.0, scale=add_stds)
         aug_obj_data['flux'] += noise_add  # add noise to increase variability
-        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
-                                             + add_stds ** 2)
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2 + 
+                                             add_stds ** 2)
         return aug_obj_data
 
 
 class PlasticcDDFAugment(GPAugment):
-    """Augment the Deep Drilling Field (DDF) events in the PLAsTiCC dataset using
-    Gaussian Process extrapolation method (see `snaugment.GPAugment`).
+    """Augment the Deep Drilling Field (DDF) events in the PLAsTiCC dataset 
+    using Gaussian Process extrapolation method (see `snaugment.GPAugment`).
     """
 
     def __init__(self, dataset, path_saved_gps, objs_number_to_aug=None,
@@ -1632,8 +1632,8 @@ class PlasticcDDFAugment(GPAugment):
             lognormal_parameters[:, 0], lognormal_parameters[:, 1])
         noise_add = self._rs.normal(loc=0.0, scale=add_stds)
         aug_obj_data['flux'] += noise_add  # add noise to increase variability
-        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
-                                             + add_stds ** 2)
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2 + 
+                                             add_stds ** 2)
         return aug_obj_data
 
     def _add_augment_objs_to_dataset(self, aug_objs_data, aug_objs_metadata):
@@ -1918,8 +1918,8 @@ class BaselineV20PlasticcWFDAugment(GPAugment):
         # distribution of the test set
         noise_add = self._rs.normal(loc=0.0, scale=add_stds)
         aug_obj_data['flux'] += noise_add  # add noise to increase variability
-        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
-                                             + add_stds ** 2)
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2 + 
+                                             add_stds ** 2)
         return aug_obj_data
 
 
@@ -2169,8 +2169,8 @@ class BaselineV20WFDAugment(GPAugment):
                                       lognormal_parameters[:, 1])
         noise_add = self._rs.normal(loc=0.0, scale=add_stds)
         aug_obj_data['flux'] += noise_add  # add noise to increase variability
-        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
-                                             + add_stds ** 2)
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2 + 
+                                             add_stds ** 2)
         return aug_obj_data
 
 
@@ -2420,8 +2420,8 @@ class PrestoV20WFDAugment(GPAugment):
                                       lognormal_parameters[:, 1])
         noise_add = self._rs.normal(loc=0.0, scale=add_stds)
         aug_obj_data['flux'] += noise_add  # add noise to increase variability
-        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
-                                             + add_stds ** 2)
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2 + 
+                                             add_stds ** 2)
         return aug_obj_data
 
 
@@ -2671,8 +2671,8 @@ class BaselineV20SubsetWFDAugment(GPAugment):
                                       lognormal_parameters[:, 1])
         noise_add = self._rs.normal(loc=0.0, scale=add_stds)
         aug_obj_data['flux'] += noise_add  # add noise to increase variability
-        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
-                                             + add_stds ** 2)
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2 + 
+                                             add_stds ** 2)
         return aug_obj_data
 
 
@@ -2928,6 +2928,6 @@ class NorollV20SubsetWFDAugment(GPAugment):
                                       lognormal_parameters[:, 1])
         noise_add = self._rs.normal(loc=0.0, scale=add_stds)
         aug_obj_data['flux'] += noise_add  # add noise to increase variability
-        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2
-                                             + add_stds ** 2)
+        aug_obj_data['flux_error'] = np.sqrt(aug_obj_data['flux_error'] ** 2 + 
+                                             add_stds ** 2)
         return aug_obj_data
