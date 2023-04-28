@@ -28,7 +28,7 @@ from scipy.signal import find_peaks
 from snmachine import gps, chisq
 
 try:
-    import pymultinest
+    import pymultinest  # type: ignore
     has_multinest = True
     # print('Module pymultinest found')
 except (ImportError, SystemExit) as exception:
@@ -39,7 +39,7 @@ except (ImportError, SystemExit) as exception:
                 Mulitnest with 'sh install/multinest_install.sh; source
                 install/setup.sh'
                 """
-        
+
     else:
         multinest_errmsg = """
                 Multinest installed but not linked.
@@ -100,8 +100,8 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
     for f in d.filter_set:
         pams = model.param_names
         for p in pams:
-            labels.append(f+'-'+p)
-    output = Table(names=labels, dtype=['U32']+['f']*(len(labels)-1))
+            labels.append(f + '-' + p)
+    output = Table(names=labels, dtype=['U32'] + ['f'] * (len(labels) - 1))
 
     if seed != -1:
         np.random.seed(seed)
@@ -124,7 +124,7 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
                     if is_outside_limits:
                         return np.inf
                 ynew = model.evaluate(x, params)
-                chi2 = np.sum((y-ynew)*(y-ynew)/err/err)
+                chi2 = np.sum((y - ynew) * (y - ynew) / err / err)
                 return chi2
 
             # For the sake of speed, we stop as soon as we get to reduced
@@ -154,7 +154,7 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
                 for p in model.param_names:
                     parm.append(m.values[p])
 
-                rchi2 = m.fval/len(x)
+                rchi2 = m.fval / len(x)
                 if rchi2 < 2:
                     fmin = m.fval
                     min_params = parm
@@ -164,16 +164,17 @@ def _run_leastsq(obj, d, model, n_attempts, seed=-1):
                     min_params = parm
 
             outfl = open('out', 'a')
-            outfl.write('%s\t%s\t%f\t%d\n' % (obj, f, fmin/len(x), i))
+            outfl.write('%s\t%s\t%f\t%d\n' % (obj, f, fmin / len(x), i))
             outfl.close()
             row += min_params
         else:
-            row += [0]*len(model.param_names)  # Fill missing values with zeros
+            # Fill missing values with zeros
+            row += [0] * len(model.param_names) 
     output.add_row(row)
     return output
 
 
-def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary,
+def _run_multinest(obj, d, model, chain_directory, nlp, convert_to_binary,
                    n_iter, restart=False, seed=-1):
     """Runs multinest on all the filter bands of a given light curve, fitting
     the model to each one and extracting the best fitting parameters.
@@ -229,7 +230,7 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary,
             low = model.lower_limit
 
             for i in range(nparams):
-                cube[i] = cube[i]*(up[i]-low[i])+low[i]
+                cube[i] = cube[i] * (up[i] - low[i]) + low[i]
             return cube
 
         lc = d.data[obj]
@@ -241,9 +242,9 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary,
         for f in d.filter_set:
             pams = model.param_names
             for p in pams:
-                labels.append(f+'-'+p)
+                labels.append(f + '-' + p)
 
-        output = Table(names=labels, dtype=['U32']+['f']*(len(labels)-1))
+        output = Table(names=labels, dtype=['U32'] + ['f'] * (len(labels) - 1))
 
         row = [obj]
         for f in d.filter_set:
@@ -280,14 +281,14 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary,
                     #          0.12057552, 7.65392637]
                     ynew = model.evaluate(x, params)
 
-                    chi2 = np.sum(((y-ynew)*(y-ynew))/err/err)
-                    return -chi2/2.
+                    chi2 = np.sum(((y - ynew) * (y - ynew)) / err / err)
+                    return -chi2 / 2.0
 
                 chain_name = os.path.join(chain_directory,
                                           '%s-%s-%s-' % (obj.split('.')[0], f,
                                                          model.model_name))
 
-                if not restart or not os.path.exists(chain_name+'stats.dat'):
+                if not restart or not os.path.exists(chain_name + 'stats.dat'):
                     # Gives the ability to restart from existing chains if
                     # they exist
                     pymultinest.run(loglike_multinest, prior_multinest,
@@ -310,12 +311,12 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary,
                                               '{}-{}-{}-{}'.format(
                                                   obj.split('.')[0], f,
                                                   model.model_name, e))
-                        outfile = infile+'.npy'
+                        outfile = infile + '.npy'
                         try:
                             x = np.loadtxt(infile)
                             np.save(outfile, x)
                             os.system('rm %s' % infile)
-                        except:
+                        except IOError:
                             print('ERROR reading file', infile)
                             print('File unconverted')
 
@@ -323,17 +324,17 @@ def _run_multinest(obj, d, model, chain_directory,  nlp, convert_to_binary,
             else:
                 # I'm not sure if it makes the most sense to fill in missing
                 # values with zeroes...
-                row += [0]*len(model.param_names)
+                row += [0] * len(model.param_names)
             # print 'Time for object', obj, 'filter', f,':', (time.time()-t1)
             np.savetxt(os.path.join(chain_directory,
                        '%s-%s-%s-.time' % (obj.split('.')[0], f,
                                            model.model_name)),
-                       [time.time()-t1])
+                       [time.time() - t1])
 
         output.add_row(row)
         return output
 
-    except:
+    except: # noqa
         # Sometimes things just break
         print('ERROR in', obj)
         print(sys.exc_info()[0])
@@ -377,7 +378,8 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds, seed=-1):
         model = sncosmo.Model(model_name)
 
     labels = ['Object'] + model.param_names
-    output = Table(names=labels, dtype=['U32']+['f']*(len(model.param_names)))
+    output = Table(names=labels, 
+                   dtype=['U32'] + ['f'] * (len(model.param_names)))
 
     row = [obj]
     try:
@@ -398,7 +400,7 @@ def _run_leastsq_templates(obj, d, model_name, use_redshift, bounds, seed=-1):
         row += best
     except RuntimeError:  # the event failed
         output = Table(names=labels,
-                       dtype=['U32']+['f']*(len(model.param_names)))
+                       dtype=['U32'] + ['f'] * (len(model.param_names)))
         row += [lc.meta['z']]
         row += (len(model.param_names) - 1) * [None]
     output.add_row(row)
@@ -461,7 +463,8 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',
                 params = params[1:]
             for i in range(ndim):
                 p = params[i]
-                cube[i] = cube[i]*(bounds[p][1]-bounds[p][0])+bounds[p][0]
+                bounds_diff = bounds[p][1] - bounds[p][0]
+                cube[i] = cube[i] * bounds_diff + bounds[p][0]
             return cube
 
         def loglike_multinest(cube, ndim, nparams):
@@ -524,11 +527,11 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',
                                   '%s-%s-' % (obj.split('.')[0], short_name))
 
         if use_redshift:
-            ndim = len(model.param_names)-1
+            ndim = len(model.param_names) - 1
         else:
             ndim = len(model.param_names)
 
-        if not restart or not os.path.exists(chain_name+'stats.dat'):
+        if not restart or not os.path.exists(chain_name + 'stats.dat'):
             pymultinest.run(loglike_multinest, prior_multinest, ndim,
                             importance_nested_sampling=False, init_MPI=False,
                             resume=False, verbose=False, seed=seed,
@@ -538,7 +541,7 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',
         best_params = get_MAP(chain_name)
 
         if use_redshift:
-            best_params = [lc.meta['z']]+best_params
+            best_params = [lc.meta['z']] + best_params
 
         if convert_to_binary and not restart:
             # These are the files we can convert
@@ -548,17 +551,17 @@ def _run_multinest_templates(obj, d, model_name, bounds, chain_directory='./',
                 infile = os.path.join(
                     chain_directory, '%s-%s-%s' % (obj.split('.')[0],
                                                    short_name, e))
-                outfile = infile+'.npy'
+                outfile = infile + '.npy'
                 x = np.loadtxt(infile)
                 np.save(outfile, x)
                 os.system('rm %s' % infile)
         np.savetxt(os.path.join(chain_directory,
                                 '%s-%s-.time' % (obj.split('.')[0],
                                                  short_name)),
-                   [time.time()-t1])
+                   [time.time() - t1])
         return np.array(best_params)
 
-    except:
+    except: # noqa
         # Sometimes things just break
         print('ERROR in', obj)
         print(sys.exc_info()[0])
@@ -604,7 +607,7 @@ def get_MAP(chain_name):
     fl = open(stats_file, 'r')
     lines = fl.readlines()
     ind = [i for i in range(len(lines)) if 'MAP' in lines[i]][0]
-    params = [float(l.split()[1]) for l in lines[ind + 2:]]
+    params = [float(ln.split()[1]) for ln in lines[ind + 2:]]
     return params
 
 
@@ -681,14 +684,14 @@ class TemplateFeatures(Features):
         self.short_names = {'Ia': 'salt2', 'mlcs2k2': 'mlcs'}
         if sampler == 'nested':
             try:
-                import pymultinest
+                import pymultinest # type: ignore # noqa
             except ImportError:
                 print('Nested sampling selected but pymultinest is not '
                       'installed. Defaulting to least squares.')
                 sampler = 'leastsq'
         elif sampler == 'mcmc':
             try:
-                import emcee
+                import emcee # type: ignore # noqa
             except ImportError:
                 print('MCMC sampling selected but emcee is not installed. '
                       'Defaulting to least squares.')
@@ -748,7 +751,7 @@ class TemplateFeatures(Features):
             else:
                 self.model = sncosmo.Model(self.templates[mod_name])
                 print(F'MODEL-NAME: {mod_name}')
-            params = ['['+mod_name+']'+pname
+            params = ['[' + mod_name + ']' + pname
                       for pname in self.model.param_names]
             labels = ['Object'] + params
             output = Table(names=labels,
@@ -772,7 +775,7 @@ class TemplateFeatures(Features):
                             tab = Table(chain, names=self.model.param_names)
                             path_to_save = os.path.join(
                                 chain_directory,
-                                obj.split('.')[0]+'_emcee_'+mod_name)
+                                obj.split('.')[0] + '_emcee_' + mod_name)
                             tab.write(path_to_save, format='ascii')
                         best = res['parameters'].flatten('F').tolist()
                     elif self.sampler == 'nested':
@@ -809,7 +812,7 @@ class TemplateFeatures(Features):
                                 print(f'Obj. {obj} failed.')
                                 res = {}
                         best = res['parameters'].flatten('F').tolist()
-                    row = [obj]+best
+                    row = [obj] + best
                     output.add_row(row)
                     k += 1
                 if len(all_output) == 0:
@@ -847,13 +850,13 @@ class TemplateFeatures(Features):
                     out = p.map(partial_func, d.object_names)
 
                     for i in range(len(out)):
-                        output.add_row([d.object_names[i]]+out[i].tolist())
+                        output.add_row([d.object_names[i]] + out[i].tolist())
                     if len(all_output) == 0:
                         all_output = output
                     else:
                         all_output = vstack((all_output, output))
         print(len(all_output), 'objects fitted')
-        output_time(time.time()-t1)
+        output_time(time.time() - t1)
         return all_output
 
     def fit_sn(self, lc, features):
@@ -899,9 +902,9 @@ class TemplateFeatures(Features):
                        meta={'name': obj})
         for filt in filts:
             x = lc['mjd'][lc['filter'] == filt]
-            xnew = np.linspace(0, x.max()-x.min(), 100)
+            xnew = np.linspace(0, x.max() - x.min(), 100)
             ynew = model.bandflux(filt, xnew, zp=27.5, zpsys='ab')
-            newtable = Table([xnew+x.min(), ynew, [filt]*len(xnew)],
+            newtable = Table([xnew + x.min(), ynew, [filt] * len(xnew)],
                              names=labels)
             output = vstack((output, newtable))
         return output
@@ -914,7 +917,7 @@ class TemplateFeatures(Features):
             fname = os.path.join(dirname, prefix + band + suffix)
             data = np.loadtxt(fname)
             bp = sncosmo.Bandpass(wave=data[:, 0], trans=data[:, 1],
-                                  name='lsst'+band)
+                                  name='lsst' + band)
             sncosmo.registry.register(bp, force=True)
 
     def goodness_of_fit(self, d):
@@ -939,8 +942,8 @@ class TemplateFeatures(Features):
             return None
         filts = np.unique(d.data[d.object_names[0]]['filter'])
         filts = np.array(filts).tolist()
-        rcs = Table(names=['Object']+filts,
-                    dtype=['U32']+['float64']*len(filts))  # Reduced chi2
+        rcs = Table(names=['Object'] + filts,
+                    dtype=['U32'] + ['float64'] * len(filts))  # Reduced chi2
         for obj in d.object_names:
             # Go through each filter
             chi2 = []
@@ -957,8 +960,8 @@ class TemplateFeatures(Features):
                 # Interpolate
                 fit = interp1d(xmod, ymod)
                 yfit = fit(x)
-                chi2.append(sum((yfit-y)**2/e**2)/(len(x)-1))
-            rcs.add_row([obj]+chi2)
+                chi2.append(sum((yfit - y)**2 / e**2) / (len(x) - 1))
+            rcs.add_row([obj] + chi2)
         return rcs
 
 
@@ -1019,7 +1022,8 @@ class ParametricFeatures(Features):
                          n_steps=500, walker_spread=0.1, burn=50, nlp=1000,
                          starting_point=None, convert_to_binary=True, n_iter=0,
                          restart=False, seed=-1):
-        """Fit parametric models and return best-fitting parameters as features.
+        """Fit parametric models and return best-fitting parameters as 
+        features.
 
         Parameters
         ----------
@@ -1117,7 +1121,7 @@ class ParametricFeatures(Features):
                 k = 0
                 objs = d.object_names
                 while k < len(objs):
-                    objs_subset = objs[k:k+number_processes]
+                    objs_subset = objs[k:k + number_processes]
                     out = p.map(partial_func, objs_subset)
                     for i in range(0, len(out)):
                         if out[i] is None:
@@ -1129,7 +1133,7 @@ class ParametricFeatures(Features):
                                 output = vstack((output, out[i]))
                     k += len(objs_subset)
         print(len(output), 'objects fitted')
-        output_time(time.time()-t1)
+        output_time(time.time() - t1)
         return output
 
     def fit_sn(self, lc, features):
@@ -1162,18 +1166,18 @@ class ParametricFeatures(Features):
         prms = np.array([params[c] for c in cols])
         for filt in filts:
             x = lc['mjd'][lc['filter'] == filt]
-            xnew = np.linspace(0, x.max()-x.min(), 100)
+            xnew = np.linspace(0, x.max() - x.min(), 100)
 
             inds = np.where([filt in s for s in cols])[0]
             P = np.array(prms[inds], dtype='float')
 
             ynew = self.model.evaluate(xnew, P)
-            newtable = Table([xnew+x.min(), ynew, [filt]*len(xnew)],
+            newtable = Table([xnew + x.min(), ynew, [filt] * len(xnew)],
                              names=labels)
             output = vstack((output, newtable))
         return output
 
-    def run_emcee(self, d, obj, save_output, chain_directory,  n_walkers,
+    def run_emcee(self, d, obj, save_output, chain_directory, n_walkers,
                   n_steps, walker_spread, burn, starting_point, seed=-1):
         """Runs emcee on all the filter bands of a given light curve, fitting
         the model to each one and extracting the best fitting parameters.
@@ -1225,9 +1229,9 @@ class ParametricFeatures(Features):
         for f in d.filter_set:
             pams = self.model.param_names
             for p in pams:
-                labels.append(f+'-'+p)
+                labels.append(f + '-' + p)
 
-        output = Table(names=labels, dtype=['U32']+['f']*(len(labels)-1))
+        output = Table(names=labels, dtype=['U32'] + ['f'] * (len(labels) - 1))
 
         t1 = time.time()
         row = [obj]
@@ -1240,15 +1244,16 @@ class ParametricFeatures(Features):
 
                 if starting_point is None:
                     # Initialise randomly in parameter space
-                    iniparams = (np.random(n_params)*(self.model.upper_limit
-                                                      - self.model.lower_limit)
-                                 + self.model.lower_limit)
+                    iniparams = (np.random(n_params) * 
+                                 (self.model.upper_limit - 
+                                 self.model.lower_limit) + 
+                                 self.model.lower_limit)
                 else:
                     # A starting point from a least squares run can be given
                     # as an astropy table
                     iniparams = get_params(starting_point, obj, f)
 
-                pos = [iniparams + walker_spread*np.randn(n_params)
+                pos = [iniparams + walker_spread * np.randn(n_params)
                        for i in range(n_walkers)]
 
                 sampler = emcee.EnsembleSampler(n_walkers, n_params,
@@ -1263,7 +1268,7 @@ class ParametricFeatures(Features):
                 lnpost = sampler.flatlnprobability
 
                 if save_output:
-                    np.savetxt(chain_directory+'emcee_chain_%s_%s_%s' % (
+                    np.savetxt(chain_directory + 'emcee_chain_%s_%s_%s' % (
                         self.model_name, f, (str)(obj)), np.column_stack(
                             (samples, lnpost)))
                 # Maximum posterior params
@@ -1275,9 +1280,9 @@ class ParametricFeatures(Features):
             else:
                 # I'm not sure if it makes the most sense to fill in missing
                 # values with zeroes...
-                row += [0]*len(self.model.param_names)
+                row += [0] * len(self.model.param_names)
         output.add_row(row)
-        print('Time per filter', (time.time()-t1)/len(d.filter_set))
+        print('Time per filter', (time.time() - t1) / len(d.filter_set))
         return output
 
     def lnprob_emcee(self, params, x, y, yerr):
@@ -1294,14 +1299,14 @@ class ParametricFeatures(Features):
         -------
         """
         # Uniform prior. Directly compares arrays
-        is_not_within_limits = ((np.any(params > self.model.upper_limit))
-                                or (np.any(params < self.model.upper_limit)))
+        is_not_within_limits = ((np.any(params > self.model.upper_limit)) or 
+                                (np.any(params < self.model.upper_limit)))
         if is_not_within_limits:
             return -np.inf
         else:
             ynew = self.model.evaluate(x, params)
-            chi2 = np.sum((y-ynew)*(y-ynew)/yerr/yerr)
-            return -chi2/2.
+            chi2 = np.sum((y - ynew) * (y - ynew) / yerr / yerr)
+            return -chi2 / 2.0
 
     def goodness_of_fit(self, d):
         """Legacy code - to be deprecated. Use `compute_overall_chisq_over_pts`
@@ -1325,8 +1330,8 @@ class ParametricFeatures(Features):
             return None
         filts = np.unique(d.data[d.object_names[0]]['filter'])
         filts = np.array(filts).tolist()
-        rcs = Table(names=['Object']+filts,
-                    dtype=['U32']+['float64']*len(filts))  # Reduced chi2
+        rcs = Table(names=['Object'] + filts,
+                    dtype=['U32'] + ['float64'] * len(filts))  # Reduced chi2
         for obj in d.object_names:
             # Go through each filter
             chi2 = []
@@ -1343,8 +1348,8 @@ class ParametricFeatures(Features):
                 # Interpolate
                 fit = interp1d(xmod, ymod)
                 yfit = fit(x)
-                chi2.append(sum((yfit-y)**2/e**2)/(len(x)-1))
-            rcs.add_row([obj]+chi2)
+                chi2.append(sum((yfit - y)**2 / e**2) / (len(x) - 1))
+            rcs.add_row([obj] + chi2)
         return rcs
 
 
@@ -1368,7 +1373,8 @@ class WaveletFeatures(Features):
                          number_processes, gp_dim, number_comps,
                          path_saved_eigendecomp=None, seed=1,
                          **kwargs):
-        """Fit Gaussian Processes and compute the dimensionality reduced features.
+        """Fit Gaussian Processes and compute the dimensionality reduced 
+        features.
 
         Parameters
         ----------
@@ -1454,7 +1460,7 @@ class WaveletFeatures(Features):
             **kwargs_features)
 
         print('Time taken to extract features: {:.2f}s.'
-              ''.format(time.time()-initial_time))
+              ''.format(time.time() - initial_time))
         return reduced_features
 
     def fit_sn(self, lc, features, dataset, wavelet_name,
@@ -1614,7 +1620,7 @@ class WaveletFeatures(Features):
             if self.output_root is not None:
                 self._save_obj_wavelet_decomp(obj, coeffs)
         print('Time taken for wavelet decomposition: {:.2f}s.'
-              ''.format(time.time()-initial_time))
+              ''.format(time.time() - initial_time))
 
     def load_feature_space(self, dataset):
         """Load the wavelet feature space.
@@ -1719,7 +1725,7 @@ class WaveletFeatures(Features):
                                                     full_matrices=False)
 
         number_objs = np.shape(feature_space)[0]
-        eigenvals = singular_vals**2 / (number_objs-1)  # by definition
+        eigenvals = singular_vals**2 / (number_objs - 1)  # by definition
 
         path_save = path_save_eigendecomp
         np.save(os.path.join(path_save, 'means.npy'), means)
@@ -1728,7 +1734,7 @@ class WaveletFeatures(Features):
         np.save(os.path.join(path_save, 'eigenvectors.npy'), eigenvecs)
 
         print('Time taken for eigendecomposition: {:.2f}s.'
-              ''.format(time.time()-initial_time))
+              ''.format(time.time() - initial_time))
 
     @staticmethod
     def load_pca(path_saved_eigendecomp, number_comps=None):
@@ -1774,7 +1780,7 @@ class WaveletFeatures(Features):
             tol = .95  # Explain at least 95% of the variance
             eigenvals = np.load(os.path.join(path_saved_eigendecomp,
                                 'eigenvalues.npy'))
-            eigenvals_cumsum = np.cumsum(eigenvals/sum(eigenvals))
+            eigenvals_cumsum = np.cumsum(eigenvals / sum(eigenvals))
             index_greater_tol = np.where(eigenvals_cumsum >= tol)
             first_index = index_greater_tol[0][0]
             # +1 because it is inclusive that index
@@ -1906,7 +1912,7 @@ class WaveletFeatures(Features):
         help in balancing cases where the variances of different features vary
         a lot. In a few tests we have done with specific datasets, we have not
         seen the suggested benefits.
-        """
+        """ # noqa
         means = np.mean(matrix, axis=0)  # mean of each feature
         matrix_new = matrix - means
 
@@ -1996,8 +2002,8 @@ class WaveletFeatures(Features):
         table = pd.DataFrame()
         number_levels = np.shape(coeffs)[0]
         for level in np.arange(number_levels):
-            table['cA{}'.format(number_levels-level)] = coeffs[level][0]
-            table['cD{}'.format(number_levels-level)] = coeffs[level][1]
+            table['cA{}'.format(number_levels - level)] = coeffs[level][0]
+            table['cD{}'.format(number_levels - level)] = coeffs[level][1]
         return table
 
     def compute_reconstruct_error(self, dataset, true_obs=False, **kwargs):
@@ -2498,7 +2504,7 @@ class AvocadoFeatures(Features):
         self.save_avo_features(classification_features)
 
         print('Time taken to extract features: {:.2f}s.'
-              ''.format(time.time()-initial_time))
+              ''.format(time.time() - initial_time))
         return classification_features
 
     def fit_sn(self, lc_gps):
@@ -2683,10 +2689,10 @@ class AvocadoFeatures(Features):
             # Calculate the positive and negative integrals of the lightcurve,
             # normalized to the respective peak fluxes. This gives a measure
             # of the "width" of the lightcurve, even for non-bursty objects.
-            positive_width = (np.sum(np.clip(obj_flux, 0, None))
-                              / max_fluxes.loc[:, pb][0])
-            negative_width = (np.sum(np.clip(obj_flux, None, 0))
-                              / min_fluxes.loc[:, pb][0])
+            positive_width = (np.sum(np.clip(obj_flux, 0, None)) /
+                              max_fluxes.loc[:, pb][0])
+            negative_width = (np.sum(np.clip(obj_flux, None, 0)) / 
+                              min_fluxes.loc[:, pb][0])
             features[f"positive_width_{pb}"] = positive_width
             features[f"negative_width_{pb}"] = negative_width
 
@@ -2797,8 +2803,8 @@ class AvocadoFeatures(Features):
                 # to the peak flux.
                 time_start = med_time_max + start
                 time_end = med_time_max + end
-                is_in_bin_gp = ((obj_gps_new['mjd'] >= time_start)
-                                & (obj_gps_new['mjd'] < time_end))
+                is_in_bin_gp = ((obj_gps_new['mjd'] >= time_start) & 
+                                (obj_gps_new['mjd'] < time_end))
                 scale_gp_fluxes = []
                 for pb in pbs:
                     is_pb = obj_gps_new['filter'] == pb
@@ -2930,33 +2936,33 @@ class AvocadoFeatures(Features):
         features["time_fwd_max_0.2"] = rf["time_fwd_max_0.2_lssti"]
 
         features["time_fwd_max_0.5_ratio_red"] = (
-            rf["time_fwd_max_0.5_lssty"] / (rf["time_fwd_max_0.5_lssty"]
-                                            + rf["time_fwd_max_0.5_lssti"]))
+            rf["time_fwd_max_0.5_lssty"] / (rf["time_fwd_max_0.5_lssty"] + 
+                                            rf["time_fwd_max_0.5_lssti"]))
         features["time_fwd_max_0.5_ratio_blue"] = (
-            rf["time_fwd_max_0.5_lsstg"] / (rf["time_fwd_max_0.5_lsstg"]
-                                            + rf["time_fwd_max_0.5_lssti"]))
+            rf["time_fwd_max_0.5_lsstg"] / (rf["time_fwd_max_0.5_lsstg"] + 
+                                            rf["time_fwd_max_0.5_lssti"]))
         features["time_fwd_max_0.2_ratio_red"] = (
-            rf["time_fwd_max_0.2_lssty"] / (rf["time_fwd_max_0.2_lssty"]
-                                            + rf["time_fwd_max_0.2_lssti"]))
+            rf["time_fwd_max_0.2_lssty"] / (rf["time_fwd_max_0.2_lssty"] + 
+                                            rf["time_fwd_max_0.2_lssti"]))
         features["time_fwd_max_0.2_ratio_blue"] = (
-            rf["time_fwd_max_0.2_lsstg"] / (rf["time_fwd_max_0.2_lsstg"]
-                                            + rf["time_fwd_max_0.2_lssti"]))
+            rf["time_fwd_max_0.2_lsstg"] / (rf["time_fwd_max_0.2_lsstg"] + 
+                                            rf["time_fwd_max_0.2_lssti"]))
 
         features["time_bwd_max_0.5"] = rf["time_bwd_max_0.5_lssti"]
         features["time_bwd_max_0.2"] = rf["time_bwd_max_0.2_lssti"]
 
         features["time_bwd_max_0.5_ratio_red"] = (
-            rf["time_bwd_max_0.5_lssty"] / (rf["time_bwd_max_0.5_lssty"]
-                                            + rf["time_bwd_max_0.5_lssti"]))
+            rf["time_bwd_max_0.5_lssty"] / (rf["time_bwd_max_0.5_lssty"] + 
+                                            rf["time_bwd_max_0.5_lssti"]))
         features["time_bwd_max_0.5_ratio_blue"] = (
-            rf["time_bwd_max_0.5_lsstg"] / (rf["time_bwd_max_0.5_lsstg"]
-                                            + rf["time_bwd_max_0.5_lssti"]))
+            rf["time_bwd_max_0.5_lsstg"] / (rf["time_bwd_max_0.5_lsstg"] + 
+                                            rf["time_bwd_max_0.5_lssti"]))
         features["time_bwd_max_0.2_ratio_red"] = (
-            rf["time_bwd_max_0.2_lssty"] / (rf["time_bwd_max_0.2_lssty"]
-                                            + rf["time_bwd_max_0.2_lssti"]))
+            rf["time_bwd_max_0.2_lssty"] / (rf["time_bwd_max_0.2_lssty"] + 
+                                            rf["time_bwd_max_0.2_lssti"]))
         features["time_bwd_max_0.2_ratio_blue"] = (
-            rf["time_bwd_max_0.2_lsstg"] / (rf["time_bwd_max_0.2_lsstg"]
-                                            + rf["time_bwd_max_0.2_lssti"]))
+            rf["time_bwd_max_0.2_lsstg"] / (rf["time_bwd_max_0.2_lsstg"] + 
+                                            rf["time_bwd_max_0.2_lssti"]))
 
         features["frac_s2n_5"] = rf["count_s2n_5"] / rf["count"]
         features["frac_s2n_-5"] = rf["count_s2n_-5"] / rf["count"]
@@ -2995,12 +3001,12 @@ class AvocadoFeatures(Features):
             np.warnings.filterwarnings("ignore", r"All-NaN slice encountered")
             features["peak_frac_2"] = np.nanmedian(all_peak_pos_frac_2, axis=0)
 
-        features["total_s2n"] = np.sqrt(rf["total_s2n_lsstu"] ** 2
-                                        + rf["total_s2n_lsstg"] ** 2
-                                        + rf["total_s2n_lsstr"] ** 2
-                                        + rf["total_s2n_lssti"] ** 2
-                                        + rf["total_s2n_lsstz"] ** 2
-                                        + rf["total_s2n_lssty"] ** 2)
+        features["total_s2n"] = np.sqrt(rf["total_s2n_lsstu"] ** 2 + 
+                                        rf["total_s2n_lsstg"] ** 2 + 
+                                        rf["total_s2n_lsstr"] ** 2 + 
+                                        rf["total_s2n_lssti"] ** 2 + 
+                                        rf["total_s2n_lsstz"] ** 2 + 
+                                        rf["total_s2n_lssty"] ** 2)
 
         all_frac_percentiles = []
         for percentile in (10, 30, 50, 70, 90):
@@ -3014,14 +3020,14 @@ class AvocadoFeatures(Features):
                 )
             all_frac_percentiles.append(np.nanmedian(frac_percentiles, axis=0))
 
-        features["percentile_diff_10_50"] = (all_frac_percentiles[0]
-                                             - all_frac_percentiles[2])
-        features["percentile_diff_30_50"] = (all_frac_percentiles[1]
-                                             - all_frac_percentiles[2])
-        features["percentile_diff_70_50"] = (all_frac_percentiles[3]
-                                             - all_frac_percentiles[2])
-        features["percentile_diff_90_50"] = (all_frac_percentiles[4]
-                                             - all_frac_percentiles[2])
+        features["percentile_diff_10_50"] = (all_frac_percentiles[0] - 
+                                             all_frac_percentiles[2])
+        features["percentile_diff_30_50"] = (all_frac_percentiles[1] - 
+                                             all_frac_percentiles[2])
+        features["percentile_diff_70_50"] = (all_frac_percentiles[3] - 
+                                             all_frac_percentiles[2])
+        features["percentile_diff_90_50"] = (all_frac_percentiles[4] - 
+                                             all_frac_percentiles[2])
 
         self.classification_features = features
         return features
