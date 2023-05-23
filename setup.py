@@ -2,7 +2,6 @@ from setuptools import setup
 from setuptools.command.install import install
 import sys
 import os
-import re
 import site
 import tarfile
 
@@ -19,8 +18,8 @@ class ExtractExampleData(install):
         """Extract example data in the installation directory"""
         if '--user' in sys.argv:
             paths = (site.getusersitepackages(),)
-            print("Package installed outside of conda enviroment. Dependencies \
-            may be missing")
+            print("""Package installed outside of conda enviroment.
+            Dependencies may be missing""")
         else:
             paths = (site.getsitepackages(),)
             install_directory = paths[0][0]

@@ -11,17 +11,15 @@ import os
 import pickle
 import sys
 import time
-import warnings
-
-import george
 import numpy as np
 import pandas as pd
-import scipy.optimize as op
+from collections import Counter
 
 # Solve imblearn problems introduced with sklearn version 0.24
 import sklearn
-import sklearn.neighbors, sklearn.utils, sklearn.ensemble
-from sklearn.utils._testing import ignore_warnings
+import sklearn.neighbors
+import sklearn.utils
+import sklearn.ensemble
 sys.modules['sklearn.neighbors.base'] = sklearn.neighbors._base
 sys.modules['sklearn.utils.safe_indexing'] = sklearn.utils._safe_indexing
 sys.modules['sklearn.utils.testing'] = sklearn.utils._testing
@@ -30,8 +28,8 @@ sys.modules['sklearn.ensemble.base'] = sklearn.ensemble._base
 sys.modules['sklearn.ensemble.forest'] = sklearn.ensemble._forest
 sys.modules['sklearn.metrics.classification'] = sklearn.metrics._classification
 
-from imblearn.combine import SMOTEENN, SMOTETomek
-from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
+# from imblearn.combine import SMOTEENN, SMOTETomek
+# from imblearn.over_sampling import SMOTE, ADASYN, SVMSMOTE
 
 
 class ImblearnAugment(SNAugment):
@@ -97,7 +95,7 @@ class ImblearnAugment(SNAugment):
         self._create_aug_metadata(aug_features, aug_labels)
         self._save_aug_feature_space()
 
-        time_spent = pd.to_timedelta(int(time.time()-initial_time), unit='s')
+        time_spent = pd.to_timedelta(int(time.time() - initial_time), unit='s')
         print('Time spent augmenting: {}.'.format(time_spent))
 
     def _save_aug_feature_space(self):
@@ -154,8 +152,8 @@ class ImblearnAugment(SNAugment):
         aug_features = pd.DataFrame(aug_features)
         aug_features['object_id'] = None
         aug_features['object_id'][:len(ori_index)] = ori_index
-        aug_objs_ids = [f'aug_{j}' for j in np.arange(0, (len(aug_features)
-                                                          - len(ori_index)))]
+        N = len(aug_features) - len(ori_index)
+        aug_objs_ids = [f'aug_{j}' for j in np.arange(0, N)]
         aug_features['object_id'][len(ori_index):] = aug_objs_ids
         aug_features.set_index('object_id', inplace=True)
         aug_features.columns = self._ori_columns
