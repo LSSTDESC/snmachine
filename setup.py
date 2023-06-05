@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools.command.install import install
 import sys
 import os
@@ -7,7 +7,7 @@ import tarfile
 
 
 PACKAGENAME = 'snmachine'
-__FALLBACK_VERSION__ = '2.0.0'
+__FALLBACK_VERSION__ = '2.1.0'
 
 
 class ExtractExampleData(install):
@@ -37,22 +37,40 @@ class ExtractExampleData(install):
 
 setup(
     name='snmachine',
+    author='Michelle Lochner et al.',
+    author_email='dr.michelle.lochner@gmail.com',
+    description='Machine learning code for photometric supernova '
+                'classification',
+    url='https://github.com/LSSTDESC/snmachine',
+    license='BSD-3-Clause License',
+    description='Machine learning code for photometric supernova '
+                'classification',
     use_scm_version={
         "root": ".",
         "relative_to": __file__,
         "fallback_version": __FALLBACK_VERSION__},
     setup_requires=['setuptools_scm>=3.2.0'],
-    packages=['snmachine', 'utils'],
+    packages=find_packages(),
     include_package_data=True,
     package_data={'snmachine': ['example_data/SPCC_SUBSET.tar.gz',
                                 'example_data/output_spcc_no_z/features/*.dat',
                                 'example_data/example_data_for_tests.pckl']},
     exclude_package_data={'utils': ['archive/*']},
     cmdclass={'install': ExtractExampleData},
-    url='https://github.com/LSSTDESC/snmachine',
-    license='BSD-3-Clause License',
-    author='Michelle Lochner et al.',
-    author_email='dr.michelle.lochner@gmail.com',
-    description='Machine learning code for photometric supernova '
-                'classification'
+    install_requires=['astropy>=1.1.2',
+                      'matplotlib>=3.0.0',
+                      'numpy>=1.18.4',
+                      'scikit-learn',
+                      'scipy>=1.4.0',
+                      'george>=0.3.0',
+                      'iminuit',
+                      'pandas>=0.23.0',
+                      'pywavelets>=0.4.0',
+                      'sncosmo>=2.1.0',
+                      'nose>=1.3.7',
+                      'future>=0.16',
+                      'pyyaml>=3.13',
+                      'seaborn',
+                      'lightgbm',
+                      'setuptools_scm']
 )

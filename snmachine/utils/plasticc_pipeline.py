@@ -24,11 +24,10 @@ except ImportError:
 
 from argparse import ArgumentParser
 # not used at the moment
-from imblearn.metrics import classification_report_imbalanced  
-# from imblearn.over_sampling import SMOTE  
-from imblearn.pipeline import make_pipeline  
-# from utils.plasticc_utils import plasticc_log_loss
-from utils.plasticc_utils import plot_confusion_matrix
+#from imblearn.metrics import classification_report_imbalanced  
+#from imblearn.over_sampling import SMOTE  
+#from imblearn.pipeline import make_pipeline
+from snmachine.utils.plasticc_utils import plot_confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
