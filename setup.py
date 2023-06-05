@@ -51,7 +51,7 @@ setup(
     cmdclass={'install': ExtractExampleData},
     url='https://github.com/LSSTDESC/snmachine',
     license='BSD-3-Clause License',
-    author='Michelle Lochner',
+    author='Michelle Lochner et al.',
     author_email='dr.michelle.lochner@gmail.com',
     description='Machine learning code for photometric supernova '
                 'classification'
