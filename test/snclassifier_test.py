@@ -41,8 +41,8 @@ def load_full_testdata(request):
     d_full = sndata.Dataset(test_data_path)
     precomp_features = Table.read(precomp_features_path, format='ascii')
     types = d_full.get_types()
-    types['Type'][np.floor(types['Type']/10) == 2] = 2
-    types['Type'][np.floor(types['Type']/10) == 3] = 3
+    types['Type'][np.floor(types['Type'] / 10) == 2] = 2
+    types['Type'][np.floor(types['Type'] / 10) == 3] = 3
     return d_full, precomp_features, types
 
 

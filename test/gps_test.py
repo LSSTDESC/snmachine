@@ -24,11 +24,13 @@ def test_1d_gps():
     Run the Gaussian Processes for `example_data` (the first 5 PLAsTiCC's
     objects) and verify the flux mean of each event is correct.
     """
+    # These are the objects in example_data.
     mean_flux_true_values = {
-        '615': -23.22402573951826, '713': -1.4359755792364706,
-        '730': 2.844743959137723, '745': 21.13420610513882,
-        '1124': 16.099748055475427
-        }  # These are the objects in example_data.
+        '615': -23.22402573951826, 
+        '713': -1.4359755792364706,
+        '730': 2.844743959137723, 
+        '745': 21.13420610513882,
+        '1124': 16.099748055475427}  
 
     gps.compute_gps(example_data, number_gp=100, t_min=0, t_max=1100,
                     kernel_param=[500., 20.], output_root=None,
@@ -47,11 +49,13 @@ def test_2d_gps():
     Run the Gaussian Processes for `example_data` (the first 5 PLAsTiCC's
     objects) and verify the flux mean of each event is correct.
     """
+    # These are the objects in example_data.
     mean_flux_true_values = {
-        '615': -45.486487005741296, '713': -0.9183076088586439,
-        '730': 3.673929979995239, '745': 29.142299327650303,
-        '1124': 17.134494730329973
-        }  # These are the objects in example_data.
+        '615': -45.486487005741296, 
+        '713': -0.9183076088586439,
+        '730': 3.673929979995239, 
+        '745': 29.142299327650303,
+        '1124': 17.134494730329973}  
 
     gps.compute_gps(example_data, number_gp=100, t_min=0, t_max=1100,
                     kernel_param=[500., 20.], output_root=None,
@@ -71,11 +75,13 @@ def test_gps_chisq_over_pts():
     objects) and verify it returns the expected values of X^2/number of
     datapoints.
     """
+    # These are the objects in example_data.
     chisq_over_pts_true_values = {
-        '615': 5695.7282978660587, '713': 1.0678220723794234,
-        '730': 0.83081717132128197, '745': 1.0721589469244539,
-        '1124': 0.77145060447736791
-        }  # These are the objects in example_data.
+        '615': 5695.7282978660587, 
+        '713': 1.0678220723794234,
+        '730': 0.83081717132128197, 
+        '745': 1.0721589469244539,
+        '1124': 0.77145060447736791}  
 
     gps.compute_gps(example_data, number_gp=100, t_min=0, t_max=1100,
                     kernel_param=[500., 20.], output_root=None,

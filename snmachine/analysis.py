@@ -209,11 +209,11 @@ def plot_chisq_over_pts_per_label(dataset, dict_label_to_real=None,
     unique_labels = np.unique(dataset.labels)
     number_cols_plot = 3
     # Calculate the necessary number of rows
-    number_rows_plot = (len(unique_labels)-1)//number_cols_plot + 1
+    number_rows_plot = (len(unique_labels) - 1) // number_cols_plot + 1
     fig, ax = plt.subplots(nrows=number_rows_plot, ncols=number_cols_plot,
-                           figsize=(20, number_rows_plot*3))
+                           figsize=(20, number_rows_plot * 3))
     for i in np.arange(len(unique_labels)):
-        plt.subplot(number_rows_plot, 3, i+1)
+        plt.subplot(number_rows_plot, 3, i + 1)
         make_chisq_over_pts_plot_of_label(
             dict_chisq_over_pts_per_label, unique_labels[i],
             dict_label_to_real=dict_label_to_real)
@@ -224,7 +224,7 @@ def plot_chisq_over_pts_per_label(dataset, dict_label_to_real=None,
 
     if output_root is not None:
         plt.savefig(os.path.join(output_root, file_name), bbox_inches='tight')
-        print('Plot saved in '+str(os.path.join(output_root, file_name)))
+        print('Plot saved in ' + str(os.path.join(output_root, file_name)))
 
 
 def compute_dict_chisq_over_pts_per_label(dataset):
@@ -265,7 +265,8 @@ def compute_dict_chisq_over_pts_per_label(dataset):
 
 
 def get_chisq_over_pts_per_obj(dataset):
-    """Calculates the reduced X^2 of each object and outputs it into a DataFrame.
+    """Calculates the reduced X^2 of each object and outputs it into a
+    DataFrame.
 
     The X^2/number of datapoints of each object is by default returned as a
     dictionary. Here, after that step, the dictionary is transformed into a
@@ -287,7 +288,8 @@ def get_chisq_over_pts_per_obj(dataset):
 
 def make_chisq_over_pts_plot_of_label(dict_chisq_over_pts_per_label, label,
                                       dict_label_to_real=None):
-    """Plots X^2/number of datapoints histogram of the objects of a specific label.
+    """Plots X^2/number of datapoints histogram of the objects of a specific
+    label.
 
     Parameters
     ----------
@@ -393,7 +395,7 @@ def compute_recall_values(quantity, bins, is_pred_right, is_true_type_list,
 
     boot_recall_has_something_ci = compute_boot_ci(boot_recall_has_something)
     print('Time taken to compute the recall values: {:.2f}s.'
-          ''.format(time.time()-initial_time))
+          ''.format(time.time() - initial_time))
     return recall_s, boot_recall_has_something_ci, number_in_bin_s
 
 
@@ -451,7 +453,7 @@ def compute_precision_values(quantity, bins, is_pred_right, is_pred_type_list,
     boot_precion_has_something_ci = compute_boot_ci(
         boot_precision_has_something)
     print('Time taken to compute the precision values: {:.2f}s.'
-          ''.format(time.time()-initial_time))
+          ''.format(time.time() - initial_time))
     return precision_s, boot_precion_has_something_ci, number_in_bin_s
 
 
@@ -489,7 +491,7 @@ def compute_recall_with_bins(quantity, bins, is_pred_right, is_true_type_list,
     """
     # `quantity` is continuous or discrete
     if use_mid_bins:  # continuous
-        mid_bins = (bins[:-1]+bins[1:])/2
+        mid_bins = (bins[:-1] + bins[1:]) / 2
         bins_number = len(mid_bins)
     else:  # discrete
         bins_number = len(bins)
@@ -498,7 +500,7 @@ def compute_recall_with_bins(quantity, bins, is_pred_right, is_true_type_list,
     number_in_bin_s = []
     for i in np.arange(bins_number):  # for each bin
         if use_mid_bins:
-            is_in_bin_i = (quantity >= bins[i]) & (quantity < bins[i+1])
+            is_in_bin_i = (quantity >= bins[i]) & (quantity < bins[i + 1])
         else:
             is_in_bin_i = (quantity == bins[i])
 
@@ -506,8 +508,8 @@ def compute_recall_with_bins(quantity, bins, is_pred_right, is_true_type_list,
         recall_js = np.zeros(number_sne)
         number_in_bin_js = np.zeros(number_sne)
         for j in np.arange(number_sne):  # for each class
-            is_sne_in_j = (is_in_bin_i & is_true_type_list[j]
-                           & extra_subset)  # all SNe truly SN[j]
+            # all SNe truly SN[j]
+            is_sne_in_j = (is_in_bin_i & is_true_type_list[j] & extra_subset)  
             y = is_pred_right[is_sne_in_j]  # correctly classifyied SN
             recall_js[j] = np.sum(y) / np.sum(is_sne_in_j)  # TP / (TP+FN)
             number_in_bin_js[j] = np.sum(is_sne_in_j)
@@ -556,7 +558,7 @@ def compute_precision_with_bins(quantity, bins, is_pred_right,
     """
     # `quantity` is continuous or discrete
     if use_mid_bins:  # continuous
-        mid_bins = (bins[:-1]+bins[1:])/2
+        mid_bins = (bins[:-1] + bins[1:]) / 2
         bins_number = len(mid_bins)
     else:  # discrete
         bins_number = len(bins)
@@ -565,7 +567,7 @@ def compute_precision_with_bins(quantity, bins, is_pred_right,
     number_in_bin_s = []
     for i in np.arange(bins_number):  # for each bin
         if use_mid_bins:
-            is_in_bin_i = (quantity >= bins[i]) & (quantity < bins[i+1])
+            is_in_bin_i = (quantity >= bins[i]) & (quantity < bins[i + 1])
         else:
             is_in_bin_i = (quantity == bins[i])
 
@@ -573,8 +575,8 @@ def compute_precision_with_bins(quantity, bins, is_pred_right,
         precision_js = np.zeros(number_sne)
         number_in_bin_js = np.zeros(number_sne)
         for j in np.arange(number_sne):  # for each class
-            is_sne_in_j = (is_in_bin_i & is_pred_type_list[j]
-                           & extra_subset)  # all SNe predicted to be SN[j]
+            # all SNe predicted to be SN[j]
+            is_sne_in_j = (is_in_bin_i & is_pred_type_list[j] & extra_subset)  
             y = is_pred_right[is_sne_in_j]  # correctly classifyied SN
             precision_js[j] = np.sum(y) / np.sum(is_sne_in_j)  # TP / (TP+FP)
             number_in_bin_js[j] = np.sum(is_sne_in_j)
@@ -616,7 +618,7 @@ def compute_has_something(quantity, bins, extra_subset=True,
     has_something = []
 
     if use_mid_bins:
-        bins_number = len(bins)-1
+        bins_number = len(bins) - 1
     else:
         bins_number = len(bins)
 
@@ -626,7 +628,7 @@ def compute_has_something(quantity, bins, extra_subset=True,
     # Create masks for the events in each bin
     for i in np.arange(bins_number):
         if use_mid_bins:
-            is_in_bin_i = ((quantity >= bins[i]) & (quantity < bins[i+1]))
+            is_in_bin_i = ((quantity >= bins[i]) & (quantity < bins[i + 1]))
         else:
             is_in_bin_i = (quantity == bins[i])
         has_something.append(is_in_bin_i)
@@ -664,8 +666,8 @@ def compute_recall_has_something(has_something, is_pred_right,
     prop_pred_right_s = []
     for j in np.arange(len(is_true_type_list)):  # choose a class
         is_to_consider = (
-            (extra_subset is not None)
-            & (extra_subset is not isinstance(extra_subset, bool)))
+            (extra_subset is not None) & 
+            (extra_subset is not isinstance(extra_subset, bool)))
         if is_to_consider:
             is_subset = is_true_type_list[j][extra_subset]
             y = is_pred_right[extra_subset]
@@ -687,7 +689,7 @@ def compute_recall_has_something(has_something, is_pred_right,
                                                           size=number_in_bin,
                                                           replace=True)
                     sum_pred_right_k = np.sum(is_pred_right_in_k)
-                    prop_pred_right_ks.append(sum_pred_right_k/number_in_bin)
+                    prop_pred_right_ks.append(sum_pred_right_k / number_in_bin)
             else:  # no events in this bin
                 prop_pred_right_ks = [None]
             prop_pred_right_i.append(prop_pred_right_ks)
@@ -725,8 +727,8 @@ def compute_precision_has_something(has_something, is_pred_right,
     precision_s = []
     for j in np.arange(len(is_pred_type_list)):  # choose a SN class
         is_to_consider = (
-            (extra_subset is not None)
-            & (extra_subset is not isinstance(extra_subset, bool)))
+            (extra_subset is not None) & 
+            (extra_subset is not isinstance(extra_subset, bool)))
         if is_to_consider:
             is_subset = is_pred_type_list[j][extra_subset]
             y = is_pred_right[extra_subset]
@@ -746,7 +748,7 @@ def compute_precision_has_something(has_something, is_pred_right,
                 is_pred_right_in_k = np.random.choice(is_pred_right_in_bin,
                                                       size=number_in_bin,
                                                       replace=True)
-                precision_ks.append(np.sum(is_pred_right_in_k)/number_in_bin)
+                precision_ks.append(np.sum(is_pred_right_in_k) / number_in_bin)
             precision_i.append(precision_ks)
         precision_s.append(precision_i)
     return precision_s
@@ -816,7 +818,7 @@ def plot_sne_has_something(something_s, boot_has_something_ci,
     """
     colors = kwargs.pop('colors', None)
     linewidth = kwargs.pop('linewidth', 3)
-    linestyle = kwargs.pop('linestyle', ['-']*len(sn_order))
+    linestyle = kwargs.pop('linestyle', ['-'] * len(sn_order))
     number_in_bin_s = kwargs.pop('number_in_bin_s', None)
     threshold = kwargs.pop('threshold', None)
 
@@ -1014,7 +1016,7 @@ def compute_number_obs_peak(dataset, t_peak_s):
 
         # rest-frame data
         obj_mjd = obj_data['mjd']
-        obj_mjd_rest_frame = t_peak + (obj_mjd-t_peak)/(1+z)
+        obj_mjd_rest_frame = t_peak + (obj_mjd - t_peak) / (1 + z)
         # # pre-peak
         is_interval = ((obj_mjd_rest_frame >= t_peak - 10) &
                        (obj_mjd_rest_frame < t_peak))
@@ -1057,7 +1059,7 @@ def compute_t_peak(dataset, path_saved_gps):
         obj = obj_names[i]
 
         # Load the GPs
-        path_obj_gps = path_saved_gps+f'/used_gp_{obj}.pckl'
+        path_obj_gps = path_saved_gps + f'/used_gp_{obj}.pckl'
         with open(path_obj_gps, 'rb') as input:
             gp_predict = pickle.load(input)
 
@@ -1079,5 +1081,5 @@ def compute_t_peak(dataset, path_saved_gps):
         t_peak = obj_gps['mjd'][np.argmax(obj_gps['flux'])]
         t_peak_s[i] = t_peak
 
-    print(np.sum(t_peak_s < 0), np.sum(t_peak_s < 0)/len(t_peak_s))
+    print(np.sum(t_peak_s < 0), np.sum(t_peak_s < 0) / len(t_peak_s))
     return t_peak_s
