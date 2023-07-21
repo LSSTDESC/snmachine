@@ -23,11 +23,11 @@ except ImportError:
     print("Unable to import snmachine. Check environment set correctly")
 
 from argparse import ArgumentParser
-from astropy.table import Table
-#from imblearn.metrics import classification_report_imbalanced  # not used at the moment
-#from imblearn.over_sampling import SMOTE  # not used at the moment
-#from imblearn.pipeline import make_pipeline  # not used at the moment
-from snmachine.utils.plasticc_utils import plasticc_log_loss, plot_confusion_matrix
+# not used at the moment
+#from imblearn.metrics import classification_report_imbalanced  
+#from imblearn.over_sampling import SMOTE  
+#from imblearn.pipeline import make_pipeline
+from snmachine.utils.plasticc_utils import plot_confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
@@ -104,11 +104,11 @@ def create_folder_structure(analyses_directory, analysis_name):
     plots_directory = os.path.join(analysis_directory, 'plots')
 
     directories = {
-            "analysis_directory": analysis_directory,
-            "features_directory": features_directory,
-            "classifications_directory": classifications_directory,
-            "intermediate_files_directory": intermediate_files_directory,
-            "plots_directory": plots_directory}
+        "analysis_directory": analysis_directory,
+        "features_directory": features_directory,
+        "classifications_directory": classifications_directory,
+        "intermediate_files_directory": intermediate_files_directory,
+        "plots_directory": plots_directory}
 
     if os.path.isdir(analysis_directory):
         errmsg = """
@@ -241,9 +241,11 @@ def save_configuration_file(params, analysis_directory):
     >>> ...
     >>> save_configuration_file(params, analysis_directory)
     >>> subprocess.call(['cat', os.path.join(analysis_directory, "logs.yml")])
-    analysis_directory: /share/hypatia/snmachine_resources/data/plasticc/analysis/
+    analysis_directory: 
+    /share/hypatia/snmachine_resources/data/plasticc/analysis/
     analysis_name: pipeline-test
-    data_path: /share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set_snia.pickle
+    data_path: 
+    /share/hypatia/snmachine_resources/data/plasticc/data/raw_data/training_set_snia.pickle
     git_hash: 916eaec
     kernel_param:
     - 500.0
@@ -315,8 +317,10 @@ def load_dataset(data_path):
     return dataset
 
 
-def reduce_size_of_training_data(training_data, directories, subset_size, seed=1234, save_subset_list=False):
-    # TODO: Incorpate further doctrings and finish examples. Tarek: Catarina and I need to
+def reduce_size_of_training_data(training_data, directories, subset_size,
+                                 seed=1234, save_subset_list=False):
+    # TODO: Incorpate further doctrings and finish examples. 
+    # Tarek: Catarina and I need to
     # discuss this further. There is some overlap between this and
     # sndata.PlasticcData.update_data() and it would be good to comebine this.
     """Load from disk the training data one will use for this analysis
@@ -341,7 +345,8 @@ def reduce_size_of_training_data(training_data, directories, subset_size, seed=1
     Examples
     --------
     >>> ...
-    >>> new_training_data = reduce_size_of_training_data(training_data, directories, 1000)
+    >>> new_training_data = reduce_size_of_training_data(training_data,
+                                                         directories, 1000)
     """
     analysis_directory = directories.get("analysis_directory", None)
     print(F"ANALYSIS DIR: {analysis_directory}")
@@ -350,8 +355,10 @@ def reduce_size_of_training_data(training_data, directories, subset_size, seed=1
         rand_objs = np.genfromtxt(subset_file, dtype='U')
     else:
         np.random.seed(seed)
-        rand_objs = np.random.choice(training_data.object_names, replace=False, size=subset_size)
-        rand_objs_sorted_int = sorted(rand_objs, key=lambda x: int(re.sub('\D', '', x)))
+        rand_objs = np.random.choice(
+            training_data.object_names, replace=False, size=subset_size)
+        rand_objs_sorted_int = sorted(
+            rand_objs, key=lambda x: int(re.sub('\D', '', x)))
         rand_objs = np.asarray(rand_objs_sorted_int, dtype='U')
         if save_subset_list:
             np.savetxt(subset_file, rand_objs, fmt='%s')
@@ -359,7 +366,9 @@ def reduce_size_of_training_data(training_data, directories, subset_size, seed=1
     training_data.object_names = rand_objs
 
     # Erase the data we are not using
-    training_data.data = {objects: training_data.data[objects] for objects in training_data.object_names}
+    training_data.data = {
+        objects: training_data.data[objects] for objects in 
+        training_data.object_names}
     print("Dataset reduced to {} objects".format(
         training_data.object_names.shape[0]))
 
@@ -385,7 +394,8 @@ def wavelet_decomposition(training_data, number_gp, **kwargs):
         String defining what should be saved. See docs in
         `snmachine.snfeatures.extract_wavelets` for more details on options.
     output_root : string
-        Path to where one would like the uncompressed wavelet files to be stored
+        Path to where one would like the uncompressed wavelet files to be 
+        stored
 
     Returns
     -------
@@ -439,7 +449,8 @@ def combine_all_features(reduced_wavelet_features, dataframe):
 
     >>> print(shape.dataframe)
 
-    >>> combined_features = combine_all_features(reduced_wavelet_features, dataframe)
+    >>> combined_features = combine_all_features(
+        reduced_wavelet_features, dataframe)
     >>> print(shape.combined_features)
 
     """
@@ -528,16 +539,21 @@ def create_classifier(combined_features, training_data, directories,
 
     target_names = np.unique(labels)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, random_state=random_state)
 
     classifer = RandomForestClassifier(n_estimators=700, criterion='entropy',
                                        oob_score=True, n_jobs=-1,
                                        random_state=random_state)
 
     if augmentation_method in snaugment.NNAugment.methods():
-        classifer = make_pipeline(eval(augmentation_method)(sampling_strategy='not majority'), classifer)
+        classifer = make_pipeline(
+            eval(augmentation_method)(sampling_strategy='not majority'), 
+            classifer)
     else:
-        print("No augmentation selected, proceeding without resampling of classes")
+        print(
+            """No augmentation selected, proceeding without resampling of 
+            classes""")
 
     classifer.fit(X_train, y_train)
 
@@ -550,13 +566,16 @@ def create_classifier(combined_features, training_data, directories,
                                                      target_names,
                                                      normalize=True)
 
-    timestamp = get_timestamp()
-    with open(os.path.join(directories.get("classifications_directory"),
-                           F'classifer_{number_comps}_{augmentation_method}.pkl'), 'wb') as clf:
+    # timestamp = get_timestamp()
+    with open(os.path.join(
+        directories.get("classifications_directory"),
+            F'classifer_{number_comps}_{augmentation_method}.pkl'), 
+            'wb') as clf:
         pickle.dump(classifer, clf)
 
-    figure.savefig(os.path.join(directories.get("plots_directory"),
-                                F'confusion_matrix_{number_comps}_{augmentation_method}.pdf'))
+    nm = F'confusion_matrix_{number_comps}_{augmentation_method}.pdf'
+    figure.savefig(
+        os.path.join(directories.get("plots_directory"), nm))
 
     return classifer, confusion_matrix
 
@@ -576,8 +595,11 @@ def restart_from_saved_wavelets(directories):
 
 def restart_from_saved_pca(directories, number_of_principal_components):
     # TODO: Write docstrings
-    wavelet_features = pd.read_pickle(os.path.join(directories.get("features_directory"),
-        "reduced_wavelet_components_{}.pickle".format(number_of_principal_components)))
+    wavelet_features = pd.read_pickle(
+        os.path.join(
+            directories.get("features_directory"),
+            "reduced_wavelet_components"
+            "_{}.pickle".format(number_of_principal_components)))
     combined_features = wavelet_features  # For running tests for now
     classifier, confusion_matrix = create_classifier(combined_features,
                                                      training_data)
@@ -592,7 +614,11 @@ if __name__ == "__main__":
 
     parser = ArgumentParser(description="Run pipeline end to end")
     parser.add_argument('--configuration', '-c')
-    parser.add_argument('--restart-from', '-r', help='Either restart from saved "GPs" or from saved "Wavelets"', default="full")
+    parser.add_argument(
+        '--restart-from', 
+        '-r', 
+        help='Either restart from saved "GPs" or from saved "Wavelets"', 
+        default="full")
     arguments = parser.parse_args()
     arguments = vars(arguments)
 
@@ -606,13 +632,15 @@ if __name__ == "__main__":
     # snmachine parameters
     number_gp = params.get("number_gp", None)
     kernel_param = params.get("kernel_param", None)
-    number_of_principal_components = params.get("number_of_principal_components", None)
+    ky = "number_of_principal_components"
+    number_of_principal_components = params.get(ky, None)
 
     # Step 1. Creat folders that contain analysis
     directories = create_folder_structure(analysis_directory, analysis_name)
     # Step 2. Save configuration file used for this analysis
     save_configuration_file(params, directories.get("analysis_directory"))
-    # Step 3. Check at which point the user would like to run the analysis from.
+    # Step 3. Check at which point the user would like to run 
+    # the analysis from.
     # If elements already saved, these will be used but this can be overriden
     # with command line argument
     if (arguments['restart_from'].lower() == "gps"):
@@ -628,9 +656,13 @@ if __name__ == "__main__":
         # Run full pipeline but still do checks to see if elements from GPs or
         # wavelets already exist on disk; the first check should be for:
         #   a. Saved PCA files
-            # path_saved_reduced_wavelets = directories.get("intermediate_files_directory")
-            # eigenvectors_saved_file = np.load(os.path.join(path_saved_reduced_wavelets, 'eigenvectors_' + str(number_of_principal_components) + '.npy'))
-            # means_saved_file = np.load(os.path.join(path_saved_reduced_wavelets, 'means_' + str(number_of_principal_components) + '.npy'))
+        # path_saved_reduced_wavelets = directories.ge
+        # ("intermediate_files_directory")
+        # eigenvectors_saved_file = np.load(os.path.joi
+        # (path_saved_reduced_wavelets, 'eigenvectors_' + st
+        # (number_of_principal_components) + '.npy'))
+        # means_saved_file = np.load(os.path.join(path_saved_reduced_wavelets,
+        # 'means_' + str(number_of_principal_components) + '.npy'))
         #   b. Saved uncompressed wavelets
         #   c. Saved GPs
 
@@ -639,9 +671,10 @@ if __name__ == "__main__":
         print("training_data = {}".format(training_data))
 
         # Step 5. Compute GPs
+        dir_name = 'intermediate_files_directory'
         gps.compute_gps(training_data, number_gp=number_gp, t_min=0,
                         t_max=1100, kernel_param=kernel_param,
-                        output_root=directories['intermediate_files_directory'],
+                        output_root=directories[dir_name],
                         number_processes=number_processes)
 
         # Step 6. Extract wavelet coeffiencts
@@ -658,21 +691,25 @@ if __name__ == "__main__":
         print("wavelet_object = {}".format(wavelet_object))
         print("wavelet_object, type = {}".format(type(wavelet_object)))
 
-        # Step 7. Reduce dimensionality of wavelets by using only N principal components
-        wavelet_features, eigenvals, eigenvecs, means, num_feats = wavelet_object.extract_pca(
+        # Step 7. Reduce dimensionality of wavelets by using only N principal
+        # components
+        output = wavelet_object.extract_pca(
             object_names=training_data.object_names, wavout=waveout,
             recompute_pca=True, method='svd',
             number_comp=number_of_principal_components, tol=None,
             pca_path=None, save_output=True,
             output_root=directories.get("features_directory"))
+        wavelet_features, eigenvals, eigenvecs, means, num_feats = output
         print("wavelet_features = {}".format(wavelet_features))
         print("wavelet_features, type = {}".format(type(wavelet_features)))
 
         # Step 8. TODO Combine snmachine features with user defined features
 
-        # Step 9. TODO Create a Random Forest classifier; need to fit model and save it.
+        # Step 9. TODO Create a Random Forest classifier; need to fit model
+        # and save it.
         combined_features = wavelet_features  # For running tests for now
         classifier = create_classifier(combined_features, training_data)
         print(F"classifier = {classifier}")
 
-        # Step 10. TODO Use saved classifier to make predictions. This can occur using a seperate file
+        # Step 10. TODO Use saved classifier to make predictions. This can
+        # occur using a seperate file

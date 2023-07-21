@@ -133,6 +133,8 @@ examples/jobs/prev
 
 # Do not track data generated from example notebook
 snmachine/example_data/output_*
+snmachine/example_data/example_dataset*
+snmachine/example_data/example_test_dataset_gapless*
 
 .DS_Store
 
@@ -141,6 +143,9 @@ snmachine/example_data/output_*
 
 # Mac OS files
 .DS_Store
+
+# VSCode settings 
+.vscode/
 
 classifications/
 out

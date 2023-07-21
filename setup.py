@@ -2,13 +2,12 @@ from setuptools import setup, find_packages
 from setuptools.command.install import install
 import sys
 import os
-import re
 import site
 import tarfile
 
 
 PACKAGENAME = 'snmachine'
-__FALLBACK_VERSION__ = '2.0.0'
+__FALLBACK_VERSION__ = '2.1.0'
 
 
 class ExtractExampleData(install):
@@ -19,8 +18,8 @@ class ExtractExampleData(install):
         """Extract example data in the installation directory"""
         if '--user' in sys.argv:
             paths = (site.getusersitepackages(),)
-            print("Package installed outside of conda enviroment. Dependencies \
-            may be missing")
+            print("""Package installed outside of conda enviroment.
+            Dependencies may be missing""")
         else:
             paths = (site.getsitepackages(),)
             install_directory = paths[0][0]
@@ -38,12 +37,14 @@ class ExtractExampleData(install):
 
 setup(
     name='snmachine',
-    author='Michelle Lochner',
+    author='Michelle Lochner et al.',
     author_email='dr.michelle.lochner@gmail.com',
     description='Machine learning code for photometric supernova '
                 'classification',
     url='https://github.com/LSSTDESC/snmachine',
     license='BSD-3-Clause License',
+    description='Machine learning code for photometric supernova '
+                'classification',
     use_scm_version={
         "root": ".",
         "relative_to": __file__,

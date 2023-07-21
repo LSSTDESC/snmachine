@@ -9,6 +9,7 @@ __all__ = []
 
 import math
 import os
+import pickle
 import re
 import sys
 import time
@@ -19,12 +20,13 @@ import matplotlib.pyplot as plt
 import sncosmo
 
 from astropy.io import fits
-from astropy.table import Table, Column
+from astropy.table import Column, Table, vstack
+from copy import deepcopy
 from past.builtins import basestring
 from random import shuffle, sample
 from snmachine import chisq as cs
 
-# Colours for graphs
+# Colours, labels, and markers for graphs
 colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
            'sdssi': '#d35c00', 'sdssz': 'k', 'desg': '#007718',
            'desr': '#b30100', 'desi': '#d35c00', 'desz': 'k',
@@ -33,10 +35,18 @@ colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
 
 sntypes = {1: 'Ia', 2: 'II', 21: 'IIn', 22: 'IIP', 23: 'IIL',
            3: 'Ibc', 32: 'Ib', 33: 'Ic', 66: 'other'}
+
 markers = {'desg': '^', 'desr': 'o', 'desi': 's', 'desz': '*',
            'lsstu': 'o', 'lsstg': 'v', 'lsstr': '^',
            'lssti': '<', 'lsstz': '>', 'lssty': 's'}
+
 labels = {'desg': 'g', 'desr': 'r', 'desi': 'i', 'desz': 'z'}
+
+# Default passband - central wavelength maps
+default_pb_wavelengths = {
+    'lsst': {'lsstu': 3685, 'lsstg': 4802, 'lsstr': 6231,
+             'lssti': 7542, 'lsstz': 8690, 'lssty': 9736},
+    'ztf': {'ZTF_g': 4804.79, 'ZTF_r': 6436.92, 'ZTF_i': 7968.22}}
 
 
 def plot_lc(lc, show_legend=True):
@@ -90,8 +100,8 @@ def plot_lc(lc, show_legend=True):
         if tdelt.max() > max_x:
             max_x = tdelt.max()
 
-    ext = 0.05*(max_x-min_x)
-    plt.xlim([min_x-ext, max_x+ext])
+    ext = 0.05 * (max_x - min_x)
+    plt.xlim([min_x - ext, max_x + ext])
     plt.xlabel('Time (days)', fontsize=16)
     plt.ylabel('Flux', fontsize=16)
 
@@ -172,7 +182,7 @@ class EmptyDataset:
         self.data[name] = lc
         for flt in np.unique(lc['filter']):
             if not str(flt) in self.filter_set:
-                print('Adding filter '+str(flt)+' ...')
+                print('Adding filter ' + str(flt) + ' ...')
                 self.filter_set.append(str(flt))
 
     def __plot_this(self, fname, title=True, loc='best'):
@@ -209,8 +219,8 @@ class EmptyDataset:
             F = lc['flux'][inds]
             F_err = lc['flux_error'][inds]
             if self.sep_detect:
-                inds_d = np.where((lc['filter'] == filts[j])
-                                  & (lc['detected'] == 1))[0]
+                inds_d = np.where((lc['filter'] == filts[j]) & 
+                                  (lc['detected'] == 1))[0]
                 t_d = lc['mjd'][inds_d]
                 F_d = lc['flux'][inds_d]
                 F_err_d = lc['flux_error'][inds_d]
@@ -238,14 +248,14 @@ class EmptyDataset:
                         t_mod, F_mod = mod['mjd'][inds], mod['flux'][inds]
                         plt.plot(t_mod, F_mod, color=colours[filts[j]])
 
-            line = plt.errorbar(tdelt, F, yerr=F_err,  marker=mkr,
+            line = plt.errorbar(tdelt, F, yerr=F_err, marker=mkr,
                                 linestyle='none', color=colours[filts[j]],
                                 markersize=4)
             lines.append(line)
 
             if self.sep_detect and detect_in_band:
                 l_d = plt.errorbar(tdelt_d, F_d, yerr=F_err_d, marker=mkr_d,
-                                   linestyle='none',  color=colours[filts[j]],
+                                   linestyle='none', color=colours[filts[j]],
                                    markersize=7)
                 lines.append(l_d)
 
@@ -263,8 +273,8 @@ class EmptyDataset:
                 if self.sep_detect and detect_in_band:
                     labs.append(f + ' detected')
 
-        ext = 0.05*(max_x-min_x)
-        plt.xlim([min_x-ext, max_x+ext])
+        ext = 0.05 * (max_x - min_x)
+        plt.xlim([min_x - ext, max_x + ext])
         plt.xlabel('Time (days)')
         plt.ylabel('Flux')
         # plt.gca().tick_params(labelsize=8)
@@ -321,7 +331,7 @@ class EmptyDataset:
         """
 
         event.canvas.figure.clear()
-        if event.key == 'right' and self.__ind < len(self.object_names)-1:
+        if event.key == 'right' and self.__ind < len(self.object_names) - 1:
             self.__ind += 1
         elif event.key == 'left' and self.__ind > 0:
             self.__ind -= 1
@@ -384,7 +394,7 @@ class EmptyDataset:
         # The folder name is the second to last item in the list
         folder_name = outpath.split(os.path.sep)[-2]
         if listname is None:
-            object_list_path = os.path.join(outpath, (folder_name+'.LIST'))
+            object_list_path = os.path.join(outpath, (folder_name + '.LIST'))
         else:
             object_list_path = os.path.join(outpath, listname)
         if overwrite or not os.path.exists(object_list_path):
@@ -402,7 +412,7 @@ class EmptyDataset:
         max_obs = 0
         for n in self.object_names:
             times = self.data[n]['mjd']
-            dif = times.max()-times.min()
+            dif = times.max() - times.min()
             if dif > max_obs:
                 max_obs = dif
         return max_obs
@@ -547,6 +557,296 @@ class EmptyDataset:
 
             return chisq_over_pts_dict
 
+    @staticmethod
+    def print_time_difference(initial_time, final_time):
+        """Print the a time interval.
+
+        Parameters
+        ----------
+        initial_time : float
+            Time at which the time interval starts.
+        final_time : float
+            Time at which the time interval ends.
+        """
+        time_diff = int(final_time - initial_time)
+        time_spent_on_this_task = pd.to_timedelta(time_diff, unit='s')
+        print('This has taken {}\n'.format(time_spent_on_this_task))
+
+    @staticmethod
+    def print_progress(obj_ordinal, number_objs):
+        """Print the percentage of objects already saved.
+
+        This funtion uses a weird formula to know at which percentages to
+        print. This formula was choosen because it looks good.
+
+        Parameters
+        ----------
+        obj_ordinal : int
+            Ordinal number of the object we are currently on.
+        number_objs : int
+            Total number of objects to perform the action on.
+        """
+        percent_to_print = pow(10, -int(np.log10(number_objs) / 2))
+        if int(math.fmod(obj_ordinal, number_objs * percent_to_print)) == 0:
+            print('{}%'.format(int(obj_ordinal / (number_objs * 0.01))))
+
+    def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
+        """Transform the pandas dataframe into an astropy table starting from 
+        mjd=0
+
+        Takes a pandas light curve from the plasticc dataset format
+        and converts it to the astropy table.table format starting from mjd=0.
+
+        Parameters
+        ----------
+        pandas_lc : pandas.core.frame.DataFrame
+            Single object multi-band lightcurve.
+
+        Returns
+        -------
+        lc : astropy.table.table
+            New single object light curve.
+        """
+        lc = Table.from_pandas(pandas_lc)
+        lc[self.mjd_col] -= lc[self.mjd_col].min()
+        return lc
+
+    @staticmethod
+    def plot_obj_and_model(obj_data, obj_model=None, passbands=None, **kwargs):
+        """Plot an object observations and the model fitted to them.
+
+        If `obj_model` is not provided, the function only plots the light
+        curve observations.
+
+        Parameters
+        ----------
+        obj_data : pandas.core.frame.DataFrame or astropy.table.Table
+            Time, flux, flux error and passbands of the object.
+        obj_model : {None, astropy.table.Table, pandas.core.frame.DataFrame},
+                    optional
+            If `None`, only plots `obj_data`. Otherwise, `obj_model` has the
+            time, flux, flux error (optional) and passbands of the model
+            fitted to the object.
+        passbands : list, optional
+            Name of the passbands to plot the data from. By default, it is all
+            the available passbands in `obj_data`.
+        **kwargs : dict
+            Additional keyword arguments that can replace default parameters in
+            other funtions:
+            - axes : {None, matplotlib.axes}, optional
+                If the axes are provided, the figure is plotted on the axes.
+                Otherwise, it is plotted directly with `matplotlib`.
+            - pb_colors : dict, optional
+                Mapping between the passband names and the colours with which
+                they are represented. If none mapping is provided, the
+                passbands are represented with the default colours.
+            - show_title : Bool, default = False
+                Whether to show the plot title.
+            - title : str, optional
+                The title for the plot.
+            - show_legend : Bool, default = True
+                Whether to show the plot legend.
+
+        Raises
+        ------
+        AttributeError
+            There is a default title if `obj_data` contains the object id and
+            redshift accessible through `obj_data.meta['name']` and
+            `obj_data.meta['hostgal_photoz']`, respectively.
+            Otherwise, if the kwarg `show_title` is `True` a title must be
+            provided in the kwarg `title`.
+        """
+        # Extra plotting parameters passed as kwargs
+        if 'axes' in kwargs:
+            axes = kwargs['axes']
+        else:
+            axes = None
+        if 'pb_colors' in kwargs:
+            pb_colors = kwargs['pb_colors']
+        else:
+            pb_colors = colours
+        if 'show_title' in kwargs:
+            show_title = kwargs['show_title']
+        else:
+            show_title = False
+        if 'title' in kwargs:
+            title = kwargs['title']
+        elif show_title is True:
+            try:
+                title = 'Object ID: {}\nPhoto-z = {:.3f}'.format(
+                    obj_data.meta['name'], obj_data.meta['hostgal_photoz'])
+            except AttributeError:
+                raise AttributeError('No default title available. Provide the'
+                                     ' desired title in the kwarg `title`.')
+        if 'show_legend' in kwargs:
+            show_legend = kwargs['show_legend']
+        else:
+            show_legend = True
+
+        if passbands is None:
+            passbands = np.sort(np.unique(obj_data['filter']))
+        for pb in passbands:
+            # Get the light curve observations in the chosen passband `pb`
+            obj_data_pb = obj_data[obj_data['filter'] == pb]
+
+            # Skip this code block and plot only the light curve observations
+            # if no `obj_model` was inputed.
+            if obj_model is not None:
+                # Get the model observations in the chosen passband `pb`
+                obj_model_pb = obj_model[obj_model['filter'] == pb]
+                model_flux = obj_model_pb['flux']
+
+                # Plot the model values
+                if axes is None:
+                    plt.plot(obj_model_pb['mjd'], model_flux,
+                             color=pb_colors[pb], alpha=.7, label='')
+                else:
+                    axes.plot(obj_model_pb['mjd'], model_flux,
+                              color=pb_colors[pb], alpha=.7, label='')
+                try:  # if the model has error information, plot it
+                    model_flux_error = obj_model_pb['flux_error']
+                    if axes is None:
+                        plt.fill_between(x=obj_model_pb['mjd'],
+                                         y1=model_flux - model_flux_error,
+                                         y2=model_flux + model_flux_error,
+                                         color=pb_colors[pb], alpha=0.15,
+                                         label=None)
+                    else:
+                        axes.fill_between(x=obj_model_pb['mjd'],
+                                          y1=model_flux - model_flux_error,
+                                          y2=model_flux + model_flux_error,
+                                          color=pb_colors[pb], alpha=0.15,
+                                          label=None)
+                except KeyError:  # the model has no error information
+                    pass
+
+            # Plot the object observations.
+            # They are ploted after the models to be on top of these.
+
+            # Get the right marker for the plot
+            try:
+                marker_pb = markers[pb]
+            except KeyError:  # no marker for this passband
+                marker_pb = 'o'
+            if axes is None:
+                plt.errorbar(obj_data_pb['mjd'], obj_data_pb['flux'],
+                             obj_data_pb['flux_error'], fmt=marker_pb,
+                             color=pb_colors[pb], label=pb[-1])
+            else:
+                axes.errorbar(obj_data_pb['mjd'], obj_data_pb['flux'],
+                              obj_data_pb['flux_error'], fmt=marker_pb,
+                              color=pb_colors[pb], label=pb[-1])
+        if axes is None:
+            plt.xlabel('Time (days)')
+            plt.ylabel('Flux units')
+        else:
+            axes.set_xlabel('Time (days)')
+            axes.set_ylabel('Flux units')
+
+        if show_title:
+            if axes is None:
+                plt.title(title)
+            else:
+                axes.set_title(title)
+
+        if show_legend:
+            if axes is None:
+                plt.legend(ncol=2, handletextpad=.3, borderaxespad=.3,
+                           labelspacing=.2, borderpad=.3, columnspacing=.4)
+            else:
+                axes.legend(ncol=2, handletextpad=.3, borderaxespad=.3,
+                            labelspacing=.2, borderpad=.3, columnspacing=.4)
+
+    @property
+    def labels(self):
+        """Returns the labels of the objects, if they are known."""
+        try:
+            labels = self.metadata.target
+        except AttributeError:  # We don't know the objects' labels
+            labels = None
+        return labels
+
+    @property
+    def object_names(self):
+        """Returns the name of the objects to work with.
+
+        Not always this corresponds to the whole dataset.
+        """
+        return self._object_names
+
+    @object_names.setter
+    def object_names(self, value):
+        """Set the name of the objects to work with.
+
+        Parameters
+        ----------
+        value: list-like
+            Name of the objects to work with.
+        """
+        self._object_names = np.array(value, dtype='str')
+
+    @staticmethod
+    def merge_dataset(dataset_1, dataset_2, join_same_name=False):
+        """Merge two datasets.
+
+        Create a new dataset that results from merging two datasets of the same
+        class. If the datasets have events with the same name, this method will
+        fail unless `join_same_name` is True.
+
+        Parameters
+        ----------
+        dataset_1 : Dataset object (`sndata` class)
+            Dataset to join with other.
+        dataset_2 : Dataset object (`sndata` class)
+            Dataset to join with other.
+        join_same_name : Bool, default = False
+            If False, do not merge the datasets unless they do not have any
+            event in common. If true, change the name of the events in common
+            in `dataset_2`, and then merge the datasets.
+
+        Returns
+        -------
+        new_dataset : Dataset object (`sndata` class)
+            Merged dataset.
+
+        Raises
+        ------
+        TypeError
+            Both datasets must have the same class.
+        ValueError
+            To merge with events in common, set `join_same_name` to True.
+        """
+        # Cheeck the datasets have the same class
+        if type(dataset_1) != type(dataset_2):
+            raise TypeError('Both datasets must have the same class.')
+
+        # Check there are no event IDs in common
+        obj_names_1 = dataset_1.object_names
+        obj_names_2 = dataset_2.object_names
+        is_common = np.sum(np.in1d(obj_names_1, obj_names_2))
+        if (np.sum(is_common) != 0) and (join_same_name is False):
+            raise ValueError('There are events in common. To proceed with the '
+                             'merge, either change the the object IDs or set '
+                             '`join_same_name` to True.')
+        if join_same_name is True:
+            raise NotImplementedError('Not yet implemented')
+
+        # Create placeholder for new dataset
+        new_dataset = deepcopy(dataset_1)
+
+        # Join metadatas
+        new_metadata = pd.concat([dataset_1.metadata, dataset_2.metadata])
+        new_dataset.metadata = new_metadata
+
+        # Add the rest of the data
+        new_dataset.data.update({obj: dataset_2.data[obj] for obj in
+                                 dataset_2.object_names})
+
+        # Reorder the object names to match the metadata
+        new_dataset.object_names = new_dataset.metadata['object_id']
+
+        return new_dataset
+
 
 class PlasticcData(EmptyDataset):
     """Class to read in the PLAsTiCC dataset. This is a simulated LSST catalog.
@@ -560,9 +860,8 @@ class PlasticcData(EmptyDataset):
     metadata_file: str
         Filename of the pandas dataframe containing the metadata for the light
         curves.
-    mix : bool, optional
-        Default False. If True, randomly permutes the objects when they are
-        read in.
+    mix : Bool, default = False
+        If True, randomly permutes the objects when they are read in.
     """
 
     def __init__(self, folder, data_file, metadata_file, mix=False):
@@ -574,8 +873,7 @@ class PlasticcData(EmptyDataset):
         if mix is True:
             self.mix()
         # Set the central wavelength of each passband
-        self.pb_wavelengths = {'lsstu': 3685, 'lsstg': 4802, 'lsstr': 6231,
-                               'lssti': 7542, 'lsstz': 8690, 'lssty': 9736}
+        self.pb_wavelengths = default_pb_wavelengths['lsst']
 
     def set_data(self, folder, data_file):
         """Reads in simulated data and saves it.
@@ -613,7 +911,7 @@ class PlasticcData(EmptyDataset):
 
         for i, id in enumerate(data[self.id_col].unique()):
             # Use +1 because the order starts at 0 in python
-            self.print_progress(i+1, number_objs)
+            self.print_progress(i + 1, number_objs)
 
             object_names.append(str(id))
             obj_lc = data.query('{0} == {1}'.format(self.id_col, id))
@@ -628,26 +926,6 @@ class PlasticcData(EmptyDataset):
         self.object_names = object_names
         print('{} objects read into memory.'.format(len(self.data)))
         self.print_time_difference(time_start_reading, time.time())
-
-    def get_obj_lc_table_starting_from_mjd_zero(self, pandas_lc):
-        """Transform the pandas dataframe into an astropy table starting from mjd=0
-
-        Takes a pandas light curve from the plasticc dataset format
-        and converts it to the astropy table.table format starting from mjd=0.
-
-        Parameters
-        ----------
-        pandas_lc : pandas.core.frame.DataFrame
-            Single object multi-band lightcurve.
-
-        Returns
-        -------
-        lc : astropy.table.table
-            New single object light curve.
-        """
-        lc = Table.from_pandas(pandas_lc)
-        lc[self.mjd_col] -= lc[self.mjd_col].min()
-        return lc
 
     def set_metadata(self, folder, meta_file):
         """Reads in simulated metadata and saves it.
@@ -679,7 +957,7 @@ class PlasticcData(EmptyDataset):
         number_objs = len(self.object_names)
         for i, obj in enumerate(self.object_names):
             # Use +1 because the order starts at 0 in python
-            self.print_progress(i+1, number_objs)
+            self.print_progress(i + 1, number_objs)
 
             self.set_inner_metadata(obj)
         print(f'Finished getting the metadata for {number_objs} objects.')
@@ -730,67 +1008,6 @@ class PlasticcData(EmptyDataset):
                 photoz = metadata[col]
         if self.data[obj].meta['z'] is None:  # if no spec z -> z = photo z
             self.data[obj].meta['z'] = photoz
-
-    @property
-    def labels(self):
-        """Returns the labels of the objects, if they are known."""
-        try:
-            labels = self.metadata.target
-        except AttributeError:  # We don't know the objects' labels
-            labels = None
-        return labels
-
-    @property
-    def object_names(self):
-        """Returns the name of the objects to work with.
-
-        Not always this corresponds to the whole dataset.
-        """
-        return self._object_names
-
-    @object_names.setter
-    def object_names(self, value):
-        """Set the name of the objects to work with.
-
-        Parameters
-        ----------
-        value: list-like
-            Name of the objects to work with.
-        """
-        self._object_names = np.array(value, dtype='str')
-
-    @staticmethod
-    def print_time_difference(initial_time, final_time):
-        """Print the a time interval.
-
-        Parameters
-        ----------
-        initial_time : float
-            Time at which the time interval starts.
-        final_time : float
-            Time at which the time interval ends.
-        """
-        time_spent_on_this_task = pd.to_timedelta(int(final_time-initial_time),
-                                                  unit='s')
-        print('This has taken {}\n'.format(time_spent_on_this_task))
-
-    @staticmethod
-    def print_progress(obj_ordinal, number_objs):
-        """Print the percentage of objects already saved.
-
-        This funtion uses a weird formula to know at which percentages to
-        print. This formula was choosen because it looks good.
-
-        Parameters
-        ----------
-        obj_ordinal : int
-            Ordinal number of the object we are currently on.
-        number_objs : int
-            Total number of objects to perform the action on.
-        """
-        percent_to_print = pow(10, -int(np.log10(number_objs)/2))
-        if int(math.fmod(obj_ordinal, number_objs*percent_to_print)) == 0:
-            print('{}%'.format(int(obj_ordinal/(number_objs*0.01))))
 
     def update_dataset(self, new_objs):
         """Update the datset so it only contains a subset of objects.
@@ -937,15 +1154,15 @@ class PlasticcData(EmptyDataset):
                     model_flux_error = obj_model_pb['flux_error']
                     if axes is None:
                         plt.fill_between(x=obj_model_pb['mjd'],
-                                         y1=model_flux-model_flux_error,
-                                         y2=model_flux+model_flux_error,
-                                         color=pb_colors[pb], alpha=.15,
+                                         y1=model_flux - model_flux_error,
+                                         y2=model_flux + model_flux_error,
+                                         color=pb_colors[pb], alpha=0.15,
                                          label=None)
                     else:
                         axes.fill_between(x=obj_model_pb['mjd'],
-                                          y1=model_flux-model_flux_error,
-                                          y2=model_flux+model_flux_error,
-                                          color=pb_colors[pb], alpha=.15,
+                                          y1=model_flux - model_flux_error,
+                                          y2=model_flux + model_flux_error,
+                                          color=pb_colors[pb], alpha=0.15,
                                           label=None)
                 except KeyError:  # the model has no error information
                     pass
@@ -1053,6 +1270,50 @@ class PlasticcData(EmptyDataset):
                   f'{obj_names[np.argmax(time_transient)]} '
                   f'and its length is {np.max(time_transient):.2f} days.')
 
+    def select_transients(self, max_distance, verbose=False):
+        """Select observations within a maximum distance from the detections.
+
+        Select all observations between the detections or within `max_distance`
+        days before the first detection or after the last.
+
+        Parameters
+        ----------
+        max_gap_length: float
+            Maximum distance from the first or last detection that any
+            observation in the edges of the light curve can have.
+        verbose: bool, optional
+            Default False. If True prints the ID of the longest event and its
+            length.
+        """
+        obj_names = self.object_names
+        time_transient = np.zeros(len(obj_names))
+        i = 0
+        for obj in obj_names:
+            obs = self.data[obj]
+            obs_time = obs['mjd']
+            obs_detected_time = obs_time[obs['detected'] == 1]
+            if len(obs_detected_time) >= 2:  # at least 2 detections
+                is_obs_transient = (
+                    (obs_time > obs_detected_time[0] - max_distance) & 
+                    (obs_time < obs_detected_time[-1] + max_distance))
+                obs_transient = obs[is_obs_transient]
+            else:  # 1 or 0 detections; will be cut out in other funtion
+                obs_transient = obs
+
+            # Introduce uniformity: all transients start at time 0
+            obs_transient['mjd'] -= min(obs_transient['mjd'])
+
+            # Update the transient data
+            self.data[obj] = obs_transient
+
+            time_transient[i] = (np.max(obs_transient['mjd']) - 
+                                 np.min(obs_transient['mjd']))
+            i += 1
+        if verbose:
+            print(f'The longest event is '
+                  f'{obj_names[np.argmax(time_transient)]} '
+                  f'and its length is {np.max(time_transient):.2f} days.')
+
 
 class Dataset(EmptyDataset):
     """
@@ -1119,17 +1380,17 @@ class Dataset(EmptyDataset):
         """
         if isinstance(subset, basestring):
             if subset == 'spectro':
-                object_names = np.genfromtxt(self.rootdir+'DES_spectro.list',
+                object_names = np.genfromtxt(self.rootdir + 'DES_spectro.list',
                                              dtype='U').flatten()
             else:
-                file_name = self.rootdir+self.survey_name+'.LIST'
+                file_name = self.rootdir + self.survey_name + '.LIST'
                 object_names = np.genfromtxt(file_name, dtype='U')
-        elif all(isinstance(l, basestring) for l in subset):
+        elif all(isinstance(obj_nm, basestring) for obj_nm in subset):
             # We assume subset is a list of strings containing object names
             object_names = subset
         else:
             # Otherwise it must be a list of indices. Otherwise raise an error.
-            names = np.genfromtxt(self.rootdir+self.survey_name+'.LIST',
+            names = np.genfromtxt(self.rootdir + self.survey_name + '.LIST',
                                   dtype='U')
             try:
                 object_names = names[subset]
@@ -1154,7 +1415,7 @@ class Dataset(EmptyDataset):
         astropy.table.Table
             Light curve
         """
-        fl = open(self.rootdir+flname, 'r')
+        fl = open(self.rootdir + flname, 'r')
         mjd = []
         flt = []
         flux = []
@@ -1170,7 +1431,7 @@ class Dataset(EmptyDataset):
                     z_err = (float)(s[3])
                 elif s[0] == 'OBS:':
                     mjd.append((float)(s[1]))
-                    flt.append('des'+s[2])
+                    flt.append('des' + s[2])
                     flux.append((float)(s[4]))
                     fluxerr.append((float)(s[5]))
                 elif s[0] == 'SIM_COMMENT:':
@@ -1179,8 +1440,8 @@ class Dataset(EmptyDataset):
                             type = (int)(k)
 
         # Zeropoint
-        zp = np.array([27.5]*len(mjd))
-        zpsys = ['ab']*len(mjd)
+        zp = np.array([27.5] * len(mjd))
+        zpsys = ['ab'] * len(mjd)
 
         # Make everything arrays
         mjd = np.array(mjd)
@@ -1191,7 +1452,7 @@ class Dataset(EmptyDataset):
         # We shift the times of the observations to all start at zero. If
         # required, the mjd of the initial observation is stored in the
         # metadata.
-        mjd = mjd-start_mjd
+        mjd = mjd - start_mjd
         # Note: obviously this will only zero the observations in one filter
         # passband, the others have to be zeroed if fitting functions.
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys],
@@ -1225,8 +1486,8 @@ class Dataset(EmptyDataset):
 
         # For SPCC we might just want the types and not subtypes
         if show_subtypes is False:
-            tab['Type'][np.floor(tab['Type']/10) == 2] = 2
-            tab['Type'][np.floor(tab['Type']/10) == 3] = 3
+            tab['Type'][np.floor(tab['Type'] / 10) == 2] = 2
+            tab['Type'][np.floor(tab['Type'] / 10) == 3] = 3
         return tab
 
 
@@ -1275,7 +1536,8 @@ class OpsimDataset(EmptyDataset):
 
         """
         is_basestring = isinstance(subset, basestring)
-        is_all_in_subset = (all(isinstance(l, basestring) for l in subset))
+        is_all_in_subset = (all(isinstance(obj_nm, basestring) 
+                            for obj_nm in subset))
         if (~is_basestring and is_all_in_subset):
             # We have to deal with separate Ia and nIa fits files
             Ia_head = os.path.join(folder, 'LSST_Ia_HEAD.FITS')
@@ -1310,7 +1572,7 @@ class OpsimDataset(EmptyDataset):
         elif isinstance(subset, basestring) and subset == 'nIa':
             all_data = data_nIa
         else:
-            all_data = data_Ia+data_nIa
+            all_data = data_Ia + data_nIa
         self.data = {}
         self.object_names = []
 
@@ -1347,7 +1609,7 @@ class OpsimDataset(EmptyDataset):
         tab_new = tab['MJD', 'FLUXCAL', 'FLUXCALERR', 'FLT']
         tab_new.rename_column('MJD', 'mjd')
         start_mjd = (tab_new['mjd']).min()
-        tab_new['mjd'] = tab_new['mjd']-start_mjd
+        tab_new['mjd'] = tab_new['mjd'] - start_mjd
         tab_new.rename_column('FLUXCAL', 'flux')
         tab_new.rename_column('FLUXCALERR', 'flux_error')
         tab_new.rename_column('FLT', 'filter')
@@ -1356,8 +1618,8 @@ class OpsimDataset(EmptyDataset):
         for f in range(len(old_filts)):
             new_is_old = tab_new['filter'] == old_filts[f]
             tab_new['filter'][new_is_old] = self.filter_set[f]
-        zp = Column(name='zp', data=np.array([27.5]*len(tab_new['mjd'])))
-        zpsys = Column(name='zpsys', data=['ab']*len(tab_new['mjd']))
+        zp = Column(name='zp', data=np.array([27.5] * len(tab_new['mjd'])))
+        zpsys = Column(name='zpsys', data=['ab'] * len(tab_new['mjd']))
         tab_new.add_column(zp)
         tab_new.add_column(zpsys)
 
@@ -1419,7 +1681,8 @@ class LSSTCadenceSimulations(OpsimDataset):
         for i in self.indices:
             print(f'chunk {i:02d}')
             is_basestring = isinstance(subset, basestring)
-            is_all_in_subset = (all(isinstance(l, basestring) for l in subset))
+            is_all_in_subset = (all(isinstance(obj_nm, basestring) 
+                                for obj_nm in subset))
             if (not is_basestring) and is_all_in_subset:
                 # We have to deal with separate Ia and nIa fits files
                 Ia_head = os.path.join(folder,
@@ -1463,7 +1726,7 @@ class LSSTCadenceSimulations(OpsimDataset):
         elif isinstance(subset, basestring) and subset == 'nIa':
             all_data = data_nIa
         else:
-            all_data = data_Ia+data_nIa
+            all_data = data_Ia + data_nIa
         self.data = {}
         self.object_names = []
 
@@ -1471,7 +1734,7 @@ class LSSTCadenceSimulations(OpsimDataset):
 
         for i in range(len(all_data)):
             if i % 1e4 == 0:
-                number_to_print = i//1e3
+                number_to_print = i // 1e3
                 print(f'{number_to_print}k')
             snid = all_data[i].meta['SNID'].decode('UTF-8')
             is_basestring = isinstance(subset, basestring)
@@ -1557,15 +1820,15 @@ class SDSS_Data(EmptyDataset):
         list-like
             List of object names
         """
-        fl = open(self.rootdir+self.survey_name+'.LIST')
+        fl = open(self.rootdir + self.survey_name + '.LIST')
         SN = []
         for line in fl:
             s = line.split()
-            is_sn_name = (s[5] == "SNIa" or s[5] == "SNIb" or s[5] == "SNIc"
-                          or s[5] == "SNII" or s[5] == "SNIa?"
-                          or s[5] == "pSNIa" or s[5] == "pSNIbc"
-                          or s[5] == "pSNII" or s[5] == "zSNIa"
-                          or s[5] == "zSNIbc" or s[5] == "zSNII")
+            is_sn_name = (s[5] == "SNIa" or s[5] == "SNIb" or s[5] == "SNIc" or
+                          s[5] == "SNII" or s[5] == "SNIa?" or
+                          s[5] == "pSNIa" or s[5] == "pSNIbc" or
+                          s[5] == "pSNII" or s[5] == "zSNIa" or
+                          s[5] == "zSNIbc" or s[5] == "zSNII")
             if is_sn_name:
                 if len(str(s[0])) == 3:
                     SN.append("SMP_000%s.dat" % s[0])
@@ -1597,13 +1860,13 @@ class SDSS_Data(EmptyDataset):
         list-like
             List of object names
         """
-        fl = open(self.rootdir+self.survey_name+'.LIST')
+        fl = open(self.rootdir + self.survey_name + '.LIST')
         SN = []
         classes = []
         for line in fl:
             s = line.split()
-            is_sn_name = (s[5] == "SNIa" or s[5] == "SNIb" or s[5] == "SNIc"
-                          or s[5] == "SNII")
+            is_sn_name = (s[5] == "SNIa" or s[5] == "SNIb" or s[5] == "SNIc" or
+                          s[5] == "SNII")
             if is_sn_name:
                 classes.append(s[5])
                 if len(str(s[0])) == 3:
@@ -1660,15 +1923,15 @@ class SDSS_Data(EmptyDataset):
         list-like
             List of object names
         """
-        fl = open(self.rootdir+self.survey_name+'.LIST')
+        fl = open(self.rootdir + self.survey_name + '.LIST')
         SN = []
         classes = []
         for line in fl:
             s = line.split()
-            is_sn_name = (s[5] == "pSNIa" or s[5] == "pSNIbc"
-                          or s[5] == "pSNII" or s[5] == "zSNIa"
-                          or s[5] == 'zSNIbc' or s[5] == 'zSNII'
-                          or s[5] == 'SNIa?')
+            is_sn_name = (s[5] == "pSNIa" or s[5] == "pSNIbc" or
+                          s[5] == "pSNII" or s[5] == "zSNIa" or
+                          s[5] == 'zSNIbc' or s[5] == 'zSNII' or
+                          s[5] == 'SNIa?')
             if is_sn_name:
                 classes.append(s[5])
                 if len(str(s[0])) == 3:
@@ -1689,8 +1952,8 @@ class SDSS_Data(EmptyDataset):
         if classification != 'none':
             if classification == 'Ia' or classification == 'SNIa':
                 SN = [SN[i] for i in range(len(SN))
-                      if classes[i] == 'SNIa?' or classes[i] == 'pSNIa'
-                      or classes[i] == 'zSNIa']
+                      if classes[i] == 'SNIa?' or classes[i] == 'pSNIa' or
+                      classes[i] == 'zSNIa']
             elif classification == 'Ibc' or classification == 'SNIbc':
                 SN = [SN[i] for i in range(len(SN))
                       if classes[i] == 'pSNIbc' or classes[i] == 'zSNIbc']
@@ -1735,12 +1998,12 @@ class SDSS_Data(EmptyDataset):
                 return np.array(self.get_SNe(subset_length))
                 # loads random sample of SNe from whole master file - sample
                 # defaulted to whole
-        elif all(isinstance(l, basestring) for l in subset):
+        elif all(isinstance(obj_nm, basestring) for obj_nm in subset):
             # We assume subset is a list of strings containing object names
             return subset
         else:
             # Otherwise it must be a list of indices. Otherwise raise an error.
-            names = np.genfromtxt(self.rootdir+self.survey_name+'.LIST',
+            names = np.genfromtxt(self.rootdir + self.survey_name + '.LIST',
                                   dtype='str')
             try:
                 return names[subset]
@@ -1762,7 +2025,7 @@ class SDSS_Data(EmptyDataset):
         list-like
             Redshift, redshift error, type
         """
-        fl = open(self.rootdir+self.survey_name+'.LIST')
+        fl = open(self.rootdir + self.survey_name + '.LIST')
         # z_hel is spectroscopic heliocentric redshift and z_psnid uses zspec
         # as prior but has many more??
         z = {'z_hel': float('nan'), 'z_phot': float('nan')}
@@ -1770,9 +2033,9 @@ class SDSS_Data(EmptyDataset):
         t = -9
         for line in fl:
             s = line.split()
-            is_good_name = ("SMP_000%s.dat" % s[0] == flname
-                            or "SMP_00%s.dat" % s[0] == flname
-                            or "SMP_0%s.dat" % s[0] == flname)
+            is_good_name = ("SMP_000%s.dat" % s[0] == flname or
+                            "SMP_00%s.dat" % s[0] == flname or
+                            "SMP_0%s.dat" % s[0] == flname)
             if is_good_name:  # is this a bit slow?
                 if s[103] != "\\N":
                     z['z_phot'] = float(s[103])
@@ -1791,10 +2054,10 @@ class SDSS_Data(EmptyDataset):
                 else:
                     z_err['z_hel_err'] = -9
                 # All classifications of type Ia SNe - includes probable SNeIa
-                is_snia = (s[5] == 'SNIa' or s[5] == 'pSNIa' or s[5] == 'zSNIa'
-                           or s[5] == 'SNIa?')
-                is_snibc = (s[5] == 'SNIb' or s[5] == 'SNIc'
-                            or s[5] == 'pSNIbc' or s[5] == 'zSNIbc')
+                is_snia = (s[5] == 'SNIa' or s[5] == 'pSNIa' or 
+                           s[5] == 'zSNIa' or s[5] == 'SNIa?')
+                is_snibc = (s[5] == 'SNIb' or s[5] == 'SNIc' or
+                            s[5] == 'pSNIbc' or s[5] == 'zSNIbc')
                 if is_snia:
                     t = 1
                 elif is_snibc:
@@ -1818,7 +2081,7 @@ class SDSS_Data(EmptyDataset):
             Light curve
         """
         print(flname)
-        fl = open(self.rootdir+flname, 'r')
+        fl = open(self.rootdir + flname, 'r')
         mjd = []
         flt = []  # band
         flux = []
@@ -1864,8 +2127,8 @@ class SDSS_Data(EmptyDataset):
             z_err = -9  # returns values of -9 if no redshift is available
 
         # Zeropoint
-        zp = np.array([27.5]*len(mjd))
-        zpsys = ['ab']*len(mjd)
+        zp = np.array([27.5] * len(mjd))
+        zpsys = ['ab'] * len(mjd)
 
         # Make everything arrays
         mjd = np.array(mjd)
@@ -1884,7 +2147,7 @@ class SDSS_Data(EmptyDataset):
         # We shift the times of the observations to all start at zero. If
         # required, the mjd of the initial observation is stored in the
         # metadata.
-        mjd = mjd-start_mjd
+        mjd = mjd - start_mjd
         # Note: obviously this will only zero the observations in one filter
         # passband, the others have to be zeroed if fitting functions.
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr],
@@ -2031,13 +2294,13 @@ class SDSS_Simulations(EmptyDataset):
         flt = np.array(['sdss' + lc['FLT'][i] for i in range(len(lc['FLT']))
                         if lc['FLUXCAL'][i] > 0])
         # Ignore negative flux values
-        flux = np.array([(lc['FLUXCAL'][i]*math.pow(10, -1.44))
+        flux = np.array([(lc['FLUXCAL'][i] * math.pow(10, -1.44))
                          for i in range(len(lc['FLUXCAL']))
                          if lc['FLUXCAL'][i] > 0])
         # FLUX: MULTIPLY BY 10^-1.44 (FLUX IN SDSS IS CALCULATED AS
         # 10^(-0.4MAG +9.56) WHEREAS SIMULATED FLUXES ARE CALCULATED AS
         # 10^(-0.4MAG + 11)- WE USE THE SDSS CONVENTION).
-        fluxerr = np.array([(lc['FLUXCALERR'][i]*math.pow(10, -1.44))
+        fluxerr = np.array([(lc['FLUXCALERR'][i] * math.pow(10, -1.44))
                             for i in range(len(lc['FLUXCALERR']))
                             if lc['FLUXCAL'][i] > 0])
         mag = np.array([lc['MAG'][i] for i in range(len(lc['MAGERR']))
@@ -2054,7 +2317,7 @@ class SDSS_Simulations(EmptyDataset):
         # We shift the times of the observations to all start at zero. If
         # required, the mjd of the initial observation is stored in the
         # metadata.
-        mjd = mjd-start_mjd
+        mjd = mjd - start_mjd
         # Note: obviously this will only zero the observations in one filter
         # passband, the others have to be zeroed if fitting functions.
 
@@ -2084,8 +2347,8 @@ class SDSS_Simulations(EmptyDataset):
         # simulated heliocentric redshift is used
         z = -9
         z_err = -9
-        exists_z = (lc.meta['REDSHIFT_HELIO'] != -9
-                    and lc.meta['REDSHIFT_HELIO_ERR'] != -9)
+        exists_z = (lc.meta['REDSHIFT_HELIO'] != -9 and 
+                    lc.meta['REDSHIFT_HELIO_ERR'] != -9)
         if exists_z:
             z = lc.meta['REDSHIFT_HELIO']
             z_err = lc.meta['REDSHIFT_HELIO_ERR']
@@ -2097,8 +2360,8 @@ class SDSS_Simulations(EmptyDataset):
         snid = lc.meta['SNID']
 
         # Zeropoint
-        zp = np.array([27.5]*len(mjd))
-        zpsys = ['ab']*len(mjd)
+        zp = np.array([27.5] * len(mjd))
+        zpsys = ['ab'] * len(mjd)
 
         # form astropy table
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys, mag, magerr],
@@ -2108,6 +2371,667 @@ class SDSS_Simulations(EmptyDataset):
                           'initial_observation_time': start_mjd,
                           'peak flux': peak_flux, 'data type': dtype})
         return tab
+
+
+class SnanaDataOri(EmptyDataset):
+    """Generic class to read in SNANA simulation datasets.
+
+    SNANA stores each class in a different folder. Each folder has several
+    files containing differenct batches of data.
+    This class was prepared for SNANA version TODO
+
+    Parameters
+    ----------
+    folder : str
+        Folder where simulations are located.
+    data_file: str
+        Filename of the pandas dataframe which is has the light curve data.
+    metadata_file: str
+        Filename of the pandas dataframe containing the metadata for the light
+        curves.
+    survey_name : str
+        Specifies the name of the survey; needed for output folder name.
+    pb_wavelengths : dict
+        Mapping between the passband names and their central wavelength. Note
+        that `snmachine` has the default some default maps in
+        `snmachine.sndata.default_pb_wavelengths`.
+    mix : bool, optional
+        Default False. If True, randomly permutes the objects when they are
+        read in.
+
+    Raises
+    ------
+    ValueError
+        At least one model/folder must be provided in `model_list`.
+    """
+    def __init__(self, folder, data_file, metadata_file, survey_name,
+                 pb_wavelengths, mix=False):
+        filter_set = list(pb_wavelengths.keys())
+        print(f'The passbands are {filter_set}')
+        super().__init__(folder, survey_name=survey_name,
+                         filter_set=filter_set)
+
+        self.set_data(folder, data_file)
+        self.set_metadata(folder, metadata_file)
+        if mix is True:
+            self.mix()
+        # Set the central wavelength of each passband
+        self.pb_wavelengths = pb_wavelengths
+
+    def set_data(self, folder, data_file):
+        """Reads in simulated data and saves it.
+
+        The data is saved into the `data` method from EmptyDataset.
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located.
+        data_file : str or list-like
+            .csv file of object light curves.
+        """
+        print('Reading data...')
+        time_start_reading = time.time()
+        data = pd.read_csv(folder + '/' + data_file, sep=',')
+
+        # snmachine and SNANA use a different denomination
+        data.rename({'FLUXCAL': 'flux', 'FLUXCALERR': 'flux_error',
+                     'BAND': 'filter', 'MJD': 'mjd'},
+                    axis='columns', inplace=True)
+        # Rename `filter` values as per `snmachine` convention
+        data['filter'] = (self.survey_name + 
+                          data['filter'].str.lower().str.strip(' '))
+
+        # Set detected flag in the observations; corresponds to the flag 13
+        is_detected = [('{0:020b}'.format(i))[-13] for i in data['PHOTFLAG']]
+        is_detected = np.array(is_detected, dtype=int)  # so the bool workss
+        data['detected'] = np.array(is_detected, dtype=bool)
+
+        # Abstract column names from dataset
+        for col in data.columns:
+            if re.search('jd', col):  # catches the column that includes `jd`
+                self.mjd_col = col
+            if re.search('_id', col):  # catches the column that includes `id`
+                self.id_col = col
+
+        number_invalid_objs = 0  # Some objects may have empty data
+        number_objs = len(data[self.id_col].unique())
+        object_names = []
+
+        for i, id in enumerate(data[self.id_col].unique()):
+            # Use +1 because the order starts at 0 in python
+            self.print_progress(i + 1, number_objs)
+
+            object_names.append(str(id))
+            obj_lc = data[data[self.id_col] == id]
+            lc = self.get_obj_lc_table_starting_from_mjd_zero(pandas_lc=obj_lc)
+            if len(lc[self.mjd_col] > 0):
+                self.data[str(id)] = lc
+            else:
+                number_invalid_objs += 1
+        if number_invalid_objs > 0:
+            print('{} objects were invalid and not added to the dataset.'
+                  ''.format(number_invalid_objs))
+        self.object_names = object_names
+        print('{} objects read into memory.'.format(len(self.data)))
+        self.print_time_difference(time_start_reading, time.time())
+
+    def set_metadata(self, folder, meta_file):
+        """Reads in simulated metadata and saves it.
+
+        The data is saved into the `metadata` method from EmptyDataset and
+        into a dictonary associated with each `data` method
+        (`.data[obj].meta`).
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located.
+        data_file : str or list-like
+            .csv file of objects metadata.
+        """
+        print('Reading metadata...')
+        time_start_reading = time.time()
+        metadata_pd = pd.read_csv(folder + '/' + meta_file, sep=',',
+                                  index_col=self.id_col)
+        metadata_pd.index = metadata_pd.index.astype(str)
+
+        # Add `object_id` column because it is useful to call it
+        metadata_pd['object_id'] = metadata_pd.index
+
+        # Convert all column names to lower case
+        map_cols = {}
+        for col in metadata_pd.columns:
+            map_cols[col] = col.lower()
+        metadata_pd.rename(map_cols, axis='columns', inplace=True)
+
+        # Rename `sntype` as target as per `snmachine` convention
+        metadata_pd.rename({'sntype': 'target'}, axis='columns', inplace=True)
+        # If `target` > 100, it is the test set and to obtain the true value,
+        # we must subtract 100 to the target value.
+        is_larger_100 = metadata_pd['target'] > 100
+        metadata_pd.loc[is_larger_100, 'target'] -= 100
+
+        # Save in the data instance
+        self.metadata = metadata_pd
+
+        # Everything bellow is to conform with `snmachine` version < 2.0
+        number_objs = len(self.object_names)
+        for i, obj in enumerate(self.object_names):
+            # Use +1 because the order starts at 0 in python
+            self.print_progress(i + 1, number_objs)
+
+            self.set_inner_metadata(obj)
+        print(f'Finished getting the metadata for {number_objs} objects.')
+        self.print_time_difference(time_start_reading, time.time())
+
+    def set_inner_metadata(self, obj):
+        """Set the metadata inside the astropy observation data.
+
+        This inner metadata is only used by `snmachine` version < 2.0 but
+        to have backwards compatibility, we keep it.
+
+        Parameters
+        ----------
+        obj : str
+            Name of the object we are working with.
+        """
+        # remove duplicated entry
+        metadata = self.metadata.drop(columns=['object_id'])
+
+        metadata_entry = metadata.loc[obj]
+        columns = metadata_entry.keys()
+        self.data[obj].meta['name'] = obj  # the name is the object id
+        self.data[obj].meta['z'] = None
+        for col in columns:
+            if col == 'sntype':
+                if metadata_entry[col] > 100:  # test set type
+                    true_type = str(100 - metadata_entry[col])
+                    self.data[obj].meta['type'] = true_type
+                else:
+                    self.data[obj].meta['type'] = str(metadata_entry[col])
+            else:
+                self.data[obj].meta[str(col)] = metadata_entry[col]
+        self._set_metadata_z(obj)
+
+    def _set_metadata_z(self, obj):
+        """Set the redshift as spectroscopic or if not available, photometric.
+
+        This is only used by the old code of `snmachine` but to keep backwards
+        compatibility, we keep it.
+
+        Parameters
+        ----------
+        obj : str
+            Name of the object we are working with.
+        """
+        metadata = self.data[obj].meta
+        columns = metadata.keys()
+        for col in columns:
+            if (col == 'redshift_final') and not np.isnan(metadata[col]):
+                self.data[obj].meta['z'] = metadata[col]
+            if re.search('photoz', col) and re.search('err', col) is None:
+                photoz = metadata[col]
+        if self.data[obj].meta['z'] is None:  # if no spec z -> z = photo z
+            self.data[obj].meta['z'] = photoz
+
+    def update_dataset(self, new_objs):
+        """Update the datset so it only contains a subset of objects.
+
+        Parameters
+        ----------
+        new_objs : list-like
+            The id of the objects we want to have in our dataset.
+
+        Raises
+        ------
+        ValueError
+            All the objects in `new_objs` need to already exist in the dataset.
+        """
+        if np.sum(~np.in1d(new_objs, self.object_names)) != 0:
+            raise ValueError('All the objects in `new_objs` need to exist in '
+                             'the original dataset.')
+
+        self.object_names = new_objs
+        self.data = {objects: self.data[objects] for objects in
+                     self.object_names}
+
+        current_objs = self.metadata.object_id.astype(str)
+        is_new_obj = np.in1d(current_objs, new_objs)
+        self.metadata = self.metadata[is_new_obj]
+
+        # Reorder the object names to match the metadata
+        self.object_names = self.metadata['object_id']
+
+    def remove_gaps(self, max_gap_length, verbose=False):
+        """Remove the first gap longer than the given threshold.
+
+        To remove all the gaps longer than `max_gap_length`, this function
+        must be called a few times.
+
+        Parameters
+        ----------
+        max_gap_length: float
+            Maximum duration of the gap to allowed in the light curves.
+        verbose: bool, optional
+            Default False. If True prints the ID of the longest event and its
+            length.
+        """
+        obj_names = self.object_names
+        time_transient = np.zeros(len(obj_names))
+        for i in range(len(obj_names)):
+            obj_data = self.data[obj_names[i]]
+            obs_time = obj_data['mjd']
+
+            if len(obs_time) >= 2:  # at least 2 observations
+                # time gaps between consecutive observations
+                time_diff = obs_time[1:] - obs_time[:-1]
+
+                if np.max(time_diff) > max_gap_length:
+                    index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
+                    time_last_obs_before = obs_time[index_gap]
+                    obs_time_detected = obs_time[obj_data['detected'] == 1]
+
+                    # number of detections before and after the gap
+                    number_detections_before = np.sum(
+                        obs_time_detected <= time_last_obs_before)
+                    number_detections_after = np.sum(
+                        obs_time_detected > time_last_obs_before)
+
+                    # more detections before the gap
+                    if number_detections_before > number_detections_after:
+                        is_obs_transient = obs_time <= time_last_obs_before
+
+                    # more detections after the gap
+                    elif number_detections_before < number_detections_after:
+                        is_obs_transient = obs_time > time_last_obs_before
+
+                    # same number of detections on before and after the gap
+                    else:
+                        number_obs_before = np.sum(
+                            obs_time <= time_last_obs_before)
+                        number_obs_after = np.sum(
+                            obs_time > time_last_obs_before)
+                        # more observation before the gap
+                        if number_obs_before >= number_obs_after:
+                            is_obs_transient = obs_time <= time_last_obs_before
+                        # more observation after the gap
+                        else:
+                            is_obs_transient = obs_time > time_last_obs_before
+                    obs_transient = obj_data[is_obs_transient]
+
+                    # introduce uniformity: all transients start at time 0
+                    obs_transient['mjd'] -= min(obs_transient['mjd'])
+
+                    self.data[obj_names[i]] = obs_transient
+            time_transient[i] = obj_data['mjd'][-1] - obj_data['mjd'][0]
+        if verbose:
+            print(f'The longest event is '
+                  f'{obj_names[np.argmax(time_transient)]} '
+                  f'and its length is {np.max(time_transient):.2f} days.')
+
+
+class SnanaData(EmptyDataset):
+    """Generic class to read in SNANA simulation datasets.
+
+    SNANA stores each class in a different folder. Each folder has several
+    files containing differenct batches of data.
+    This class was prepared for SNANA version TODO
+
+    Parameters
+    ----------
+    folder : str
+        Folder where simulations are located.
+    data_file: str
+        Filename of the pandas dataframe which is has the light curve data.
+    metadata_file: str
+        Filename of the pandas dataframe containing the metadata for the light
+        curves.
+    survey_name : str
+        Specifies the name of the survey; needed for output folder name.
+    pb_wavelengths : dict
+        Mapping between the passband names and their central wavelength. Note
+        that `snmachine` has the default some default maps in
+        `snmachine.sndata.default_pb_wavelengths`.
+    mix : bool, optional
+        Default False. If True, randomly permutes the objects when they are
+        read in.
+
+    Raises
+    ------
+    ValueError
+        At least one model/folder must be provided in `model_list`.
+    """
+    def __init__(self, folder, data_file, metadata_file, survey_name,
+                 pb_wavelengths, mix=False):
+        filter_set = list(pb_wavelengths.keys())
+        print(f'The passbands are {filter_set}')
+        super().__init__(folder, survey_name=survey_name,
+                         filter_set=filter_set)
+
+        self.set_data(folder, data_file)
+        self.set_metadata(folder, metadata_file)
+        if mix is True:
+            self.mix()
+        # Set the central wavelength of each passband
+        self.pb_wavelengths = pb_wavelengths
+
+    @staticmethod
+    def _clean_obj_data(obj_data):
+        """Make the event data consistent with snmachine.
+
+        Parameters
+        ----------
+        obj_data :  astropy.table.table
+            Observations of the event.
+
+        Returns
+        -------
+        obj_data :  astropy.table.table
+            Observations of the event.
+        obj_name : str
+            Name of the event.
+        """
+        # snmachine and SNANA use a different denomination
+        obj_data.rename_columns(names=['FLUXCAL', 'FLUXCALERR', 'MJD'],
+                                new_names=['flux', 'flux_error', 'mjd'])
+        # Rename `filter` values as per `snmachine` convention
+        obj_pb = list(obj_data['BAND'])
+        obj_pb = ['lsst' + x.lower().strip() for x in obj_pb]
+        obj_data['filter'] = obj_pb
+
+        # Set detected flag in the observations; corresponds to SNANA flag 13
+        is_detected = [('{0:020b}'.format(i))[-13]
+                       for i in obj_data['PHOTFLAG']]
+        is_detected = np.array(is_detected, dtype=int)
+        obj_data['detected'] = np.array(is_detected, dtype=bool)
+
+        # Add the object name to the light curve observations
+        obj_name = obj_data.meta['SNID'].astype(str)
+        obj_data['object_id'] = obj_name
+        return obj_data, obj_name
+
+    def set_data(self, folder, data_file):
+        """Reads in simulated data and saves it.
+
+        The data is saved into the `data` method from EmptyDataset.
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located.
+        data_file : str
+            .pckl file of light curves saved as a list of astropy Tables.
+        """
+        print('Reading data...')
+        time_start_reading = time.time()
+
+        # Read in all the events data
+        path_data = folder + '/' + data_file
+        with open(path_data, 'rb') as input:
+            data = pickle.load(input)  # list of astropy tables
+
+        # Abstract column names from dataset
+        self.mjd_col = 'mjd'
+        self.id_col = 'object_id'
+
+        number_invalid_objs = 0  # Some objects may have empty data
+        number_objs = len(data)
+        obj_names = []
+        # Load each event to the data class
+        for i in np.arange(number_objs):
+            # Use +1 because the order starts at 0 in python
+            self.print_progress(i + 1, number_objs)
+
+            obj_data = data[i]
+            if len(obj_data[self.mjd_col.upper()] > 0):  # MJD not modified yet
+                obj_data, obj_name = self._clean_obj_data(obj_data)
+                obj_names.append(obj_name)
+                self.data[obj_name] = obj_data
+            else:
+                number_invalid_objs += 1
+
+        if number_invalid_objs > 0:
+            print('{} objects were invalid and not added to the dataset.'
+                  ''.format(number_invalid_objs))
+        self.object_names = obj_names
+        print('{} objects read into memory.'.format(len(self.data)))
+        self.print_time_difference(time_start_reading, time.time())
+
+    def set_metadata(self, folder, meta_file):
+        """Reads in simulated metadata and saves it.
+
+        The metadata is saved into the `metadata` method from EmptyDataset. It
+        is saved as a pandas DataFrame.
+
+        Parameters
+        ----------
+        folder : str
+            Folder where simulations are located.
+        meta_file : str
+            .pckl file of the objects metadata saved as astropy Table.
+        """
+        print('Reading metadata...')
+        time_start_reading = time.time()
+        # Load the metadata and trnsform it into pandas DataFrame
+        with open(folder + '/' + meta_file, 'rb') as input:
+            metadata = pickle.load(input)
+        metadata_pd = metadata.to_pandas()
+
+        # Set all column names to lower case for consistency
+        metadata_pd.rename(columns=str.lower, inplace=True)
+
+        # Add `object_id` column because it is useful to call it
+        col_object_id = list(metadata['SNID'])
+        col_object_id = [x.strip() for x in col_object_id]
+        metadata_pd['object_id'] = col_object_id
+
+        # Set the object ids as the metadata index
+        metadata_pd.set_index(keys='object_id', drop=False, inplace=True)
+
+        # Rename `sntype` as target as per `snmachine` convention
+        metadata_pd.rename({'sntype': 'target'}, axis='columns', inplace=True)
+        # If `target` > 100, it is the test set and to obtain the true value,
+        # we must subtract 100 to the target value.
+        is_larger_100 = metadata_pd['target'] > 100
+        metadata_pd.loc[is_larger_100, 'target'] -= 100
+
+        # Save in the data instance
+        self.metadata = metadata_pd
+
+        self.print_time_difference(time_start_reading, time.time())
+
+    def update_dataset(self, new_objs):
+        """Update the datset so it only contains a subset of objects.
+
+        Parameters
+        ----------
+        new_objs : list-like
+            The id of the objects we want to have in our dataset.
+
+        Raises
+        ------
+        ValueError
+            All the objects in `new_objs` need to already exist in the dataset.
+        """
+        if np.sum(~np.in1d(new_objs, self.object_names)) != 0:
+            raise ValueError('All the objects in `new_objs` need to exist in '
+                             'the original dataset.')
+
+        self.object_names = new_objs
+        self.data = {objects: self.data[objects] for objects in
+                     self.object_names}
+
+        current_objs = self.metadata.object_id.astype(str)
+        is_new_obj = np.in1d(current_objs, new_objs)
+        self.metadata = self.metadata[is_new_obj]
+
+        # Reorder the object names to match the metadata
+        self.object_names = self.metadata['object_id']
+
+    def remove_gaps(self, max_gap_length, verbose=False):
+        """Remove the first gap longer than the given threshold.
+
+        To remove all the gaps longer than `max_gap_length`, this function
+        must be called a few times.
+
+        Parameters
+        ----------
+        max_gap_length: float
+            Maximum duration of the gap to allowed in the light curves.
+        verbose: bool, optional
+            Default False. If True prints the ID of the longest event and its
+            length.
+        """
+        obj_names = self.object_names
+        time_transient = np.zeros(len(obj_names))
+        for i in range(len(obj_names)):
+            obj_data = self.data[obj_names[i]]
+            obs_time = obj_data['mjd']
+
+            if len(obs_time) >= 2:  # at least 2 observations
+                # time gaps between consecutive observations
+                time_diff = obs_time[1:] - obs_time[:-1]
+
+                if np.max(time_diff) > max_gap_length:
+                    index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
+                    time_last_obs_before = obs_time[index_gap]
+                    obs_time_detected = obs_time[obj_data['detected'] == 1]
+
+                    # number of detections before and after the gap
+                    number_detections_before = np.sum(
+                        obs_time_detected <= time_last_obs_before)
+                    number_detections_after = np.sum(
+                        obs_time_detected > time_last_obs_before)
+
+                    # more detections before the gap
+                    if number_detections_before > number_detections_after:
+                        is_obs_transient = obs_time <= time_last_obs_before
+
+                    # more detections after the gap
+                    elif number_detections_before < number_detections_after:
+                        is_obs_transient = obs_time > time_last_obs_before
+
+                    # same number of detections on before and after the gap
+                    else:
+                        number_obs_before = np.sum(
+                            obs_time <= time_last_obs_before)
+                        number_obs_after = np.sum(
+                            obs_time > time_last_obs_before)
+                        # more observation before the gap
+                        if number_obs_before >= number_obs_after:
+                            is_obs_transient = obs_time <= time_last_obs_before
+                        # more observation after the gap
+                        else:
+                            is_obs_transient = obs_time > time_last_obs_before
+                    obs_transient = obj_data[is_obs_transient]
+
+                    obj_data = obs_transient
+            # introduce uniformity: all transients start at time 0
+            obj_data['mjd'] -= min(obj_data['mjd'])
+
+            self.data[obj_names[i]] = obj_data
+
+            time_transient[i] = (obj_data['mjd'][-1] - 
+                                 obj_data['mjd'][0])
+        if verbose:
+            print(f'The longest event is '
+                  f'{obj_names[np.argmax(time_transient)]} '
+                  f'and its length is {np.max(time_transient):.2f} days.')
+
+    def select_transients(self, max_distance, verbose=False):
+        """Select observations within a maximum distance from the detections.
+
+        Select all observations between the detections or within `max_distance`
+        days before the first detection or after the last.
+
+        Parameters
+        ----------
+        max_gap_length: float
+            Maximum distance from the first or last detection that any
+            observation in the edges of the light curve can have.
+        verbose: bool, optional
+            Default False. If True prints the ID of the longest event and its
+            length.
+        """
+        obj_names = self.object_names
+        time_transient = np.zeros(len(obj_names))
+        i = 0
+        for obj in obj_names:
+            obs = self.data[obj]
+            obs_time = obs['mjd']
+            obs_detected_time = obs_time[obs['detected'] == 1]
+            if len(obs_detected_time) >= 2:  # at least 2 detections
+                is_obs_transient = (
+                    (obs_time > obs_detected_time[0] - max_distance) & 
+                    (obs_time < obs_detected_time[-1] + max_distance))
+                obs_transient = obs[is_obs_transient]
+            else:  # 1 or 0 detections; will be cut out in other funtion
+                obs_transient = obs
+
+            # Introduce uniformity: all transients start at time 0
+            obs_transient['mjd'] -= min(obs_transient['mjd'])
+
+            # Update the transient data
+            self.data[obj] = obs_transient
+
+            time_transient[i] = (np.max(obs_transient['mjd']) - 
+                                 np.min(obs_transient['mjd']))
+            i += 1
+        if verbose:
+            print(f'The longest event is '
+                  f'{obj_names[np.argmax(time_transient)]} '
+                  f'and its length is {np.max(time_transient):.2f} days.')
+
+    def select_window(self, window, verbose=False):
+        """Select the rolling part of the cadence.
+
+        For each event, select the observations withing the time window
+        provided.
+
+        In the rolling analysis, we generated the events between days 60220
+        and 61325. Since the rolling cadence starts in year 1.5, we cut all
+        the light curves to be after 60220+548=60768 days.
+
+        Parameters
+        ----------
+        window: list
+            Minimum mjd and maximum mjd the events can have.
+        verbose: bool, optional
+            Default False. If True prints the ID of the longest event and its
+            length.
+        """
+        time_start = time.time()
+        time_min = window[0]
+        time_max = window[1]
+
+        obj_names = self.object_names
+        time_obj = np.zeros(len(obj_names))
+        for i in range(len(obj_names)):
+            obj_data = self.data[obj_names[i]]
+            obs_time = obj_data['mjd']
+
+            # Select the rolling part of the light curves
+            if time_min is not None:
+                is_window = obs_time > time_min
+                if time_max is not None:
+                    is_window = is_window & (obs_time < time_max)
+            elif time_max is not None:
+                is_window = obs_time < time_max
+            else:
+                raise ValueError('It should have at least one restriction')
+            obj_data_window = obj_data[is_window]
+
+            # Update dataset
+            self.data[obj_names[i]] = obj_data_window
+
+            time_obj[i] = (obj_data_window['mjd'][-1] - 
+                           obj_data_window['mjd'][0])
+        if verbose:
+            print(f'The longest event is '
+                  f'{obj_names[np.argmax(time_obj)]} '
+                  f'and its length is {np.max(time_obj):.2f} days.')
+        self.print_time_difference(time_start, time.time())
 
 
 class SNANA_Data(EmptyDataset):
@@ -2196,7 +3120,7 @@ class SNANA_Data(EmptyDataset):
                 ind = f.index('HEAD')
                 fl_prefix = f[:ind]
                 print('Reading data from the', fl_prefix, 'files')
-                phot_file = fl_prefix+'PHOT'+f[ind+4:]
+                phot_file = fl_prefix + 'PHOT' + f[ind + 4:]
                 try:
                     sne = sncosmo.read_snana_fits(f, phot_file)
                 except FileNotFoundError:
@@ -2238,7 +3162,7 @@ class SNANA_Data(EmptyDataset):
         # We shift the times of the observations to all start at zero. If
         # required, the mjd of the initial observation is stored in the
         # metadata.
-        mjd = mjd-start_mjd
+        mjd = mjd - start_mjd
         # Note: obviously this will only zero the observations in one filter
         # passband, the others have to be zeroed if fitting functions.
 
@@ -2252,8 +3176,8 @@ class SNANA_Data(EmptyDataset):
         # simulated heliocentric redshift is used
         z = -9
         z_err = -9
-        exists_z = (lc.meta['REDSHIFT_HELIO'] != -9
-                    and lc.meta['REDSHIFT_HELIO_ERR'] != -9)
+        exists_z = (lc.meta['REDSHIFT_HELIO'] != -9 and 
+                    lc.meta['REDSHIFT_HELIO_ERR'] != -9)
         if exists_z:
             z = lc.meta['REDSHIFT_HELIO']
             z_err = lc.meta['REDSHIFT_HELIO_ERR']
@@ -2265,8 +3189,8 @@ class SNANA_Data(EmptyDataset):
         snid = lc.meta['SNID'].decode()
 
         # Zeropoint
-        zp = np.array([27.5]*len(mjd))
-        zpsys = ['ab']*len(mjd)
+        zp = np.array([27.5] * len(mjd))
+        zpsys = ['ab'] * len(mjd)
 
         # form astropy table
         tab = Table([mjd, flt, flux, fluxerr, zp, zpsys],
@@ -2276,3 +3200,260 @@ class SNANA_Data(EmptyDataset):
                           'initial_observation_time': start_mjd,
                           'peak flux': peak_flux})
         return tab
+
+
+class PreprocessData:
+    """Class to preprocess data files before reading into `snmachine`.
+
+    Data files from different sources/at different times require a different
+    preprocessing. This is an class to deal with it. Since this process is
+    very data-specific, each child class has different inputs.
+    """
+    def preprocess_data(self):
+        """Preproces the data to be `snmachine` compatible.
+        """
+        raise NotImplementedError('This method must be implemented in child '
+                                  'classes.')
+
+    @staticmethod
+    def flatten_list(list_list):
+        """Flatten a list of lists.
+
+        Parameters
+        ----------
+        list_list : list
+            List with inner lists.
+
+        Returns
+        -------
+        list
+            List without inner lists.
+        """
+        return [item for sublist in list_list for item in sublist]
+
+    @staticmethod
+    def print_time_difference(initial_time, final_time):
+        """Print the a time interval.
+
+        Parameters
+        ----------
+        initial_time : float
+            Time at which the time interval starts.
+        final_time : float
+            Time at which the time interval ends.
+        """
+        EmptyDataset.print_time_difference(initial_time, final_time)
+
+    @staticmethod
+    def _read_objs_data(metadata, path_head_file):
+        """Read the data associated to the metadata using sncosmo.
+
+        Parameters
+        ----------
+        metadata : astropy.table.table
+            Metadata of the events that will be selected in this function.
+        path_head_file : str
+            Path or name of the HEAD `.FITS` file from `SNANA` containing the
+            data of the events.
+
+        Returns
+        -------
+        data_objs : list of astropy.table.table
+            Data of the events associated with the metadata file.
+        """
+        # Obtain the path to where the data is stored
+        path_phot_file = path_head_file.replace('HEAD', 'PHOT')
+
+        # Select which events to obtain data
+        objs = np.array(metadata['SNID'])
+        objs = [x.rstrip() for x in objs]  # remove trailing spaces
+        data_objs = sncosmo.read_snana_fits(
+            head_file=path_head_file, phot_file=path_phot_file, snids=objs)
+        return data_objs
+
+    @staticmethod
+    def _initialise_dict(number_train_files, number_test_files):
+        """Initialise dictionaries to store the train and test events.
+
+        Parameters
+        ----------
+        number_train_files : int
+            Number of files in which to divide the train data.
+        number_test_files : int
+            Number of files in which to divide the test data.
+
+        Returns
+        -------
+        file_id_train : dict
+            Initialised dictionary with numbers between 0 and
+            `number_train_files` as keys, and empty lists as values. The
+            metadata of the events will be saved as `metadata_i`, where `i` is
+            the number correspondent to the dictionary key where the light
+            curves will be saved.
+        file_id_test : dict
+            Initialised dictionary with numbers between 0 and
+            `number_test_files` as keys, and empty lists as values. The
+            metadata of the events will be saved as `metadata_i`, where `i` is
+            the number correspondent to the dictionary key where the light
+            curves will be saved.
+        """
+        file_id_train = {}
+        file_id_test = {}
+        for i in np.arange(number_train_files):
+            file_id_train[i] = []
+            file_id_train[f'meta_{i}'] = []
+        for i in np.arange(number_test_files):
+            file_id_test[i] = []
+            file_id_test[f'meta_{i}'] = []
+        return file_id_train, file_id_test
+
+
+class PreprocessSnana(PreprocessData):
+    """Class to preprocess SNANA data files before reading into `snmachine`.
+
+    Parameters
+    ----------
+    data_folders : list of str
+        List of paths to the folders that contain all the `.FITS` files to
+        preprocess.
+    """
+    def __init__(self, data_folders):
+        self.data_folders = data_folders
+
+    def preprocess_data(self, number_train_test_files, path_to_save='.',
+                        extra_name_to_save=''):
+        """Preproces the data to be `snmachine` compatible.
+
+        Parameters
+        ----------
+        number_train_test_files : list
+            Number of files in which to divide the train and test data,
+            respectively first and second entries.
+        path_to_save : str, optional
+            Path to save the `.pckl` files containing the preprocessed data. By
+            default, it is save the the current directory.
+        extra_name_to_save : str, optional
+            Additional name for the file to be saved (`train`/`test` and
+            `metadata` are always included). By default, no name is added.
+            However, it is recommended to add names such as `DDF`/`WFD`.
+
+        Raises
+        ------
+        ValueError
+            To generate more than 1000 files for either train or test set,
+            generate a new `PreprocessData` data class or modify the one
+            currently in use.
+        """
+        time_start = time.time()
+        data_folders = self.data_folders
+
+        number_train_files = number_train_test_files[0]
+        number_test_files = number_train_test_files[1]
+        if (number_train_files > 1000) or (number_test_files > 1000):
+            raise ValueError('To generate more than 1000 files for either '
+                             'train or test set, generate a new '
+                             '`PreprocessData` data class or modify the'
+                             'one currently in use.')
+        # Initialize the dictionaries where to save the data
+        file_id_train, file_id_test = self._initialise_dict(number_train_files,
+                                                            number_test_files)
+
+        # Divide up the data and save it to the dictionaries
+        for folder in data_folders:
+            files = os.listdir(folder)  # all files in that directory
+            i = 0
+            for file in files:
+                if 'HEAD' in file:
+                    path_head_file = os.path.join(folder, file)
+                    data_head = Table.read(path_head_file, format='fits')
+
+                    # Separate train and test metadata
+                    is_train = data_head['SNTYPE'] < 100
+                    metadata_train = data_head[is_train]
+                    metadata_test = data_head[~is_train]
+
+                    # Load the data into memory
+                    # Note that using sncosmo to read the training and test set
+                    # separately leads to memory issues because in each call,
+                    # the entire data in loaded. Hence we these two types of
+                    # events will be separated afterwards
+                    path_phot_file = path_head_file.replace('HEAD', 'PHOT')
+                    data_objs = sncosmo.read_snana_fits(
+                        head_file=path_head_file, phot_file=path_phot_file)
+
+                    # Separate train and test data
+                    data_train = []
+                    data_test = []
+                    for j in np.arange(len(is_train)):
+                        # the data and metadata store the events in the same
+                        # order so we can make use of that information and
+                        # simply check if event j belongs to the train set
+                        if is_train[j]:
+                            data_train.append(data_objs[j])
+                        else:
+                            data_test.append(data_objs[j])
+
+                    # Save to the appropriate dictionary
+                    index_save_train = (i % number_train_files)
+                    file_id_train[index_save_train].append(data_train)
+                    file_id_train[f'meta_{index_save_train}'].append(
+                        metadata_train)
+                    index_save_test = (i % number_test_files)
+                    file_id_test[index_save_test].append(data_test)
+                    file_id_test[f'meta_{index_save_test}'].append(
+                        metadata_test)
+                    i += 1
+
+        # Save the astropy tables into `.pckl` files
+        if extra_name_to_save != '':
+            name_to_save_train = f'file_train_{extra_name_to_save}'
+            name_to_save_test = f'file_test_{extra_name_to_save}'
+        else:
+            name_to_save_train = 'file_train'
+            name_to_save_test = 'file_test'
+        self._save_obj_data(number_files=number_train_files,
+                            file_id=file_id_train,
+                            name_to_save=name_to_save_train,
+                            path_to_save=path_to_save)  # train data
+        self._save_obj_data(number_files=number_test_files,
+                            file_id=file_id_test,
+                            name_to_save=name_to_save_test,
+                            path_to_save=path_to_save)  # test data
+        self.print_time_difference(time_start, time.time())
+
+    def _save_obj_data(self, number_files, file_id, name_to_save,
+                       path_to_save):
+        """Save the events light curve and their metadata as pickle files.
+
+        Parameters
+        ----------
+        number_files : int
+            Number of files in which to divide the data.
+        file_id : dict
+            Dictionary with numbers between 0 and `number_files` as keys, and
+            lists of light curves as values. The metadata of the events is
+            saved as `metadata_i`, where `i` is the number correspondent to the
+            dictionary key where the light curves are saved.
+        name_to_save : str
+            Name format to save the pickle `.pckl` files.
+        path_to_save : str
+            Path to save the `.pckl` files containing the preprocessed data.
+        """
+        for i in np.arange(number_files):
+            obj_data_s = file_id[i]
+            obj_data_s = self.flatten_list(obj_data_s)  # flatten the list
+            obj_metadata_s = file_id[f'meta_{i}']
+            obj_metadata_s = vstack(obj_metadata_s)  # stack metadata
+
+            # Name the files where the data will be saved
+            data_file_name = f'{name_to_save}_{i:03}.pckl'
+            metadata_file_name = f'{name_to_save}_metadata_{i:03}.pckl'
+
+            # Save the data in pickle files
+            path_to_save_data = os.path.join(path_to_save, data_file_name)
+            with open(path_to_save_data, 'wb') as path:
+                pickle.dump(obj_data_s, path)
+
+            path_to_save_meta = os.path.join(path_to_save, metadata_file_name)
+            with open(path_to_save_meta, 'wb') as path:
+                pickle.dump(obj_metadata_s, path)

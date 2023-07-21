@@ -63,12 +63,12 @@ class NewlingModel:
         y1, y2 = y
         k1, k2 = d
 
-        a = k1*(x2-x1)-(y2-y1)
-        b = -k2*(x2-x1)+(y2-y1)
+        a = k1 * (x2 - x1) - (y2 - y1)
+        b = -k2 * (x2 - x1) + (y2 - y1)
 
-        t = (x_eval-x1)/(x2-x1)
+        t = (x_eval - x1) / (x2 - x1)
 
-        return (1-t)*y1+t*y2+t*(1-t)*(a*(1-t)+b*t)
+        return (1 - t) * y1 + t * y2 + t * (1 - t) * (a * (1 - t) + b * t)
 
     def evaluate(self, t, params):
         """Evaluate the function at given values of t.
@@ -91,10 +91,10 @@ class NewlingModel:
         s = np.exp(logsigma)
         psi = np.exp(logpsi)
         Ft = np.zeros(len(t))
-        delta = (t-phi)/s
+        delta = (t - phi) / s
         delta = delta[t > phi]
 
-        tau = k*s+phi  # peak
+        tau = k * s + phi  # peak
 
         # Calculate big psi
         Psi = np.zeros(len(t))
@@ -104,8 +104,8 @@ class NewlingModel:
         Psi[t < phi] = 0
         Psi[(t >= phi) & (t <= tau)] = y_int
         Psi[t > tau] = psi
-        Ft[t > phi] = (A * (delta**k) * np.exp(-delta) * (k**(-k)) * np.exp(k)
-                       + Psi[t > phi])
+        prefactor = A * (delta**k) * np.exp(-delta) * (k**(-k))
+        Ft[t > phi] = (prefactor * np.exp(k) + Psi[t > phi])
         return Ft
 
 
@@ -165,5 +165,6 @@ class KarpenkaModel:
         logA, logB, t0, t1, T_rise, T_fall = params
         A = np.exp(logA)
         B = np.exp(logB)
-        return (A*(1+B*(t-t1)*(t-t1))*np.exp(-(t-t0)/T_fall)
-                / (1+np.exp(-(t-t0)/T_rise)))
+        prefactor = A * (1 + B * (t - t1) * (t - t1))
+        return (prefactor * np.exp(-(t - t0) / T_fall) / 
+                (1 + np.exp(-(t - t0) / T_rise)))

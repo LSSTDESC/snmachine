@@ -150,8 +150,8 @@ def compute_roc_values(probs, y_test, which_column):
 
     # Calculate the true/false positive rates
     tpr = np.zeros(len(tp))  # true positive rate
-    tpr[tp != 0] = tp[tp != 0]/(tp[tp != 0] + fn[tp != 0])
-    fpr = fp/(fp+tn)  # false positive rate
+    tpr[tp != 0] = tp[tp != 0] / (tp[tp != 0] + fn[tp != 0])
+    fpr = fp / (fp + tn)  # false positive rate
     fpr = np.array(fpr)[::-1]
     tpr = np.array(tpr)[::-1]
 
@@ -161,7 +161,7 @@ def compute_roc_values(probs, y_test, which_column):
     return fpr, tpr, auc
 
 
-def compute_f1(probs,  y_test, which_column, full_output=False):
+def compute_f1(probs, y_test, which_column, full_output=False):
     """Compute the best F1 score.
 
     Computes the F1 score for many probability threshold increments
@@ -217,7 +217,8 @@ def compute_f1(probs,  y_test, which_column, full_output=False):
 
     # Compute F1
     f1 = np.zeros(len(tp))
-    f1[tp != 0] = 2*tp[tp != 0]/(2 * tp[tp != 0] + fn[tp != 0] + fp[tp != 0])
+    f1[tp != 0] = 2 * tp[tp != 0] / (2 * tp[tp != 0] + fn[tp != 0] + 
+                                     fp[tp != 0])
 
     if full_output:
         return f1, threshold
@@ -228,7 +229,7 @@ def compute_f1(probs,  y_test, which_column, full_output=False):
         return best_f1, best_threshold
 
 
-def compute_fom(probs,  y_test, which_column, full_output=False):
+def compute_fom(probs, y_test, which_column, full_output=False):
     """Compute a Kessler figure of merit.
 
     Computes a Kessler figure of merit (FoM) for many probability threshold
@@ -289,9 +290,9 @@ def compute_fom(probs,  y_test, which_column, full_output=False):
 
     # Compute FoM
     fom = np.zeros(len(tp))
-    fom[tp != 0] = (tp[tp != 0]**2
-                    / (tp[tp != 0] + fn[tp != 0])
-                    / (tp[tp != 0] + weight * fp[tp != 0]))
+    fom[tp != 0] = (tp[tp != 0]**2 / 
+                    (tp[tp != 0] + fn[tp != 0]) / 
+                    (tp[tp != 0] + weight * fp[tp != 0]))
 
     if full_output:
         return fom, threshold
@@ -545,7 +546,7 @@ def run_several_classifiers(classifier_list, features, labels,
         cms[classifier_name] = cm
 
     print('Time taken to extract features: {:.2f}s.'
-          ''.format(time.time()-initial_time))
+          ''.format(time.time() - initial_time))
     return classifier_instances, cms
 
 
@@ -720,7 +721,7 @@ class BaseClassifier():
             Path to the folder where the classifier will be saved.
         """
         classifier_name = self.classifier_name
-        path_to_save = os.path.join(output_path, classifier_name+'.pck')
+        path_to_save = os.path.join(output_path, classifier_name + '.pck')
         with open(path_to_save, 'wb') as clf_path:
             pickle.dump(self, clf_path)
         print(f'Classifier saved in {path_to_save} .')
