@@ -43,8 +43,6 @@ setup(
                 'classification',
     url='https://github.com/LSSTDESC/snmachine',
     license='BSD-3-Clause License',
-    description='Machine learning code for photometric supernova '
-                'classification',
     use_scm_version={
         "root": ".",
         "relative_to": __file__,
