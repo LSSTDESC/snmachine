@@ -135,6 +135,9 @@ examples/jobs/prev
 snmachine/example_data/output_*
 snmachine/example_data/example_dataset*
 snmachine/example_data/example_test_dataset_gapless*
+snmachine/example_data/example_test_dataset/*
+snmachine/example_data/aug_plasticc*
+snmachine/example_data/test_dataset_gps.pckl
 
 .DS_Store
 
