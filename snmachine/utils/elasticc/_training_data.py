@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Dict, List, Mapping, Tuple, Set, Union
 from pathlib import Path
+from typing import Dict, List, Mapping, Set, Tuple, Union
 
-from tqdm import tqdm
 from astropy.table import Table
 from pandas import DataFrame, Series, concat
+from tqdm import tqdm
 
 from snmachine.sndata import default_pb_wavelengths
 
