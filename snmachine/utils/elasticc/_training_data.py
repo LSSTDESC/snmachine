@@ -9,8 +9,8 @@ from pandas import DataFrame, Series, concat
 
 from snmachine.sndata import default_pb_wavelengths
 
-fname_tmpl = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
-bands_key: Dict[bytes, str] = {
+FNAME_TMPL = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
+BANDS_KEY: Dict[bytes, str] = {
     bytes(f"{band} ", encoding="utf-8"): f"lsst{band.lower()}"
     for band in ["u", "g", "r", "i", "z", "Y", "-"]
 }
@@ -33,10 +33,10 @@ TableDict = Dict[str, Table]
 
 
 class ElasticcTrainingData:
-    survey_name = "lsst"
-    pb_wavelengths: Mapping = default_pb_wavelengths[survey_name]
-    filter_set = tuple(pb_wavelengths)
-    from ._training_metadata import src_class_taxonomy, all_src_classes, all_data_cols
+    SURVEY_NAME = "lsst"
+    PB_WAVELENGTHS: Mapping = default_pb_wavelengths[SURVEY_NAME]
+    FILTER_SET = tuple(PB_WAVELENGTHS)
+    from ._training_metadata import ALL_DATA_COLS, ALL_SRC_CLASSES, SRC_CLASS_TAXONOMY
 
     def __init__(
         self,
@@ -53,14 +53,14 @@ class ElasticcTrainingData:
 
         use_all = isinstance(src_classes, str) and src_classes.lower() == "all"
         self.src_classes: Set[str] = (
-            self.all_src_classes if use_all else self._parse_src_classes(src_classes)
+            self.ALL_SRC_CLASSES if use_all else self._parse_src_classes(src_classes)
         )
 
         data_cols: Set[str] = self._parse_add_cols_spec(add_data_cols)
-        assert set(data_cols_key.keys()).issubset(self.all_data_cols)
+        assert set(data_cols_key.keys()).issubset(self.ALL_DATA_COLS)
         bad_cols: Set[str] = (
             data_cols
-            - self.all_data_cols
+            - self.ALL_DATA_COLS
             - set(data_cols_key.values())
             - base_data_cols
             - derived_data_cols
@@ -68,10 +68,10 @@ class ElasticcTrainingData:
         if bad_cols:
             raise ValueError(
                 f"Invalid data column labels:\n{bad_cols}\nLabels must be taken from:\n"
-                f"{set(data_cols_key.values())}\nand/or\n{self.all_data_cols}"
+                f"{set(data_cols_key.values())}\nand/or\n{self.ALL_DATA_COLS}"
             )
         self.dropped_data_cols: Set[str] = (
-            self.all_data_cols - set(data_cols_key.keys()) - data_cols
+            self.ALL_DATA_COLS - set(data_cols_key.keys()) - data_cols
         )
         self.dropped_metadata_cols = {"NOBS", "PTROBS_MIN", "PTROBS_MAX"}
 
@@ -94,7 +94,7 @@ class ElasticcTrainingData:
         self.metadata = concat(heads)
 
     def _load_class(self, src_class: str, heads: DFList) -> None:
-        src_class_dir: Path = self.root_dir / f"{fname_tmpl[0]}_{src_class}"
+        src_class_dir: Path = self.root_dir / f"{FNAME_TMPL[0]}_{src_class}"
         if not src_class_dir.is_dir():
             raise FileNotFoundError(
                 f"Specified src_class_dir does not exist:\n{src_class_dir}"
@@ -111,9 +111,9 @@ class ElasticcTrainingData:
             self.excluded_srcs[src_class] = excl_srcs
 
     def _load_core(self, icore: int, src_class_dir: Path) -> DFTuple:
-        fname_core_tmpl: str = f"{fname_tmpl[0]}_{fname_tmpl[1]}{icore:02d}"
+        fname_core_tmpl: str = f"{FNAME_TMPL[0]}_{FNAME_TMPL[1]}{icore:02d}"
         core_fpaths: Dict[str, Path] = {
-            key: src_class_dir / f"{fname_core_tmpl}_{key.upper()}.{fname_tmpl[2]}"
+            key: src_class_dir / f"{fname_core_tmpl}_{key.upper()}.{FNAME_TMPL[2]}"
             for key in ["head", "phot"]
         }
         assert all([core_fpath.is_file() for core_fpath in core_fpaths.values()])
@@ -130,7 +130,7 @@ class ElasticcTrainingData:
         head.set_index("SNID", inplace=True)
 
         phot.rename(columns=data_cols_key, inplace=True)
-        bands: List[str] = [bands_key[band] for band in phot.pop("filter")]
+        bands: List[str] = [BANDS_KEY[band] for band in phot.pop("filter")]
         detecteds: Series = (phot.pop("detected") > 0).astype(int)
         phot.insert(loc=1, column="filter", value=bands)
         phot.insert(loc=2, column="detected", value=detecteds)
@@ -199,32 +199,32 @@ class ElasticcTrainingData:
         if not isinstance(spec, set):
             spec = {spec} if isinstance(spec, str) else {*spec}
 
-        src_classes: Set[str] = spec & self.all_src_classes
-        for spec_str in spec - self.all_src_classes:
+        src_classes: Set[str] = spec & self.ALL_SRC_CLASSES
+        for spec_str in spec - self.ALL_SRC_CLASSES:
             src_classes |= self._resolve_spec_str(spec_str.lower())
         return src_classes
 
     # TODO: Make these checks case insensitive.
     def _resolve_spec_str(self, spec_str: str) -> set[str]:
-        if spec_str in self.src_class_taxonomy.keys():
-            supset_dict = self.src_class_taxonomy[spec_str]
+        if spec_str in self.SRC_CLASS_TAXONOMY.keys():
+            supset_dict = self.SRC_CLASS_TAXONOMY[spec_str]
             src_classes = set()
             for supset in supset_dict.values():
                 src_classes |= supset
             return src_classes
-        for supset_dict in self.src_class_taxonomy.values():
+        for supset_dict in self.SRC_CLASS_TAXONOMY.values():
             if spec_str in supset_dict.keys():
                 return supset_dict[spec_str]
         else:
             supset_keys = []
-            loop_keys = sorted(self.src_class_taxonomy.keys())
+            loop_keys = sorted(self.SRC_CLASS_TAXONOMY.keys())
             for key in loop_keys:
-                supset_keys += sorted(self.src_class_taxonomy[key].keys())
+                supset_keys += sorted(self.SRC_CLASS_TAXONOMY[key].keys())
             raise ValueError(
                 f"Invalid spec_str: '{spec_str}'. Value must be (equivalent to) 'all' or in:\n"
                 f"{loop_keys}\n"
                 f"or\n{supset_keys}\n"
-                f"or\n{sorted(self.all_src_classes)}"
+                f"or\n{sorted(self.ALL_SRC_CLASSES)}"
             )
 
     def _parse_add_cols_spec(self, add_cols: StrSpec) -> Set[str]:
@@ -233,7 +233,7 @@ class ElasticcTrainingData:
             if add_cols == "none":
                 return base_data_cols
             elif add_cols == "all":
-                return self.all_data_cols
+                return self.ALL_DATA_COLS
             else:
                 return base_data_cols & {add_cols}
         if not isinstance(add_cols, set):

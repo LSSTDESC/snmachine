@@ -3,7 +3,7 @@ from typing import Dict, Set
 
 SetDict = Dict[str, Set[str]]
 
-src_class_taxonomy: Dict[str, SetDict] = {
+SRC_CLASS_TAXONOMY: Dict[str, SetDict] = {
     "Non-Recurring": {
         "SN-like": {
             "SNIa-91bg",
@@ -37,12 +37,12 @@ src_class_taxonomy: Dict[str, SetDict] = {
         "Non-Periodic": {"CLAGN"},
     },
 }
-all_src_classes = set()
-for supset_dict in src_class_taxonomy.values():
+ALL_SRC_CLASSES = set()
+for supset_dict in SRC_CLASS_TAXONOMY.values():
     for src_class_supset in supset_dict.values():
-        all_src_classes |= src_class_supset
+        ALL_SRC_CLASSES |= src_class_supset
 
-all_data_cols = {
+ALL_DATA_COLS = {
     "MJD",
     "BAND",
     "PHOTFLAG",
