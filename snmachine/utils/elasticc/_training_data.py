@@ -14,12 +14,22 @@ BANDS_KEY: Dict[bytes, str] = {
     bytes(f"{band} ", encoding="utf-8"): f"lsst{band.lower()}"
     for band in ["u", "g", "r", "i", "z", "Y", "-"]
 }
+# NOTE: This dictionary should be higher up in the snmachine somewhere.
+SNCOSMO_COLS: Dict[str, str] = {
+    "time": "mjd",
+    "band": "filter",
+    "flux": "flux",
+    "fluxerr": "flux_error",
+    "zp": "zp",
+    # "zpsys": "zpsys",
+    # "fluxcov": "covar",
+}
 data_cols_key: Dict[str, str] = {
-    "MJD": "mjd",
-    "BAND": "filter",
+    "MJD": SNCOSMO_COLS["time"],
+    "BAND": SNCOSMO_COLS["band"],
+    "FLUXCAL": SNCOSMO_COLS["flux"],
+    "FLUXCALERR": SNCOSMO_COLS["fluxerr"],
     "PHOTFLAG": "detected",
-    "FLUXCAL": "flux",
-    "FLUXCALERR": "flux_error",
 }
 base_data_cols: Set[str] = set(data_cols_key.values())
 derived_data_cols: Set[str] = {"days_after_first_detection"}
