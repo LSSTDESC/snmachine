@@ -24,16 +24,18 @@ SNCOSMO_COLS: Dict[str, str] = {
     # "zpsys": "zpsys",
     # "fluxcov": "covar",
 }
+detected_label = "detected"
+zeroed_mjds_label = "days_after_first_detection"
 data_cols_key: Dict[str, str] = {
     "MJD": SNCOSMO_COLS["time"],
     "BAND": SNCOSMO_COLS["band"],
     "FLUXCAL": SNCOSMO_COLS["flux"],
     "FLUXCALERR": SNCOSMO_COLS["fluxerr"],
     "ZEROPT": SNCOSMO_COLS["zp"],
-    "PHOTFLAG": "detected",
+    "PHOTFLAG": detected_label,
 }
 base_data_cols: Set[str] = set(data_cols_key.values())
-derived_data_cols: Set[str] = {"days_after_first_detection"}
+derived_data_cols: Set[str] = {zeroed_mjds_label}
 
 # FIXME: Using 'Dict' and 'List' etc. is deprecated. Use `type` from 3.12 onward…
 StrSpec = Union[List[str], Set[str], str]
@@ -141,12 +143,18 @@ class ElasticcTrainingData:
         head.set_index("SNID", inplace=True)
 
         phot.rename(columns=data_cols_key, inplace=True)
-        bands: List[str] = [BANDS_KEY[band] for band in phot.pop("filter")]
-        detecteds: Series = (phot.pop("detected") > 0).astype(int)
-        phot.insert(loc=1, column="filter", value=bands)
-        phot.insert(loc=2, column="detected", value=detecteds)
-        phot.insert(loc=3, column="flux", value=phot.pop("flux"))
-        phot.insert(loc=4, column="flux_error", value=phot.pop("flux_error"))
+        bands: List[str] = [BANDS_KEY[band] for band in phot.pop(SNCOSMO_COLS["band"])]
+        detecteds: Series = (phot.pop(detected_label) > 0).astype(int)
+        phot.insert(loc=1, column=SNCOSMO_COLS["band"], value=bands)
+        phot.insert(loc=2, column=detected_label, value=detecteds)
+        phot.insert(
+            loc=3, column=SNCOSMO_COLS["flux"], value=phot.pop(SNCOSMO_COLS["flux"])
+        )
+        phot.insert(
+            loc=4,
+            column=SNCOSMO_COLS["fluxerr"],
+            value=phot.pop(SNCOSMO_COLS["fluxerr"]),
+        )
         if self.dropped_data_cols:
             phot.drop(columns=self.dropped_data_cols, inplace=True)
 
@@ -179,7 +187,7 @@ class ElasticcTrainingData:
     ) -> Tuple[DataFrame, bool]:
         src_phot_view = core_phot[:nobs]
         assert src_phot_view is not None
-        src_phot_only_detected = src_phot_view.query("detected == 1")
+        src_phot_only_detected = src_phot_view.query(f"{detected_label} == 1")
         assert (
             isinstance(src_phot_only_detected, DataFrame)
             and not src_phot_only_detected.empty
@@ -200,11 +208,11 @@ class ElasticcTrainingData:
     def _insert_days_after_first_detection(
         self, src_phot: DataFrame, src_phot_only_detected: DataFrame
     ) -> None:
-        mjds_detected = src_phot_only_detected["mjd"]
-        mjds_all = src_phot["mjd"]
+        mjds_detected = src_phot_only_detected[SNCOSMO_COLS["time"]]
+        mjds_all = src_phot[SNCOSMO_COLS["time"]]
         assert isinstance(mjds_detected, Series) and isinstance(mjds_all, Series)
         mjd_diffs: Series = mjds_all - mjds_detected.min()
-        src_phot.insert(loc=1, column="days_after_first_detection", value=mjd_diffs)
+        src_phot.insert(loc=1, column=zeroed_mjds_label, value=mjd_diffs)
 
     def _parse_src_classes(self, spec: list[str] | set[str] | str) -> set[str]:
         if not isinstance(spec, set):
