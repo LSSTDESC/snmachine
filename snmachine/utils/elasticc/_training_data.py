@@ -29,6 +29,7 @@ data_cols_key: Dict[str, str] = {
     "BAND": SNCOSMO_COLS["band"],
     "FLUXCAL": SNCOSMO_COLS["flux"],
     "FLUXCALERR": SNCOSMO_COLS["fluxerr"],
+    "ZEROPT": SNCOSMO_COLS["zp"],
     "PHOTFLAG": "detected",
 }
 base_data_cols: Set[str] = set(data_cols_key.values())
