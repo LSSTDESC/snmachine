@@ -138,9 +138,12 @@ class ElasticcTrainingData:
         )
 
     def _parse_core_dfs(self, head: DataFrame, phot: DataFrame) -> DFTuple:
-        snids: List[str] = [str(snid.decode()).strip() for snid in head.pop("SNID")]
-        head.insert(loc=0, column="SNID", value=snids)
-        head.set_index("SNID", inplace=True)
+        head.rename(columns={"SNID": "object_id"}, inplace=True)
+        object_ids: List[str] = [
+            str(snid.decode()).strip() for snid in head.pop("object_id")
+        ]
+        head.insert(loc=0, column="object_id", value=object_ids)
+        head.set_index("object_id", inplace=True)
 
         phot.rename(columns=data_cols_key, inplace=True)
         bands: List[str] = [BANDS_KEY[band] for band in phot.pop(SNCOSMO_COLS["band"])]
@@ -168,14 +171,14 @@ class ElasticcTrainingData:
         src_head: Series
         src_phot: DataFrame
         include_src: bool
-        for snid, src_head in core_head.iterrows():
-            assert isinstance(snid, str)
+        for object_id, src_head in core_head.iterrows():
+            assert isinstance(object_id, str)
             nobs: int = src_head.loc["NOBS"]
             src_phot, include_src = self._extract_src_phot(core_phot, nobs)
             if include_src:
-                core_data[snid] = Table.from_pandas(src_phot)
+                core_data[object_id] = Table.from_pandas(src_phot)
             else:
-                core_excl_srcs.add(snid)
+                core_excl_srcs.add(object_id)
             core_phot.drop(index=core_phot.index[: nobs + 1], inplace=True)
         if core_excl_srcs:
             core_head.drop(index=core_excl_srcs, inplace=True)
