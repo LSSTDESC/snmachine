@@ -51,6 +51,8 @@ class ElasticcTrainingData:
     FILTER_SET = tuple(PB_WAVELENGTHS)
     from ._training_metadata import ALL_DATA_COLS, ALL_SRC_CLASSES, SRC_CLASS_TAXONOMY
 
+    assert set(data_cols_key.keys()).issubset(ALL_DATA_COLS)
+
     def __init__(
         self,
         root_dir: str | Path,
@@ -69,22 +71,8 @@ class ElasticcTrainingData:
             self.ALL_SRC_CLASSES if use_all else self._parse_src_classes(src_classes)
         )
 
-        data_cols: Set[str] = self._parse_add_cols_spec(add_data_cols)
-        assert set(data_cols_key.keys()).issubset(self.ALL_DATA_COLS)
-        bad_cols: Set[str] = (
-            data_cols
-            - self.ALL_DATA_COLS
-            - set(data_cols_key.values())
-            - base_data_cols
-            - derived_data_cols
-        )
-        if bad_cols:
-            raise ValueError(
-                f"Invalid data column labels:\n{bad_cols}\nLabels must be taken from:\n"
-                f"{set(data_cols_key.values())}\nand/or\n{self.ALL_DATA_COLS}"
-            )
-        self.dropped_data_cols: Set[str] = (
-            self.ALL_DATA_COLS - set(data_cols_key.keys()) - data_cols
+        self.dropped_data_cols: Set[str] = self.ALL_DATA_COLS - (
+            set(data_cols_key.keys()) | self._parse_add_cols_spec(add_data_cols)
         )
         self.dropped_metadata_cols = {"NOBS", "PTROBS_MIN", "PTROBS_MAX"}
 
@@ -260,4 +248,14 @@ class ElasticcTrainingData:
                 return base_data_cols & {add_cols}
         if not isinstance(add_cols, set):
             add_cols = set(add_cols)
-        return base_data_cols & add_cols
+
+        # TODO: Add check and warn for cols in data_cols_key.keys(); also kinda ignored.
+        bad_cols: Set[str] = add_cols - (
+            self.ALL_DATA_COLS | set(data_cols_key.values()) | derived_data_cols
+        )
+        if bad_cols:
+            warn(
+                f"Ignoring invalid data column labels in add_data_cols:\n{bad_cols}\nValid labels are those in:\n"
+                f"{set(data_cols_key.values())}\nand/or\n{self.ALL_DATA_COLS}"
+            )
+        return base_data_cols & add_cols - bad_cols
