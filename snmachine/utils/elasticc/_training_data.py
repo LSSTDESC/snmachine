@@ -161,13 +161,17 @@ class ElasticcTrainingData:
         core_data: TableDict = {}
         core_excl_srcs: Set[str] = set()
         src_head: Series
-        src_phot: DataFrame
-        include_src: bool
         for object_id, src_head in core_head.iterrows():
             assert isinstance(object_id, str)
             nobs: int = src_head.loc["NOBS"]
-            src_phot, include_src = self._extract_src_phot(core_phot, nobs)
-            if include_src:
+            src_phot_view = core_phot[:nobs]
+            assert isinstance(src_phot_view, DataFrame)
+            src_phot: DataFrame | None = (
+                self._extract_src_phot(src_phot_view)
+                if len(src_phot_view) >= self.min_incl_obs
+                else None
+            )
+            if src_phot is not None:
                 core_data[object_id] = Table.from_pandas(src_phot)
             else:
                 core_excl_srcs.add(object_id)
@@ -177,27 +181,17 @@ class ElasticcTrainingData:
             excl_srcs.update(core_excl_srcs)
         return core_data
 
-    def _extract_src_phot(
-        self, core_phot: DataFrame, nobs: int
-    ) -> Tuple[DataFrame, bool]:
-        src_phot_view = core_phot[:nobs]
-        assert src_phot_view is not None
-        src_phot_only_detected = src_phot_view.query(f"{detected_label} == 1")
-        assert (
-            isinstance(src_phot_only_detected, DataFrame)
-            and not src_phot_only_detected.empty
-        )
-        if self.only_detected:
-            src_phot = src_phot_only_detected
-        else:
-            src_phot = src_phot_view.copy()
+    def _extract_src_phot(self, src_phot_view: DataFrame) -> DataFrame | None:
+        src_phot_detected = src_phot_view.query(f"{detected_label} == 1")
+        assert isinstance(src_phot_detected, DataFrame)
+        if self.only_detected and len(src_phot_detected) < self.min_incl_obs:
+            return None
+        src_phot = src_phot_detected if self.only_detected else src_phot_view.copy()
         assert isinstance(src_phot, DataFrame)
 
-        include_src = len(src_phot) >= self.min_incl_obs
-        if include_src and self.zeroed:
-            self._insert_days_after_first_detection(src_phot, src_phot_only_detected)
-
-        return src_phot, include_src
+        if self.zeroed:
+            self._insert_days_after_first_detection(src_phot, src_phot_detected)
+        return src_phot
 
     # NOTE: The 'MJD_DETECT_FIRST' and 'MJD_TRIGGER' fields in head files can't be trusted.
     def _insert_days_after_first_detection(
