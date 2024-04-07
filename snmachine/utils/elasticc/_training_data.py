@@ -61,6 +61,7 @@ class ElasticcTrainingData:
         min_incl_obs: int = 1,
         only_detected: bool = False,
         add_zeroed_mjds: bool = True,
+        sort_data_cols: bool = False,
     ) -> None:
         self.root_dir: Path = Path(root_dir) if isinstance(root_dir, str) else root_dir
         if not self.root_dir.is_dir():
@@ -79,6 +80,7 @@ class ElasticcTrainingData:
         self.min_incl_obs: int = min_incl_obs
         self.only_detected: bool = only_detected
         self.zeroed: bool = add_zeroed_mjds
+        self._sorted_data_cols: bool = sort_data_cols
 
         self.metadata: DataFrame
         self.excluded_srcs: Dict[str, Set[str]] = {}
@@ -138,17 +140,18 @@ class ElasticcTrainingData:
         detecteds: Series = (phot.pop(detected_label) > 0).astype(int)
         phot.insert(loc=1, column=SNCOSMO_COLS["band"], value=bands)
         phot.insert(loc=2, column=detected_label, value=detecteds)
-        phot.insert(
-            loc=3, column=SNCOSMO_COLS["flux"], value=phot.pop(SNCOSMO_COLS["flux"])
-        )
-        phot.insert(
-            loc=4,
-            column=SNCOSMO_COLS["fluxerr"],
-            value=phot.pop(SNCOSMO_COLS["fluxerr"]),
-        )
+        if self._sorted_data_cols:
+            phot.insert(
+                loc=3, column=SNCOSMO_COLS["flux"], value=phot.pop(SNCOSMO_COLS["flux"])
+            )
+            phot.insert(
+                loc=4,
+                column=SNCOSMO_COLS["fluxerr"],
+                value=phot.pop(SNCOSMO_COLS["fluxerr"]),
+            )
+
         if self.dropped_data_cols:
             phot.drop(columns=self.dropped_data_cols, inplace=True)
-
         return head, phot
 
     def _parse_core(
