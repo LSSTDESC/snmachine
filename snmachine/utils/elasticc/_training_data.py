@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict, List, Mapping, Set, Tuple, Union
+from warnings import warn
 
 from astropy.table import Table
 from pandas import DataFrame, Series, concat
