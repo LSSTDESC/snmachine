@@ -58,8 +58,8 @@ class ElasticcTrainingData:
         root_dir: str | Path,
         src_classes: StrSpec = "all",
         add_data_cols: StrSpec = "none",
-        min_incl_obs: int = 2,
-        only_detected: bool = True,
+        min_incl_obs: int = 1,
+        only_detected: bool = False,
         add_zeroed_mjds: bool = True,
     ) -> None:
         self.root_dir: Path = Path(root_dir) if isinstance(root_dir, str) else root_dir
