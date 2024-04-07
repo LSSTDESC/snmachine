@@ -105,7 +105,7 @@ class ElasticcTrainingData:
         excl_srcs: Set[str] = set()
         for icore in tqdm(range(1, 41), desc=src_class, leave=False):
             core_head, core_phot = self._load_core(icore, src_class_dir)
-            self.data.update(self._split_core_phot(core_head, core_phot, excl_srcs))
+            self.data.update(self._parse_core(core_head, core_phot, excl_srcs))
             core_head.drop(columns=self.dropped_metadata_cols, inplace=True)
             heads.append(core_head)
         if excl_srcs:
@@ -151,7 +151,7 @@ class ElasticcTrainingData:
 
         return head, phot
 
-    def _split_core_phot(
+    def _parse_core(
         self, core_head: DataFrame, core_phot: DataFrame, excl_srcs: Set[str]
     ) -> TableDict:
         core_data: TableDict = {}
