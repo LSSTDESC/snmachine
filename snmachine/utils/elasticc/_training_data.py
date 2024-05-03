@@ -27,6 +27,7 @@ SNCOSMO_COLS = {
 }
 detected_label = "detected"
 zeroed_mjds_label = "days_after_first_detection"
+src_class_label = "sim_src_class"
 data_cols_key: Dict[str, str] = {
     "MJD": SNCOSMO_COLS["time"],
     "BAND": SNCOSMO_COLS["band"],
@@ -63,6 +64,7 @@ class ElasticcTrainingData:
         only_detected: bool = False,
         add_zeroed_mjds: bool = True,
         sort_data_cols: bool = False,
+        add_src_class_col: bool = True,
     ) -> None:
         self.root_dir: Path = Path(root_dir) if isinstance(root_dir, str) else root_dir
         if not self.root_dir.is_dir():
@@ -82,6 +84,7 @@ class ElasticcTrainingData:
         self.only_detected: bool = only_detected
         self.zeroed: bool = add_zeroed_mjds
         self._sorted_data_cols: bool = sort_data_cols
+        self._add_src_class_col: bool = add_src_class_col
 
         self.metadata: DataFrame
         self.excluded_srcs: Dict[str, Set[str]] = {}
@@ -105,14 +108,23 @@ class ElasticcTrainingData:
             )
         core_head: DataFrame
         core_phot: DataFrame
+        core_heads: DFList = []
         excl_srcs: Set[str] = set()
         for icore in tqdm(range(1, 41), desc=src_class, leave=False):
             core_head, core_phot = self._load_core(icore, src_class_dir)
             self.data.update(self._parse_core(core_head, core_phot, excl_srcs))
             core_head.drop(columns=self.dropped_metadata_cols, inplace=True)
-            heads.append(core_head)
+            core_heads.append(core_head)
         if excl_srcs:
             self.excluded_srcs[src_class] = excl_srcs
+        full_core_head = concat(core_heads)
+        if self._add_src_class_col:
+            full_core_head.insert(
+                loc=len(full_core_head.columns),
+                column=src_class_label,
+                value=[src_class] * len(full_core_head),
+            )
+        heads.append(full_core_head)
 
     def _load_core(self, icore: int, src_class_dir: Path) -> DFTuple:
         fname_core_tmpl: str = f"{FNAME_TMPL[0]}_{FNAME_TMPL[1]}{icore:02d}"
