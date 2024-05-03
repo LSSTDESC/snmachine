@@ -16,7 +16,7 @@ BANDS_KEY: Dict[bytes, str] = {
     for band in ["u", "g", "r", "i", "z", "Y", "-"]
 }
 # NOTE: This dictionary should be higher up in the snmachine somewhere.
-SNCOSMO_COLS: Dict[str, str] = {
+SNCOSMO_COLS = {
     "time": "mjd",
     "band": "filter",
     "flux": "flux",
@@ -35,8 +35,8 @@ data_cols_key: Dict[str, str] = {
     "ZEROPT": SNCOSMO_COLS["zp"],
     "PHOTFLAG": detected_label,
 }
-base_data_cols: Set[str] = set(data_cols_key.values())
-derived_data_cols: Set[str] = {zeroed_mjds_label}
+base_data_cols = set(data_cols_key.values())
+derived_data_cols = {zeroed_mjds_label, src_class_label}
 
 # FIXME: Using 'Dict' and 'List' etc. is deprecated. Use `type` from 3.12 onward…
 StrSpec = Union[List[str], Set[str], str]
