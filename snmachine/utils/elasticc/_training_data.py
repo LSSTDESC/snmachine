@@ -131,7 +131,7 @@ class ElasticcTrainingData:
     def _parse_core_dfs(self, head: DataFrame, phot: DataFrame) -> DFTuple:
         head.rename(columns={"SNID": "object_id"}, inplace=True)
         object_ids: List[str] = [
-            str(snid.decode()).strip() for snid in head.pop("object_id")
+            snid.decode().strip() for snid in head.pop("object_id")
         ]
         head.insert(loc=0, column="object_id", value=object_ids)
         head.set_index("object_id", inplace=True)
