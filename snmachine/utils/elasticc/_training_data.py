@@ -18,7 +18,7 @@ BANDS_KEY: Dict[bytes, str] = {
 # NOTE: This dictionary should be higher up in the snmachine somewhere.
 SNCOSMO_COLS = {
     "time": "mjd",
-    "band": "filter",
+    "band": "band",
     "flux": "flux",
     "fluxerr": "flux_error",
     "zp": "zp",
