@@ -26,7 +26,7 @@ SNCOSMO_COLS = {
     # "fluxcov": "covar",
 }
 detected_label = "detected"
-zeroed_mjds_label = "days_after_first_detection"
+zeroed_mjds_label = "days_since_detection"
 src_class_label = "sim_src_class"
 data_cols_key: Dict[str, str] = {
     "MJD": SNCOSMO_COLS["time"],
@@ -202,11 +202,11 @@ class ElasticcTrainingData:
         assert isinstance(src_phot, DataFrame)
 
         if self.zeroed:
-            self._insert_days_after_first_detection(src_phot, src_phot_detected)
+            self._insert_days_since_detection(src_phot, src_phot_detected)
         return src_phot
 
     # NOTE: The 'MJD_DETECT_FIRST' and 'MJD_TRIGGER' fields in head files can't be trusted.
-    def _insert_days_after_first_detection(
+    def _insert_days_since_detection(
         self, src_phot: DataFrame, src_phot_only_detected: DataFrame
     ) -> None:
         mjds_detected = src_phot_only_detected[SNCOSMO_COLS["time"]]
