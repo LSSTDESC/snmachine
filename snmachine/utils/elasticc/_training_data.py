@@ -26,7 +26,7 @@ SNCOSMO_COLS = {
     # "fluxcov": "covar",
 }
 detected_label = "detected"
-zeroed_mjds_label = "days_since_detection"
+zeroed_mjds_label = "days_since_detect"
 src_class_label = "sim_src_class"
 data_cols_key: Dict[str, str] = {
     "MJD": SNCOSMO_COLS["time"],
