@@ -117,7 +117,7 @@ class ElasticcTrainingData:
         core_heads: DFList = []
         excl_srcs: Set[str] = set()
         core_nums = range(1, 41)
-        core_nums_ = tqdm.tqdm(core_nums, desc=src_class, leave=False, position=4)
+        core_nums_ = tqdm.tqdm(core_nums, desc=src_class, leave=False)
         for icore in core_nums_:
             core_head, core_phot = self._load_core(icore, src_class_dir)
             self.data.update(self._parse_core(core_head, core_phot, excl_srcs))
