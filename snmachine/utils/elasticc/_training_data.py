@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Dict, List, Mapping, Set, Tuple, Union
 from warnings import warn
 
+import tqdm
 from astropy.table import Table
 from pandas import DataFrame, Series, concat
-from tqdm import tqdm
 
 from snmachine.sndata import default_pb_wavelengths
 
@@ -96,7 +96,13 @@ class ElasticcTrainingData:
 
     def _load_data(self) -> None:
         heads: DFList = []
-        for src_class in tqdm(self.src_classes, desc="Classes loaded"):
+        src_classes = tqdm.tqdm(
+            self.src_classes,
+            desc="Classes loaded",
+            leave=False,
+            disable=len(self.src_classes) < 2,
+        )
+        for src_class in src_classes:
             self._load_class(src_class, heads)
         self.metadata = concat(heads)
 
@@ -110,7 +116,9 @@ class ElasticcTrainingData:
         core_phot: DataFrame
         core_heads: DFList = []
         excl_srcs: Set[str] = set()
-        for icore in tqdm(range(1, 41), desc=src_class, leave=False):
+        core_nums = range(1, 41)
+        core_nums_ = tqdm.tqdm(core_nums, desc=src_class, leave=False, position=4)
+        for icore in core_nums_:
             core_head, core_phot = self._load_core(icore, src_class_dir)
             self.data.update(self._parse_core(core_head, core_phot, excl_srcs))
             core_head.drop(columns=self.dropped_metadata_cols, inplace=True)
