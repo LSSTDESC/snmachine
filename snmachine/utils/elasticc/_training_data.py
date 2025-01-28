@@ -36,6 +36,7 @@ data_cols_key: Dict[str, str] = {
     "ZEROPT": SNCOSMO_COLS["zp"],
     "PHOTFLAG": detected_label,
 }
+data_cols_key["ZEROPT_ERR"] = "zp_error"
 base_data_cols = set(data_cols_key.values())
 derived_data_cols = {zeroed_mjds_label, src_class_label}
 
@@ -65,6 +66,7 @@ class ElasticcTrainingData:
         add_zeroed_mjds: bool = True,
         sort_data_cols: bool = False,
         add_src_class_col: bool = True,
+        quiet_load: bool = False,
     ) -> None:
         self.root_dir: Path = Path(root_dir) if isinstance(root_dir, str) else root_dir
         if not self.root_dir.is_dir():
@@ -85,6 +87,7 @@ class ElasticcTrainingData:
         self.zeroed: bool = add_zeroed_mjds
         self._sorted_data_cols: bool = sort_data_cols
         self._add_src_class_col: bool = add_src_class_col
+        self._quiet_load: bool = quiet_load
 
         self.metadata: DataFrame
         self.excluded_srcs: Dict[str, Set[str]] = {}
@@ -100,7 +103,7 @@ class ElasticcTrainingData:
             self.src_classes,
             desc="Classes loaded",
             leave=False,
-            disable=len(self.src_classes) < 2,
+            disable=any([len(self.src_classes) < 2, self._quiet_load]),
         )
         for src_class in src_classes:
             self._load_class(src_class, heads)
@@ -117,7 +120,9 @@ class ElasticcTrainingData:
         core_heads: DFList = []
         excl_srcs: Set[str] = set()
         core_nums = range(1, 41)
-        core_nums_ = tqdm.tqdm(core_nums, desc=src_class, leave=False)
+        core_nums_ = tqdm.tqdm(
+            core_nums, desc=src_class, leave=False, disable=self._quiet_load
+        )
         for icore in core_nums_:
             core_head, core_phot = self._load_core(icore, src_class_dir)
             self.data.update(self._parse_core(core_head, core_phot, excl_srcs))
@@ -221,7 +226,7 @@ class ElasticcTrainingData:
         mjds_all = src_phot[SNCOSMO_COLS["time"]]
         assert isinstance(mjds_detected, Series) and isinstance(mjds_all, Series)
         mjd_diffs: Series = mjds_all - mjds_detected.min()
-        src_phot.insert(loc=1, column=zeroed_mjds_label, value=mjd_diffs)
+        src_phot.insert(loc=1, column=zeroed_mjds_label, value=mjd_diffs.round(4))
 
     def _parse_src_classes(self, spec: list[str] | set[str] | str) -> set[str]:
         if not isinstance(spec, set):
