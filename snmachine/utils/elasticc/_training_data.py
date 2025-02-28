@@ -58,8 +58,8 @@ class ElasticcTrainingData:
 
     def __init__(
         self,
+        src_classes: StrSpec,
         root_dir: str | Path,
-        src_classes: StrSpec = "all",
         add_data_cols: StrSpec = "none",
         min_incl_obs: int = 1,
         only_detected: bool = False,
