@@ -1,7 +1,2 @@
-from ._training_data import (
-    ElasticcTrainingData,
-    FNAME_TMPL,
-    BANDS_KEY,
-    data_cols_key,
-    base_data_cols,
-)
+from .._utils import resolve_sncosmo_label, are_sncosmo_aliases
+from ._training_data import BANDS_KEY, FNAME_TMPL, ElasticcTrainingData

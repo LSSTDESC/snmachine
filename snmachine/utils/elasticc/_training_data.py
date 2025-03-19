@@ -9,36 +9,13 @@ from astropy.table import Table
 from pandas import DataFrame, Series, concat
 
 from snmachine.sndata import default_pb_wavelengths
+from .._utils import are_sncosmo_aliases
 
 FNAME_TMPL = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
 BANDS_KEY: Dict[bytes, str] = {
     bytes(f"{band} ", encoding="utf-8"): f"lsst{band.lower()}"
     for band in ["u", "g", "r", "i", "z", "Y", "-"]
 }
-# NOTE: This dictionary should be higher up in the snmachine somewhere.
-SNCOSMO_COLS = {
-    "time": "mjd",
-    "band": "band",
-    "flux": "flux",
-    "fluxerr": "flux_error",
-    "zp": "zp",
-    # "zpsys": "zpsys",
-    # "fluxcov": "covar",
-}
-detected_label = "detected"
-zeroed_mjds_label = "days_since_detect"
-src_class_label = "sim_src_class"
-data_cols_key: Dict[str, str] = {
-    "MJD": SNCOSMO_COLS["time"],
-    "BAND": SNCOSMO_COLS["band"],
-    "FLUXCAL": SNCOSMO_COLS["flux"],
-    "FLUXCALERR": SNCOSMO_COLS["fluxerr"],
-    "ZEROPT": SNCOSMO_COLS["zp"],
-    "PHOTFLAG": detected_label,
-}
-data_cols_key["ZEROPT_ERR"] = "zp_error"
-base_data_cols = set(data_cols_key.values())
-derived_data_cols = {zeroed_mjds_label, src_class_label}
 
 # FIXME: Using 'Dict' and 'List' etc. is deprecated. Use `type` from 3.12 onward…
 StrSpec = Union[List[str], Set[str], str]
@@ -54,6 +31,17 @@ class ElasticcTrainingData:
     FILTER_SET = tuple(PB_WAVELENGTHS)
     from ._training_metadata import ALL_DATA_COLS, ALL_SRC_CLASSES, SRC_CLASS_TAXONOMY
 
+    data_cols_key: Dict[str, str] = {
+        "MJD": "mjd",
+        "BAND": "band",
+        "FLUXCAL": "flux",
+        "FLUXCALERR": "fluxerr",
+        "ZEROPT": "zp",
+    }
+    assert are_sncosmo_aliases(set(data_cols_key.values()))
+    data_cols_key |= {"PHOTFLAG": "detected", "ZEROPT_ERR": "zp_error"}
+    base_data_cols = set(data_cols_key.values())
+    derived_data_cols = {"days_since_detect", "src_class"}
     assert set(data_cols_key.keys()).issubset(ALL_DATA_COLS)
 
     def __init__(
@@ -78,7 +66,7 @@ class ElasticcTrainingData:
         )
 
         self.dropped_data_cols: Set[str] = self.ALL_DATA_COLS - (
-            set(data_cols_key.keys()) | self._parse_add_cols_spec(add_data_cols)
+            set(self.data_cols_key.keys()) | self._parse_add_cols_spec(add_data_cols)
         )
         self.dropped_metadata_cols = {"NOBS", "PTROBS_MIN", "PTROBS_MAX"}
 
@@ -134,8 +122,8 @@ class ElasticcTrainingData:
         if self._add_src_class_col:
             full_core_head.insert(
                 loc=len(full_core_head.columns),
-                column=src_class_label,
                 value=[src_class] * len(full_core_head),
+                column="src_class",
             )
         heads.append(full_core_head)
 
@@ -161,20 +149,14 @@ class ElasticcTrainingData:
         head.insert(loc=0, column="object_id", value=object_ids)
         head.set_index("object_id", inplace=True)
 
-        phot.rename(columns=data_cols_key, inplace=True)
-        bands: List[str] = [BANDS_KEY[band] for band in phot.pop(SNCOSMO_COLS["band"])]
-        detecteds: Series = (phot.pop(detected_label) > 0).astype(int)
-        phot.insert(loc=1, column=SNCOSMO_COLS["band"], value=bands)
-        phot.insert(loc=2, column=detected_label, value=detecteds)
+        phot.rename(columns=self.data_cols_key, inplace=True)
+        bands: List[str] = [BANDS_KEY[band] for band in phot.pop("band")]
+        detecteds: Series = (phot.pop("detected") > 0).astype(int)
+        phot.insert(loc=1, column="band", value=np.array(bands))
+        phot.insert(loc=2, column="detected", value=detecteds)
         if self._sorted_data_cols:
-            phot.insert(
-                loc=3, column=SNCOSMO_COLS["flux"], value=phot.pop(SNCOSMO_COLS["flux"])
-            )
-            phot.insert(
-                loc=4,
-                column=SNCOSMO_COLS["fluxerr"],
-                value=phot.pop(SNCOSMO_COLS["fluxerr"]),
-            )
+            phot.insert(loc=3, column="flux", value=phot.pop("flux"))
+            phot.insert(loc=4, column="flux_error", value=phot.pop("flux_error"))
 
         if self.dropped_data_cols:
             phot.drop(columns=self.dropped_data_cols, inplace=True)
@@ -207,7 +189,7 @@ class ElasticcTrainingData:
         return core_data
 
     def _extract_src_phot(self, src_phot_view: DataFrame) -> DataFrame | None:
-        src_phot_detected = src_phot_view.query(f"{detected_label} == 1")
+        src_phot_detected = src_phot_view.query(f"detected == 1")
         assert isinstance(src_phot_detected, DataFrame)
         if self.only_detected and len(src_phot_detected) < self.min_incl_obs:
             return None
@@ -222,11 +204,11 @@ class ElasticcTrainingData:
     def _insert_days_since_detection(
         self, src_phot: DataFrame, src_phot_only_detected: DataFrame
     ) -> None:
-        mjds_detected = src_phot_only_detected[SNCOSMO_COLS["time"]]
-        mjds_all = src_phot[SNCOSMO_COLS["time"]]
+        mjds_detected = src_phot_only_detected["mjd"]
+        mjds_all = src_phot["mjd"]
         assert isinstance(mjds_detected, Series) and isinstance(mjds_all, Series)
         mjd_diffs: Series = mjds_all - mjds_detected.min()
-        src_phot.insert(loc=1, column=zeroed_mjds_label, value=mjd_diffs.round(4))
+        src_phot.insert(loc=1, column="days_since_detect", value=mjd_diffs.round(4))
 
     def _parse_src_classes(self, spec: list[str] | set[str] | str) -> set[str]:
         if not isinstance(spec, set):
@@ -264,21 +246,23 @@ class ElasticcTrainingData:
         if isinstance(add_cols, str):
             add_cols = add_cols.lower()
             if add_cols == "none":
-                return base_data_cols
+                return self.base_data_cols
             elif add_cols == "all":
                 return self.ALL_DATA_COLS
             else:
-                return base_data_cols & {add_cols}
+                return self.base_data_cols & {add_cols}
         if not isinstance(add_cols, set):
             add_cols = set(add_cols)
 
         # TODO: Add check and warn for cols in data_cols_key.keys(); also kinda ignored.
         bad_cols: Set[str] = add_cols - (
-            self.ALL_DATA_COLS | set(data_cols_key.values()) | derived_data_cols
+            self.ALL_DATA_COLS
+            | set(self.data_cols_key.values())
+            | self.derived_data_cols
         )
         if bad_cols:
             warn(
                 f"Ignoring invalid data column labels in add_data_cols:\n{bad_cols}\nValid labels are those in:\n"
-                f"{set(data_cols_key.values())}\nand/or\n{self.ALL_DATA_COLS}"
+                f"{set(self.data_cols_key.values())}\nand/or\n{self.ALL_DATA_COLS}"
             )
-        return base_data_cols & add_cols - bad_cols
+        return self.base_data_cols & add_cols - bad_cols
