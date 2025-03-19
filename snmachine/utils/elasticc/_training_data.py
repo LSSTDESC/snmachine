@@ -8,7 +8,7 @@ import tqdm
 from astropy.table import Table
 from pandas import DataFrame, Series, concat
 
-from snmachine.sndata import default_pb_wavelengths
+from ...sndata import default_pb_wavelengths
 from .._utils import are_sncosmo_aliases
 
 FNAME_TMPL = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
