@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Mapping, Set, Tuple, Union
 from warnings import warn
 
+import numpy as np
 import tqdm
 from astropy.table import Table
 from pandas import DataFrame, Series, concat
@@ -114,7 +115,7 @@ class ElasticcTrainingData:
         for icore in core_nums_:
             core_head, core_phot = self._load_core(icore, src_class_dir)
             self.data.update(self._parse_core(core_head, core_phot, excl_srcs))
-            core_head.drop(columns=self.dropped_metadata_cols, inplace=True)
+            core_head.drop(columns=list(self.dropped_metadata_cols), inplace=True)
             core_heads.append(core_head)
         if excl_srcs:
             self.excluded_srcs[src_class] = excl_srcs
@@ -122,8 +123,8 @@ class ElasticcTrainingData:
         if self._add_src_class_col:
             full_core_head.insert(
                 loc=len(full_core_head.columns),
-                value=[src_class] * len(full_core_head),
                 column="src_class",
+                value=np.array([src_class] * len(full_core_head)),
             )
         heads.append(full_core_head)
 
@@ -146,7 +147,7 @@ class ElasticcTrainingData:
         object_ids: List[str] = [
             snid.decode().strip() for snid in head.pop("object_id")
         ]
-        head.insert(loc=0, column="object_id", value=object_ids)
+        head.insert(loc=0, column="object_id", value=np.array(object_ids))
         head.set_index("object_id", inplace=True)
 
         phot.rename(columns=self.data_cols_key, inplace=True)
@@ -159,7 +160,7 @@ class ElasticcTrainingData:
             phot.insert(loc=4, column="flux_error", value=phot.pop("flux_error"))
 
         if self.dropped_data_cols:
-            phot.drop(columns=self.dropped_data_cols, inplace=True)
+            phot.drop(columns=list(self.dropped_data_cols), inplace=True)
         return head, phot
 
     def _parse_core(
@@ -182,9 +183,9 @@ class ElasticcTrainingData:
                 core_data[object_id] = Table.from_pandas(src_phot)
             else:
                 core_excl_srcs.add(object_id)
-            core_phot.drop(index=core_phot.index[: nobs + 1], inplace=True)
+            core_phot.drop(index=list(core_phot.index[: nobs + 1]), inplace=True)
         if core_excl_srcs:
-            core_head.drop(index=core_excl_srcs, inplace=True)
+            core_head.drop(index=list(core_excl_srcs), inplace=True)
             excl_srcs.update(core_excl_srcs)
         return core_data
 
