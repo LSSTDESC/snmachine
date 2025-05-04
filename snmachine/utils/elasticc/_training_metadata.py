@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 SetDict = dict[str, set[str]]
+BAND_LABELS = ["u", "g", "r", "i", "z", "Y"]
 SRC_CLASS_TAXONOMY: dict[str, SetDict] = {
     "Non-Recurring": {
         "SN-like": {

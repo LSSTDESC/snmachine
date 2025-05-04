@@ -12,11 +12,12 @@ from pandas import DataFrame, Series, concat
 from ...sndata import default_pb_wavelengths
 from .._utils import are_sncosmo_aliases
 from ._typing import DFList, DFTuple, StrSpec, TableDict
+from ._training_metadata import BAND_LABELS
 
 FNAME_TMPL = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
 BANDS_KEY: dict[bytes, str] = {
     bytes(f"{band} ", encoding="utf-8"): f"lsst{band.lower()}"
-    for band in ["u", "g", "r", "i", "z", "Y", "-"]
+    for band in BAND_LABELS + ["-"]
 }
 
 
