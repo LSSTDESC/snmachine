@@ -1,34 +1,22 @@
 from __future__ import annotations
 
+from .._utils import stitch
 
 SetDict = dict[str, set[str]]
 BAND_LABELS = ["u", "g", "r", "i", "z", "Y"]
 SRC_CLASS_TAXONOMY: dict[str, SetDict] = {
     "Non-Recurring": {
         "SN-like": {
-            "SNIa-91bg",
-            "SNIa-SALT3",
-            "SNIax",
-            "SNIb+HostXT_V19",
-            "SNIb-Templates",
-            "SNIcBL+HostXT_V19",
-            "SNIc+HostXT_V19",
-            "SNIc-Templates",
-            "SNIIb+HostXT_V19",
-            "SNII+HostXT_V19",
-            "SNIIn+HostXT_V19",
-            "SNII-NMF",
-            "SNIIn-MOSFIT",
-            "SNII-Templates",
+            *{"SNIax", "SNII-NMF", "SNIIn-MOSFIT"},
+            *stitch("SNIa", {"91bg", "SALT3"}, sep="-"),
+            *stitch({"SNIb", "SNIc", "SNII"}, "Templates", sep="-"),
+            *stitch({"SNIb", "SNIc", "SNII"}, "HostXT_V19", sep="+"),
+            *stitch({"SNIcBL", "SNIIb", "SNIIn"}, "HostXT_V19", sep="+"),
         },
         "Fast": {
-            "KN_B19",
-            "KN_K17",
-            "Mdwarf-flare",
-            "dwarf-nova",
-            "uLens-Binary",
-            "uLens-Single-GenLens",
-            "uLens-Single_PyLIMA",
+            *{"Mdwarf-flare", "dwarf-nova"},
+            *stitch("KN", {"B19", "K17"}),
+            *stitch("uLens", {"Binary", "Single-GenLens", "Single_PyLIMA"}, sep="-"),
         },
         "Long": {"SLSN-I+host", "SLSN-I_no_host", "TDE", "CART", "ILOT", "PISN"},
     },
@@ -42,26 +30,13 @@ for supset_dict in SRC_CLASS_TAXONOMY.values():
     for src_class_supset in supset_dict.values():
         ALL_SRC_CLASSES |= src_class_supset
 
+
 ALL_DATA_COLS = {
-    "MJD",
-    "BAND",
-    "PHOTFLAG",
-    "FLUXCAL",
-    "FLUXCALERR",
-    "CCDNUM",
-    "ZEROPT_ERR",
-    "SIM_MAGOBS",
-    "YPIX",
-    "FIELD",
-    "SIM_FLUXCAL_HOSTERR",
-    "ZEROPT",
-    "RDNOISE",
-    "SKY_SIG",
-    "PHOTPROB",
-    "SKY_SIG_T",
-    "GAIN",
-    "PSF_SIG2",
-    "PSF_SIG1",
-    "XPIX",
-    "PSF_RATIO",
+    *{"BAND", "CCDNUM", "FIELD", "GAIN", "MJD", "RDNOISE"},
+    *stitch({"X", "Y"}, "PIX", tight=True),
+    *stitch(["FLUXCAL", "ZEROPT"], "ERR", tight=[True, False], echo="left"),
+    *stitch("PSF", {"RATIO", "SIG1", "SIG2"}),
+    *stitch("SKY_SIG", "T", echo="left"),
+    *stitch("SIM", {"MAGOBS", "FLUXCAL_HOSTERR"}),
+    *stitch("PHOT", {"FLAG", "PROB"}, tight=True),
 }
