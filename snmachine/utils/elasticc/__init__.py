@@ -1,3 +1,4 @@
-from .._utils import resolve_sncosmo_label, are_sncosmo_aliases
+from .._utils import are_sncosmo_aliases, resolve_sncosmo_label
 from ._training_metadata import BAND_LABELS
 from ._training_data import BANDS_KEY, FNAME_TMPL, ElasticcTrainingData
+from ._typing import StrSpec, TableDict
