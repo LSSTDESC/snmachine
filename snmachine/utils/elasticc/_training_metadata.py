@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import Dict, Set
 
-SetDict = Dict[str, Set[str]]
 
-SRC_CLASS_TAXONOMY: Dict[str, SetDict] = {
+SetDict = dict[str, set[str]]
+SRC_CLASS_TAXONOMY: dict[str, SetDict] = {
     "Non-Recurring": {
         "SN-like": {
             "SNIa-91bg",
