@@ -23,9 +23,8 @@ BANDS_KEY: dict[bytes, str] = {
 
 class ElasticcTrainingData:
     SURVEY_NAME = "lsst"
-    PB_WAVELENGTHS: Mapping = default_pb_wavelengths[SURVEY_NAME]
-    FILTER_SET = tuple(PB_WAVELENGTHS)
     from ._training_metadata import ALL_DATA_COLS, ALL_SRC_CLASSES, SRC_CLASS_TAXONOMY
+    FILTER_SET = tuple(default_pb_wavelengths[SURVEY_NAME])
 
     data_cols_key: dict[str, str] = {
         "MJD": "mjd",
