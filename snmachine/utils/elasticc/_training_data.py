@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Mapping, Set, Tuple, Union
+from typing import Mapping
 from warnings import warn
 
 import numpy as np
@@ -11,19 +11,13 @@ from pandas import DataFrame, Series, concat
 
 from ...sndata import default_pb_wavelengths
 from .._utils import are_sncosmo_aliases
+from ._typing import DFList, DFTuple, StrSpec, TableDict
 
 FNAME_TMPL = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
-BANDS_KEY: Dict[bytes, str] = {
+BANDS_KEY: dict[bytes, str] = {
     bytes(f"{band} ", encoding="utf-8"): f"lsst{band.lower()}"
     for band in ["u", "g", "r", "i", "z", "Y", "-"]
 }
-
-# FIXME: Using 'Dict' and 'List' etc. is deprecated. Use `type` from 3.12 onward…
-StrSpec = Union[List[str], Set[str], str]
-DFDict = Dict[str, DataFrame]
-DFList = List[DataFrame]
-DFTuple = Tuple[DataFrame, ...]
-TableDict = Dict[str, Table]
 
 
 class ElasticcTrainingData:
@@ -32,7 +26,7 @@ class ElasticcTrainingData:
     FILTER_SET = tuple(PB_WAVELENGTHS)
     from ._training_metadata import ALL_DATA_COLS, ALL_SRC_CLASSES, SRC_CLASS_TAXONOMY
 
-    data_cols_key: Dict[str, str] = {
+    data_cols_key: dict[str, str] = {
         "MJD": "mjd",
         "BAND": "band",
         "FLUXCAL": "flux",
@@ -62,11 +56,11 @@ class ElasticcTrainingData:
             raise FileNotFoundError(f"Specified root_dir does not exist:\n{root_dir}")
 
         use_all = isinstance(src_classes, str) and src_classes.lower() == "all"
-        self.src_classes: Set[str] = (
+        self.src_classes: set[str] = (
             self.ALL_SRC_CLASSES if use_all else self._parse_src_classes(src_classes)
         )
 
-        self.dropped_data_cols: Set[str] = self.ALL_DATA_COLS - (
+        self.dropped_data_cols: set[str] = self.ALL_DATA_COLS - (
             set(self.data_cols_key.keys()) | self._parse_add_cols_spec(add_data_cols)
         )
         self.dropped_metadata_cols = {"NOBS", "PTROBS_MIN", "PTROBS_MAX"}
@@ -79,7 +73,7 @@ class ElasticcTrainingData:
         self._quiet_load: bool = quiet_load
 
         self.metadata: DataFrame
-        self.excluded_srcs: Dict[str, Set[str]] = {}
+        self.excluded_srcs: dict[str, set[str]] = {}
         self.data: TableDict = {}
         self._load_data()
 
@@ -107,7 +101,7 @@ class ElasticcTrainingData:
         core_head: DataFrame
         core_phot: DataFrame
         core_heads: DFList = []
-        excl_srcs: Set[str] = set()
+        excl_srcs: set[str] = set()
         core_nums = range(1, 41)
         core_nums_ = tqdm.tqdm(
             core_nums, desc=src_class, leave=False, disable=self._quiet_load
@@ -130,7 +124,7 @@ class ElasticcTrainingData:
 
     def _load_core(self, icore: int, src_class_dir: Path) -> DFTuple:
         fname_core_tmpl: str = f"{FNAME_TMPL[0]}_{FNAME_TMPL[1]}{icore:02d}"
-        core_fpaths: Dict[str, Path] = {
+        core_fpaths: dict[str, Path] = {
             key: src_class_dir / f"{fname_core_tmpl}_{key.upper()}.{FNAME_TMPL[2]}"
             for key in ["head", "phot"]
         }
@@ -144,14 +138,14 @@ class ElasticcTrainingData:
 
     def _parse_core_dfs(self, head: DataFrame, phot: DataFrame) -> DFTuple:
         head.rename(columns={"SNID": "object_id"}, inplace=True)
-        object_ids: List[str] = [
+        object_ids: list[str] = [
             snid.decode().strip() for snid in head.pop("object_id")
         ]
         head.insert(loc=0, column="object_id", value=np.array(object_ids))
         head.set_index("object_id", inplace=True)
 
         phot.rename(columns=self.data_cols_key, inplace=True)
-        bands: List[str] = [BANDS_KEY[band] for band in phot.pop("band")]
+        bands: list[str] = [BANDS_KEY[band] for band in phot.pop("band")]
         detecteds: Series = (phot.pop("detected") > 0).astype(int)
         phot.insert(loc=1, column="band", value=np.array(bands))
         phot.insert(loc=2, column="detected", value=detecteds)
@@ -164,10 +158,10 @@ class ElasticcTrainingData:
         return head, phot
 
     def _parse_core(
-        self, core_head: DataFrame, core_phot: DataFrame, excl_srcs: Set[str]
+        self, core_head: DataFrame, core_phot: DataFrame, excl_srcs: set[str]
     ) -> TableDict:
         core_data: TableDict = {}
-        core_excl_srcs: Set[str] = set()
+        core_excl_srcs: set[str] = set()
         src_head: Series
         for object_id, src_head in core_head.iterrows():
             assert isinstance(object_id, str)
@@ -190,7 +184,7 @@ class ElasticcTrainingData:
         return core_data
 
     def _extract_src_phot(self, src_phot_view: DataFrame) -> DataFrame | None:
-        src_phot_detected = src_phot_view.query(f"detected == 1")
+        src_phot_detected = src_phot_view.query("detected == 1")
         assert isinstance(src_phot_detected, DataFrame)
         if self.only_detected and len(src_phot_detected) < self.min_incl_obs:
             return None
@@ -215,7 +209,7 @@ class ElasticcTrainingData:
         if not isinstance(spec, set):
             spec = {spec} if isinstance(spec, str) else {*spec}
 
-        src_classes: Set[str] = spec & self.ALL_SRC_CLASSES
+        src_classes: set[str] = spec & self.ALL_SRC_CLASSES
         for spec_str in spec - self.ALL_SRC_CLASSES:
             src_classes |= self._resolve_spec_str(spec_str.lower())
         return src_classes
@@ -243,7 +237,7 @@ class ElasticcTrainingData:
                 f"or\n{sorted(self.ALL_SRC_CLASSES)}"
             )
 
-    def _parse_add_cols_spec(self, add_cols: StrSpec) -> Set[str]:
+    def _parse_add_cols_spec(self, add_cols: StrSpec) -> set[str]:
         if isinstance(add_cols, str):
             add_cols = add_cols.lower()
             if add_cols == "none":
@@ -256,7 +250,7 @@ class ElasticcTrainingData:
             add_cols = set(add_cols)
 
         # TODO: Add check and warn for cols in data_cols_key.keys(); also kinda ignored.
-        bad_cols: Set[str] = add_cols - (
+        bad_cols: set[str] = add_cols - (
             self.ALL_DATA_COLS
             | set(self.data_cols_key.values())
             | self.derived_data_cols
