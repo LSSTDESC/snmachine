@@ -33,8 +33,8 @@ def stitch(
     assert _to_echo is None or echo is None
 
     args = tuple({arg} if isinstance(arg, str) else arg for arg in args)
-    tight = True if isinstance(tight, list) and all(tight) else tight  # type: ignore
-    tight = False if isinstance(tight, list) and not any(tight) else tight  # type: ignore
+    tight = True if isinstance(tight, list) and all(tight) else tight
+    tight = False if isinstance(tight, list) and not any(tight) else tight
     to_echo: set[str] = set() if _to_echo is None else _to_echo
 
     assert isinstance(tight, bool) or any([isinstance(arg, list) for arg in args])
