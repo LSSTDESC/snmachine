@@ -1,24 +1,42 @@
-from __future__ import annotations
-
+from functools import partial
+from multiprocessing import Pool
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Callable, Generator, Iterator
 from warnings import warn
 
 import numpy as np
-import tqdm
 from astropy.table import Table
-from pandas import DataFrame, Series, concat
+from numpy.typing import NDArray
+from tqdm import tqdm
 
 from ...sndata import default_pb_wavelengths
 from .._utils import are_sncosmo_aliases
-from ._typing import DFList, DFTuple, StrSpec, TableDict
 from ._training_metadata import BAND_LABELS
+from ._typing import DataBundle, StrSpec, resolve_spec
+
+_read_table = partial(Table.read, character_as_bytes=False, memmap=False)
 
 FNAME_TMPL = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
-BANDS_KEY: dict[bytes, str] = {
-    bytes(f"{band} ", encoding="utf-8"): f"lsst{band.lower()}"
-    for band in BAND_LABELS + ["-"]
+FNAME_BASE = "_".join(FNAME_TMPL[:2])
+BANDS_KEY: dict[str, str] = {f"{band} ": f"lsst{band.lower()}" for band in BAND_LABELS}
+
+_renamed_data_cols = {
+    "MJD": "mjd",
+    "BAND": "band",
+    "FLUXCAL": "flux",
+    "FLUXCALERR": "fluxerr",
+    "ZEROPT": "zp",
 }
+assert are_sncosmo_aliases(set(_renamed_data_cols.values()))
+_renamed_data_cols |= {"PHOTFLAG": "detected", "ZEROPT_ERR": "zp_error"}
+RENAMED_DATA_COLS: dict[str, tuple] = dict(
+    zip(["names", "new_names"], zip(*_renamed_data_cols.items()))
+)
+
+_renamed_mdata_cols = {"SNID": "object_id"}
+RENAMED_MDATA_COLS: dict[str, tuple] = dict(
+    zip(["names", "new_names"], zip(*_renamed_mdata_cols.items()))
+)
 
 
 class ElasticcTrainingData:
@@ -26,9 +44,9 @@ class ElasticcTrainingData:
     FILTER_SET = tuple(default_pb_wavelengths[SURVEY_NAME])
     from ._training_metadata import (
         ALL_DATA_COLS,
+        ALL_METADATA_COLS,
         ALL_SRC_CLASSES,
         SRC_CLASS_TAXONOMY,
-        ALL_METADATA_COLS,
     )
 
     data_cols_key: dict[str, str] = {
@@ -49,170 +67,39 @@ class ElasticcTrainingData:
         src_classes: StrSpec,
         root_dir: str | Path,
         add_data_cols: StrSpec = "none",
-        min_incl_obs: int = 1,
-        only_detected: bool = False,
-        add_zeroed_mjds: bool = True,
-        sort_data_cols: bool = False,
-        add_src_class_col: bool = True,
         quiet_load: bool = False,
+        **kwargs,
     ) -> None:
+        use_all: bool = isinstance(src_classes, str) and src_classes.lower() == "all"
+        self.src_classes: set[str] = (
+            self.ALL_SRC_CLASSES if use_all else self._parse_src_classes(src_classes)
+        )
         self.root_dir: Path = Path(root_dir) if isinstance(root_dir, str) else root_dir
         if not self.root_dir.is_dir():
             raise FileNotFoundError(f"Specified root_dir does not exist:\n{root_dir}")
 
-        use_all = isinstance(src_classes, str) and src_classes.lower() == "all"
-        self.src_classes: set[str] = (
-            self.ALL_SRC_CLASSES if use_all else self._parse_src_classes(src_classes)
-        )
-
-        self.dropped_data_cols: set[str] = self.ALL_DATA_COLS - (
+        drop_phot_cols: set[str] = self.ALL_DATA_COLS - (
             set(self.data_cols_key.keys()) | self._parse_add_cols_spec(add_data_cols)
         )
-        self.dropped_metadata_cols = {"NOBS", "PTROBS_MIN", "PTROBS_MAX"}
 
-        self.min_incl_obs: int = min_incl_obs
-        self.only_detected: bool = only_detected
-        self.zeroed: bool = add_zeroed_mjds
-        self._sorted_data_cols: bool = sort_data_cols
-        self._add_src_class_col: bool = add_src_class_col
-        self._quiet_load: bool = quiet_load
-
-        self.metadata: DataFrame
-        self.excluded_srcs: dict[str, set[str]] = {}
-        self.data: TableDict = {}
-        self._load_data()
+        # FIXME: The len(thing) < 2 check(s) are missing for all the tqdm calls.
+        _bundle = _load_training_data(
+            self.src_classes,
+            root_dir=self.root_dir,
+            drop_phot_cols=drop_phot_cols,
+            disable=quiet_load,
+            **kwargs,
+        )
+        self.metadata: Table = _bundle.head
+        self.data: dict[str, Table] = _bundle.data
+        self.excluded_srcs: Table | None = _bundle.excl
 
     def __len__(self):
         return len(self.data)
 
-    def _load_data(self) -> None:
-        heads: DFList = []
-        src_classes = tqdm.tqdm(
-            self.src_classes,
-            desc="Classes loaded",
-            leave=False,
-            disable=any([len(self.src_classes) < 2, self._quiet_load]),
-        )
-        for src_class in src_classes:
-            self._load_class(src_class, heads)
-        self.metadata = concat(heads)
-
-    def _load_class(self, src_class: str, heads: DFList) -> None:
-        src_class_dir: Path = self.root_dir / f"{FNAME_TMPL[0]}_{src_class}"
-        if not src_class_dir.is_dir():
-            raise FileNotFoundError(
-                f"Specified src_class_dir does not exist:\n{src_class_dir}"
-            )
-        core_head: DataFrame
-        core_phot: DataFrame
-        core_heads: DFList = []
-        excl_srcs: set[str] = set()
-        core_nums = range(1, 41)
-        core_nums_ = tqdm.tqdm(
-            core_nums, desc=src_class, leave=False, disable=self._quiet_load
-        )
-        for icore in core_nums_:
-            core_head, core_phot = self._load_core(icore, src_class_dir)
-            self.data.update(self._parse_core(core_head, core_phot, excl_srcs))
-            core_head.drop(columns=list(self.dropped_metadata_cols), inplace=True)
-            core_heads.append(core_head)
-        if excl_srcs:
-            self.excluded_srcs[src_class] = excl_srcs
-        full_core_head = concat(core_heads)
-        if self._add_src_class_col:
-            full_core_head.insert(
-                loc=len(full_core_head.columns),
-                column="src_class",
-                value=np.array([src_class] * len(full_core_head)),
-            )
-        heads.append(full_core_head)
-
-    def _load_core(self, icore: int, src_class_dir: Path) -> DFTuple:
-        fname_core_tmpl: str = f"{FNAME_TMPL[0]}_{FNAME_TMPL[1]}{icore:02d}"
-        core_fpaths: dict[str, Path] = {
-            key: src_class_dir / f"{fname_core_tmpl}_{key.upper()}.{FNAME_TMPL[2]}"
-            for key in ["head", "phot"]
-        }
-        assert all([core_fpath.is_file() for core_fpath in core_fpaths.values()])
-        return self._parse_core_dfs(
-            **{
-                key: Table.read(core_fpath).to_pandas()
-                for key, core_fpath in core_fpaths.items()
-            }
-        )
-
-    def _parse_core_dfs(self, head: DataFrame, phot: DataFrame) -> DFTuple:
-        head.rename(columns={"SNID": "object_id"}, inplace=True)
-        object_ids: list[str] = [
-            snid.decode().strip() for snid in head.pop("object_id")
-        ]
-        head.insert(loc=0, column="object_id", value=np.array(object_ids))
-        head.set_index("object_id", inplace=True)
-
-        phot.rename(columns=self.data_cols_key, inplace=True)
-        bands: list[str] = [BANDS_KEY[band] for band in phot.pop("band")]
-        detecteds: Series = (phot.pop("detected") > 0).astype(int)
-        phot.insert(loc=1, column="band", value=np.array(bands))
-        phot.insert(loc=2, column="detected", value=detecteds)
-        if self._sorted_data_cols:
-            phot.insert(loc=3, column="flux", value=phot.pop("flux"))
-            phot.insert(loc=4, column="flux_error", value=phot.pop("flux_error"))
-
-        if self.dropped_data_cols:
-            phot.drop(columns=list(self.dropped_data_cols), inplace=True)
-        return head, phot
-
-    def _parse_core(
-        self, core_head: DataFrame, core_phot: DataFrame, excl_srcs: set[str]
-    ) -> TableDict:
-        core_data: TableDict = {}
-        core_excl_srcs: set[str] = set()
-        src_head: Series
-        for object_id, src_head in core_head.iterrows():
-            assert isinstance(object_id, str)
-            nobs: int = src_head.loc["NOBS"]
-            src_phot_view = core_phot[:nobs]
-            assert isinstance(src_phot_view, DataFrame)
-            src_phot: DataFrame | None = (
-                self._extract_src_phot(src_phot_view)
-                if len(src_phot_view) >= self.min_incl_obs
-                else None
-            )
-            if src_phot is not None:
-                core_data[object_id] = Table.from_pandas(src_phot)
-            else:
-                core_excl_srcs.add(object_id)
-            core_phot.drop(index=list(core_phot.index[: nobs + 1]), inplace=True)
-        if core_excl_srcs:
-            core_head.drop(index=list(core_excl_srcs), inplace=True)
-            excl_srcs.update(core_excl_srcs)
-        return core_data
-
-    def _extract_src_phot(self, src_phot_view: DataFrame) -> DataFrame | None:
-        src_phot_detected = src_phot_view.query("detected == 1")
-        assert isinstance(src_phot_detected, DataFrame)
-        if self.only_detected and len(src_phot_detected) < self.min_incl_obs:
-            return None
-        src_phot = src_phot_detected if self.only_detected else src_phot_view.copy()
-        assert isinstance(src_phot, DataFrame)
-
-        if self.zeroed:
-            self._insert_days_since_detection(src_phot, src_phot_detected)
-        return src_phot
-
-    # NOTE: The 'MJD_DETECT_FIRST' and 'MJD_TRIGGER' fields in head files can't be trusted.
-    def _insert_days_since_detection(
-        self, src_phot: DataFrame, src_phot_only_detected: DataFrame
-    ) -> None:
-        mjds_detected = src_phot_only_detected["mjd"]
-        mjds_all = src_phot["mjd"]
-        assert isinstance(mjds_detected, Series) and isinstance(mjds_all, Series)
-        mjd_diffs: Series = mjds_all - mjds_detected.min()
-        src_phot.insert(loc=1, column="days_since_detect", value=mjd_diffs.round(4))
-
-    def _parse_src_classes(self, spec: list[str] | set[str] | str) -> set[str]:
+    def _parse_src_classes(self, spec: StrSpec) -> set[str]:
         if not isinstance(spec, set):
-            spec = {spec} if isinstance(spec, str) else {*spec}
+            spec = {spec} if isinstance(spec, str) else set(spec)
 
         src_classes: set[str] = spec & self.ALL_SRC_CLASSES
         for spec_str in spec - self.ALL_SRC_CLASSES:
@@ -266,3 +153,179 @@ class ElasticcTrainingData:
                 f"{set(self.data_cols_key.values())}\nand/or\n{self.ALL_DATA_COLS}"
             )
         return self.base_data_cols & add_cols - bad_cols
+
+
+def _load_training_data(src_classes: set[str], **kwargs) -> DataBundle:
+    tqdm_spec: dict[str, Any] = dict(desc="Classes loaded", leave=False)
+    tqdm_keys: set[str] = {"leave"}
+    tqdm_spec |= {key: kwargs.get(key) for key in set(kwargs) & tqdm_keys}
+    tqdm_spec["disable"] = tqdm_spec.get("disable", False) or len(src_classes) < 2
+
+    src_class_bundles: list[DataBundle] = [
+        load_src_class(src_class, **kwargs)
+        for src_class in tqdm(src_classes, **tqdm_spec)
+    ]
+    return DataBundle.from_bundles(src_class_bundles)
+
+
+def _add_src_class_col(bundle: DataBundle, src_class: str) -> None:
+    for tbl in [bundle.head, bundle.excl]:
+        if tbl is not None:
+            tbl.add_column(src_class, name="src_class")
+
+
+def _src_class_dir(root_dir: Path, src_class: str) -> Path:
+    return root_dir / f"{FNAME_TMPL[0]}_{src_class}"
+
+
+def load_src_class(
+    src_class: str,
+    root_dir: Path,
+    add_src_class_col: bool = True,
+    num_workers: int = 1,
+    chunksize: int = 1,
+    **kwargs,
+) -> DataBundle:
+    if not (src_class_dir := _src_class_dir(root_dir, src_class)).is_dir():
+        raise FileNotFoundError(f"src_class_dir for {src_class} not found.")
+    assert num_workers > 0
+    assert chunksize > 0
+
+    tqdm_spec: dict[str, Any] = dict(desc="Core files loaded", total=40, leave=False)
+    tqdm_keys: set[str] = {"leave", "disable"}
+    tqdm_spec |= {key: kwargs.get(key) for key in set(kwargs) & tqdm_keys}
+
+    bundler: Callable[[tuple[Table, Table]], DataBundle] = partial(
+        _bundle_core_tbls, **kwargs
+    )
+    core_tables: Iterator[tuple[Table, Table]] = tqdm(
+        _load_core_tables(src_class_dir), **tqdm_spec
+    )  # type: ignore
+
+    with Pool(num_workers) as pool:
+        core_bundles: list[DataBundle] = list(
+            pool.imap(bundler, core_tables, chunksize)
+        )
+    out_bundle: DataBundle = DataBundle.from_bundles(core_bundles)
+    if add_src_class_col:
+        _add_src_class_col(out_bundle, src_class)
+    return out_bundle
+
+
+def _bundle_core_tbls(tbls: tuple[Table, Table], **kwargs) -> DataBundle:
+    head: Table
+    phot: Table
+    head, phot = tbls
+    _format_head(head, **kwargs)
+    _format_phot(phot, **kwargs)
+    src_phots: list[Table | None] = [
+        _parse_src_phot(src_phot, **kwargs) for src_phot in _devour_phot(phot, head)
+    ]
+    excl_idxs: list[int] = [
+        idx for idx, src_phot in enumerate(src_phots) if src_phot is None
+    ]
+    excl: Table | None = head[excl_idxs] if excl_idxs else None  # type: ignore
+    if excl_idxs:
+        head.remove_columns(excl_idxs)
+        for idx in reversed(excl_idxs):
+            src_phots.pop(idx)
+
+    assert None not in src_phots
+    assert len(src_phots) == len(head)
+
+    data: dict[str, Table] = dict(zip(head.columns["object_id"], src_phots))  # type: ignore
+    return DataBundle(head, data, excl)
+
+
+# NOTE: The 'MJD_DETECT_FIRST' and 'MJD_TRIGGER' fields in head files can't be trusted.
+def _parse_src_phot(
+    src_phot: Table,
+    only_detected: bool = False,
+    zeroed: bool = True,
+    min_incl_obs: int = 1,
+    **_,
+) -> Table | None:
+    assert min_incl_obs > 0
+    detections: NDArray[np.int_]
+    detections = np.nonzero(np.array(src_phot.columns["detected"]))[0]
+    n_incl_obs: int = len(detections if only_detected else src_phot)
+    if n_incl_obs < min_incl_obs:
+        return None
+    if not (only_detected or zeroed):
+        return src_phot
+    if not zeroed:
+        return src_phot[detections]  # type: ignore
+
+    mjds_detect = np.array(src_phot.columns["mjd"][detections])
+    if only_detected:
+        src_phot = src_phot[detections]  # type: ignore
+    src_phot.add_column(src_phot["mjd"] - mjds_detect[0], name="days_since_detect")
+    return src_phot
+
+
+# NOTE: The hack-ey slicing of phot prevents the yielded Table from referencing phot.
+#       (Passing such referenced copies causes memory meltdowns.)
+#       Unfortunately, astropy is a hot mess, so there's no knowing why this works, and
+#       no sensible type hinting.
+def _devour_phot(phot: Table, head: Table) -> Generator[Table, None, None]:
+    for (nobs,) in head.iterrows("NOBS"):
+        yield phot[list(range(nobs))]  # type: ignore
+        phot.remove_rows(slice(nobs))
+
+
+def _load_core_tables(
+    src_class_dir: Path,
+) -> Generator[tuple[Table, Table], None, None]:
+    fits_path = partial(_fits_path, src_class_dir)
+    for icore in range(1, 41):
+        yield _read_table(fits_path(icore, "head")), _read_table(
+            fits_path(icore, "phot")
+        )
+
+
+def _fits_path(src_class_dir: Path, icore: int, key: str) -> Path:
+    return src_class_dir / f"{FNAME_BASE}{icore:02d}_{key.upper()}.{FNAME_TMPL[2]}"
+
+
+def _format_head(head: Table, drop_head_cols: StrSpec | None = None, **_) -> None:
+    head.rename_columns(**RENAMED_MDATA_COLS)
+    drop_cols_: set[str] | None = _resolve_drop_cols(
+        drop_head_cols, base={"PTROBS_MIN", "PTROBS_MAX"}, protected={"object_id"}
+    )
+    assert drop_cols_ is not None
+    head.remove_columns(drop_cols_)
+    oids: Iterator[str] = map(str.strip, head.columns["object_id"])
+    head.replace_column("object_id", list(oids))
+
+
+def _format_phot(phot: Table, drop_phot_cols: StrSpec | None = None, **_) -> None:
+    phot.rename_columns(**RENAMED_DATA_COLS)
+    drop_cols_: set[str] | None = _resolve_drop_cols(
+        drop_phot_cols, protected={"band", "detected"}
+    )
+    if drop_cols_ is not None:
+        phot.remove_columns(drop_cols_)
+    phot.remove_rows(phot.columns["band"] == "- ")
+    phot.replace_column("band", list(map(BANDS_KEY.get, phot.columns["band"])))
+    phot.replace_column("detected", phot.columns["detected"].astype(bool).astype(int))  # type: ignore
+
+
+def _resolve_drop_cols(
+    drop_cols: StrSpec | None,
+    base: set[str] | None = None,
+    protected: set[str] | None = None,
+) -> set[str] | None:
+    if drop_cols is None and base is None:
+        return None
+    all_drop_cols: set[str] = set() if base is None else base
+    if drop_cols is not None:
+        all_drop_cols |= resolve_spec(drop_cols)
+    if protected is None:
+        return all_drop_cols
+    if __debug__:
+        if base is not None and protected is not None:
+            assert not base & protected
+    for colname in protected:
+        if colname in all_drop_cols:
+            warn(f'Ignoring "{colname}" in drop_cols')
+    return all_drop_cols - protected
