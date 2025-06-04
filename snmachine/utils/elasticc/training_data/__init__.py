@@ -10,14 +10,9 @@ from astropy.table import Table
 from numpy.typing import NDArray
 from tqdm import tqdm
 
-from .._utils import are_sncosmo_aliases
-from ._training_metadata import (
-    BAND_LABELS,
-    ALL_DATA_COLS,
-    ALL_SRC_CLASSES,
-    SRC_CLASS_TAXONOMY,
-)
-from ._typing import DataBundle, StrSpec, resolve_spec
+from ..._utils import are_sncosmo_aliases
+from ._utils import DataBundle, StrSpec, resolve_spec
+from .metadata import ALL_DATA_COLS, ALL_SRC_CLASSES, BAND_LABELS, SRC_CLASS_TAXONOMY
 
 _read_table = partial(Table.read, character_as_bytes=False, memmap=False)
 

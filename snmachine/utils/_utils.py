@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from itertools import product
 
 from sncosmo.photdata import PHOTDATA_ALIASES as SNCOSMO_ALIAS_KEY
