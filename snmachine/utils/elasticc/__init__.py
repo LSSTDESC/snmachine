@@ -1,9 +1,7 @@
-from .._utils import are_sncosmo_aliases, resolve_sncosmo_label
-from ._training_metadata import (
-    BAND_LABELS,
+from .training_data import TrainingData
+from .training_data.metadata import (
     ALL_DATA_COLS,
     ALL_METADATA_COLS,
+    ALL_SRC_CLASSES,
     SRC_CLASS_TAXONOMY,
 )
-from ._training_data import BANDS_KEY, FNAME_TMPL, ElasticcTrainingData, load_src_class
-from ._typing import StrSpec, resolve_spec, DataBundle

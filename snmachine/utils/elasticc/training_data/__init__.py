@@ -43,7 +43,7 @@ ALL_DATA_COLS_RENAMED = ALL_DATA_COLS - set(RENAMED_DATA_COLS["names"]) | set(
 )
 
 
-class ElasticcTrainingData:
+class TrainingData:
     data_cols_base = ["mjd", "band", "detected", "flux", "fluxerr", "zp", "zp_error"]
 
     def __init__(
