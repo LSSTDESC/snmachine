@@ -1,6 +1,7 @@
 from collections import ChainMap
 from itertools import chain
-from .._utils import stitch
+
+from ._utils import stitch
 
 BAND_LABELS = ["u", "g", "r", "i", "z", "Y"]
 
