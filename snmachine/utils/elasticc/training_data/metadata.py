@@ -1,6 +1,7 @@
 from collections import ChainMap
 from itertools import chain
 
+from ..._utils import are_sncosmo_aliases
 from ._utils import stitch
 
 BAND_LABELS = ["u", "g", "r", "i", "z", "Y"]
@@ -32,6 +33,7 @@ SRC_CLASS_TAXONOMY: dict[str, dict[str, set[str]]] = {
     },
 }
 ALL_SRC_CLASSES: set[str] = set(chain(*ChainMap(*SRC_CLASS_TAXONOMY.values()).values()))
+
 ALL_DATA_COLS: set[str] = {
     *{"BAND", "CCDNUM", "FIELD", "GAIN", "MJD", "RDNOISE"},
     *stitch({"X", "Y"}, "PIX", tight=True),
@@ -41,6 +43,16 @@ ALL_DATA_COLS: set[str] = {
     *stitch("SIM", {"MAGOBS", "FLUXCAL_HOSTERR"}),
     *stitch("PHOT", {"FLAG", "PROB"}, tight=True),
 }
+RENAMED_DATA_COLS = {
+    "MJD": "mjd",
+    "BAND": "band",
+    "FLUXCAL": "flux",
+    "FLUXCALERR": "fluxerr",
+    "ZEROPT": "zp",
+}
+assert are_sncosmo_aliases(set(RENAMED_DATA_COLS.values()))
+RENAMED_DATA_COLS |= {"PHOTFLAG": "detected", "ZEROPT_ERR": "zp_error"}
+
 _mdata_gal2_has_err: set[str] = {
     *stitch("LOG", {"MASS", "SFR", "sSFR"}, tight=True),
     *{"COLOR", *stitch({"PHOTO", "SPEC"}, "Z", tight=True)},
@@ -77,3 +89,4 @@ ALL_METADATA_COLS: set[str] = {
     *stitch("HOSTGAL2", _mdata_gal2),
     *stitch("SIM", _mdata_sim),
 }
+RENAMED_MDATA_COLS = {"SNID": "object_id"}

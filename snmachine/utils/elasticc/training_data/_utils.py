@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 from itertools import product
-from typing import ChainMap, NamedTuple, Sequence
+from pathlib import Path
+from typing import Sequence
 
-from astropy.table import Table, vstack
-
+FNAME_TMPL = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
+FNAME_BASE = "_".join(FNAME_TMPL[:2])
 StrSpec = Sequence[str] | set[str] | str
 
 
@@ -14,19 +13,16 @@ def resolve_spec(spec: StrSpec) -> set[str]:
     return {spec} if isinstance(spec, str) else set(spec)
 
 
-class DataBundle(NamedTuple):
-    head: Table
-    data: dict[str, Table]
-    excl: Table | None
+def src_class_dir(root_dir: Path, src_class: str) -> Path:
+    return root_dir / f"{FNAME_TMPL[0]}_{src_class}"
 
-    @classmethod
-    def from_bundles(cls, bundles: list[DataBundle]) -> DataBundle:
-        excls = [bundle.excl for bundle in bundles if bundle.excl is not None]
-        return cls(
-            head=vstack([bundle.head for bundle in bundles]),
-            data=dict(ChainMap(*[bundle.data for bundle in bundles])),
-            excl=vstack(excls) if excls else None,
-        )
+
+def fits_path(src_class_dir: Path, icore: int, key: str) -> Path:
+    return src_class_dir / f"{FNAME_BASE}{icore:02d}_{key.upper()}.{FNAME_TMPL[2]}"
+
+
+def key_to_rename_spec(key_dict: dict[str, str]) -> dict[str, tuple[str]]:
+    return dict(zip(["names", "new_names"], zip(*key_dict.items())))
 
 
 def stitch(

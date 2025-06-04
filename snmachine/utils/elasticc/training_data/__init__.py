@@ -1,45 +1,20 @@
-from functools import partial
 from itertools import chain
-from multiprocessing import Pool
 from pathlib import Path
-from typing import Any, Callable, Generator, Iterator
 from warnings import warn
 
-import numpy as np
 from astropy.table import Table
-from numpy.typing import NDArray
-from tqdm import tqdm
 
-from ..._utils import are_sncosmo_aliases
-from ._utils import DataBundle, StrSpec, resolve_spec
-from .metadata import ALL_DATA_COLS, ALL_SRC_CLASSES, BAND_LABELS, SRC_CLASS_TAXONOMY
-
-_read_table = partial(Table.read, character_as_bytes=False, memmap=False)
-
-FNAME_TMPL = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
-FNAME_BASE = "_".join(FNAME_TMPL[:2])
-BANDS_KEY: dict[str, str] = {f"{band} ": f"lsst{band.lower()}" for band in BAND_LABELS}
-
-_renamed_data_cols = {
-    "MJD": "mjd",
-    "BAND": "band",
-    "FLUXCAL": "flux",
-    "FLUXCALERR": "fluxerr",
-    "ZEROPT": "zp",
-}
-assert are_sncosmo_aliases(set(_renamed_data_cols.values()))
-_renamed_data_cols |= {"PHOTFLAG": "detected", "ZEROPT_ERR": "zp_error"}
-RENAMED_DATA_COLS: dict[str, tuple] = dict(
-    zip(["names", "new_names"], zip(*_renamed_data_cols.items()))
+from ._utils import StrSpec, resolve_spec
+from .loading import load_training_data
+from .metadata import (
+    ALL_DATA_COLS,
+    ALL_SRC_CLASSES,
+    RENAMED_DATA_COLS,
+    SRC_CLASS_TAXONOMY,
 )
 
-_renamed_mdata_cols = {"SNID": "object_id"}
-RENAMED_MDATA_COLS: dict[str, tuple] = dict(
-    zip(["names", "new_names"], zip(*_renamed_mdata_cols.items()))
-)
-
-ALL_DATA_COLS_RENAMED = ALL_DATA_COLS - set(RENAMED_DATA_COLS["names"]) | set(
-    RENAMED_DATA_COLS["new_names"]
+ALL_DATA_COLS_RENAMED = ALL_DATA_COLS - set(RENAMED_DATA_COLS.keys()) | set(
+    RENAMED_DATA_COLS.values()
 )
 
 
@@ -67,7 +42,7 @@ class TrainingData:
         drop_phot_cols: set[str] = ALL_DATA_COLS_RENAMED - self.data_cols
 
         # FIXME: The len(thing) < 2 check(s) are missing for all the tqdm calls.
-        _bundle = _load_training_data(
+        _bundle = load_training_data(
             self.src_classes,
             root_dir=self.root_dir,
             zeroed=zeroed,
@@ -113,7 +88,7 @@ class TrainingData:
             if add_cols.lower() == "all":
                 return ALL_DATA_COLS_RENAMED - set(self.data_cols_base)
             if add_cols.upper() in ALL_DATA_COLS:
-                old_name, add_cols = add_cols, _renamed_data_cols[add_cols]
+                old_name, add_cols = add_cols, RENAMED_DATA_COLS[add_cols]
                 warn(f"{old_name} added to data cols but renamed to {add_cols}.")
             if add_cols.lower() in ALL_DATA_COLS_RENAMED:
                 return {add_cols.lower()}
@@ -129,179 +104,3 @@ class TrainingData:
                 f"{sorted(ALL_DATA_COLS | ALL_DATA_COLS_RENAMED)}"
             )
         return add_cols - (bad_cols | set(self.data_cols_base))
-
-
-def _load_training_data(src_classes: set[str], **kwargs) -> DataBundle:
-    tqdm_spec: dict[str, Any] = dict(desc="Classes loaded", leave=False)
-    tqdm_keys: set[str] = {"leave"}
-    tqdm_spec |= {key: kwargs.get(key) for key in set(kwargs) & tqdm_keys}
-    tqdm_spec["disable"] = tqdm_spec.get("disable", False) or len(src_classes) < 2
-
-    src_class_bundles: list[DataBundle] = [
-        load_src_class(src_class, **kwargs)
-        for src_class in tqdm(src_classes, **tqdm_spec)
-    ]
-    return DataBundle.from_bundles(src_class_bundles)
-
-
-def _add_src_class_col(bundle: DataBundle, src_class: str) -> None:
-    for tbl in [bundle.head, bundle.excl]:
-        if tbl is not None:
-            tbl.add_column(src_class, name="src_class")
-
-
-def _src_class_dir(root_dir: Path, src_class: str) -> Path:
-    return root_dir / f"{FNAME_TMPL[0]}_{src_class}"
-
-
-def load_src_class(
-    src_class: str,
-    root_dir: Path,
-    add_src_class_col: bool = True,
-    num_workers: int = 1,
-    chunksize: int = 1,
-    **kwargs,
-) -> DataBundle:
-    if not (src_class_dir := _src_class_dir(root_dir, src_class)).is_dir():
-        raise FileNotFoundError(f"src_class_dir for {src_class} not found.")
-    assert num_workers > 0
-    assert chunksize > 0
-
-    tqdm_spec: dict[str, Any] = dict(desc="Core files loaded", total=40, leave=False)
-    tqdm_keys: set[str] = {"leave", "disable"}
-    tqdm_spec |= {key: kwargs.get(key) for key in set(kwargs) & tqdm_keys}
-
-    bundler: Callable[[tuple[Table, Table]], DataBundle] = partial(
-        _bundle_core_tbls, **kwargs
-    )
-    core_tables: Iterator[tuple[Table, Table]] = tqdm(
-        _load_core_tables(src_class_dir), **tqdm_spec
-    )  # type: ignore
-
-    with Pool(num_workers) as pool:
-        core_bundles: list[DataBundle] = list(
-            pool.imap(bundler, core_tables, chunksize)
-        )
-    out_bundle: DataBundle = DataBundle.from_bundles(core_bundles)
-    if add_src_class_col:
-        _add_src_class_col(out_bundle, src_class)
-    return out_bundle
-
-
-def _bundle_core_tbls(tbls: tuple[Table, Table], **kwargs) -> DataBundle:
-    head: Table
-    phot: Table
-    head, phot = tbls
-    _format_head(head, **kwargs)
-    _format_phot(phot, **kwargs)
-    src_phots: list[Table | None] = [
-        _parse_src_phot(src_phot, **kwargs) for src_phot in _devour_phot(phot, head)
-    ]
-    excl_idxs: list[int] = [
-        idx for idx, src_phot in enumerate(src_phots) if src_phot is None
-    ]
-    excl: Table | None = head[excl_idxs] if excl_idxs else None  # type: ignore
-    if excl_idxs:
-        head.remove_columns(excl_idxs)
-        for idx in reversed(excl_idxs):
-            src_phots.pop(idx)
-
-    assert None not in src_phots
-    assert len(src_phots) == len(head)
-
-    data: dict[str, Table] = dict(zip(head.columns["object_id"], src_phots))  # type: ignore
-    return DataBundle(head, data, excl)
-
-
-# NOTE: The 'MJD_DETECT_FIRST' and 'MJD_TRIGGER' fields in head files can't be trusted.
-def _parse_src_phot(
-    src_phot: Table,
-    only_detected: bool = False,
-    zeroed: bool = True,
-    min_incl_obs: int = 1,
-    **_,
-) -> Table | None:
-    assert min_incl_obs > 0
-    detections: NDArray[np.int_]
-    detections = np.nonzero(np.array(src_phot.columns["detected"]))[0]
-    n_incl_obs: int = len(detections if only_detected else src_phot)
-    if n_incl_obs < min_incl_obs:
-        return None
-    if not (only_detected or zeroed):
-        return src_phot
-    if not zeroed:
-        return src_phot[detections]  # type: ignore
-
-    mjds_detect = np.array(src_phot.columns["mjd"][detections])
-    if only_detected:
-        src_phot = src_phot[detections]  # type: ignore
-    src_phot.add_column(src_phot["mjd"] - mjds_detect[0], name="days_since_detect")
-    return src_phot
-
-
-# NOTE: The hack-ey slicing of phot prevents the yielded Table from referencing phot.
-#       (Passing such referenced copies causes memory meltdowns.)
-#       Unfortunately, astropy is a hot mess, so there's no knowing why this works, and
-#       no sensible type hinting.
-def _devour_phot(phot: Table, head: Table) -> Generator[Table, None, None]:
-    for (nobs,) in head.iterrows("NOBS"):
-        yield phot[list(range(nobs))]  # type: ignore
-        phot.remove_rows(slice(nobs))
-
-
-def _load_core_tables(
-    src_class_dir: Path,
-) -> Generator[tuple[Table, Table], None, None]:
-    fits_path = partial(_fits_path, src_class_dir)
-    for icore in range(1, 41):
-        yield _read_table(fits_path(icore, "head")), _read_table(
-            fits_path(icore, "phot")
-        )
-
-
-def _fits_path(src_class_dir: Path, icore: int, key: str) -> Path:
-    return src_class_dir / f"{FNAME_BASE}{icore:02d}_{key.upper()}.{FNAME_TMPL[2]}"
-
-
-def _format_head(head: Table, drop_head_cols: StrSpec | None = None, **_) -> None:
-    head.rename_columns(**RENAMED_MDATA_COLS)
-    drop_cols_: set[str] | None = _resolve_drop_cols(
-        drop_head_cols, base={"PTROBS_MIN", "PTROBS_MAX"}, protected={"object_id"}
-    )
-    assert drop_cols_ is not None
-    head.remove_columns(drop_cols_)
-    oids: Iterator[str] = map(str.strip, head.columns["object_id"])
-    head.replace_column("object_id", list(oids))
-
-
-def _format_phot(phot: Table, drop_phot_cols: StrSpec | None = None, **_) -> None:
-    phot.rename_columns(**RENAMED_DATA_COLS)
-    drop_cols_: set[str] | None = _resolve_drop_cols(
-        drop_phot_cols, protected={"band", "detected"}
-    )
-    if drop_cols_ is not None:
-        phot.remove_columns(drop_cols_)
-    phot.remove_rows(phot.columns["band"] == "- ")
-    phot.replace_column("band", list(map(BANDS_KEY.get, phot.columns["band"])))
-    phot.replace_column("detected", phot.columns["detected"].astype(bool).astype(int))  # type: ignore
-
-
-def _resolve_drop_cols(
-    drop_cols: StrSpec | None,
-    base: set[str] | None = None,
-    protected: set[str] | None = None,
-) -> set[str] | None:
-    if drop_cols is None and base is None:
-        return None
-    all_drop_cols: set[str] = set() if base is None else base
-    if drop_cols is not None:
-        all_drop_cols |= resolve_spec(drop_cols)
-    if protected is None:
-        return all_drop_cols
-    if __debug__:
-        if base is not None and protected is not None:
-            assert not base & protected
-    for colname in protected:
-        if colname in all_drop_cols:
-            warn(f'Ignoring "{colname}" in drop_cols')
-    return all_drop_cols - protected
