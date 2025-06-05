@@ -12,8 +12,9 @@ from astropy.table import Table, vstack
 from numpy.typing import NDArray
 from tqdm import tqdm
 
-from ._utils import StrSpec, fits_path, key_to_rename_spec, resolve_spec, src_class_dir
+from ..utils import StrSpec, key_to_rename_spec, resolve_spec
 from .metadata import BAND_LABELS, RENAMED_DATA_COLS, RENAMED_MDATA_COLS
+from .utils import fits_path, src_class_dir
 
 read_table = partial(Table.read, character_as_bytes=False, memmap=False)
 BANDS_KEY: dict[str, str] = {f"{band} ": f"lsst{band.lower()}" for band in BAND_LABELS}

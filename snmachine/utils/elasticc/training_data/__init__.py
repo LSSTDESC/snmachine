@@ -4,7 +4,7 @@ from warnings import warn
 
 from astropy.table import Table
 
-from ._utils import StrSpec, resolve_spec
+from ..utils import StrSpec, resolve_spec
 from .loading import load_training_data
 from .metadata import (
     ALL_DATA_COLS,

@@ -1,9 +1,6 @@
 from itertools import product
-from pathlib import Path
 from typing import Sequence
 
-FNAME_TMPL = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
-FNAME_BASE = "_".join(FNAME_TMPL[:2])
 StrSpec = Sequence[str] | set[str] | str
 
 
@@ -11,14 +8,6 @@ def resolve_spec(spec: StrSpec) -> set[str]:
     if isinstance(spec, set):
         return spec
     return {spec} if isinstance(spec, str) else set(spec)
-
-
-def src_class_dir(root_dir: Path, src_class: str) -> Path:
-    return root_dir / f"{FNAME_TMPL[0]}_{src_class}"
-
-
-def fits_path(src_class_dir: Path, icore: int, key: str) -> Path:
-    return src_class_dir / f"{FNAME_BASE}{icore:02d}_{key.upper()}.{FNAME_TMPL[2]}"
 
 
 def key_to_rename_spec(key_dict: dict[str, str]) -> dict[str, tuple[str]]:
