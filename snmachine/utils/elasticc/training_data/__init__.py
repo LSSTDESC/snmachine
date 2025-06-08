@@ -20,6 +20,7 @@ ALL_DATA_COLS_RENAMED = ALL_DATA_COLS - set(RENAMED_DATA_COLS.keys()) | set(
 
 class TrainingData:
     data_cols_base = ["mjd", "band", "detected", "flux", "fluxerr", "zp", "zp_error"]
+    data_cols_derived = {"days_since_detect"}
 
     def __init__(
         self,
@@ -96,6 +97,10 @@ class TrainingData:
 
         assert isinstance(add_cols, set)
         assert all(isinstance(val, str) for val in add_cols)
+
+        if "days_since_detect" in add_cols:
+            warn("Ignoring 'days_since_detect' in add_cols_spec. Pass 'zeroed=True'.")
+            add_cols.remove("days_since_detect")
 
         bad_cols: set[str]
         if bad_cols := add_cols - (ALL_DATA_COLS | ALL_DATA_COLS_RENAMED):
