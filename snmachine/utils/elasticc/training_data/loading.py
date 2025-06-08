@@ -168,9 +168,7 @@ def devour_phot(phot: Table, head: Table) -> Generator[Table, None, None]:
         phot.remove_rows(slice(nobs))
 
 
-def load_core_tables(
-    src_class_dir: Path,
-) -> Generator[tuple[Table, Table], None, None]:
+def load_core_tables(src_class_dir: Path) -> Generator[tuple[Table, Table], None, None]:
     fits_path_ = partial(fits_path, src_class_dir)
     for icore in range(1, 41):
         yield (
