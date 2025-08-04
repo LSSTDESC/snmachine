@@ -115,7 +115,7 @@ def format_head(head: Table, drop_head_cols: StrSpec | None = None, **_) -> None
         drop_head_cols, base={"PTROBS_MIN", "PTROBS_MAX"}, protected={"object_id"}
     )
     assert drop_cols is not None
-    head.remove_columns(drop_cols)
+    head.remove_columns(drop_cols & set(head.columns))
     oids: Iterator[str] = map(str.strip, head.columns["object_id"])
     head.replace_column("object_id", list(oids))
 
