@@ -89,4 +89,4 @@ ALL_METADATA_COLS: set[str] = {
     *stitch("HOSTGAL2", _mdata_gal2),
     *stitch("SIM", _mdata_sim),
 }
-RENAMED_MDATA_COLS = {"SNID": "object_id"}
+RENAMED_METADATA_COLS = {"SNID": "object_id"}

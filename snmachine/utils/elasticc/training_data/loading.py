@@ -13,7 +13,7 @@ from numpy.typing import NDArray
 from tqdm import tqdm
 
 from ..utils import StrSpec, key_to_rename_spec, resolve_spec
-from .metadata import BAND_LABELS, RENAMED_DATA_COLS, RENAMED_MDATA_COLS
+from .metadata import BAND_LABELS, RENAMED_DATA_COLS, RENAMED_METADATA_COLS
 from .utils import fits_path, src_class_dir
 
 read_table = partial(Table.read, character_as_bytes=False, memmap=False)
@@ -110,7 +110,7 @@ def bundle_core_tbls(tbls: tuple[Table, Table], **kwargs) -> DataBundle:
 
 
 def format_head(head: Table, drop_head_cols: StrSpec | None = None, **_) -> None:
-    head.rename_columns(**key_to_rename_spec(RENAMED_MDATA_COLS))
+    head.rename_columns(**key_to_rename_spec(RENAMED_METADATA_COLS))
     drop_cols: set[str] | None = resolve_drop_cols(
         drop_head_cols, base={"PTROBS_MIN", "PTROBS_MAX"}, protected={"object_id"}
     )
