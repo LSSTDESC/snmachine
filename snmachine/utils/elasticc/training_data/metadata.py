@@ -7,7 +7,7 @@ from ..utils import stitch
 BAND_LABELS = ["u", "g", "r", "i", "z", "Y"]
 
 
-def per_band(stems: set[str] | str, **stitch_kwargs) -> set[str]:
+def per_band(stems: list[str] | set[str] | str, **stitch_kwargs) -> set[str]:
     return stitch(stems, set(BAND_LABELS), **stitch_kwargs)
 
 
