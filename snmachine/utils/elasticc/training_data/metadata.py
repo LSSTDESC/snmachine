@@ -74,7 +74,8 @@ MIXIN_METADATA_COLS: dict[tuple[str, ...], set[str]] = {
         sorted(
             per_band("SIM_GALFRAC")
             | stitch(
-                ["HOSTGAL", "HOSTGAL2"], [f"Q{num:03}" for num in range(0, 101, 10)]
+                ["HOSTGAL", "HOSTGAL2"],
+                [f"ZPHOT_Q{num:03}" for num in range(0, 101, 10)],
             )
         )
     ): SRC_CLASS_TAXONOMY["Non-Recurring"]["SN-like"]
@@ -106,8 +107,10 @@ _mdata_sim: list[str] = (
 _mdata_has_err: list[str] = ["MWEBV", "VPEC"] + [
     f"REDSHIFT_{val}" for val in ["HELIO", "FINAL"]
 ]
+DOOMED_METADATA_COLS = {"NOBS", "PTROBS_MIN", "PTROBS_MAX", "SNID"}
 COMMON_METADATA_COLS: set[str] = (
-    {"IAUC", "FAKE", "RA", "DEC", "PIXSIZE", "SNTYPE", "SEARCH_TYPE"}
+    DOOMED_METADATA_COLS
+    | {"IAUC", "FAKE", "RA", "DEC", "PIXSIZE", "SNTYPE", "SEARCH_TYPE"}
     | {"PEAKMJD", "MJD_TRIGGER"}
     | {f"MJD_DETECT_{val}" for val in ["FIRST", "LAST"]}
     | {f"N{val}PIX" for val in ["X", "Y"]}
