@@ -1,38 +1,22 @@
 from __future__ import annotations
 
-from collections import ChainMap
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Any, Callable, Generator, Iterator, NamedTuple
+from typing import Any, Callable, Generator, Iterator
 from warnings import warn
 
 import numpy as np
-from astropy.table import Table, vstack
+from astropy.table import Table
 from numpy.typing import NDArray
 from tqdm import tqdm
 
 from ..utils import StrSpec, key_to_rename_spec, resolve_spec
 from .metadata import BAND_LABELS, RENAMED_DATA_COLS, RENAMED_METADATA_COLS
-from .utils import fits_path, src_class_dir
+from .utils import DataBundle, fits_path, src_class_dir
 
 read_table = partial(Table.read, character_as_bytes=False, memmap=False)
 BANDS_KEY: dict[str, str] = {f"{band} ": f"lsst{band.lower()}" for band in BAND_LABELS}
-
-
-class DataBundle(NamedTuple):
-    head: Table
-    data: dict[str, Table]
-    excl: Table | None
-
-    @classmethod
-    def from_bundles(cls, bundles: list[DataBundle]) -> DataBundle:
-        excls = [bundle.excl for bundle in bundles if bundle.excl is not None]
-        return cls(
-            head=vstack([bundle.head for bundle in bundles]),
-            data=dict(ChainMap(*[bundle.data for bundle in bundles])),
-            excl=vstack(excls) if excls else None,
-        )
 
 
 def load_training_data(src_classes: set[str], **kwargs) -> DataBundle:
