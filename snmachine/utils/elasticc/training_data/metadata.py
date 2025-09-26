@@ -1,4 +1,5 @@
 from collections import ChainMap
+from copy import copy
 from itertools import chain
 
 from ...extra_utils import are_sncosmo_aliases
@@ -121,3 +122,11 @@ COMMON_METADATA_COLS: set[str] = (
 )
 ALL_METADATA_COLS: set[str] = COMMON_METADATA_COLS | set(chain(*MIXIN_METADATA_COLS))
 RENAMED_METADATA_COLS = {"SNID": "object_id"}
+
+
+def resolve_metadata_cols(src_class: str) -> set[str]:
+    mdata_cols = copy(COMMON_METADATA_COLS)
+    for mixin, src_classes in MIXIN_METADATA_COLS.items():
+        if src_class in src_classes:
+            mdata_cols |= set(mixin)
+    return mdata_cols - DOOMED_METADATA_COLS
