@@ -11,7 +11,7 @@ from astropy.table import Table
 from numpy.typing import NDArray
 from tqdm import tqdm
 
-from ..utils import StrSpec, key_to_rename_spec, resolve_spec
+from ...utils import StrSpec, key_to_rename_spec, resolve_spec
 from .metadata import BAND_LABELS, RENAMED_DATA_COLS, RENAMED_METADATA_COLS
 from .utils import DataBundle, fits_path, src_class_dir
 

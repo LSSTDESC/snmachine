@@ -1,5 +1,5 @@
-from .training_data import TrainingData
-from .training_data.metadata import (
+from .data_handling.training import TrainingData
+from .data_handling.training.metadata import (
     ALL_DATA_COLS,
     ALL_METADATA_COLS,
     ALL_SRC_CLASSES,

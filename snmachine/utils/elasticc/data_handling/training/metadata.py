@@ -2,8 +2,8 @@ from collections import ChainMap
 from copy import copy
 from itertools import chain
 
-from ...extra_utils import are_sncosmo_aliases
-from ..utils import stitch
+from ....extra_utils import are_sncosmo_aliases
+from ...utils import stitch
 
 BAND_LABELS = ["u", "g", "r", "i", "z", "Y"]
 
