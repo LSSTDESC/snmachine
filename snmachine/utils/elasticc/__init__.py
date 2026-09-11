@@ -8,3 +8,4 @@ from .data_handling.training.metadata import (
     MIXIN_METADATA_COLS,
     SRC_CLASS_TAXONOMY,
 )
+from .metrics import elasticc_log_loss

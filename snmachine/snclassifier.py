@@ -28,6 +28,7 @@ from sklearn import model_selection
 from sklearn.model_selection import PredefinedSplit, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from snmachine.utils import plasticc_utils
+from snmachine.utils.elasticc import elasticc_log_loss
 
 # This allows the user to easily loop through all possible classifiers
 choice_of_classifiers = ['svm', 'knn', 'random_forest', 'decision_tree',
@@ -64,6 +65,35 @@ def logloss_score(classifier, X_features, y_true):
     """
     probs = classifier.predict_proba(X_features)
     logloss = plasticc_utils.plasticc_log_loss(y_true, probs)
+    return -logloss  # symmetric because we want to maximise this output
+
+
+def elasticc_logloss_score(classifier, X_features, y_true):
+    """ELAsTiCC logloss classification score.
+
+    This custom scoring method can be used in a grid search. See
+    `snmachine.utils.elasticc.elasticc_log_loss` for how the classes are
+    weighted.
+
+    Parameters
+    ----------
+    classifier : classifier instance `sklearn`, `LightGBM` or
+                `BaseClassifier.child.classifier`
+        Classifier.
+    X_features : pandas.DataFrame or np.array
+        Features of shape (n_samples, n_features).
+    y_true : 1D array-like
+        Ground truth (correct) labels of shape (n_samples,).
+
+    Returns
+    -------
+    float
+        Symmetric of the ELAsTiCC logloss score. We use the symmetric
+        because this function is going to be maximised and the optimal
+        result of the logloss is its minimum (logloss = 0).
+    """
+    probs = classifier.predict_proba(X_features)
+    logloss = elasticc_log_loss(y_true, probs)
     return -logloss  # symmetric because we want to maximise this output
 
 
@@ -409,9 +439,9 @@ def run_several_classifiers(classifier_list, features, labels,
         validation sets. See
         `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
         how to choose this input.
-        `snmachine` also contains the 'logloss' and 'auc' custom scoring.
-        For more details about these, see `logloss_score` and
-        `auc_score`, respectively.
+        `snmachine` also contains the 'logloss', 'elasticc_logloss' and 'auc'
+        custom scoring. For more details about these, see `logloss_score`,
+        `elasticc_logloss_score` and `auc_score`, respectively.
     train_set : {float, list-like}
         If float, it is the fraction of objects that will be used as training
         set. If list, it is the IDs of the objects to use as training set.
@@ -617,9 +647,9 @@ def _run_classifier(classifier_name, X_train, y_train, X_test,
         validation sets. See
         `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
         how to choose this input.
-        `snmachine` also contains the 'logloss' and 'auc' custom scoring.
-        For more details about these, see `logloss_score` and
-        `auc_score`, respectively.
+        `snmachine` also contains the 'logloss', 'elasticc_logloss' and 'auc'
+        custom scoring. For more details about these, see `logloss_score`,
+        `elasticc_logloss_score` and `auc_score`, respectively.
     which_column : int, optional
         The index of the column refering to the desired class (e.g. Ias, which
         might correspond to class 1, or 90). This allows the user to optimise
@@ -754,7 +784,7 @@ class BaseClassifier():
                   for elem in set(metadata.original_event)]
         y_original = metadata.target[sorted(output)]
         y_original.index = metadata.original_event[sorted(output)]
-        y_original = y_original.astype(int)
+        y_original = y_original.astype(str)  # labels can be numbers or names
 
         indices_split = cv_fold.split(np.zeros_like(y_original), y_original)
         # Add augmented objects corresponding to the added originals
@@ -863,9 +893,11 @@ class BaseClassifier():
             value = self._auc_score
         elif value == 'logloss':
             value = logloss_score
+        elif value == 'elasticc_logloss':
+            value = elasticc_logloss_score
         self._scoring = value
 
-    def _set_auc_score_roc_cur(self, y_train, **kwargs):
+    def _set_auc_score_kwargs(self, y_train, **kwargs):
         """Set the parameters needed for the AUC score.
 
         Parameters
@@ -914,7 +946,7 @@ class BaseClassifier():
             AUC score.
         """
         probs = classifier.predict_proba(X_features)
-        fpr, tpr, auc = compute_roc_values(probs=probs, y_true=y_true,
+        fpr, tpr, auc = compute_roc_values(probs=probs, y_test=y_true,
                                            which_column=self.which_column)
         return auc  # symmetric because we want to maximise this output
 
@@ -963,9 +995,10 @@ class SklearnClassifier(BaseClassifier):
             validation sets. See
             `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
             how to choose this input.
-            `snmachine` also contains the 'logloss' and 'auc' custom scoring.
-            For more details about these, see `logloss_score` and
-            `auc_score`, respectively.
+            `snmachine` also contains the 'logloss', 'elasticc_logloss' and
+            'auc' custom scoring. For more details about these, see
+            `logloss_score`, `elasticc_logloss_score` and `auc_score`,
+            respectively.
         param_grid : {None, dict}, optional
             Dictionary containing the parameters names (`str`) as keys and
             lists of their possible settings as values.
@@ -1473,9 +1506,10 @@ class LightGBMClassifier(BaseClassifier):
             validation sets. See
             `sklearn.model_selection._search.GridSearchCV` [1]_ for details on
             how to choose this input.
-            `snmachine` also contains the 'logloss' and 'auc' custom scoring.
-            For more details about these, see `logloss_score` and
-            `auc_score`, respectively.
+            `snmachine` also contains the 'logloss', 'elasticc_logloss' and
+            'auc' custom scoring. For more details about these, see
+            `logloss_score`, `elasticc_logloss_score` and `auc_score`,
+            respectively.
         param_grid : {None, dict}, optional
             Dictionary containing the parameters names (`str`) as keys and
             lists of their possible settings as values.

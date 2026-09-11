@@ -8,6 +8,7 @@ from astropy.table import Table, vstack
 
 FNAME_TMPL = ("ELASTICC2_TRAIN_02", "NONIaMODEL0-00", "FITS.gz")
 FNAME_BASE = "_".join(FNAME_TMPL[:2])
+NUM_CORE_FILES = 40  # The training set was simulated on 40 cores
 
 
 class DataBundle(NamedTuple):

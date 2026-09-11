@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from ...utils import StrSpec, key_to_rename_spec, resolve_spec
 from .metadata import BAND_LABELS, RENAMED_DATA_COLS, RENAMED_METADATA_COLS
-from .utils import DataBundle, fits_path, src_class_dir
+from .utils import NUM_CORE_FILES, DataBundle, fits_path, src_class_dir
 
 read_table = partial(Table.read, character_as_bytes=False, memmap=False)
 BANDS_KEY: dict[str, str] = {f"{band} ": f"lsst{band.lower()}" for band in BAND_LABELS}
@@ -21,13 +21,13 @@ BANDS_KEY: dict[str, str] = {f"{band} ": f"lsst{band.lower()}" for band in BAND_
 
 def load_training_data(src_classes: set[str], **kwargs) -> DataBundle:
     tqdm_spec: dict[str, Any] = dict(desc="Classes loaded", leave=False)
-    tqdm_keys: set[str] = {"leave"}
+    tqdm_keys: set[str] = {"leave", "disable"}
     tqdm_spec |= {key: kwargs.get(key) for key in set(kwargs) & tqdm_keys}
     tqdm_spec["disable"] = tqdm_spec.get("disable", False) or len(src_classes) < 2
 
     src_class_bundles: list[DataBundle] = [
         load_src_class(src_class, **kwargs)
-        for src_class in tqdm(src_classes, **tqdm_spec)
+        for src_class in tqdm(sorted(src_classes), **tqdm_spec)  # reproducible order
     ]
     return DataBundle.from_bundles(src_class_bundles)
 
@@ -38,14 +38,18 @@ def load_src_class(
     add_src_class_col: bool = True,
     num_workers: int = 1,
     chunksize: int = 1,
+    num_core_files: int = NUM_CORE_FILES,
     **kwargs,
 ) -> DataBundle:
     if not (cores_dir := src_class_dir(root_dir, src_class)).is_dir():
         raise FileNotFoundError(f"src_class_dir for {src_class} not found.")
     assert num_workers > 0
     assert chunksize > 0
+    assert 0 < num_core_files <= NUM_CORE_FILES
 
-    tqdm_spec: dict[str, Any] = dict(desc="Core files loaded", total=40, leave=False)
+    tqdm_spec: dict[str, Any] = dict(
+        desc="Core files loaded", total=num_core_files, leave=False
+    )
     tqdm_keys: set[str] = {"leave", "disable"}
     tqdm_spec |= {key: kwargs.get(key) for key in set(kwargs) & tqdm_keys}
 
@@ -53,13 +57,15 @@ def load_src_class(
         bundle_core_tbls, **kwargs
     )
     core_tables: Iterator[tuple[Table, Table]] = tqdm(
-        load_core_tables(cores_dir), **tqdm_spec
+        load_core_tables(cores_dir, num_core_files), **tqdm_spec
     )  # type: ignore
 
-    with Pool(num_workers) as pool:
-        core_bundles: list[DataBundle] = list(
-            pool.imap(bundler, core_tables, chunksize)
-        )
+    core_bundles: list[DataBundle]
+    if num_workers == 1:
+        core_bundles = list(map(bundler, core_tables))
+    else:
+        with Pool(num_workers) as pool:
+            core_bundles = list(pool.imap(bundler, core_tables, chunksize))
     out_bundle: DataBundle = DataBundle.from_bundles(core_bundles)
     if add_src_class_col:
         for tbl in [out_bundle.head, out_bundle.excl]:
@@ -82,7 +88,7 @@ def bundle_core_tbls(tbls: tuple[Table, Table], **kwargs) -> DataBundle:
     ]
     excl: Table | None = head[excl_idxs] if excl_idxs else None  # type: ignore
     if excl_idxs:
-        head.remove_columns(excl_idxs)
+        head.remove_rows(excl_idxs)
         for idx in reversed(excl_idxs):
             src_phots.pop(idx)
 
@@ -152,9 +158,11 @@ def devour_phot(phot: Table, head: Table) -> Generator[Table, None, None]:
         phot.remove_rows(slice(nobs))
 
 
-def load_core_tables(src_class_dir: Path) -> Generator[tuple[Table, Table], None, None]:
+def load_core_tables(
+    src_class_dir: Path, num_core_files: int = NUM_CORE_FILES
+) -> Generator[tuple[Table, Table], None, None]:
     fits_path_ = partial(fits_path, src_class_dir)
-    for icore in range(1, 41):
+    for icore in range(1, num_core_files + 1):
         yield (
             read_table(fits_path_(icore, "head")),
             read_table(fits_path_(icore, "phot")),
