@@ -60,21 +60,21 @@ class TrainingData:
         return len(self.data)
 
     def _parse_src_classes(self, spec: StrSpec) -> set[str]:
-        if isinstance(spec, str) and spec == "all":
-            return ALL_SRC_CLASSES
+        if isinstance(spec, str) and spec.lower() == "all":
+            return set(ALL_SRC_CLASSES)
         spec = resolve_spec(spec)
         src_classes: set[str] = spec & ALL_SRC_CLASSES
         for spec_str in spec - ALL_SRC_CLASSES:
             src_classes |= self._resolve_spec_str(spec_str.lower())
         return src_classes
 
-    # TODO: Make these checks case insensitive.
     def _resolve_spec_str(self, spec_str: str) -> set[str]:
-        if spec_str in SRC_CLASS_TAXONOMY:
-            return set(chain(*SRC_CLASS_TAXONOMY[spec_str]))
-        for supset_dict in SRC_CLASS_TAXONOMY.values():
-            if spec_str in supset_dict:
-                return supset_dict[spec_str]
+        for supset, supset_dict in SRC_CLASS_TAXONOMY.items():
+            if spec_str == supset.lower():
+                return set(chain(*supset_dict.values()))
+            for subset, src_classes in supset_dict.items():
+                if spec_str == subset.lower():
+                    return set(src_classes)
         raise ValueError(
             f"Invalid spec_str: '{spec_str}'. Value must be (equivalent to) 'all' or in:\n"
             f"{sorted(SRC_CLASS_TAXONOMY)}\n"

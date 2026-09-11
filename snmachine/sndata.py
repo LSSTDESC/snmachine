@@ -25,6 +25,7 @@ from copy import deepcopy
 from past.builtins import basestring
 from random import shuffle, sample
 from snmachine import chisq as cs
+from snmachine.utils.elasticc import TrainingData
 
 # Colours, labels, and markers for graphs
 colours = {'sdssu': '#6614de', 'sdssg': '#007718', 'sdssr': '#b30100',
@@ -1227,7 +1228,7 @@ class PlasticcData(EmptyDataset):
             # time gaps between consecutive observations
             time_diff = obs_time[1:] - obs_time[:-1]
 
-            if np.max(time_diff) > max_gap_length:
+            if len(time_diff) > 0 and np.max(time_diff) > max_gap_length:
                 index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
                 time_last_obs_before = obs_time[index_gap]
                 obs_time_detected = obs_time[obj_data['detected'] == 1]
@@ -1313,6 +1314,121 @@ class PlasticcData(EmptyDataset):
             print(f'The longest event is '
                   f'{obj_names[np.argmax(time_transient)]} '
                   f'and its length is {np.max(time_transient):.2f} days.')
+
+
+class ElasticcData(PlasticcData):
+    """Class to read in the ELAsTiCC training set. This is a simulated LSST
+    catalog.
+
+    Parameters
+    ----------
+    folder : str
+        Folder containing the `ELASTICC2_TRAIN_02_[model]` folders.
+    src_classes : str or list-like
+        ELAsTiCC models to read (e.g. 'SNIa-SALT3'), groups of models (e.g.
+        'SN-like') or 'all'.
+    class_map : dict, optional
+        Class label saved in `metadata.target` for each model, e.g.
+        `{'SNIb-Templates': 'SNIbc', 'SNIc-Templates': 'SNIbc'}`. Models not in
+        `class_map` are labelled with their model name.
+    num_core_files : int, optional
+        Number of files to read per model, out of 40. Each file contains
+        roughly 1/40 of the events of that model. By default, all are read.
+    mix : Bool, default = False
+        If True, randomly permutes the objects when they are read in.
+    **kwargs : dict, optional
+        Optional keywords to pass to `snmachine.utils.elasticc.TrainingData`
+        (e.g. `num_workers`).
+    """
+
+    def __init__(self, folder, src_classes, class_map=None, num_core_files=40,
+                 mix=False, **kwargs):
+        EmptyDataset.__init__(self, folder, survey_name='lsst',
+                              filter_set=['lsstu', 'lsstg', 'lsstr', 'lssti',
+                                          'lsstz', 'lssty'])
+        print('Reading data...')
+        time_start_reading = time.time()
+        training_data = TrainingData(src_classes, os.path.expanduser(folder),
+                                     zeroed=False,
+                                     num_core_files=num_core_files, **kwargs)
+        self.set_data(training_data.data)
+        self.set_metadata(training_data.metadata, class_map=class_map)
+        print(f'{len(self.data)} objects read into memory.')
+        self.print_time_difference(time_start_reading, time.time())
+        if mix is True:
+            self.mix()
+        # Set the central wavelength of each passband
+        self.pb_wavelengths = default_pb_wavelengths['lsst']
+
+    def set_data(self, data):
+        """Saves the light curves in the format used by `snmachine`.
+
+        Parameters
+        ----------
+        data : dict of astropy.table.Table
+            Light curve of each object, as read by
+            `snmachine.utils.elasticc.TrainingData`.
+        """
+        for obj, obj_data in data.items():
+            obj_data.rename_columns(['band', 'fluxerr'],
+                                    ['filter', 'flux_error'])
+            obj_data.add_column(obj, name='object_id', index=0)
+            obj_data = obj_data['object_id', 'mjd', 'filter', 'flux',
+                                'flux_error', 'detected']
+            obj_data['mjd'] -= obj_data['mjd'].min()
+            self.data[obj] = obj_data
+
+    def set_metadata(self, metadata, class_map=None):
+        """Saves the metadata in the format used by `snmachine`.
+
+        The column names are converted to lower case (e.g. `HOSTGAL_PHOTOZ`
+        becomes `hostgal_photoz`) and the class of each object is saved in
+        `target`. Missing redshifts are -9, as in the ELAsTiCC files.
+
+        Parameters
+        ----------
+        metadata : astropy.table.Table
+            Metadata of the objects, as read by
+            `snmachine.utils.elasticc.TrainingData`.
+        class_map : dict, optional
+            Class label for each model. Models not in `class_map` are
+            labelled with their model name.
+        """
+        class_map = {} if class_map is None else class_map
+        metadata_pd = metadata.to_pandas()
+        metadata_pd.columns = metadata_pd.columns.str.lower()
+        metadata_pd.index = pd.Index(metadata_pd['object_id'].astype(str),
+                                     name='object_id')
+        metadata_pd['object_id'] = metadata_pd.index
+        metadata_pd['target'] = metadata_pd['src_class'].map(
+            lambda src_class: class_map.get(src_class, src_class))
+        self.metadata = metadata_pd
+        self.object_names = metadata_pd.index
+
+        # Everything bellow is to conform with `snmachine` version < 2.0
+        for obj in self.object_names:
+            self.set_inner_metadata(obj)
+
+    def set_inner_metadata(self, obj):
+        """Set the metadata inside the astropy observation data.
+
+        Only the entries used by `snmachine` are saved: the object name, its
+        class, the host galaxy photometric redshift and the redshift
+        (spectroscopic if available, otherwise photometric).
+
+        Parameters
+        ----------
+        obj : str
+            Name of the object we are working with.
+        """
+        obj_metadata = self.metadata.loc[obj]
+        specz = obj_metadata['hostgal_specz']
+        photoz = obj_metadata['hostgal_photoz']
+        inner_metadata = self.data[obj].meta
+        inner_metadata['name'] = obj
+        inner_metadata['type'] = str(obj_metadata['target'])
+        inner_metadata['hostgal_photoz'] = photoz
+        inner_metadata['z'] = specz if specz > 0 else photoz
 
 
 class Dataset(EmptyDataset):
@@ -2627,7 +2743,7 @@ class SnanaDataOri(EmptyDataset):
                 # time gaps between consecutive observations
                 time_diff = obs_time[1:] - obs_time[:-1]
 
-                if np.max(time_diff) > max_gap_length:
+                if len(time_diff) > 0 and np.max(time_diff) > max_gap_length:
                     index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
                     time_last_obs_before = obs_time[index_gap]
                     obs_time_detected = obs_time[obj_data['detected'] == 1]
@@ -2893,7 +3009,7 @@ class SnanaData(EmptyDataset):
                 # time gaps between consecutive observations
                 time_diff = obs_time[1:] - obs_time[:-1]
 
-                if np.max(time_diff) > max_gap_length:
+                if len(time_diff) > 0 and np.max(time_diff) > max_gap_length:
                     index_gap = np.nonzero(time_diff >= max_gap_length)[0][0]
                     time_last_obs_before = obs_time[index_gap]
                     obs_time_detected = obs_time[obj_data['detected'] == 1]
